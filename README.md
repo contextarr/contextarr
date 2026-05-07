@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 3.1: API readiness for the local web dashboard.
+This repository is in Phase 4: web dashboard shell and pack library.
 
 Current scope:
 
@@ -25,10 +25,14 @@ Current scope:
 - Hardened local search for UI input.
 - UI-ready pack summary fields for cover metadata and review queue counts.
 - Optional local API token auth.
+- React and Vite local dashboard shell.
+- API-backed Pack Library with Cover Grid, Compact Cards, and Dense Table views.
+- Read-only library search, sort, and filter controls.
 
 Not included yet:
 
-- Web UI implementation.
+- Pack detail and record detail implementation.
+- Human-readable Markdown renderer.
 - MCP implementation.
 - Importers or exporters.
 
@@ -48,7 +52,7 @@ AI exports later.
 
 ```text
 apps/
-  web/                 React and Vite UI, later
+  web/                 React and Vite local dashboard
   server/              Node.js Fastify API
   cli/                 Contextarr CLI
 
@@ -94,7 +98,7 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase3:verify
+pnpm phase4:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm demo:validate
 ```
@@ -109,6 +113,12 @@ Start the local API after installing dependencies:
 pnpm --filter @contextarr/server dev
 ```
 
+Start the local web dashboard in another shell:
+
+```bash
+pnpm --filter @contextarr/web dev
+```
+
 Default API settings come from `.env.example`:
 
 - `CONTEXTARR_HOST=127.0.0.1`
@@ -116,6 +126,8 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
 - `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
+- `VITE_CONTEXTARR_API_BASE=` optional web override; leave empty to use the Vite `/api` proxy
+- `VITE_CONTEXTARR_API_TOKEN=` optional web token for protected local APIs
 
 When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
 
