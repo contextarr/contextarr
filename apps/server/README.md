@@ -2,7 +2,7 @@
 
 Local Fastify API server and rebuildable SQLite index for Contextarr packs.
 
-Implemented through Phase 6:
+Implemented through Phase 7:
 
 - load and validate local pack folders
 - rebuild SQLite derived index from pack files
@@ -13,6 +13,7 @@ Implemented through Phase 6:
 - calculate deterministic Pack Health v0
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue and pack health API endpoints
+- expose local export preview API endpoints
 
 Run locally:
 
@@ -27,6 +28,8 @@ pnpm --filter @contextarr/server rescan
 ```
 
 The server binds to `127.0.0.1` by default and does not mutate pack files.
+
+Export previews are generated from validated local pack files. The server does not write generated export files, fetch source URLs, call AI APIs, or upload data.
 
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 

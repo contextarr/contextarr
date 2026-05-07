@@ -1,0 +1,19 @@
+id: fake-product-line-json-records
+name: Fake Product Line JSON Records Export
+target: json_records
+format: json
+privacy_mode: redacted
+include:
+  records:
+    - fake-product-line.product-overview
+    - fake-product-line.model-comparison
+    - fake-product-line.support-matrix
+    - fake-product-line.release-notes
+    - fake-product-line.sales-support-faq
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 24000
+sections:
+  - records
+  - sources

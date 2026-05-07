@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
+import { buildPackExport, buildPackExports, ExportError, type ExportArtifact } from "@contextarr/export-profiles";
 import {
   formatValidationResult,
   PackReadError,
@@ -100,6 +101,45 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
     });
 
+  program
+    .command("export")
+    .argument("<path>", "pack directory or directory of pack directories to export")
+    .option("--profile <profileId>", "export profile id to generate")
+    .option("--all", "export all profiles")
+    .requiredOption("--out <path>", "output directory for generated exports")
+    .action((targetPath: string, options: { profile?: string; all?: boolean; out: string }) => {
+      const resolvedTargetPath = resolveUserPath(targetPath);
+      const resolvedOutputPath = resolveUserPath(options.out);
+
+      if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
+        io.stderr.write(`Export path is not a readable directory: ${targetPath}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if ((options.all && options.profile) || (!options.all && !options.profile)) {
+        io.stderr.write("Choose exactly one export mode: --profile <profile-id> or --all.\n");
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const packPaths = getPackTargets(resolvedTargetPath);
+        const artifacts = packPaths.flatMap((packPath) =>
+          options.all
+            ? buildPackExports({ packPath })
+            : [buildPackExport({ packPath, profileId: options.profile! })]
+        );
+        const writtenFiles = writeExportArtifacts(resolvedOutputPath, artifacts);
+
+        io.stdout.write(`Exported ${writtenFiles.length} file(s): ${resolvedOutputPath}\n`);
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${error instanceof ExportError ? error.message : errorMessage(error)}\n`);
+        exitCode = error instanceof ExportError ? 1 : 2;
+      }
+    });
+
   try {
     await program.parseAsync(args, { from: "user" });
   } catch (error) {
@@ -123,6 +163,10 @@ function resolveUserPath(value: string): string {
 }
 
 function getValidationTargets(targetPath: string): string[] {
+  return getPackTargets(targetPath);
+}
+
+function getPackTargets(targetPath: string): string[] {
   if (fs.existsSync(path.join(targetPath, "contextarr-pack.json"))) {
     return [targetPath];
   }
@@ -135,6 +179,20 @@ function getValidationTargets(targetPath: string): string[] {
     .sort((left, right) => left.localeCompare(right));
 
   return childPacks.length > 0 ? childPacks : [targetPath];
+}
+
+function writeExportArtifacts(outputPath: string, artifacts: ExportArtifact[]): string[] {
+  const writtenFiles: string[] = [];
+
+  for (const artifact of artifacts) {
+    const packOutputDir = path.join(outputPath, artifact.packId);
+    fs.mkdirSync(packOutputDir, { recursive: true });
+    const filePath = path.join(packOutputDir, artifact.filename);
+    fs.writeFileSync(filePath, artifact.content, "utf8");
+    writtenFiles.push(filePath);
+  }
+
+  return writtenFiles;
 }
 
 function formatValidationText(results: ValidationResult[]): string {

@@ -1,0 +1,19 @@
+id: claude-code-project-json-records
+name: Claude Code Project JSON Records Export
+target: json_records
+format: json
+privacy_mode: redacted
+include:
+  records:
+    - claude-code-project.repo-overview
+    - claude-code-project.agent-instructions
+    - claude-code-project.dev-workflow
+    - claude-code-project.testing-checklist
+    - claude-code-project.handoff-notes
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 24000
+sections:
+  - records
+  - sources

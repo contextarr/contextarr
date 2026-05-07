@@ -1,0 +1,20 @@
+id: internal-support-markdown
+name: Internal Support KB Generic Markdown Export
+target: markdown
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - internal-support.ticket-intake
+    - internal-support.escalation-policy
+    - internal-support.customer-safe-response-rules
+    - internal-support.known-issues
+    - internal-support.review-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 18000
+sections:
+  - summary
+  - records
+  - sources

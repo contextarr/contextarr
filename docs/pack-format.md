@@ -47,7 +47,7 @@ Sources live in `sources/sources.yaml`. Source maps connect pack records to loca
 
 ## Export Profiles
 
-Export profiles define target-specific output. Supported targets are later-phase work and include ChatGPT, Claude, Codex, Claude Code, OpenCode, Cursor, Open WebUI, AnythingLLM, Hermes, OpenClaw, generic Markdown, JSON, CSV, and llms.txt-style output.
+Export profiles define target-specific output. Phase 7 supports ChatGPT, Claude, Codex, generic Markdown, and JSON records. Later targets include Claude Code, OpenCode, Cursor, Open WebUI, AnythingLLM, Hermes, OpenClaw, CSV, and llms.txt-style output.
 
 ## Rules
 

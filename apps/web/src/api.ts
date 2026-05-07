@@ -1,5 +1,6 @@
 import type {
   HealthResponse,
+  ExportArtifact,
   PackDetail,
   PackHealthResponse,
   PackSummary,
@@ -33,6 +34,7 @@ export interface ApiClient {
   getPackHealth(id: string): Promise<PackHealthResponse>;
   getPackRecords(id: string): Promise<RecordSummary[]>;
   getRecord(id: string): Promise<RecordDetail>;
+  getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   getReviewItems(filters?: { status?: string; severity?: string; type?: string; packId?: string }): Promise<ReviewItemsResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
@@ -72,6 +74,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.records;
     },
     getRecord: (id: string) => requestJson<RecordDetail>(`/api/records/${encodeURIComponent(id)}`),
+    getExportPreview: (packId: string, profileId: string) =>
+      requestJson<ExportArtifact>(
+        `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`
+      ),
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(

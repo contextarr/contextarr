@@ -1,5 +1,7 @@
 # @contextarr/export-profiles
 
-Phase 0 placeholder for future export profile parsing and export target support.
+Profile-driven export generation for local Contextarr packs.
 
-No export logic is implemented yet.
+Phase 7 supports ChatGPT, Claude, Codex, generic Markdown, and JSON records exports.
+Exports are generated from local pack files only; the package does not mutate packs,
+fetch URLs, call AI APIs, upload data, or execute pack content.

@@ -12,6 +12,7 @@
     "test": "vitest run --root ../.. apps/cli/src"
   },
   "dependencies": {
+    "@contextarr/export-profiles": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/renderer": "workspace:*",
     "commander": "^12.1.0"

@@ -55,6 +55,7 @@
 - Parse export profiles.
 - Build redacted exports.
 - Support ChatGPT, Claude, Codex, generic Markdown, and JSON records.
+- Add CLI export, local API preview, and web copy/download flows.
 
 ## Phase 8: Read-Only MCP
 

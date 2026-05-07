@@ -1,5 +1,5 @@
 {
-  "name": "@contextarr/server",
+  "name": "@contextarr/export-profiles",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,18 +7,12 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "tsx src/main.ts",
-    "start": "tsx src/main.ts",
-    "rescan": "tsx src/rescan.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --root ../.."
+    "test": "vitest run --root ../.. packages/export-profiles/src"
   },
   "dependencies": {
-    "@contextarr/export-profiles": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/schema": "workspace:*",
-    "better-sqlite3": "^11.8.1",
-    "fastify": "^5.2.1",
     "gray-matter": "^4.0.3",
     "yaml": "^2.6.1"
   }

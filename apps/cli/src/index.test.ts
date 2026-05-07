@@ -153,4 +153,47 @@ describe("contextarr CLI", () => {
     expect(code).toBe(1);
     expect(output.stderr).toContain("Validation failed");
   });
+
+  it("exports a single profile to generated files", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const code = await runCli(
+      ["export", path.join(demoPacksDir, "ai-workstation-pack"), "--profile", "ai-workstation-chatgpt", "--out", outDir],
+      output.io
+    );
+
+    expect(code).toBe(0);
+    expect(output.stdout).toContain("Exported 1 file(s)");
+    expect(fs.readFileSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-chatgpt.md"), "utf8")).toContain(
+      "ChatGPT Context Export"
+    );
+  });
+
+  it("exports all profiles for all demo packs", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const code = await runCli(["export", demoPacksDir, "--all", "--out", outDir], output.io);
+
+    expect(code).toBe(0);
+    expect(output.stdout).toContain("Exported 25 file(s)");
+    expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
+    expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);
+  });
+
+  it("returns non-zero for invalid export usage and missing profiles", async () => {
+    const usageOutput = createIo();
+    const missingProfileOutput = createIo();
+    const outDir = tempDir();
+
+    expect(await runCli(["export", path.join(demoPacksDir, "ai-workstation-pack"), "--out", outDir], usageOutput.io)).toBe(2);
+    expect(usageOutput.stderr).toContain("Choose exactly one export mode");
+
+    expect(
+      await runCli(
+        ["export", path.join(demoPacksDir, "ai-workstation-pack"), "--profile", "missing-profile", "--out", outDir],
+        missingProfileOutput.io
+      )
+    ).toBe(1);
+    expect(missingProfileOutput.stderr).toContain("Export profile not found");
+  });
 });

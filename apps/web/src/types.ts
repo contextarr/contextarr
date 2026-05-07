@@ -59,6 +59,55 @@ export interface ExportProfileSummary {
   tokenBudget?: number | null;
 }
 
+export interface ExportRecordSummary {
+  id: string;
+  title: string;
+  type: string;
+  privacy: string;
+  tags: string[];
+  sources: string[];
+}
+
+export interface ExcludedExportRecord extends ExportRecordSummary {
+  reason: string;
+}
+
+export interface ExportSourceSummary {
+  id: string;
+  title: string;
+  type: string;
+  url?: string;
+  path?: string;
+  trust?: string;
+  status?: string;
+}
+
+export interface ExportWarning {
+  code: string;
+  message: string;
+  recordId?: string;
+  pattern?: string;
+}
+
+export interface ExportArtifact {
+  packId: string;
+  packName: string;
+  profileId: string;
+  profileName: string;
+  target: string;
+  format: string;
+  filename: string;
+  mimeType: string;
+  content: string;
+  includedRecords: ExportRecordSummary[];
+  excludedRecords: ExcludedExportRecord[];
+  sources: ExportSourceSummary[];
+  warnings: ExportWarning[];
+  generatedAt: string;
+  byteLength: number;
+  estimatedTokens: number;
+}
+
 export interface PackDetail extends PackSummary {
   author: string;
   license: string;
@@ -183,4 +232,5 @@ export type Route =
   | { name: "pack"; packId: string }
   | { name: "record"; recordId: string }
   | { name: "reviewQueue" }
+  | { name: "exports" }
   | { name: "health" };

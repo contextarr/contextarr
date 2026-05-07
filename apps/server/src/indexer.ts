@@ -163,6 +163,10 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
   };
 }
 
+export function getPackPath(db: ContextarrDatabase, packId: string): string | undefined {
+  return db.prepare("SELECT pack_path FROM packs WHERE id = ?").pluck().get(packId) as string | undefined;
+}
+
 export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilters = {}): ReviewItem[] {
   const where: string[] = [];
   const values: unknown[] = [];

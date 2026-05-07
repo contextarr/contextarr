@@ -11,7 +11,9 @@ import {
   CircleHelp,
   CloudDownload,
   Code2,
+  Copy,
   Database,
+  Download,
   ExternalLink,
   FileText,
   Filter,
@@ -41,6 +43,7 @@ import {
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
+import { buildExportOptions, copyTextToClipboard, downloadExportArtifact, getExportTargets } from "./exports";
 import {
   createCoverVisual,
   filterAndSortPacks,
@@ -51,8 +54,9 @@ import {
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
 import { filterReviewItems, reviewPackName, summarizeReviewItems, type ReviewFilters } from "./review";
-import { healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
+import { exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
 import type {
+  ExportArtifact,
   ExportProfileSummary,
   HealthCheck,
   HealthResponse,
@@ -76,7 +80,7 @@ const navItems = [
   { label: "Sources", icon: Database },
   { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
   { label: "Composer", icon: PenLine },
-  { label: "Exports", icon: CloudDownload },
+  { label: "Exports", icon: CloudDownload, href: exportsHref(), route: "exports" },
   { label: "Registry", icon: Package },
   { label: "Health", icon: HeartPulse, href: healthHref(), route: "health" },
   { label: "Settings", icon: Settings }
@@ -216,6 +220,8 @@ export function App() {
           <RecordDetailPage recordId={route.recordId} packs={packs} />
         ) : route.name === "reviewQueue" ? (
           <ReviewQueuePage packs={packs} onStatusChanged={loadDashboard} />
+        ) : route.name === "exports" ? (
+          <ExportsPage packs={packs} />
         ) : route.name === "health" ? (
           <HealthPage health={health} packs={packs} />
         ) : (
@@ -278,7 +284,7 @@ function Sidebar({ health, route }: { health: HealthResponse | null; route: Rout
         </div>
         <p>{health ? `${health.counts.packs} packs / ${health.counts.records} records` : "Local API status loading"}</p>
         <div className="system-meta">
-          <span>v0.6.0</span>
+          <span>v0.7.0</span>
           <span>{health?.authRequired ? "Token auth" : "Local dev"}</span>
         </div>
       </div>
@@ -715,7 +721,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       {activeTab === "overview" ? <PackOverview pack={pack} records={records} packs={packs} /> : null}
       {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
-      {activeTab === "exports" ? <ExportsTab profiles={pack.exportProfiles} /> : null}
+      {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
       {activeTab === "activity" ? <PlaceholderTab title="Activity" detail="Activity timelines arrive after pack health and review workflows are implemented." /> : null}
       {activeTab === "changelog" ? <PlaceholderTab title="Changelog" detail="Static HTML can render CHANGELOG.md; API-backed changelog content remains a later read endpoint." /> : null}
@@ -915,13 +921,250 @@ function SourcesTab({ sources }: { sources: SourceSummary[] }) {
   );
 }
 
-function ExportsTab({ profiles }: { profiles: ExportProfileSummary[] }) {
+function ExportsTab({ pack }: { pack: PackDetail }) {
   return (
-    <article className="detail-card">
-      <h2>Export Profiles</h2>
-      <ProfileList profiles={profiles} />
-      <p className="muted-note">Profiles are displayed as metadata only. Export generation starts in Phase 7.</p>
+    <ExportWorkbench pack={pack} compact />
+  );
+}
+
+function ExportsPage({ packs }: { packs: PackSummary[] }) {
+  const [selectedPackId, setSelectedPackId] = useState("");
+  const [pack, setPack] = useState<PackDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedPackId && packs[0]) {
+      setSelectedPackId(packs[0].id);
+    }
+  }, [packs, selectedPackId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedPackId) {
+      setPack(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    async function loadPack() {
+      try {
+        const response = await apiClient.getPack(selectedPackId);
+        if (!cancelled) {
+          setPack(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load export profiles.");
+          setPack(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPack();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPackId]);
+
+  if (packs.length === 0) {
+    return <StateCard title="No packs indexed" detail="The local API returned an empty pack library." icon={CloudDownload} />;
+  }
+
+  return (
+    <section className="library-panel" aria-labelledby="exports-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <CloudDownload size={16} aria-hidden="true" />
+            <span>Exports</span>
+          </div>
+          <h1 id="exports-title">Export Center</h1>
+          <p>Generate local, profile-driven context artifacts for assistant and agent targets.</p>
+        </div>
+        <label className="select-control export-pack-select">
+          <Package size={16} aria-hidden="true" />
+          <select value={selectedPackId} onChange={(event) => setSelectedPackId(event.target.value)}>
+            {packs.map((candidate) => (
+              <option value={candidate.id} key={candidate.id}>
+                {candidate.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {error ? (
+        <StateCard title="Exports unavailable" detail={error} icon={CloudDownload} />
+      ) : loading || !pack ? (
+        <DetailLoading />
+      ) : (
+        <ExportWorkbench pack={pack} />
+      )}
+    </section>
+  );
+}
+
+function ExportWorkbench({ pack, compact = false }: { pack: PackDetail; compact?: boolean }) {
+  const [target, setTarget] = useState("all");
+  const [profileId, setProfileId] = useState(pack.exportProfiles[0]?.id ?? "");
+  const [artifact, setArtifact] = useState<ExportArtifact | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const targets = getExportTargets(pack.exportProfiles);
+  const options = buildExportOptions(pack, target);
+  const selectedProfile = options.find((option) => option.profile.id === profileId)?.profile ?? options[0]?.profile;
+
+  useEffect(() => {
+    setTarget("all");
+    setProfileId(pack.exportProfiles[0]?.id ?? "");
+    setArtifact(null);
+    setError(null);
+    setCopied(false);
+  }, [pack.id, pack.exportProfiles]);
+
+  useEffect(() => {
+    if (!selectedProfile && options[0]) {
+      setProfileId(options[0].profile.id);
+    } else if (selectedProfile && selectedProfile.id !== profileId) {
+      setProfileId(selectedProfile.id);
+    }
+  }, [options, profileId, selectedProfile]);
+
+  async function previewExport() {
+    if (!selectedProfile) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setCopied(false);
+
+    try {
+      setArtifact(await apiClient.getExportPreview(pack.id, selectedProfile.id));
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : "Unable to build export preview.");
+      setArtifact(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyExport() {
+    if (!artifact) {
+      return;
+    }
+
+    const copiedToClipboard = await copyTextToClipboard(artifact.content);
+    setCopied(copiedToClipboard);
+    if (!copiedToClipboard) {
+      setError("Unable to copy export content from this browser session.");
+    }
+  }
+
+  return (
+    <article className={compact ? "detail-card export-workbench compact" : "detail-card export-workbench"}>
+      <div className="export-header">
+        <div>
+          <h2>Export Profiles</h2>
+          <p>{pack.exportProfiles.length} profile-driven targets for {pack.name}.</p>
+        </div>
+        <div className="export-controls">
+          <label className="select-control">
+            <Filter size={16} aria-hidden="true" />
+            <select value={target} onChange={(event) => setTarget(event.target.value)}>
+              <option value="all">All targets</option>
+              {targets.map((candidate) => (
+                <option value={candidate} key={candidate}>
+                  {formatPackType(candidate)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-control">
+            <CloudDownload size={16} aria-hidden="true" />
+            <select value={selectedProfile?.id ?? ""} onChange={(event) => setProfileId(event.target.value)}>
+              {options.map((option) => (
+                <option value={option.profile.id} key={option.profile.id}>
+                  {option.profile.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="primary-action" type="button" onClick={previewExport} disabled={!selectedProfile || loading}>
+            <CloudDownload size={18} aria-hidden="true" />
+            <span>{loading ? "Building" : "Preview"}</span>
+          </button>
+        </div>
+      </div>
+
+      <ProfileList profiles={options.map((option) => option.profile)} />
+
+      {error ? <StateCard title="Export failed" detail={error} icon={ShieldAlert} /> : null}
+      {artifact ? (
+        <ExportPreview artifact={artifact} onCopy={copyExport} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+      ) : (
+        <div className="export-placeholder">
+          <CloudDownload size={26} aria-hidden="true" />
+          <h2>No preview loaded</h2>
+          <p>{selectedProfile ? `${selectedProfile.name} is ready.` : "No export profile matches this target."}</p>
+        </div>
+      )}
     </article>
+  );
+}
+
+function ExportPreview({
+  artifact,
+  copied,
+  onCopy,
+  onDownload
+}: {
+  artifact: ExportArtifact;
+  copied: boolean;
+  onCopy(): void;
+  onDownload(): void;
+}) {
+  return (
+    <div className="export-preview">
+      <div className="export-preview-toolbar">
+        <div>
+          <strong>{artifact.filename}</strong>
+          <span>{formatPackType(artifact.target)} / {artifact.estimatedTokens} estimated tokens / {artifact.byteLength} bytes</span>
+        </div>
+        <div className="export-actions">
+          <button type="button" onClick={onCopy}>
+            <Copy size={16} aria-hidden="true" />
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+          <button type="button" onClick={onDownload}>
+            <Download size={16} aria-hidden="true" />
+            <span>Download</span>
+          </button>
+        </div>
+      </div>
+      <div className="export-stats">
+        <Stat value={artifact.includedRecords.length} label="Included" />
+        <Stat value={artifact.excludedRecords.length} label="Excluded" />
+        <Stat value={artifact.sources.length} label="Sources" />
+        <Stat value={artifact.warnings.length} label="Warnings" />
+      </div>
+      {artifact.warnings.length > 0 ? (
+        <ul className="export-warning-list">
+          {artifact.warnings.map((warning) => (
+            <li key={`${warning.code}-${warning.recordId ?? warning.pattern ?? warning.message}`}>{warning.message}</li>
+          ))}
+        </ul>
+      ) : null}
+      <pre className="export-code"><code>{artifact.content}</code></pre>
+    </div>
   );
 }
 

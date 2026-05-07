@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 6: Pack Health and Review Queue.
+This repository is in Phase 7: Export Engine.
 
 Current scope:
 
@@ -34,14 +34,17 @@ Current scope:
 - Deterministic Pack Health v0.
 - SQLite-backed review items and review status actions.
 - Review Queue and Pack Health dashboard pages.
+- Profile-driven export generation for ChatGPT, Claude, Codex, generic Markdown, and JSON records.
+- `contextarr export <path> --profile <id> --out <path>` and `contextarr export <path> --all --out <path>` CLI commands.
+- Local API export preview endpoint.
+- Export Center and pack-level export preview, copy, and download UI.
 
 Not included yet:
 
 - MCP implementation.
-- Importers or exporters.
-- Export generation.
+- Importers.
 - Pack file editing from review actions.
-- Export preview or export generation.
+- Composer workflows.
 
 ## Product Positioning
 
@@ -51,8 +54,8 @@ Contextarr is not a chatbot, hosted memory vault, marketplace, RAG app, or agent
 Local sources in.
 Validated context packs out.
 Human-readable dashboard.
+Profile-driven AI exports.
 Read-only MCP later.
-AI exports later.
 ```
 
 ## Repository Layout
@@ -67,7 +70,7 @@ packages/
   schema/              Zod schemas
   renderer/            Sanitized Markdown and static HTML renderer
   pack-validator/      Pack validation engine
-  export-profiles/     Export profile support, later
+  export-profiles/     Profile-driven export engine
 
 demo-packs/            Fake public-safe demo packs
 docs/                  Product, architecture, security, and roadmap docs
@@ -105,7 +108,7 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase6:verify
+pnpm phase7:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```
@@ -120,6 +123,15 @@ pnpm --filter @contextarr/cli contextarr render demo-packs --out rendered/demo-p
 ```
 
 Static HTML output is generated under ignored local folders such as `rendered/`.
+
+Generate local export files:
+
+```bash
+pnpm --filter @contextarr/cli contextarr export demo-packs/ai-workstation-pack --profile ai-workstation-codex --out generated-exports/ai-workstation
+pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated-exports/demo-packs
+```
+
+Generated export files are derived artifacts and are ignored under `generated-exports/`.
 
 ## Local API
 
@@ -153,6 +165,7 @@ Available local API endpoints:
 - `GET /api/packs`
 - `GET /api/packs/:id`
 - `GET /api/packs/:id/health`
+- `GET /api/packs/:id/exports/:profileId/preview`
 - `GET /api/packs/:id/records`
 - `GET /api/records/:id`
 - `GET /api/review-items`

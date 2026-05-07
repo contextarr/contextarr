@@ -1,0 +1,19 @@
+id: ai-workstation-json-records
+name: AI Workstation JSON Records Export
+target: json_records
+format: json
+privacy_mode: redacted
+include:
+  records:
+    - ai-workstation.hardware-overview
+    - ai-workstation.local-ai-stack
+    - ai-workstation.storage-layout
+    - ai-workstation.networking-notes
+    - ai-workstation.troubleshooting-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 24000
+sections:
+  - records
+  - sources

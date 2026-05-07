@@ -45,7 +45,7 @@ describe("Contextarr API", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 15,
+        exportProfiles: 25,
         reviewItems: 0,
         openReviewItems: 0
       }
@@ -83,7 +83,7 @@ describe("Contextarr API", () => {
           id: "ai-workstation-pack",
           recordCount: 5,
           sourceCount: 5,
-          exportProfileCount: 3,
+          exportProfileCount: 5,
           healthStatus: "healthy",
           coverImage: null,
           reviewQueueCount: 0
@@ -146,9 +146,47 @@ describe("Contextarr API", () => {
       counts: {
         records: 5,
         sources: 5,
-        exportProfiles: 3
+        exportProfiles: 5
       }
     });
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exports/:profileId/preview returns an export artifact", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex",
+      target: "codex",
+      format: "markdown",
+      filename: "ai-workstation-codex.md"
+    });
+    expect(response.json().content).toContain("Codex Context Export");
+    expect(response.json().includedRecords).toHaveLength(5);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exports/:profileId/preview reports missing packs and profiles", async () => {
+    const app = createApp({ config, db });
+    const missingPack = await app.inject({
+      method: "GET",
+      url: "/api/packs/missing-pack/exports/ai-workstation-codex/preview"
+    });
+    const missingProfile = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/missing-profile/preview"
+    });
+
+    expect(missingPack.statusCode).toBe(404);
+    expect(missingProfile.statusCode).toBe(404);
     await app.close();
     db.close();
   });
@@ -264,6 +302,26 @@ describe("Contextarr API", () => {
 
     expect(reviewResponse.statusCode).toBe(401);
     expect(healthResponse.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on export preview routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const blocked = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const allowed = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(blocked.statusCode).toBe(401);
+    expect(allowed.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

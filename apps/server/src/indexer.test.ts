@@ -23,13 +23,13 @@ describe("SQLite indexer", () => {
         packsSkipped: 0,
         recordsIndexed: 25,
         sourcesIndexed: 25,
-        exportProfilesIndexed: 15
+        exportProfilesIndexed: 25
       });
       expect(stats).toMatchObject({
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 15,
+        exportProfiles: 25,
         reviewItems: 0,
         openReviewItems: 0
       });
@@ -49,7 +49,7 @@ describe("SQLite indexer", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 15,
+        exportProfiles: 25,
         reviewItems: 0,
         openReviewItems: 0
       });

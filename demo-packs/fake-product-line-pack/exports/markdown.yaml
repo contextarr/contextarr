@@ -1,0 +1,20 @@
+id: fake-product-line-markdown
+name: Fake Product Line Generic Markdown Export
+target: markdown
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - fake-product-line.product-overview
+    - fake-product-line.model-comparison
+    - fake-product-line.support-matrix
+    - fake-product-line.release-notes
+    - fake-product-line.sales-support-faq
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 18000
+sections:
+  - summary
+  - records
+  - sources

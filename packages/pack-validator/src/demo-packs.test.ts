@@ -24,6 +24,8 @@ const requiredFiles = [
   "exports/chatgpt.yaml",
   "exports/claude.yaml",
   "exports/codex.yaml",
+  "exports/markdown.yaml",
+  "exports/json-records.yaml",
   "rules/validation.yaml",
   "rules/redaction.yaml",
   "rules/freshness.yaml"

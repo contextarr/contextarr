@@ -96,6 +96,22 @@ describe("Contextarr API client", () => {
     });
   });
 
+  it("reads export preview routes", async () => {
+    const requests: string[] = [];
+    const client = createApiClient({
+      fetchImpl: async (url) => {
+        requests.push(String(url));
+        return jsonResponse({ packId: "pack-1", profileId: "profile-1", content: "# Export" });
+      }
+    });
+
+    await expect(client.getExportPreview("pack-1", "profile-1")).resolves.toMatchObject({
+      profileId: "profile-1",
+      content: "# Export"
+    });
+    expect(requests).toEqual(["/api/packs/pack-1/exports/profile-1/preview"]);
+  });
+
   it("throws ApiError for failed responses", async () => {
     const client = createApiClient({
       fetchImpl: async () => jsonResponse({ message: "API token required." }, 401)

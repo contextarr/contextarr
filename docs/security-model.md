@@ -71,6 +71,10 @@ AI-drafted content, when supported later, must enter a review queue. It must not
 
 Phase 6 review queue actions are SQLite-only local app state. Accept, Ignore, and Mark Reviewed do not mutate records, manifests, source maps, rules, or export profiles.
 
+## Export Security
+
+Phase 7 exports are generated from validated local pack files and data-only export profiles. Export generation must not mutate pack files, fetch source URLs, call AI APIs, upload data, execute pack content, or bypass redaction rules. CLI output belongs under ignored local artifact folders such as `generated-exports/`.
+
 ## Telemetry
 
 Telemetry is disabled and out of scope. Contextarr should not phone home by default.

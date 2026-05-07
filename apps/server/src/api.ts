@@ -1,9 +1,11 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import { buildPackExport, ExportError } from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
 import {
   getIndexStats,
   getPack,
   getPackHealth,
+  getPackPath,
   getPackRecords,
   getPacks,
   getRecord,
@@ -81,6 +83,30 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return health;
+  });
+
+  app.get<{ Params: { id: string; profileId: string } }>("/api/packs/:id/exports/:profileId/preview", async (request, reply) => {
+    const packPath = getPackPath(db, request.params.id);
+    if (!packPath) {
+      return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+    }
+
+    try {
+      return buildPackExport({
+        packPath,
+        profileId: request.params.profileId
+      });
+    } catch (error) {
+      if (error instanceof ExportError && error.code === "profile_not_found") {
+        return reply.code(404).send({ error: "not_found", message: error.message });
+      }
+
+      if (error instanceof ExportError) {
+        return reply.code(400).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
   });
 
   app.get<{

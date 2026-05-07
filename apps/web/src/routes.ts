@@ -16,6 +16,10 @@ export function parseHashRoute(hash: string): Route {
     return { name: "reviewQueue" };
   }
 
+  if (parts[0] === "exports") {
+    return { name: "exports" };
+  }
+
   if (parts[0] === "health") {
     return { name: "health" };
   }
@@ -33,6 +37,10 @@ export function recordHref(recordId: string): string {
 
 export function reviewQueueHref(): string {
   return "#/review-queue";
+}
+
+export function exportsHref(): string {
+  return "#/exports";
 }
 
 export function healthHref(): string {

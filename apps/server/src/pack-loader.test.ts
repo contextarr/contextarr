@@ -28,7 +28,7 @@ describe("loadPacks", () => {
 
     expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(25);
     expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(25);
-    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(15);
+    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(25);
   });
 
   it("skips invalid packs without failing the whole load", () => {
