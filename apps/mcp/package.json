@@ -1,0 +1,24 @@
+{
+  "name": "@contextarr/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "contextarr-mcp": "./src/main.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. apps/mcp"
+  },
+  "dependencies": {
+    "@contextarr/export-profiles": "workspace:*",
+    "@contextarr/server": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  }
+}

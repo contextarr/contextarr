@@ -59,8 +59,8 @@
 
 ## Phase 8: Read-Only MCP
 
-- Add local read-only MCP server.
-- Expose selected context tools.
+- Add local read-only stdio MCP server.
+- Expose `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`.
 - Add client setup docs.
 
 ## Phase 9: Importers

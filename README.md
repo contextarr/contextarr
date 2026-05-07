@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 7: Export Engine.
+This repository is in Phase 8: Read-Only MCP.
 
 Current scope:
 
@@ -38,10 +38,10 @@ Current scope:
 - `contextarr export <path> --profile <id> --out <path>` and `contextarr export <path> --all --out <path>` CLI commands.
 - Local API export preview endpoint.
 - Export Center and pack-level export preview, copy, and download UI.
+- Local stdio MCP server with read-only pack, record, search, and export-preview tools.
 
 Not included yet:
 
-- MCP implementation.
 - Importers.
 - Pack file editing from review actions.
 - Composer workflows.
@@ -55,7 +55,7 @@ Local sources in.
 Validated context packs out.
 Human-readable dashboard.
 Profile-driven AI exports.
-Read-only MCP later.
+Read-only local MCP.
 ```
 
 ## Repository Layout
@@ -65,6 +65,7 @@ apps/
   web/                 React and Vite local dashboard
   server/              Node.js Fastify API
   cli/                 Contextarr CLI
+  mcp/                 Read-only stdio MCP server
 
 packages/
   schema/              Zod schemas
@@ -87,7 +88,7 @@ docs/                  Product, architecture, security, and roadmap docs
 - Zod for schemas and validation.
 - Sanitized Markdown rendering.
 - Docker Compose for local operation.
-- Read-only MCP SDK integration later.
+- Read-only MCP SDK integration over stdio.
 
 ## Safety Boundaries
 
@@ -108,7 +109,7 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase7:verify
+pnpm phase8:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```
@@ -133,6 +134,14 @@ pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated
 
 Generated export files are derived artifacts and are ignored under `generated-exports/`.
 
+Run the read-only MCP server:
+
+```bash
+pnpm --filter @contextarr/mcp dev
+```
+
+The MCP server uses stdio only. It exposes `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`. See [docs/mcp.md](docs/mcp.md).
+
 ## Local API
 
 Start the local API after installing dependencies:
@@ -156,6 +165,10 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
 - `VITE_CONTEXTARR_API_BASE=` optional web override; leave empty to use the Vite `/api` proxy
 - `VITE_CONTEXTARR_API_TOKEN=` optional web token for protected local APIs
+- `CONTEXTARR_MCP_RESCAN_ON_START=true`
+- `CONTEXTARR_MCP_MAX_RESULTS=8`
+- `CONTEXTARR_MCP_MAX_RECORD_CHARS=12000`
+- `CONTEXTARR_MCP_ALLOW_PRIVATE=false`
 
 When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
 

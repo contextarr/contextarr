@@ -17,6 +17,7 @@
       "@contextarr/schema": ["packages/schema/src/index.ts"],
       "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"],
       "@contextarr/export-profiles": ["packages/export-profiles/src/index.ts"],
+      "@contextarr/server": ["apps/server/src/index.ts"],
       "@contextarr/renderer": ["packages/renderer/src/index.ts"],
       "@contextarr/renderer/markdown": ["packages/renderer/src/markdown.ts"],
       "@contextarr/renderer/static": ["packages/renderer/src/static.ts"]

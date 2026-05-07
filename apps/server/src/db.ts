@@ -141,6 +141,24 @@ export function createSchema(db: ContextarrDatabase): void {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS mcp_query_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool TEXT NOT NULL,
+      pack_id TEXT,
+      record_id TEXT,
+      profile_id TEXT,
+      status TEXT NOT NULL,
+      result_count INTEGER NOT NULL,
+      query_hash TEXT,
+      query_length INTEGER,
+      duration_ms INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_mcp_query_log_tool ON mcp_query_log(tool);
+    CREATE INDEX IF NOT EXISTS idx_mcp_query_log_created_at ON mcp_query_log(created_at);
+
     CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
       record_id UNINDEXED,
       pack_id UNINDEXED,

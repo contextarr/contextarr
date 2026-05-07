@@ -57,13 +57,15 @@ Markdown rendering is sanitized before HTML is displayed or written to static ou
 
 ## Read-Only MCP
 
-MCP is later-phase and read-only. It must not:
+The MCP server is local, stdio-only, and read-only. It must not:
 
 - Mutate files.
 - Run commands.
 - Call network services.
 - Access secrets.
 - Return raw private source dumps unless explicitly configured.
+
+`CONTEXTARR_MCP_ALLOW_PRIVATE=false` is the default. Secret record bodies are never returned through MCP. Private, internal, or sensitive record bodies are omitted unless private MCP access is explicitly enabled. MCP query logs store metadata only: tool name, ids, query hash and length, result count, timing, and sanitized flags. They must not store raw query text or returned context.
 
 ## Human Review
 
@@ -74,6 +76,8 @@ Phase 6 review queue actions are SQLite-only local app state. Accept, Ignore, an
 ## Export Security
 
 Phase 7 exports are generated from validated local pack files and data-only export profiles. Export generation must not mutate pack files, fetch source URLs, call AI APIs, upload data, execute pack content, or bypass redaction rules. CLI output belongs under ignored local artifact folders such as `generated-exports/`.
+
+MCP export previews reuse the same export engine and do not write generated files.
 
 ## Telemetry
 

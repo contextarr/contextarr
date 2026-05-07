@@ -14,7 +14,7 @@ Contextarr is a local-first context pack compiler and manager. Source files are 
 - Use Zod for schemas and validation.
 - Use sanitized Markdown rendering for human-readable records and static output.
 - Use Docker Compose for local operation.
-- Add read-only MCP later as a local context access layer.
+- Use read-only stdio MCP as a local context access layer.
 
 ## Monorepo Shape
 
@@ -22,6 +22,7 @@ Contextarr is a local-first context pack compiler and manager. Source files are 
 apps/web
 apps/server
 apps/cli
+apps/mcp
 packages/schema
 packages/renderer
 packages/pack-validator
@@ -38,7 +39,7 @@ docs
 4. The web UI reads from the local API.
 5. The renderer produces sanitized human-readable output.
 6. Export profiles produce target-specific context files.
-7. MCP, when added, exposes selected context through read-only local tools.
+7. The MCP server exposes selected context through read-only local stdio tools.
 
 ## Source of Truth
 
@@ -50,7 +51,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 adds export preview, copy, and download flows for profile-driven generated artifacts.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts.
 
 ## Renderer Direction
 
@@ -64,10 +65,12 @@ Review item statuses are local SQLite app state. Rescans preserve statuses by de
 
 Generated exports are derived artifacts. The CLI may write them to ignored local folders such as `generated-exports/`; API previews return content only and do not write files.
 
+MCP query metadata is local SQLite app state. It records tool name, related ids, query hash and length, result count, timing, and sanitized metadata only. It must not store raw result content or full raw query text.
+
 ## Local API Direction
 
 The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
 
 ## MCP Direction
 
-MCP is later-phase and read-only in v0/v1. It must not mutate files, run commands, call external services, or expose raw private sources unless explicitly configured.
+MCP is implemented as a local stdio process in `apps/mcp`. It uses the official TypeScript SDK, reuses the derived SQLite index, and exposes read-only tools for packs, records, search, export profiles, and export previews. It must not mutate files, run commands, call external services, or expose raw private sources unless explicitly configured.
