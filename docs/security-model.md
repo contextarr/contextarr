@@ -47,7 +47,9 @@ Packs must not run code in v0 or v1.
 
 ## Local API Security
 
-The local API should bind to `127.0.0.1` by default. LAN mode must be explicit and warning-gated later. If the API is enabled beyond a local-only development path, it should require a local auth token.
+The local API binds to `127.0.0.1` by default. LAN mode must be explicit and warning-gated later.
+
+Local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only whether auth is required; it must never return the configured token.
 
 ## Read-Only MCP
 

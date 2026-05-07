@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 3: local pack index and API.
+This repository is in Phase 3.1: API readiness for the local web dashboard.
 
 Current scope:
 
@@ -22,6 +22,9 @@ Current scope:
 - Five public-safe demo packs under `demo-packs/`.
 - Rebuildable SQLite index for local pack folders.
 - Local Fastify API for pack, record, health, search, and rescan data.
+- Hardened local search for UI input.
+- UI-ready pack summary fields for cover metadata and review queue counts.
+- Optional local API token auth.
 
 Not included yet:
 
@@ -112,8 +115,11 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_PORT=3210`
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
+- `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
 
-Available Phase 3 endpoints:
+When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
+
+Available Phase 3.1 endpoints:
 
 - `GET /api/health`
 - `GET /api/packs`

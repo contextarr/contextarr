@@ -76,6 +76,7 @@ export function getPacks(db: ContextarrDatabase): PackSummary[] {
         validation_errors AS validationErrors, validation_warnings AS validationWarnings,
         record_count AS recordCount, source_count AS sourceCount,
         export_profile_count AS exportProfileCount, accent_color AS accentColor,
+        cover_image AS coverImage, review_queue_count AS reviewQueueCount,
         last_reviewed_at AS lastReviewedAt, updated_at AS updatedAt
       FROM packs
       ORDER BY name`
@@ -111,6 +112,8 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
     updatedAt: pack.updated_at,
     lastReviewedAt: pack.last_reviewed_at,
     accentColor: pack.accent_color,
+    coverImage: pack.cover_image,
+    reviewQueueCount: pack.review_queue_count,
     packPath: pack.pack_path,
     manifest: JSON.parse(String(pack.manifest_json)),
     counts: {
@@ -222,19 +225,7 @@ export function searchIndex(db: ContextarrDatabase, query: string): unknown[] {
     )
     .all(likeQuery, likeQuery, likeQuery);
 
-  const recordMatches = ftsQuery
-    ? db
-        .prepare(
-          `SELECT records.id, 'record' AS kind, records.title, records.pack_id AS packId,
-            snippet(records_fts, 3, '[', ']', '...', 12) AS snippet
-           FROM records_fts
-           JOIN records ON records.id = records_fts.record_id
-           WHERE records_fts MATCH ?
-           ORDER BY rank
-           LIMIT 30`
-        )
-        .all(ftsQuery)
-    : [];
+  const recordMatches = searchRecords(db, trimmed, ftsQuery);
 
   return [...packMatches, ...recordMatches];
 }
@@ -242,20 +233,23 @@ export function searchIndex(db: ContextarrDatabase, query: string): unknown[] {
 function insertPack(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string): void {
   const score = calculateHealthScore(pack);
   const status = score >= 90 ? "healthy" : score >= 70 ? "degraded" : "needs_review";
+  const reviewQueueCount = countReviewQueueRecords(pack);
 
   db.prepare(
     `INSERT INTO packs (
       id, name, version, description, type, visibility, trust_level, author, license,
       created_at, updated_at, last_reviewed_at, contains_personal_data,
-      contains_executable_code, requires_network, accent_color, pack_path,
+      contains_executable_code, requires_network, accent_color, cover_image, pack_path,
       manifest_json, validation_errors, validation_warnings, health_score,
-      health_status, record_count, source_count, export_profile_count, indexed_at
+      health_status, record_count, source_count, export_profile_count,
+      review_queue_count, indexed_at
     ) VALUES (
       @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
       @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
-      @containsExecutableCode, @requiresNetwork, @accentColor, @packPath,
+      @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @packPath,
       @manifestJson, @validationErrors, @validationWarnings, @healthScore,
-      @healthStatus, @recordCount, @sourceCount, @exportProfileCount, @indexedAt
+      @healthStatus, @recordCount, @sourceCount, @exportProfileCount,
+      @reviewQueueCount, @indexedAt
     )`
   ).run({
     id: pack.manifest.id,
@@ -274,6 +268,7 @@ function insertPack(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string)
     containsExecutableCode: pack.manifest.containsExecutableCode ? 1 : 0,
     requiresNetwork: pack.manifest.requiresNetwork ? 1 : 0,
     accentColor: pack.manifest.assets.accentColor ?? null,
+    coverImage: pack.manifest.assets.coverImage ?? null,
     packPath: path.resolve(pack.packPath),
     manifestJson: JSON.stringify(pack.manifest),
     validationErrors: pack.validation.summary.errors,
@@ -283,6 +278,7 @@ function insertPack(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string)
     recordCount: pack.records.length,
     sourceCount: pack.sources.length,
     exportProfileCount: pack.exportProfiles.length,
+    reviewQueueCount,
     indexedAt
   });
 }
@@ -408,6 +404,10 @@ function calculateHealthScore(pack: LoadedPack): number {
   return Math.max(0, 100 - pack.validation.summary.errors * 25 - pack.validation.summary.warnings * 5);
 }
 
+function countReviewQueueRecords(pack: LoadedPack): number {
+  return pack.records.filter((record) => record.metadata.review_status !== "approved").length;
+}
+
 function getCount(db: ContextarrDatabase, table: string): number {
   return db.prepare(`SELECT COUNT(*) FROM ${table}`).pluck().get() as number;
 }
@@ -431,12 +431,45 @@ function normalizeRecordSummary(record: Row): unknown {
 }
 
 function toFtsQuery(query: string): string {
-  return query
-    .split(/\s+/)
-    .map((part) => part.replace(/["'`*]/g, "").trim())
-    .filter(Boolean)
+  return (query.match(/[A-Za-z0-9_]+/g) ?? [])
     .map((part) => `${part}*`)
     .join(" OR ");
+}
+
+function searchRecords(db: ContextarrDatabase, query: string, ftsQuery: string): unknown[] {
+  if (!ftsQuery) {
+    return searchRecordsLike(db, query);
+  }
+
+  try {
+    return db
+      .prepare(
+        `SELECT records.id, 'record' AS kind, records.title, records.pack_id AS packId,
+          snippet(records_fts, 3, '[', ']', '...', 12) AS snippet
+         FROM records_fts
+         JOIN records ON records.id = records_fts.record_id
+         WHERE records_fts MATCH ?
+         ORDER BY rank
+         LIMIT 30`
+      )
+      .all(ftsQuery);
+  } catch {
+    return searchRecordsLike(db, query);
+  }
+}
+
+function searchRecordsLike(db: ContextarrDatabase, query: string): unknown[] {
+  const likeQuery = `%${query}%`;
+
+  return db
+    .prepare(
+      `SELECT id, 'record' AS kind, title, pack_id AS packId, substr(body, 1, 240) AS snippet
+       FROM records
+       WHERE title LIKE ? OR body LIKE ? OR tags_text LIKE ?
+       ORDER BY title
+       LIMIT 30`
+    )
+    .all(likeQuery, likeQuery, likeQuery);
 }
 
 type Row = Record<string, unknown>;

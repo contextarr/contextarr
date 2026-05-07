@@ -34,6 +34,7 @@ export function createSchema(db: ContextarrDatabase): void {
       contains_executable_code INTEGER NOT NULL,
       requires_network INTEGER NOT NULL,
       accent_color TEXT,
+      cover_image TEXT,
       pack_path TEXT NOT NULL,
       manifest_json TEXT NOT NULL,
       validation_errors INTEGER NOT NULL,
@@ -43,6 +44,7 @@ export function createSchema(db: ContextarrDatabase): void {
       record_count INTEGER NOT NULL,
       source_count INTEGER NOT NULL,
       export_profile_count INTEGER NOT NULL,
+      review_queue_count INTEGER NOT NULL DEFAULT 0,
       indexed_at TEXT NOT NULL
     );
 
@@ -126,6 +128,9 @@ export function createSchema(db: ContextarrDatabase): void {
       tags
     );
   `);
+
+  ensureColumn(db, "packs", "cover_image", "TEXT");
+  ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
 }
 
 export function clearDerivedIndex(db: ContextarrDatabase): void {
@@ -137,4 +142,13 @@ export function clearDerivedIndex(db: ContextarrDatabase): void {
     DELETE FROM pack_health;
     DELETE FROM packs;
   `);
+}
+
+function ensureColumn(db: ContextarrDatabase, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (columns.some((existingColumn) => existingColumn.name === column)) {
+    return;
+  }
+
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }

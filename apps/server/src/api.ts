@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { ContextarrDatabase } from "./db";
 import { getIndexStats, getPack, getPackRecords, getPacks, getRecord, rebuildIndex, searchIndex } from "./indexer";
 import type { ServerConfig } from "./types";
@@ -13,11 +13,24 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     logger: false
   });
 
+  app.addHook("onRequest", async (request, reply) => {
+    if (!config.apiToken || !isApiRequest(request) || isHealthRequest(request)) {
+      return;
+    }
+
+    if (getRequestToken(request) === config.apiToken) {
+      return;
+    }
+
+    return reply.code(401).send({ error: "unauthorized", message: "API token required." });
+  });
+
   app.get("/api/health", async () => {
     const stats = getIndexStats(db);
 
     return {
       status: "ok",
+      authRequired: Boolean(config.apiToken),
       host: config.host,
       port: config.port,
       packsDir: config.packsDir,
@@ -86,4 +99,26 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   });
 
   return app;
+}
+
+function isApiRequest(request: FastifyRequest): boolean {
+  return request.url.startsWith("/api/");
+}
+
+function isHealthRequest(request: FastifyRequest): boolean {
+  return request.method === "GET" && request.url.split("?")[0] === "/api/health";
+}
+
+function getRequestToken(request: FastifyRequest): string | undefined {
+  const authorization = getHeaderValue(request.headers.authorization);
+  const bearerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (bearerToken) {
+    return bearerToken;
+  }
+
+  return getHeaderValue(request.headers["x-contextarr-token"])?.trim() || undefined;
+}
+
+function getHeaderValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }

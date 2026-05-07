@@ -9,13 +9,14 @@ import type { ServerConfig } from "./types";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 
-function createTestContext(): { db: ContextarrDatabase; config: ServerConfig } {
+function createTestContext(apiToken?: string): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
     packsDir: demoPacksDir,
-    databasePath: ":memory:"
+    databasePath: ":memory:",
+    apiToken
   };
   rebuildIndex(db, demoPacksDir);
   return { db, config };
@@ -38,6 +39,7 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       status: "ok",
+      authRequired: false,
       counts: {
         packs: 5,
         records: 25,
@@ -61,7 +63,9 @@ describe("Contextarr API", () => {
           recordCount: 5,
           sourceCount: 5,
           exportProfileCount: 3,
-          healthStatus: "healthy"
+          healthStatus: "healthy",
+          coverImage: null,
+          reviewQueueCount: 0
         })
       ])
     );
@@ -76,6 +80,8 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       id: "ai-workstation-pack",
+      coverImage: null,
+      reviewQueueCount: 0,
       counts: {
         records: 5,
         sources: 5,
@@ -130,6 +136,24 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/search?q= handles punctuation-heavy input", async () => {
+    const app = createApp({ config, db });
+    const queries = ["C++", "tag:ai", "local-ai", "ai/workstation", "?", "\"quoted\""];
+
+    for (const query of queries) {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/search?q=${encodeURIComponent(query)}`
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(Array.isArray(response.json().results)).toBe(true);
+    }
+
+    await app.close();
+    db.close();
+  });
+
   it("POST /api/rescan rebuilds the configured index", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "POST", url: "/api/rescan" });
@@ -142,5 +166,84 @@ describe("Contextarr API", () => {
     });
     await app.close();
     db.close();
+  });
+
+  it("allows protected API requests when no token is configured", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs" });
+
+    expect(response.statusCode).toBe(200);
+    await app.close();
+    db.close();
+  });
+
+  it("reports authRequired from health when a token is configured", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({ method: "GET", url: "/api/health" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ authRequired: true });
+    expect(JSON.stringify(response.json())).not.toContain("test-token");
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("rejects protected API requests without a configured token", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({ method: "GET", url: "/api/packs" });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized", message: "API token required." });
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("allows protected API requests with a bearer token", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/packs",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("allows protected API requests with X-Contextarr-Token", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/packs",
+      headers: { "x-contextarr-token": "test-token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("rejects protected API requests with a wrong token", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/packs",
+      headers: { authorization: "Bearer wrong-token" }
+    });
+
+    expect(response.statusCode).toBe(401);
+    await app.close();
+    authedContext.db.close();
   });
 });

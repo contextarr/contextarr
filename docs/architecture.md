@@ -34,7 +34,7 @@ docs
 
 1. Pack files live in local folders.
 2. The validator reads pack manifests, records, sources, exports, and rules.
-3. The server indexes approved local pack files into SQLite.
+3. The server indexes approved local pack files into SQLite with FTS5 search.
 4. The web UI reads from the local API.
 5. The renderer produces sanitized human-readable output.
 6. Export profiles produce target-specific context files.
@@ -54,7 +54,11 @@ The web app should be a power-user dashboard, not a marketing site. Initial scre
 
 ## Database Direction
 
-SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 should be added later for local full-text search.
+SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record search, with safe fallback behavior for punctuation-heavy UI queries.
+
+## Local API Direction
+
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
 
 ## MCP Direction
 

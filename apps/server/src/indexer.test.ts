@@ -85,4 +85,19 @@ describe("SQLite indexer", () => {
       db.close();
     }
   });
+
+  it("returns array results without throwing for punctuation-heavy searches", () => {
+    const db = openDatabase(":memory:");
+
+    try {
+      rebuildIndex(db, demoPacksDir);
+
+      for (const query of ["workstation", "C++", "tag:ai", "local-ai", "ai/workstation", "?", "\"quoted\""]) {
+        expect(() => searchIndex(db, query)).not.toThrow();
+        expect(Array.isArray(searchIndex(db, query))).toBe(true);
+      }
+    } finally {
+      db.close();
+    }
+  });
 });

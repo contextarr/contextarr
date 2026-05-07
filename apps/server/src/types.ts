@@ -7,6 +7,7 @@ export interface ServerConfig {
   port: number;
   packsDir: string;
   databasePath: string;
+  apiToken?: string;
 }
 
 export interface LoadedRecord {
@@ -61,6 +62,8 @@ export interface PackSummary {
   sourceCount: number;
   exportProfileCount: number;
   accentColor?: string;
+  coverImage: string | null;
+  reviewQueueCount: number;
   lastReviewedAt: string | null;
   updatedAt: string;
 }
