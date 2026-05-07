@@ -36,6 +36,78 @@ export interface PackSummary {
   updatedAt: string;
 }
 
+export interface SourceSummary {
+  id: string;
+  type: string;
+  title: string;
+  url?: string | null;
+  path?: string | null;
+  retrievedAt?: string | null;
+  license?: string | null;
+  trust?: string | null;
+  status?: string | null;
+}
+
+export interface ExportProfileSummary {
+  id: string;
+  name: string;
+  target: string;
+  format: string;
+  privacyMode?: string | null;
+  tokenBudget?: number | null;
+}
+
+export interface PackDetail extends PackSummary {
+  author: string;
+  license: string;
+  createdAt: string;
+  packPath: string;
+  manifest: Record<string, unknown>;
+  counts: {
+    records: number;
+    sources: number;
+    exportProfiles: number;
+  };
+  validation: {
+    errors: number;
+    warnings: number;
+  };
+  health?: {
+    score: number;
+    status: string;
+    validationErrors: number;
+    validationWarnings: number;
+    recordCount: number;
+    sourceCount: number;
+    exportProfileCount: number;
+    updatedAt: string;
+  } | null;
+  sources: SourceSummary[];
+  exportProfiles: ExportProfileSummary[];
+}
+
+export interface RecordSummary {
+  id: string;
+  packId: string;
+  title: string;
+  type: string;
+  confidence: string;
+  sourceStatus: string;
+  freshness: string;
+  privacy: string;
+  lastReviewed?: string | null;
+  reviewStatus: string;
+  tags: string[];
+  sources: string[];
+  filePath: string;
+}
+
+export interface RecordDetail extends RecordSummary {
+  body: string;
+  resolvedSources: SourceSummary[];
+  metadata: Record<string, unknown>;
+}
+
 export interface SearchResult {
   id: string;
   kind: "pack" | "record";
@@ -51,3 +123,8 @@ export interface SearchResponse {
 
 export type SortKey = "name" | "health" | "lastReviewed" | "records";
 export type LibraryViewMode = "cover" | "compact" | "table";
+
+export type Route =
+  | { name: "library" }
+  | { name: "pack"; packId: string }
+  | { name: "record"; recordId: string };

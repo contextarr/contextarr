@@ -1,10 +1,11 @@
 # Contextarr CLI
 
-Phase 1 command line interface for local Contextarr tooling.
+Command line interface for local Contextarr tooling.
 
 Implemented:
 
 - `contextarr validate <path>`
 - `--format text|json`
+- `contextarr render <path> --out <path>`
 
-The CLI is read-only and currently only validates local pack folders.
+The validator is read-only. The render command writes generated static HTML to the requested output folder and never mutates source pack files.

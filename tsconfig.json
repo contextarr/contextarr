@@ -15,7 +15,10 @@
     "baseUrl": ".",
     "paths": {
       "@contextarr/schema": ["packages/schema/src/index.ts"],
-      "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"]
+      "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"],
+      "@contextarr/renderer": ["packages/renderer/src/index.ts"],
+      "@contextarr/renderer/markdown": ["packages/renderer/src/markdown.ts"],
+      "@contextarr/renderer/static": ["packages/renderer/src/static.ts"]
     }
   },
   "include": ["apps/**/*.ts", "apps/**/*.tsx", "packages/**/*.ts", "vitest.config.ts"]

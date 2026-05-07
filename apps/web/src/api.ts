@@ -1,4 +1,4 @@
-import type { HealthResponse, PackSummary, SearchResponse } from "./types";
+import type { HealthResponse, PackDetail, PackSummary, RecordDetail, RecordSummary, SearchResponse } from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -19,6 +19,9 @@ export interface ApiClientOptions {
 export interface ApiClient {
   getHealth(): Promise<HealthResponse>;
   getPacks(): Promise<PackSummary[]>;
+  getPack(id: string): Promise<PackDetail>;
+  getPackRecords(id: string): Promise<RecordSummary[]>;
+  getRecord(id: string): Promise<RecordDetail>;
   search(query: string): Promise<SearchResponse>;
 }
 
@@ -45,6 +48,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const response = await requestJson<{ packs: PackSummary[] }>("/api/packs");
       return response.packs;
     },
+    getPack: (id: string) => requestJson<PackDetail>(`/api/packs/${encodeURIComponent(id)}`),
+    getPackRecords: async (id: string) => {
+      const response = await requestJson<{ records: RecordSummary[] }>(`/api/packs/${encodeURIComponent(id)}/records`);
+      return response.records;
+    },
+    getRecord: (id: string) => requestJson<RecordDetail>(`/api/records/${encodeURIComponent(id)}`),
     search: (query: string) => requestJson<SearchResponse>(`/api/search?q=${encodeURIComponent(query)}`)
   };
 }

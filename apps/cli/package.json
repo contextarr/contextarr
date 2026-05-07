@@ -9,10 +9,11 @@
   "scripts": {
     "contextarr": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --root ../.. apps/cli/src"
   },
   "dependencies": {
     "@contextarr/pack-validator": "workspace:*",
+    "@contextarr/renderer": "workspace:*",
     "commander": "^12.1.0"
   }
 }

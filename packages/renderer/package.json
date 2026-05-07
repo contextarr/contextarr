@@ -1,0 +1,27 @@
+{
+  "name": "@contextarr/renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./markdown": "./src/markdown.ts",
+    "./static": "./src/static.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. packages/renderer/src"
+  },
+  "dependencies": {
+    "@contextarr/pack-validator": "workspace:*",
+    "@contextarr/schema": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5",
+    "yaml": "^2.6.1"
+  }
+}

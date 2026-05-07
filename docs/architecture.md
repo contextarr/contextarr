@@ -50,7 +50,11 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implements the app shell and API-backed Pack Library with Cover Grid, Compact Cards, Dense Table, local search, sort, and filters. Pack detail, source inspection, review queue workflows, renderer, and export preview remain later phases.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 adds hash-based pack and record detail views plus sanitized record rendering. Review queue workflows and export preview remain later phases.
+
+## Renderer Direction
+
+The shared renderer converts Markdown to sanitized HTML for both the web UI and static output. Static HTML is a local generated artifact only; it must contain CSS but no user JavaScript or external scripts.
 
 ## Database Direction
 

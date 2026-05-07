@@ -33,11 +33,11 @@
 
 - Build local dashboard shell.
 - Add pack library views.
-- Add pack detail basics.
-- Add record detail basics.
 
 ## Phase 5: Renderer and Static HTML
 
+- Add pack detail basics.
+- Add record detail basics.
 - Render pack and record pages.
 - Sanitize Markdown and HTML.
 - Generate static output.

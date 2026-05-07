@@ -51,6 +51,10 @@ The local API binds to `127.0.0.1` by default. LAN mode must be explicit and war
 
 Local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only whether auth is required; it must never return the configured token.
 
+## Rendering Security
+
+Markdown rendering is sanitized before HTML is displayed or written to static output. Rendered pack content must not include user JavaScript, event handler attributes, external scripts, iframe embeds, or `javascript:` links. Static HTML output is local generated documentation and must remain CSS-only.
+
 ## Read-Only MCP
 
 MCP is later-phase and read-only. It must not:

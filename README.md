@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 4: web dashboard shell and pack library.
+This repository is in Phase 5: pack detail, sanitized rendering, and static HTML.
 
 Current scope:
 
@@ -28,13 +28,16 @@ Current scope:
 - React and Vite local dashboard shell.
 - API-backed Pack Library with Cover Grid, Compact Cards, and Dense Table views.
 - Read-only library search, sort, and filter controls.
+- Pack detail and record detail views.
+- Shared sanitized Markdown renderer.
+- `contextarr render <path> --out <path>` static HTML command.
 
 Not included yet:
 
-- Pack detail and record detail implementation.
-- Human-readable Markdown renderer.
 - MCP implementation.
 - Importers or exporters.
+- Export generation.
+- Full Pack Health and Review Queue workflows.
 
 ## Product Positioning
 
@@ -58,7 +61,7 @@ apps/
 
 packages/
   schema/              Zod schemas
-  renderer/            Sanitized Markdown and HTML renderer, later
+  renderer/            Sanitized Markdown and static HTML renderer
   pack-validator/      Pack validation engine
   export-profiles/     Export profile support, later
 
@@ -98,12 +101,21 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase4:verify
+pnpm phase5:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm demo:validate
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
+
+Render static HTML locally:
+
+```bash
+pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/ai-workstation
+pnpm --filter @contextarr/cli contextarr render demo-packs --out rendered/demo-packs
+```
+
+Static HTML output is generated under ignored local folders such as `rendered/`.
 
 ## Local API
 
@@ -131,7 +143,7 @@ Default API settings come from `.env.example`:
 
 When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
 
-Available Phase 3.1 endpoints:
+Available local API endpoints:
 
 - `GET /api/health`
 - `GET /api/packs`

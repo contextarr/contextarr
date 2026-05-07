@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
 import { formatValidationResult, PackReadError, validatePack } from "@contextarr/pack-validator";
+import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
 
 export type OutputFormat = "text" | "json";
 
@@ -60,6 +61,35 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
     });
 
+  program
+    .command("render")
+    .argument("<path>", "pack directory or directory of pack directories to render")
+    .requiredOption("--out <path>", "output directory for static HTML")
+    .action((targetPath: string, options: { out: string }) => {
+      const resolvedTargetPath = resolveUserPath(targetPath);
+      const resolvedOutputPath = resolveUserPath(options.out);
+
+      if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
+        io.stderr.write(`Render path is not a readable directory: ${targetPath}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = fs.existsSync(path.join(resolvedTargetPath, "contextarr-pack.json"))
+          ? renderPackToStaticHtml({ packPath: resolvedTargetPath, outputDir: resolvedOutputPath })
+          : renderPacksToStaticHtml({ packsDir: resolvedTargetPath, outputDir: resolvedOutputPath });
+
+        io.stdout.write(
+          `Rendered ${result.packsRendered} pack(s), ${result.recordsRendered} record(s): ${result.entryFile}\n`
+        );
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${error instanceof StaticRenderError ? error.message : errorMessage(error)}\n`);
+        exitCode = error instanceof StaticRenderError ? 1 : 2;
+      }
+    });
+
   try {
     await program.parseAsync(args, { from: "user" });
   } catch (error) {
@@ -76,6 +106,10 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
 function parseFormat(value: string): OutputFormat | undefined {
   return value === "text" || value === "json" ? value : undefined;
+}
+
+function resolveUserPath(value: string): string {
+  return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
 }
 
 function errorMessage(error: unknown): string {
