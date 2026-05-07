@@ -1,0 +1,33 @@
+{
+  "id": "fake-product-line-pack",
+  "name": "Fake Product Line Pack",
+  "version": "1.0.0",
+  "description": "Public-safe demo context for a fictional product line.",
+  "type": "product_reference",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": null,
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": true,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "accentColor": "#22c55e"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

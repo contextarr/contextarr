@@ -1,0 +1,33 @@
+{
+  "id": "internal-support-kb-pack",
+  "name": "Internal Support KB Pack",
+  "version": "1.0.0",
+  "description": "Public-safe demo context for a fictional internal support knowledge base.",
+  "type": "internal_kb",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": null,
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": true,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "accentColor": "#f97316"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

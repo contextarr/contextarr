@@ -1,0 +1,21 @@
+id: internal-support-codex
+name: Internal Support KB Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - internal-support.ticket-intake
+    - internal-support.escalation-policy
+    - internal-support.customer-safe-response-rules
+    - internal-support.known-issues
+    - internal-support.review-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 10000
+sections:
+  - summary
+  - constraints
+  - review_notes
+  - sources

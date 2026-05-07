@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 1: pack schema and validator.
+This repository is in Phase 2: public-safe demo packs.
 
 Current scope:
 
@@ -19,10 +19,10 @@ Current scope:
 - Deterministic read-only pack validator.
 - `contextarr validate <path>` CLI command.
 - Test fixture packs for validator coverage.
+- Five public-safe demo packs under `demo-packs/`.
 
 Not included yet:
 
-- Demo pack content.
 - Database/index implementation.
 - Web UI implementation.
 - MCP implementation.
@@ -46,15 +46,15 @@ AI exports later.
 apps/
   web/                 React and Vite UI, later
   server/              Node.js Fastify API, later
-  cli/                 Contextarr CLI, later
+  cli/                 Contextarr CLI
 
 packages/
-  schema/              Zod schemas, later
+  schema/              Zod schemas
   renderer/            Sanitized Markdown and HTML renderer, later
-  pack-validator/      Pack validation engine, later
+  pack-validator/      Pack validation engine
   export-profiles/     Export profile support, later
 
-demo-packs/            Fake public-safe demo packs, later
+demo-packs/            Fake public-safe demo packs
 docs/                  Product, architecture, security, and roadmap docs
 ```
 
@@ -90,8 +90,9 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase1:verify
+pnpm phase2:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
+pnpm demo:validate
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.

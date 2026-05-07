@@ -1,0 +1,41 @@
+sources:
+  - id: support-intake-note
+    type: markdown
+    title: Fictional Support Intake Note
+    path: ../raw/intake-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-escalation-note
+    type: markdown
+    title: Fictional Escalation Note
+    path: ../raw/escalation-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-response-note
+    type: markdown
+    title: Fictional Response Safety Note
+    path: ../raw/response-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-known-issues-note
+    type: markdown
+    title: Fictional Known Issues Note
+    path: ../raw/known-issues-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-review-note
+    type: markdown
+    title: Fictional Review Workflow Note
+    path: ../raw/review-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current

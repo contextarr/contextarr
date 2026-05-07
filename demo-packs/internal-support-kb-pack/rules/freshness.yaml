@@ -1,0 +1,4 @@
+stale_after_days:
+  default: 90
+  internal_kb: 45
+  product_reference: 30

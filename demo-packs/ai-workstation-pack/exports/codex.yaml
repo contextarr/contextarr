@@ -1,0 +1,21 @@
+id: ai-workstation-codex
+name: AI Workstation Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - ai-workstation.hardware-overview
+    - ai-workstation.local-ai-stack
+    - ai-workstation.storage-layout
+    - ai-workstation.networking-notes
+    - ai-workstation.troubleshooting-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 10000
+sections:
+  - summary
+  - constraints
+  - do_not_assume
+  - sources

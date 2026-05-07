@@ -1,0 +1,21 @@
+id: claude-code-project-chatgpt
+name: Claude Code Project ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - claude-code-project.repo-overview
+    - claude-code-project.agent-instructions
+    - claude-code-project.dev-workflow
+    - claude-code-project.testing-checklist
+    - claude-code-project.handoff-notes
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - workflow
+  - testing
+  - sources

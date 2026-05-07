@@ -12,7 +12,9 @@
     "phase0:verify": "node -e \"console.log('Contextarr Phase 0 workspace skeleton ready')\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "phase1:verify": "pnpm typecheck && pnpm test"
+    "phase1:verify": "pnpm typecheck && pnpm test",
+    "demo:validate": "pnpm --filter @contextarr/cli contextarr validate demo-packs/ai-workstation-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/jellyfin-server-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/claude-code-project-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/internal-support-kb-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/fake-product-line-pack",
+    "phase2:verify": "pnpm phase1:verify && pnpm demo:validate"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

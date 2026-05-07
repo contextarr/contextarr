@@ -1,0 +1,41 @@
+sources:
+  - id: claude-code-repo-note
+    type: markdown
+    title: Fictional Repo Overview Note
+    path: ../raw/repo-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: claude-code-agent-note
+    type: markdown
+    title: Fictional Agent Instruction Note
+    path: ../raw/agent-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: claude-code-workflow-note
+    type: markdown
+    title: Fictional Development Workflow Note
+    path: ../raw/workflow-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: claude-code-testing-note
+    type: markdown
+    title: Fictional Testing Checklist Note
+    path: ../raw/testing-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: claude-code-handoff-note
+    type: markdown
+    title: Fictional Handoff Note
+    path: ../raw/handoff-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current

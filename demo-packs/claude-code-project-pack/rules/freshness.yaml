@@ -1,0 +1,4 @@
+stale_after_days:
+  default: 90
+  project: 45
+  technical_system: 60

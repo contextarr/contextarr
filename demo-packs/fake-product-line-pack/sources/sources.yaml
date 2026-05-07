@@ -1,0 +1,41 @@
+sources:
+  - id: product-overview-note
+    type: markdown
+    title: Fictional Product Overview Note
+    path: ../raw/overview-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-comparison-note
+    type: markdown
+    title: Fictional Product Comparison Note
+    path: ../raw/comparison-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-support-note
+    type: markdown
+    title: Fictional Support Matrix Note
+    path: ../raw/support-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-release-note
+    type: markdown
+    title: Fictional Release Notes Source
+    path: ../raw/release-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-faq-note
+    type: markdown
+    title: Fictional FAQ Source
+    path: ../raw/faq-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current

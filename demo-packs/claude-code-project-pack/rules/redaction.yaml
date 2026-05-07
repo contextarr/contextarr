@@ -1,0 +1,14 @@
+redact_tags:
+  - secret
+  - health
+  - financial
+  - family_private
+  - never_export
+patterns:
+  - name: api_key_like
+    regex: "(?i)(api[_-]?key|secret|token)\\s*[:=]\\s*[^\\s]+"
+    action: remove
+  - name: email
+    regex: "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}"
+    flags: i
+    action: mask
