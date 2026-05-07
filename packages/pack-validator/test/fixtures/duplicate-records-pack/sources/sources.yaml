@@ -1,0 +1,7 @@
+sources:
+  - id: manual-source
+    type: markdown
+    title: Manual Source
+    path: ../raw/manual-note.md
+    trust: local
+    status: current

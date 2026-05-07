@@ -1,5 +1,10 @@
 # Contextarr CLI
 
-Phase 0 placeholder for the future Contextarr command line interface.
+Phase 1 command line interface for local Contextarr tooling.
 
-No CLI commands are implemented yet.
+Implemented:
+
+- `contextarr validate <path>`
+- `--format text|json`
+
+The CLI is read-only and currently only validates local pack folders.

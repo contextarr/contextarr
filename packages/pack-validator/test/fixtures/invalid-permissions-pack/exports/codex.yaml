@@ -1,0 +1,6 @@
+id: codex-context
+name: Codex Context
+target: codex
+format: markdown
+sections:
+  - summary

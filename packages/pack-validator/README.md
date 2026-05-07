@@ -1,5 +1,10 @@
 # @contextarr/pack-validator
 
-Phase 0 placeholder for the future pack validation engine.
+Read-only Contextarr pack validation engine.
 
-No validation logic is implemented yet.
+Implemented:
+
+- `validatePack(packPath, options)`
+- structured validation results
+- human-readable validation reports
+- manifest, record, source, export profile, rule, executable-file, shell-command, and credential-pattern checks

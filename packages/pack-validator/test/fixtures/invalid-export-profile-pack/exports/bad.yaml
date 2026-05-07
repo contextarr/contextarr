@@ -1,0 +1,6 @@
+id: bad-export
+name: Bad Export
+format: markdown
+token_budget: -1
+sections:
+  - summary

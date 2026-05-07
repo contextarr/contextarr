@@ -1,0 +1,33 @@
+{
+  "id": "executable-file-pack",
+  "name": "Executable File Pack",
+  "version": "1.0.0",
+  "description": "A fake pack with executable files.",
+  "type": "technical_system",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Test",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": null,
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": true,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "accentColor": "#3b82f6"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

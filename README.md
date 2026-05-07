@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 0: workspace initialization.
+This repository is in Phase 1: pack schema and validator.
 
 Current scope:
 
@@ -15,11 +15,13 @@ Current scope:
 - Package manager metadata.
 - Local-first architecture decisions.
 - Security and non-goal guardrails.
+- Zod schemas for pack manifests, records, sources, export profiles, and rules.
+- Deterministic read-only pack validator.
+- `contextarr validate <path>` CLI command.
+- Test fixture packs for validator coverage.
 
 Not included yet:
 
-- Application runtime code.
-- Pack validation logic.
 - Demo pack content.
 - Database/index implementation.
 - Web UI implementation.
@@ -84,12 +86,12 @@ Contextarr v0 must stay local-first and data-only:
 
 See [docs/security-model.md](docs/security-model.md) for the full security posture.
 
-## Phase 0 Commands
-
-No dependencies are installed in Phase 0. The only root script is a scaffold check:
+## Verification
 
 ```bash
-pnpm phase0:verify
+pnpm install
+pnpm phase1:verify
+pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 ```
 
-This command is metadata-only and does not run application functionality.
+The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.

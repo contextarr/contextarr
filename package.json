@@ -9,6 +9,15 @@
     "node": ">=20"
   },
   "scripts": {
-    "phase0:verify": "node -e \"console.log('Contextarr Phase 0 workspace skeleton ready')\""
+    "phase0:verify": "node -e \"console.log('Contextarr Phase 0 workspace skeleton ready')\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "phase1:verify": "pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
