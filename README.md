@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 2: public-safe demo packs.
+This repository is in Phase 3: local pack index and API.
 
 Current scope:
 
@@ -20,10 +20,11 @@ Current scope:
 - `contextarr validate <path>` CLI command.
 - Test fixture packs for validator coverage.
 - Five public-safe demo packs under `demo-packs/`.
+- Rebuildable SQLite index for local pack folders.
+- Local Fastify API for pack, record, health, search, and rescan data.
 
 Not included yet:
 
-- Database/index implementation.
 - Web UI implementation.
 - MCP implementation.
 - Importers or exporters.
@@ -45,7 +46,7 @@ AI exports later.
 ```text
 apps/
   web/                 React and Vite UI, later
-  server/              Node.js Fastify API, later
+  server/              Node.js Fastify API
   cli/                 Contextarr CLI
 
 packages/
@@ -90,9 +91,34 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase2:verify
+pnpm phase3:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm demo:validate
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
+
+## Local API
+
+Start the local API after installing dependencies:
+
+```bash
+pnpm --filter @contextarr/server dev
+```
+
+Default API settings come from `.env.example`:
+
+- `CONTEXTARR_HOST=127.0.0.1`
+- `CONTEXTARR_PORT=3210`
+- `CONTEXTARR_PACKS_DIR=./demo-packs`
+- `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
+
+Available Phase 3 endpoints:
+
+- `GET /api/health`
+- `GET /api/packs`
+- `GET /api/packs/:id`
+- `GET /api/packs/:id/records`
+- `GET /api/records/:id`
+- `GET /api/search?q=`
+- `POST /api/rescan`
