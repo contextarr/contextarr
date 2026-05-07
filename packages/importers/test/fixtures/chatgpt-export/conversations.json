@@ -1,0 +1,28 @@
+[
+  {
+    "id": "chatcmpl-demo-1",
+    "title": "Context Pack Planning",
+    "mapping": {
+      "a": {
+        "message": {
+          "author": { "role": "user" },
+          "content": { "parts": ["How should I organize a context pack?"] }
+        }
+      },
+      "b": {
+        "message": {
+          "author": { "role": "assistant" },
+          "content": { "parts": ["Start with source-backed records and keep draft notes separate."] }
+        }
+      }
+    }
+  },
+  {
+    "id": "chatcmpl-demo-2",
+    "title": "Review Checklist",
+    "messages": [
+      { "role": "user", "content": "What should reviewers check?" },
+      { "role": "assistant", "content": "Check source coverage, freshness, and privacy labels." }
+    ]
+  }
+]

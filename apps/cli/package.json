@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@contextarr/export-profiles": "workspace:*",
+    "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/renderer": "workspace:*",
     "commander": "^12.1.0"

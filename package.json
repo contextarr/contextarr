@@ -25,7 +25,8 @@
     "phase5:verify": "pnpm phase4:verify && pnpm --filter @contextarr/renderer test && pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/phase5-ai-workstation && pnpm --filter @contextarr/cli contextarr render demo-packs --out rendered/phase5-demo-packs && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase6:verify": "pnpm phase5:verify && pnpm --filter @contextarr/cli contextarr validate demo-packs --format json && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase7:verify": "pnpm phase6:verify && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated-exports/phase7-demo-packs && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
-    "phase8:verify": "pnpm phase7:verify && pnpm --filter @contextarr/mcp typecheck && pnpm --filter @contextarr/mcp test"
+    "phase8:verify": "pnpm phase7:verify && pnpm --filter @contextarr/mcp typecheck && pnpm --filter @contextarr/mcp test",
+    "phase9:verify": "pnpm phase8:verify && pnpm --filter @contextarr/importers test && pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/phase9-smoke --pack-id phase9-markdown-smoke --overwrite && pnpm --filter @contextarr/cli contextarr validate imported-packs/phase9-smoke/phase9-markdown-smoke"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

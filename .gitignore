@@ -9,6 +9,7 @@ coverage/
 out/
 rendered/
 generated-exports/
+imported-packs/
 mockup-images/
 
 # Local environment

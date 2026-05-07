@@ -11,6 +11,7 @@ const fixturesDir = path.resolve(
   "../../../packages/pack-validator/test/fixtures"
 );
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const tempDirs: string[] = [];
 
 function fixture(name: string): string {
@@ -122,6 +123,77 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(2);
     expect(output.stderr).toContain("Pack path is not a readable directory");
+  });
+
+  it("imports a Markdown folder to a generated draft pack", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const code = await runCli(
+      [
+        "import",
+        path.join(importFixturesDir, "markdown-folder"),
+        "--kind",
+        "markdown",
+        "--out",
+        outDir,
+        "--pack-id",
+        "cli-markdown-import",
+        "--format",
+        "json"
+      ],
+      output.io
+    );
+    const json = JSON.parse(output.stdout);
+
+    expect(code).toBe(0);
+    expect(json).toMatchObject({
+      packId: "cli-markdown-import",
+      counts: {
+        records: 2,
+        sources: 2
+      },
+      validation: {
+        valid: true,
+        errors: 0
+      }
+    });
+    expect(fs.existsSync(path.join(outDir, "cli-markdown-import", "contextarr-pack.json"))).toBe(true);
+  });
+
+  it("returns 2 for import usage or read failures", async () => {
+    const output = createIo();
+    const code = await runCli(["import", "does-not-exist", "--out", tempDir()], output.io);
+
+    expect(code).toBe(2);
+    expect(output.stderr).toContain("Input path does not exist");
+  });
+
+  it("returns 1 for malformed imports and existing output without overwrite", async () => {
+    const malformedOutput = createIo();
+    const existingOutput = createIo();
+    const outDir = tempDir();
+
+    expect(
+      await runCli(
+        ["import", path.join(importFixturesDir, "malformed-chatgpt"), "--kind", "chatgpt", "--out", outDir],
+        malformedOutput.io
+      )
+    ).toBe(1);
+    expect(malformedOutput.stderr).toContain("ChatGPT conversations.json must contain an array");
+
+    expect(
+      await runCli(
+        ["import", path.join(importFixturesDir, "markdown-folder"), "--kind", "markdown", "--out", outDir, "--pack-id", "exists"],
+        existingOutput.io
+      )
+    ).toBe(0);
+    expect(
+      await runCli(
+        ["import", path.join(importFixturesDir, "markdown-folder"), "--kind", "markdown", "--out", outDir, "--pack-id", "exists"],
+        existingOutput.io
+      )
+    ).toBe(1);
+    expect(existingOutput.stderr).toContain("Draft pack already exists");
   });
 
   it("renders a valid pack to static HTML", async () => {

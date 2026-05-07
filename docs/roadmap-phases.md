@@ -69,6 +69,7 @@
 - Add Markdown and Obsidian import.
 - Add basic ChatGPT and Claude export parsing.
 - Create draft records only.
+- Keep importers CLI/core only; web and API import workflows remain later.
 
 ## Phase 10: Composer
 

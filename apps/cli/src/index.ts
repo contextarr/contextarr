@@ -4,6 +4,12 @@ import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
 import { buildPackExport, buildPackExports, ExportError, type ExportArtifact } from "@contextarr/export-profiles";
 import {
+  importToDraftPack,
+  ImporterError,
+  type DraftImportResult,
+  type ImporterKind
+} from "@contextarr/importers";
+import {
   formatValidationResult,
   PackReadError,
   validatePack,
@@ -35,6 +41,71 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       writeOut: (value) => io.stdout.write(value),
       writeErr: (value) => io.stderr.write(value)
     });
+
+  program
+    .command("import")
+    .argument("<path>", "local folder, Markdown folder, Obsidian vault, ChatGPT export, or Claude export to import")
+    .option("--kind <kind>", "import kind: auto, folder, markdown, obsidian, chatgpt, or claude", "auto")
+    .option("--out <path>", "output directory for generated draft packs", "imported-packs")
+    .option("--pack-id <id>", "draft pack id")
+    .option("--name <name>", "draft pack display name")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--max-records <n>", "maximum records to import", "50")
+    .option("--overwrite", "overwrite an existing generated draft pack", false)
+    .action(
+      (
+        targetPath: string,
+        options: {
+          kind: string;
+          out: string;
+          packId?: string;
+          name?: string;
+          format: string;
+          maxRecords: string;
+          overwrite?: boolean;
+        }
+      ) => {
+        const format = parseFormat(options.format);
+        const kind = parseImportKind(options.kind);
+        const maxRecords = parsePositiveInteger(options.maxRecords);
+
+        if (!format) {
+          io.stderr.write(`Unsupported output format: ${options.format}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        if (!kind) {
+          io.stderr.write(`Unsupported import kind: ${options.kind}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        if (!maxRecords) {
+          io.stderr.write(`--max-records must be a positive integer.\n`);
+          exitCode = 2;
+          return;
+        }
+
+        try {
+          const result = importToDraftPack({
+            inputPath: resolveUserPath(targetPath),
+            kind,
+            outputDir: resolveUserPath(options.out),
+            packId: options.packId,
+            name: options.name,
+            maxRecords,
+            overwrite: Boolean(options.overwrite)
+          });
+
+          io.stdout.write(format === "json" ? `${JSON.stringify(formatImportJson(result), null, 2)}\n` : formatImportText(result));
+          exitCode = result.validation.valid ? 0 : 1;
+        } catch (error) {
+          io.stderr.write(`${error instanceof ImporterError ? error.message : errorMessage(error)}\n`);
+          exitCode = error instanceof ImporterError && error.code.startsWith("input.") ? 2 : 1;
+        }
+      }
+    );
 
   program
     .command("validate")
@@ -158,6 +229,17 @@ function parseFormat(value: string): OutputFormat | undefined {
   return value === "text" || value === "json" ? value : undefined;
 }
 
+function parseImportKind(value: string): ImporterKind | undefined {
+  return ["auto", "folder", "markdown", "obsidian", "chatgpt", "claude"].includes(value)
+    ? (value as ImporterKind)
+    : undefined;
+}
+
+function parsePositiveInteger(value: string): number | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
 }
@@ -217,6 +299,52 @@ function formatValidationJson(targetPath: string, results: ValidationResult[]): 
       errors: results.reduce((count, result) => count + result.summary.errors, 0),
       warnings: results.reduce((count, result) => count + result.summary.warnings, 0),
       infos: results.reduce((count, result) => count + result.summary.infos, 0)
+    }
+  };
+}
+
+function formatImportText(result: DraftImportResult): string {
+  const lines = [
+    `Imported ${result.recordCount} record(s) from ${result.kind}: ${result.packPath}`,
+    `Pack: ${result.packName} (${result.packId})`,
+    `Sources: ${result.sourceCount}`,
+    `Warnings: ${result.warnings.length}`,
+    `Validation: ${result.validation.summary.errors} error(s), ${result.validation.summary.warnings} warning(s), ${result.validation.summary.infos} info(s)`
+  ];
+
+  for (const warning of result.warnings) {
+    const location = warning.file ? ` ${warning.file}` : "";
+    lines.push(`[WARNING] ${warning.code}${location}: ${warning.message}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatImportJson(result: DraftImportResult): {
+  inputPath: string;
+  kind: string;
+  packId: string;
+  packName: string;
+  packPath: string;
+  counts: { records: number; sources: number; warnings: number };
+  warnings: DraftImportResult["warnings"];
+  validation: ValidationResult["summary"] & { valid: boolean };
+} {
+  return {
+    inputPath: result.inputPath,
+    kind: result.kind,
+    packId: result.packId,
+    packName: result.packName,
+    packPath: result.packPath,
+    counts: {
+      records: result.recordCount,
+      sources: result.sourceCount,
+      warnings: result.warnings.length
+    },
+    warnings: result.warnings,
+    validation: {
+      valid: result.validation.valid,
+      ...result.validation.summary
     }
   };
 }

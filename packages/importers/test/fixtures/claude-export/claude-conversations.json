@@ -1,0 +1,20 @@
+{
+  "conversations": [
+    {
+      "uuid": "claude-demo-1",
+      "name": "Claude Context Review",
+      "chat_messages": [
+        { "sender": "human", "text": "Summarize this local project safely." },
+        { "sender": "assistant", "text": "Use public-safe summaries and mark drafts for review." }
+      ]
+    },
+    {
+      "uuid": "claude-demo-2",
+      "name": "Pack Hygiene",
+      "messages": [
+        { "role": "human", "content": "What should stay out of packs?" },
+        { "role": "assistant", "content": "Secrets, scripts, telemetry, and unreviewed private data." }
+      ]
+    }
+  ]
+}

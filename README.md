@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 8: Read-Only MCP.
+This repository is in Phase 9: Local Importers v1.
 
 Current scope:
 
@@ -39,10 +39,13 @@ Current scope:
 - Local API export preview endpoint.
 - Export Center and pack-level export preview, copy, and download UI.
 - Local stdio MCP server with read-only pack, record, search, and export-preview tools.
+- Local CLI/core importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
+- `contextarr import <path> --kind <kind> --out <path>` draft pack command.
 
 Not included yet:
 
-- Importers.
+- Web importer UI.
+- API import endpoints.
 - Pack file editing from review actions.
 - Composer workflows.
 
@@ -72,6 +75,7 @@ packages/
   renderer/            Sanitized Markdown and static HTML renderer
   pack-validator/      Pack validation engine
   export-profiles/     Profile-driven export engine
+  importers/           Local draft pack importers
 
 demo-packs/            Fake public-safe demo packs
 docs/                  Product, architecture, security, and roadmap docs
@@ -133,6 +137,14 @@ pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated
 ```
 
 Generated export files are derived artifacts and are ignored under `generated-exports/`.
+
+Import local files into a generated draft pack:
+
+```bash
+pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/manual --pack-id manual-markdown-draft
+```
+
+Imported packs are drafts under ignored local folders such as `imported-packs/`. Imported records are private, unapproved, and tagged to avoid accidental export.
 
 Run the read-only MCP server:
 

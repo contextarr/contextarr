@@ -79,6 +79,12 @@ Phase 7 exports are generated from validated local pack files and data-only expo
 
 MCP export previews reuse the same export engine and do not write generated files.
 
+## Import Security
+
+Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
+
+Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use.
+
 ## Telemetry
 
 Telemetry is disabled and out of scope. Contextarr should not phone home by default.

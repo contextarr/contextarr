@@ -40,6 +40,7 @@ docs
 5. The renderer produces sanitized human-readable output.
 6. Export profiles produce target-specific context files.
 7. The MCP server exposes selected context through read-only local stdio tools.
+8. Importers can generate local draft pack folders from selected local inputs.
 
 ## Source of Truth
 
@@ -67,6 +68,8 @@ Generated exports are derived artifacts. The CLI may write them to ignored local
 
 MCP query metadata is local SQLite app state. It records tool name, related ids, query hash and length, result count, timing, and sanitized metadata only. It must not store raw result content or full raw query text.
 
+Imported draft packs are generated local files under explicit ignored output directories such as `imported-packs/`. They are not approved packs by default; imported records are private drafts tagged `imported_draft` and `never_export`.
+
 ## Local API Direction
 
 The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
@@ -74,3 +77,7 @@ The local API binds to `127.0.0.1` by default. Local development can run without
 ## MCP Direction
 
 MCP is implemented as a local stdio process in `apps/mcp`. It uses the official TypeScript SDK, reuses the derived SQLite index, and exposes read-only tools for packs, records, search, export profiles, and export previews. It must not mutate files, run commands, call external services, or expose raw private sources unless explicitly configured.
+
+## Importer Direction
+
+Phase 9 importers are CLI/core only. They read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. They must not add API import endpoints, web importer screens, MCP mutation, live connectors, cloud sync, or external API calls.
