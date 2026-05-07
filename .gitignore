@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and test output
+dist/
+build/
+coverage/
+out/
+rendered/
+generated-exports/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Source handoff artifacts kept outside the initialized repo
+/contextarr_prd_and_build_plan.md
+/Contextarr Prd And Build Plan.pdf
+
+# Local derived state
+/data/
+/.contextarr/
+/.contextarr-cache/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp

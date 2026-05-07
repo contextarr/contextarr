@@ -1,0 +1,14 @@
+{
+  "name": "contextarr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-hosted context automation and context pack management for AI assistants and agents.",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "phase0:verify": "node -e \"console.log('Contextarr Phase 0 workspace skeleton ready')\""
+  }
+}
