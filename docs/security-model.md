@@ -79,11 +79,13 @@ Phase 7 exports are generated from validated local pack files and data-only expo
 
 MCP export previews reuse the same export engine and do not write generated files.
 
+Composer previews reuse the same export engine and redaction rules. They are read-only temporary artifacts: the API returns content, the browser may copy or download it locally, and Contextarr does not write composed pack files in Phase 10.
+
 ## Import Security
 
 Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
 
-Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use.
+Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use. Composer excludes `imported_draft` and `never_export` records by default.
 
 ## Telemetry
 

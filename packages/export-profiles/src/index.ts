@@ -81,6 +81,22 @@ export interface BuildPackExportOptions {
   generatedAt?: string;
 }
 
+export interface ComposeSelection {
+  packPath: string;
+  recordIds: string[];
+}
+
+export interface BuildComposedExportOptions {
+  title?: string;
+  target: string;
+  format: "markdown" | "json";
+  privacyMode?: "redacted" | "public_safe";
+  selections: ComposeSelection[];
+  excludeTags?: string[];
+  tokenBudget?: number;
+  generatedAt?: string;
+}
+
 export interface BuildPackExportsOptions {
   packPath: string;
   profileIds?: string[];
@@ -111,7 +127,12 @@ interface PreparedRecord {
   body: string;
 }
 
+interface PreparedComposedRecord extends PreparedRecord {
+  pack: LoadedPackForExport;
+}
+
 const supportedTargets = new Set(["chatgpt", "claude", "codex", "markdown", "generic_markdown", "json", "json_records"]);
+const defaultComposedExcludeTags = ["secret", "never_export", "imported_draft"];
 
 export class ExportError extends Error {
   constructor(
@@ -141,6 +162,63 @@ export function buildPackExports(options: BuildPackExportsOptions): ExportArtifa
 export function buildPackExport(options: BuildPackExportOptions): ExportArtifact {
   const pack = loadPackForExport(options.packPath);
   return buildExportFromLoadedPack(pack, options.profileId, options.generatedAt);
+}
+
+export function buildComposedExport(options: BuildComposedExportOptions): ExportArtifact {
+  if (!supportedTargets.has(options.target)) {
+    throw new ExportError("unsupported_target", `Export target is not supported for composed exports: ${options.target}`);
+  }
+
+  if (!["markdown", "json"].includes(options.format)) {
+    throw new ExportError("unsupported_format", `Composed export format is not supported: ${options.format}`);
+  }
+
+  if (options.selections.length === 0 || options.selections.every((selection) => selection.recordIds.length === 0)) {
+    throw new ExportError("selection_empty", "Composed export requires at least one selected record.");
+  }
+
+  const packs = options.selections.map((selection) => ({
+    selection,
+    pack: loadPackForExport(selection.packPath)
+  }));
+  const warnings: ExportWarning[] = [];
+  const privacyMode = options.privacyMode ?? "redacted";
+  const excludeTags = options.excludeTags ?? defaultComposedExcludeTags;
+  const { included, excluded } = selectComposedRecords(packs, privacyMode, excludeTags, warnings);
+  const title = options.title?.trim() || "Composed Context Export";
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const sources = summarizeComposedSources(included);
+  const content =
+    options.format === "json"
+      ? renderComposedJsonExport(title, options, included, excluded, sources, warnings, privacyMode, generatedAt)
+      : renderComposedMarkdownExport(title, options, included, excluded, sources, warnings, privacyMode, generatedAt);
+  const estimatedTokens = estimateTokens(content);
+
+  if (options.tokenBudget && estimatedTokens > options.tokenBudget) {
+    warnings.push({
+      code: "token_budget.exceeded",
+      message: `Estimated export size (${estimatedTokens} tokens) exceeds profile budget (${options.tokenBudget}).`
+    });
+  }
+
+  return {
+    packId: "composed",
+    packName: title,
+    profileId: "composed-preview",
+    profileName: title,
+    target: options.target,
+    format: options.format,
+    filename: `${slugifyFilePart(title)}-${targetFilePart(options.target)}.${options.format === "json" ? "json" : "md"}`,
+    mimeType: mimeTypeForFormat(options.format),
+    content,
+    includedRecords: included.map(({ record }) => summarizeRecord(record)),
+    excludedRecords: excluded,
+    sources,
+    warnings,
+    generatedAt,
+    byteLength: Buffer.byteLength(content, "utf8"),
+    estimatedTokens
+  };
 }
 
 function buildExportFromLoadedPack(pack: LoadedPackForExport, profileId: string, generatedAt = new Date().toISOString()): ExportArtifact {
@@ -223,6 +301,42 @@ function selectRecords(
   return { included, excluded };
 }
 
+function selectComposedRecords(
+  packs: Array<{ selection: ComposeSelection; pack: LoadedPackForExport }>,
+  privacyMode: "redacted" | "public_safe",
+  excludeTags: string[],
+  warnings: ExportWarning[]
+): { included: PreparedComposedRecord[]; excluded: ExcludedExportRecord[] } {
+  const included: PreparedComposedRecord[] = [];
+  const excluded: ExcludedExportRecord[] = [];
+
+  for (const { selection, pack } of packs) {
+    const byId = new Map(pack.records.map((record) => [record.metadata.id, record]));
+    const missingIds = selection.recordIds.filter((id) => !byId.has(id));
+    if (missingIds.length > 0) {
+      throw new ExportError("record_not_found", `Composed export references missing record(s): ${missingIds.join(", ")}`);
+    }
+
+    for (const recordId of selection.recordIds) {
+      const record = byId.get(recordId)!;
+      const reason = composedExclusionReason(record.metadata, privacyMode, excludeTags, pack.redactionRules);
+
+      if (reason) {
+        excluded.push({ ...summarizeRecord(record), reason });
+        continue;
+      }
+
+      included.push({
+        pack,
+        record,
+        body: applyRedaction(record.body, pack.redactionRules, record.metadata.id, warnings)
+      });
+    }
+  }
+
+  return { included, excluded };
+}
+
 function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, rules: RedactionRules): string | undefined {
   const profileExcludedTag = metadata.tags.find((tag) => profile.exclude_tags.includes(tag));
   if (profileExcludedTag) {
@@ -242,6 +356,29 @@ function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, ru
     if (redactionTag) {
       return `Excluded by redaction tag: ${redactionTag}`;
     }
+  }
+
+  return undefined;
+}
+
+function composedExclusionReason(
+  metadata: RecordFrontmatter,
+  privacyMode: "redacted" | "public_safe",
+  excludeTags: string[],
+  rules: RedactionRules
+): string | undefined {
+  const blockedTags = new Set([...excludeTags, ...rules.redact_tags]);
+  const blockedTag = metadata.tags.find((tag) => blockedTags.has(tag));
+  if (blockedTag) {
+    return `Excluded by composed export tag: ${blockedTag}`;
+  }
+
+  if (privacyMode === "public_safe" && metadata.privacy !== "public_safe") {
+    return `Excluded by public-safe privacy mode: ${metadata.privacy}`;
+  }
+
+  if (privacyMode === "redacted" && metadata.privacy === "secret") {
+    return "Excluded by redacted privacy mode: secret";
   }
 
   return undefined;
@@ -406,6 +543,121 @@ function renderJsonExport(
   )}\n`;
 }
 
+function renderComposedMarkdownExport(
+  title: string,
+  options: BuildComposedExportOptions,
+  included: PreparedComposedRecord[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  privacyMode: string,
+  generatedAt: string
+): string {
+  const lines = [
+    `# ${targetLabel(options.target)} Context Export: ${title}`,
+    "",
+    `Generated: ${generatedAt}`,
+    `Privacy mode: ${privacyMode}`,
+    `Records included: ${included.length}`,
+    "",
+    "## Included Records",
+    ""
+  ];
+
+  for (const { pack, record, body } of included) {
+    lines.push(
+      `### ${record.metadata.title}`,
+      "",
+      `- Pack: ${pack.manifest.name} (${pack.manifest.id})`,
+      `- Record ID: ${record.metadata.id}`,
+      `- Type: ${record.metadata.type}`,
+      `- Privacy: ${record.metadata.privacy}`,
+      `- Tags: ${record.metadata.tags.join(", ") || "none"}`,
+      `- Sources: ${record.metadata.sources.join(", ") || "none"}`,
+      "",
+      body,
+      ""
+    );
+  }
+
+  if (sources.length > 0) {
+    lines.push("## Source Summaries", "");
+    for (const source of sources) {
+      lines.push(`- ${source.id}: ${source.title} (${source.type}${source.trust ? `, ${source.trust}` : ""})`);
+    }
+    lines.push("");
+  }
+
+  if (excluded.length > 0) {
+    lines.push("## Excluded Records", "");
+    for (const record of excluded) {
+      lines.push(`- ${record.id}: ${record.reason}`);
+    }
+    lines.push("");
+  }
+
+  if (warnings.length > 0) {
+    lines.push("## Export Warnings", "");
+    for (const warning of warnings) {
+      lines.push(`- ${warning.message}`);
+    }
+    lines.push("");
+  }
+
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+function renderComposedJsonExport(
+  title: string,
+  options: BuildComposedExportOptions,
+  included: PreparedComposedRecord[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  privacyMode: string,
+  generatedAt: string
+): string {
+  return `${JSON.stringify(
+    {
+      contextarrExportVersion: "0.1",
+      exportKind: "composed",
+      title,
+      target: options.target,
+      format: options.format,
+      privacyMode,
+      generatedAt,
+      records: included.map(({ pack, record, body }) => ({
+        packId: pack.manifest.id,
+        packName: pack.manifest.name,
+        id: record.metadata.id,
+        title: record.metadata.title,
+        type: record.metadata.type,
+        privacy: record.metadata.privacy,
+        tags: record.metadata.tags,
+        sources: record.metadata.sources,
+        body
+      })),
+      sources,
+      excludedRecords: excluded,
+      warnings
+    },
+    null,
+    2
+  )}\n`;
+}
+
+function summarizeComposedSources(included: PreparedComposedRecord[]): ExportSourceSummary[] {
+  const byKey = new Map<string, ExportSourceSummary>();
+
+  for (const { pack, record } of included) {
+    for (const source of summarizeSources(pack.sources, record.metadata.sources)) {
+      byKey.set(`${pack.manifest.id}:${source.id}`, source);
+    }
+  }
+
+  return Array.from(byKey.values()).sort((left, right) => left.id.localeCompare(right.id));
+}
+
 function summarizeSources(sources: Source[], sourceIds: string[]): ExportSourceSummary[] {
   const wanted = new Set(sourceIds);
   return sources
@@ -436,6 +688,20 @@ function summarizeRecord(record: LoadedRecord): ExportRecordSummary {
 function filenameForProfile(profile: ExportProfile): string {
   const extension = profile.format === "json" ? "json" : profile.format === "text" ? "txt" : "md";
   return `${profile.id}.${extension}`;
+}
+
+function slugifyFilePart(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "composed-context"
+  );
+}
+
+function targetFilePart(target: string): string {
+  return target.replace(/[^a-z0-9_]+/gi, "-").toLowerCase();
 }
 
 function mimeTypeForFormat(format: ExportProfile["format"]): string {

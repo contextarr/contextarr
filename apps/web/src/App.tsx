@@ -44,6 +44,15 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
 import { brandMarkUrl } from "./brand";
+import {
+  buildComposePreviewRequest,
+  composerTargets,
+  countSelectedRecords,
+  defaultComposerExcludeTags,
+  filterComposerRecords,
+  getComposerFilterOptions,
+  summarizeSelectedPacks
+} from "./composer";
 import { buildExportOptions, copyTextToClipboard, downloadExportArtifact, getExportTargets } from "./exports";
 import {
   createCoverVisual,
@@ -55,7 +64,7 @@ import {
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
 import { filterReviewItems, reviewPackName, summarizeReviewItems, type ReviewFilters } from "./review";
-import { exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
+import { composerHref, exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
 import type {
   ExportArtifact,
   ExportProfileSummary,
@@ -80,7 +89,7 @@ const navItems = [
   { label: "Collectors", icon: Layers3 },
   { label: "Sources", icon: Database },
   { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
-  { label: "Composer", icon: PenLine },
+  { label: "Composer", icon: PenLine, href: composerHref(), route: "composer" },
   { label: "Exports", icon: CloudDownload, href: exportsHref(), route: "exports" },
   { label: "Registry", icon: Package },
   { label: "Health", icon: HeartPulse, href: healthHref(), route: "health" },
@@ -221,6 +230,8 @@ export function App() {
           <RecordDetailPage recordId={route.recordId} packs={packs} />
         ) : route.name === "reviewQueue" ? (
           <ReviewQueuePage packs={packs} onStatusChanged={loadDashboard} />
+        ) : route.name === "composer" ? (
+          <ComposerPage packs={packs} />
         ) : route.name === "exports" ? (
           <ExportsPage packs={packs} />
         ) : route.name === "health" ? (
@@ -925,6 +936,346 @@ function SourcesTab({ sources }: { sources: SourceSummary[] }) {
 function ExportsTab({ pack }: { pack: PackDetail }) {
   return (
     <ExportWorkbench pack={pack} compact />
+  );
+}
+
+function ComposerPage({ packs }: { packs: PackSummary[] }) {
+  const [recordsByPack, setRecordsByPack] = useState<Record<string, RecordSummary[]>>({});
+  const [activePackId, setActivePackId] = useState("");
+  const [selectedByPack, setSelectedByPack] = useState<Record<string, string[]>>({});
+  const [title, setTitle] = useState("Composed Context Export");
+  const [target, setTarget] = useState<(typeof composerTargets)[number]["value"]>("codex");
+  const [privacyMode, setPrivacyMode] = useState<"redacted" | "public_safe">("redacted");
+  const [query, setQuery] = useState("");
+  const [tagFilter, setTagFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [privacyFilter, setPrivacyFilter] = useState("all");
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [tokenBudget, setTokenBudget] = useState("");
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [artifact, setArtifact] = useState<ExportArtifact | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!activePackId && packs[0]) {
+      setActivePackId(packs[0].id);
+    }
+  }, [activePackId, packs]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (packs.length === 0) {
+      setRecordsByPack({});
+      return;
+    }
+
+    async function loadRecords() {
+      setRecordsLoading(true);
+      setError(null);
+      try {
+        const entries = await Promise.all(packs.map(async (pack) => [pack.id, await apiClient.getPackRecords(pack.id)] as const));
+        if (!cancelled) {
+          setRecordsByPack(Object.fromEntries(entries));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load records for Composer.");
+        }
+      } finally {
+        if (!cancelled) {
+          setRecordsLoading(false);
+        }
+      }
+    }
+
+    void loadRecords();
+    return () => {
+      cancelled = true;
+    };
+  }, [packs]);
+
+  const activeRecords = recordsByPack[activePackId] ?? [];
+  const filterOptions = useMemo(() => getComposerFilterOptions(activeRecords), [activeRecords]);
+  const visibleRecords = useMemo(
+    () =>
+      filterComposerRecords(activeRecords, {
+        query,
+        tag: tagFilter,
+        type: typeFilter,
+        privacy: privacyFilter,
+        reviewStatus: reviewFilter
+      }),
+    [activeRecords, privacyFilter, query, reviewFilter, tagFilter, typeFilter]
+  );
+  const selectedTarget = composerTargets.find((option) => option.value === target) ?? composerTargets[0];
+  const selectedCount = countSelectedRecords(selectedByPack);
+  const tokenBudgetValue = tokenBudget.trim() && Number(tokenBudget) > 0 ? Number(tokenBudget) : undefined;
+
+  function togglePack(packId: string) {
+    setActivePackId(packId);
+    setSelectedByPack((current) => {
+      if (Object.prototype.hasOwnProperty.call(current, packId)) {
+        const { [packId]: _removed, ...rest } = current;
+        return rest;
+      }
+
+      return { ...current, [packId]: [] };
+    });
+    setArtifact(null);
+  }
+
+  function toggleRecord(packId: string, recordId: string) {
+    setSelectedByPack((current) => {
+      const selected = new Set(current[packId] ?? []);
+      if (selected.has(recordId)) {
+        selected.delete(recordId);
+      } else {
+        selected.add(recordId);
+      }
+
+      return { ...current, [packId]: Array.from(selected) };
+    });
+    setArtifact(null);
+  }
+
+  function selectVisibleRecords() {
+    setSelectedByPack((current) => {
+      const selected = new Set(current[activePackId] ?? []);
+      for (const record of visibleRecords) {
+        selected.add(record.id);
+      }
+
+      return { ...current, [activePackId]: Array.from(selected) };
+    });
+    setArtifact(null);
+  }
+
+  function clearActivePackRecords() {
+    setSelectedByPack((current) => ({ ...current, [activePackId]: [] }));
+    setArtifact(null);
+  }
+
+  async function previewComposition() {
+    if (selectedCount === 0) {
+      setError("Select at least one record before building a preview.");
+      return;
+    }
+
+    setLoadingPreview(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const request = buildComposePreviewRequest({
+        title,
+        target,
+        format: selectedTarget.format,
+        privacyMode,
+        selectedByPack,
+        excludeTags: defaultComposerExcludeTags,
+        tokenBudget: tokenBudgetValue
+      });
+      setArtifact(await apiClient.composePreview(request));
+    } catch (previewError) {
+      setArtifact(null);
+      setError(previewError instanceof Error ? previewError.message : "Unable to build composed export.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  async function copyComposition() {
+    if (!artifact) {
+      return;
+    }
+
+    setCopied(await copyTextToClipboard(artifact.content));
+  }
+
+  if (packs.length === 0) {
+    return <StateCard title="No packs indexed" detail="Composer needs at least one indexed pack." icon={PenLine} />;
+  }
+
+  return (
+    <section className="library-panel composer-page" aria-labelledby="composer-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <PenLine size={16} aria-hidden="true" />
+            <span>Composer</span>
+          </div>
+          <h1 id="composer-title">Composer</h1>
+          <p>Build temporary, redacted context exports from selected local records.</p>
+        </div>
+        <button className="secondary-action" type="button" disabled>
+          Save as pack later
+        </button>
+      </div>
+
+      <div className="composer-grid">
+        <aside className="composer-panel">
+          <h2>Packs</h2>
+          <div className="composer-pack-list">
+            {packs.map((pack) => {
+              const selected = Object.prototype.hasOwnProperty.call(selectedByPack, pack.id);
+              return (
+                <button
+                  className={pack.id === activePackId ? "composer-pack is-active" : "composer-pack"}
+                  type="button"
+                  onClick={() => setActivePackId(pack.id)}
+                  key={pack.id}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => togglePack(pack.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={`Select ${pack.name}`}
+                  />
+                  <span>
+                    <strong>{pack.name}</strong>
+                    <small>{selectedByPack[pack.id]?.length ?? 0} selected</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <section className="composer-panel records-composer">
+          <div className="composer-panel-heading">
+            <div>
+              <h2>Records</h2>
+              <p>{recordsLoading ? "Loading records..." : `${visibleRecords.length} visible / ${activeRecords.length} total`}</p>
+            </div>
+            <div className="inline-actions">
+              <button className="secondary-action" type="button" onClick={selectVisibleRecords} disabled={!activePackId || visibleRecords.length === 0}>
+                Select shown
+              </button>
+              <button className="secondary-action" type="button" onClick={clearActivePackRecords} disabled={!activePackId}>
+                Clear pack
+              </button>
+            </div>
+          </div>
+
+          <div className="composer-filters">
+            <label>
+              <Search size={15} aria-hidden="true" />
+              <input value={query} placeholder="Filter records..." onChange={(event) => setQuery(event.target.value)} />
+            </label>
+            <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
+              <option value="all">All tags</option>
+              {filterOptions.tags.map((tag) => (
+                <option value={tag} key={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="all">All types</option>
+              {filterOptions.types.map((type) => (
+                <option value={type} key={type}>
+                  {formatPackType(type)}
+                </option>
+              ))}
+            </select>
+            <select value={privacyFilter} onChange={(event) => setPrivacyFilter(event.target.value)}>
+              <option value="all">All privacy</option>
+              {filterOptions.privacy.map((privacy) => (
+                <option value={privacy} key={privacy}>
+                  {privacy}
+                </option>
+              ))}
+            </select>
+            <select value={reviewFilter} onChange={(event) => setReviewFilter(event.target.value)}>
+              <option value="all">All review</option>
+              {filterOptions.reviewStatuses.map((status) => (
+                <option value={status} key={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="composer-record-list">
+            {visibleRecords.map((record) => (
+              <label className="composer-record" key={record.id}>
+                <input
+                  type="checkbox"
+                  checked={(selectedByPack[activePackId] ?? []).includes(record.id)}
+                  onChange={() => toggleRecord(activePackId, record.id)}
+                />
+                <span>
+                  <strong>{record.title}</strong>
+                  <small>{record.type} / {record.privacy} / {record.reviewStatus}</small>
+                </span>
+                <span className="tag-row">
+                  {record.tags.slice(0, 3).map((tag) => (
+                    <span className="tag" key={tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <aside className="composer-panel composer-output">
+          <h2>Preview</h2>
+          <label className="field-label">
+            Title
+            <input value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <label className="field-label">
+            Target
+            <select value={target} onChange={(event) => setTarget(event.target.value as typeof target)}>
+              {composerTargets.map((option) => (
+                <option value={option.value} key={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-label">
+            Privacy
+            <select value={privacyMode} onChange={(event) => setPrivacyMode(event.target.value as "redacted" | "public_safe")}>
+              <option value="redacted">Redacted</option>
+              <option value="public_safe">Public safe only</option>
+            </select>
+          </label>
+          <label className="field-label">
+            Token budget
+            <input
+              inputMode="numeric"
+              min="1"
+              placeholder="warning only"
+              value={tokenBudget}
+              onChange={(event) => setTokenBudget(event.target.value.replace(/\D/g, ""))}
+            />
+          </label>
+          <div className="composer-summary">
+            <Stat value={selectedCount} label="Selected Records" />
+            <p>{summarizeSelectedPacks(packs, selectedByPack)}</p>
+            <p>Default exclusions: {defaultComposerExcludeTags.join(", ")}</p>
+          </div>
+          <button className="primary-action" type="button" onClick={previewComposition} disabled={selectedCount === 0 || loadingPreview}>
+            {loadingPreview ? "Building..." : "Build Preview"}
+          </button>
+          {error ? (
+            <p className="composer-error">
+              <ShieldAlert size={15} aria-hidden="true" />
+              <span>{error}</span>
+            </p>
+          ) : null}
+        </aside>
+      </div>
+
+      {artifact ? (
+        <ExportPreview artifact={artifact} onCopy={copyComposition} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+      ) : null}
+    </section>
   );
 }
 

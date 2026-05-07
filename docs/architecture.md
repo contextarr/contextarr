@@ -27,6 +27,9 @@ packages/schema
 packages/renderer
 packages/pack-validator
 packages/export-profiles
+packages/importers
+tools/brand-kit
+assets/brand
 demo-packs
 docs
 ```
@@ -41,6 +44,7 @@ docs
 6. Export profiles produce target-specific context files.
 7. The MCP server exposes selected context through read-only local stdio tools.
 8. Importers can generate local draft pack folders from selected local inputs.
+9. Composer builds temporary custom exports from selected local records.
 
 ## Source of Truth
 
@@ -52,7 +56,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports.
 
 ## Renderer Direction
 
@@ -70,6 +74,8 @@ MCP query metadata is local SQLite app state. It records tool name, related ids,
 
 Imported draft packs are generated local files under explicit ignored output directories such as `imported-packs/`. They are not approved packs by default; imported records are private drafts tagged `imported_draft` and `never_export`.
 
+Composed exports are temporary derived artifacts. The web UI can preview, copy, and browser-download them, but Phase 10 does not save composed packs or mutate pack files.
+
 ## Local API Direction
 
 The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
@@ -81,3 +87,7 @@ MCP is implemented as a local stdio process in `apps/mcp`. It uses the official 
 ## Importer Direction
 
 Phase 9 importers are CLI/core only. They read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. They must not add API import endpoints, web importer screens, MCP mutation, live connectors, cloud sync, or external API calls.
+
+## Composer Direction
+
+Phase 10 Composer v0 selects indexed packs and records, filters by local metadata, chooses a target and privacy mode, and calls the local compose preview API. It reuses the export engine and redaction rules. Saving composed packs is deferred.

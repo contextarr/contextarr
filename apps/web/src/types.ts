@@ -108,6 +108,21 @@ export interface ExportArtifact {
   estimatedTokens: number;
 }
 
+export interface ComposeSelection {
+  packId: string;
+  recordIds: string[];
+}
+
+export interface ComposePreviewRequest {
+  title?: string;
+  target: "chatgpt" | "claude" | "codex" | "markdown" | "json_records";
+  format: "markdown" | "json";
+  privacyMode?: "redacted" | "public_safe";
+  selections: ComposeSelection[];
+  excludeTags?: string[];
+  tokenBudget?: number;
+}
+
 export interface PackDetail extends PackSummary {
   author: string;
   license: string;
@@ -232,5 +247,6 @@ export type Route =
   | { name: "pack"; packId: string }
   | { name: "record"; recordId: string }
   | { name: "reviewQueue" }
+  | { name: "composer" }
   | { name: "exports" }
   | { name: "health" };

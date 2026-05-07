@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 9: Local Importers v1.
+This repository is in Phase 10: Composer v0.
 
 Current scope:
 
@@ -51,13 +51,16 @@ Current scope:
 - Local stdio MCP server with read-only pack, record, search, and export-preview tools.
 - Local CLI/core importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
 - `contextarr import <path> --kind <kind> --out <path>` draft pack command.
+- Deterministic SVG brand kit and web app brand mark.
+- Read-only Composer page for selecting packs/records and building temporary custom exports.
+- `POST /api/compose/preview` local API endpoint for composed export previews.
 
 Not included yet:
 
 - Web importer UI.
 - API import endpoints.
 - Pack file editing from review actions.
-- Composer workflows.
+- Saving composed exports as new packs.
 
 ## Product Positioning
 
@@ -89,6 +92,8 @@ packages/
 
 demo-packs/            Fake public-safe demo packs
 docs/                  Product, architecture, security, and roadmap docs
+assets/brand/          Deterministic SVG brand kit
+tools/brand-kit/       Private pnpm brand asset generator
 ```
 
 ## Planned Stack
@@ -127,7 +132,7 @@ The public SVG brand kit lives in [assets/brand](assets/brand). PNG previews and
 
 ```bash
 pnpm install
-pnpm phase8:verify
+pnpm phase10:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```

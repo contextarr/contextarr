@@ -191,6 +191,72 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("POST /api/compose/preview returns a composed export artifact", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: {
+        title: "Phase 10 Handoff",
+        target: "codex",
+        format: "markdown",
+        selections: [
+          { packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] },
+          { packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }
+        ]
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "composed",
+      profileId: "composed-preview",
+      target: "codex",
+      format: "markdown",
+      filename: "phase-10-handoff-codex.md"
+    });
+    expect(response.json().includedRecords.map((record: { id: string }) => record.id)).toEqual([
+      "ai-workstation.local-ai-stack",
+      "claude-code-project.agent-instructions"
+    ]);
+    expect(response.json().content).toContain("Phase 10 Handoff");
+    await app.close();
+    db.close();
+  });
+
+  it("POST /api/compose/preview reports bad selections and missing records", async () => {
+    const app = createApp({ config, db });
+    const emptySelection = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: { target: "codex", format: "markdown", selections: [] }
+    });
+    const missingPack = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: {
+        target: "codex",
+        format: "markdown",
+        selections: [{ packId: "missing-pack", recordIds: ["missing.record"] }]
+      }
+    });
+    const missingRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: {
+        target: "codex",
+        format: "markdown",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["missing.record"] }]
+      }
+    });
+
+    expect(emptySelection.statusCode).toBe(400);
+    expect(missingPack.statusCode).toBe(404);
+    expect(missingRecord.statusCode).toBe(404);
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs/:id/records returns records and supports filters", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({
@@ -318,6 +384,33 @@ describe("Contextarr API", () => {
       method: "GET",
       url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview",
       headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(blocked.statusCode).toBe(401);
+    expect(allowed.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on compose preview routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const payload = {
+      target: "codex",
+      format: "markdown",
+      selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+    };
+    const blocked = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload
+    });
+    const allowed = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      headers: { authorization: "Bearer test-token" },
+      payload
     });
 
     expect(blocked.statusCode).toBe(401);

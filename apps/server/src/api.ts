@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
-import { buildPackExport, ExportError } from "@contextarr/export-profiles";
+import { buildComposedExport, buildPackExport, ExportError, type BuildComposedExportOptions } from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
 import {
   getIndexStats,
@@ -98,6 +98,40 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       });
     } catch (error) {
       if (error instanceof ExportError && error.code === "profile_not_found") {
+        return reply.code(404).send({ error: "not_found", message: error.message });
+      }
+
+      if (error instanceof ExportError) {
+        return reply.code(400).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post<{ Body: ComposePreviewBody }>("/api/compose/preview", async (request, reply) => {
+    const parsed = parseComposePreviewBody(request.body ?? {});
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: "invalid_compose_request", message: parsed.message });
+    }
+
+    const selections: BuildComposedExportOptions["selections"] = [];
+    for (const selection of parsed.value.selections) {
+      const packPath = getPackPath(db, selection.packId);
+      if (!packPath) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${selection.packId}` });
+      }
+
+      selections.push({ packPath, recordIds: selection.recordIds });
+    }
+
+    try {
+      return buildComposedExport({
+        ...parsed.value,
+        selections
+      });
+    } catch (error) {
+      if (error instanceof ExportError && error.code === "record_not_found") {
         return reply.code(404).send({ error: "not_found", message: error.message });
       }
 
@@ -218,4 +252,100 @@ function getHeaderValue(value: string | string[] | undefined): string | undefine
 
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
   return typeof value === "string" && reviewItemStatuses.includes(value as ReviewItemStatus);
+}
+
+interface ComposePreviewBody {
+  title?: unknown;
+  target?: unknown;
+  format?: unknown;
+  privacyMode?: unknown;
+  selections?: unknown;
+  excludeTags?: unknown;
+  tokenBudget?: unknown;
+}
+
+interface ParsedComposePreviewBody {
+  title?: string;
+  target: string;
+  format: "markdown" | "json";
+  privacyMode?: "redacted" | "public_safe";
+  selections: Array<{ packId: string; recordIds: string[] }>;
+  excludeTags?: string[];
+  tokenBudget?: number;
+}
+
+function parseComposePreviewBody(body: ComposePreviewBody): { ok: true; value: ParsedComposePreviewBody } | { ok: false; message: string } {
+  const allowedTargets = new Set(["chatgpt", "claude", "codex", "markdown", "json_records"]);
+  if (typeof body?.target !== "string" || !allowedTargets.has(body.target)) {
+    return { ok: false, message: "Composer target is invalid." };
+  }
+
+  if (body.format !== "markdown" && body.format !== "json") {
+    return { ok: false, message: "Composer format is invalid." };
+  }
+
+  if (body.privacyMode !== undefined && body.privacyMode !== "redacted" && body.privacyMode !== "public_safe") {
+    return { ok: false, message: "Composer privacy mode is invalid." };
+  }
+
+  if (!Array.isArray(body.selections)) {
+    return { ok: false, message: "Composer selections are required." };
+  }
+
+  const selections: Array<{ packId: string; recordIds: string[] }> = [];
+  for (const selection of body.selections) {
+    if (!isRecord(selection)) {
+      return { ok: false, message: "Composer selection is invalid." };
+    }
+
+    const packId = selection.packId;
+    const recordIds = selection.recordIds;
+    if (typeof packId !== "string" || !packId.trim() || !Array.isArray(recordIds)) {
+      return { ok: false, message: "Composer selection is invalid." };
+    }
+
+    const validRecordIds = recordIds.filter((recordId): recordId is string => typeof recordId === "string" && Boolean(recordId.trim()));
+    if (validRecordIds.length !== recordIds.length) {
+      return { ok: false, message: "Composer record IDs are invalid." };
+    }
+
+    selections.push({ packId: packId.trim(), recordIds: validRecordIds });
+  }
+
+  if (selections.length === 0 || selections.every((selection) => selection.recordIds.length === 0)) {
+    return { ok: false, message: "Composer requires at least one selected record." };
+  }
+
+  let excludeTags: string[] | undefined;
+  if (body.excludeTags !== undefined) {
+    if (!Array.isArray(body.excludeTags) || body.excludeTags.some((tag) => typeof tag !== "string" || !tag.trim())) {
+      return { ok: false, message: "Composer exclude tags are invalid." };
+    }
+    excludeTags = body.excludeTags.map((tag) => tag.trim());
+  }
+
+  let tokenBudget: number | undefined;
+  if (body.tokenBudget !== undefined) {
+    if (!Number.isInteger(body.tokenBudget) || Number(body.tokenBudget) <= 0) {
+      return { ok: false, message: "Composer token budget must be a positive integer." };
+    }
+    tokenBudget = Number(body.tokenBudget);
+  }
+
+  return {
+    ok: true,
+    value: {
+      title: typeof body.title === "string" && body.title.trim() ? body.title.trim() : undefined,
+      target: body.target,
+      format: body.format,
+      privacyMode: body.privacyMode,
+      selections,
+      excludeTags,
+      tokenBudget
+    }
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

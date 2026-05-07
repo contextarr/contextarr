@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
+import { composerHref, exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
 
 describe("hash routes", () => {
   it("defaults to library", () => {
@@ -18,8 +18,9 @@ describe("hash routes", () => {
     });
   });
 
-  it("parses review queue, exports, and health routes", () => {
+  it("parses review queue, composer, exports, and health routes", () => {
     expect(parseHashRoute("#/review-queue")).toEqual({ name: "reviewQueue" });
+    expect(parseHashRoute("#/composer")).toEqual({ name: "composer" });
     expect(parseHashRoute("#/exports")).toEqual({ name: "exports" });
     expect(parseHashRoute("#/health")).toEqual({ name: "health" });
   });
@@ -28,6 +29,7 @@ describe("hash routes", () => {
     expect(packHref("pack id")).toBe("#/packs/pack%20id");
     expect(recordHref("record/id")).toBe("#/records/record%2Fid");
     expect(reviewQueueHref()).toBe("#/review-queue");
+    expect(composerHref()).toBe("#/composer");
     expect(exportsHref()).toBe("#/exports");
     expect(healthHref()).toBe("#/health");
   });

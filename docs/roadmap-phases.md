@@ -73,9 +73,11 @@
 
 ## Phase 10: Composer
 
+- Implemented in Phase 10.
 - Select packs and records.
 - Filter by tags and metadata.
-- Build temporary custom exports.
+- Build temporary custom exports through the export engine.
+- Preview, copy, and browser-download only.
 - Save composed packs later.
 
 ## Phase 11: Launch Prep

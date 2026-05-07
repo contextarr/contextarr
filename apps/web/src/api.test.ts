@@ -112,6 +112,33 @@ describe("Contextarr API client", () => {
     expect(requests).toEqual(["/api/packs/pack-1/exports/profile-1/preview"]);
   });
 
+  it("posts compose preview requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        return jsonResponse({ packId: "composed", profileId: "composed-preview", content: "# Composed" });
+      }
+    });
+
+    await expect(
+      client.composePreview({
+        title: "Handoff",
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        selections: [{ packId: "pack-1", recordIds: ["record-1"] }]
+      })
+    ).resolves.toMatchObject({ packId: "composed" });
+
+    expect(requests[0].url).toBe("/api/compose/preview");
+    expect(requests[0].init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({ title: "Handoff", target: "codex" });
+  });
+
   it("throws ApiError for failed responses", async () => {
     const client = createApiClient({
       fetchImpl: async () => jsonResponse({ message: "API token required." }, 401)

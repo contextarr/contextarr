@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildPackExport, ExportError, listPackExportProfiles } from "./index";
+import { buildComposedExport, buildPackExport, ExportError, listPackExportProfiles } from "./index";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
@@ -148,5 +148,101 @@ describe("export profile engine", () => {
     );
 
     expect(() => buildPackExport({ packPath, profileId: "codex-context" })).toThrow(/missing record/);
+  });
+
+  it("builds composed markdown and JSON exports in selected record order", () => {
+    const selections = [
+      {
+        packPath: demoPack("ai-workstation-pack"),
+        recordIds: ["ai-workstation.local-ai-stack", "ai-workstation.networking-notes"]
+      },
+      {
+        packPath: demoPack("claude-code-project-pack"),
+        recordIds: ["claude-code-project.agent-instructions"]
+      }
+    ];
+
+    const markdown = buildComposedExport({
+      title: "Workbench Handoff",
+      target: "codex",
+      format: "markdown",
+      selections,
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+
+    expect(markdown.filename).toBe("workbench-handoff-codex.md");
+    expect(markdown.includedRecords.map((record) => record.id)).toEqual([
+      "ai-workstation.local-ai-stack",
+      "ai-workstation.networking-notes",
+      "claude-code-project.agent-instructions"
+    ]);
+    expect(markdown.content.indexOf("Local AI Stack")).toBeLessThan(markdown.content.indexOf("Networking Notes"));
+
+    const json = buildComposedExport({
+      title: "Workbench Handoff",
+      target: "json_records",
+      format: "json",
+      selections,
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+    const parsed = JSON.parse(json.content);
+
+    expect(json.mimeType).toBe("application/json");
+    expect(parsed.exportKind).toBe("composed");
+    expect(parsed.records.map((record: { id: string }) => record.id)).toEqual(markdown.includedRecords.map((record) => record.id));
+  });
+
+  it("applies composed privacy, default excluded tags, and token budget warnings", () => {
+    const packPath = copyFixture();
+    fs.writeFileSync(
+      path.join(packPath, "records", "draft.md"),
+      fs
+        .readFileSync(path.join(packPath, "records", "overview.md"), "utf8")
+        .replace("id: valid.overview", "id: valid.draft")
+        .replace("title: Valid Overview", "title: Draft Import")
+        .replace("tags:\n  - test", "tags:\n  - imported_draft")
+        .replace("privacy: public_safe", "privacy: private"),
+      "utf8"
+    );
+
+    const artifact = buildComposedExport({
+      target: "codex",
+      format: "markdown",
+      selections: [{ packPath, recordIds: ["valid.overview", "valid.draft"] }],
+      tokenBudget: 1,
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("imported_draft") })])
+    );
+    expect(artifact.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "token_budget.exceeded" })]));
+  });
+
+  it("fails clearly for invalid composed export requests", () => {
+    expect(() =>
+      buildComposedExport({
+        target: "codex",
+        format: "markdown",
+        selections: []
+      })
+    ).toThrow(/requires at least one selected record/);
+
+    expect(() =>
+      buildComposedExport({
+        target: "codex",
+        format: "markdown",
+        selections: [{ packPath: demoPack("ai-workstation-pack"), recordIds: ["missing.record"] }]
+      })
+    ).toThrow(/missing record/);
+
+    expect(() =>
+      buildComposedExport({
+        target: "unsupported",
+        format: "markdown",
+        selections: [{ packPath: demoPack("ai-workstation-pack"), recordIds: ["ai-workstation.local-ai-stack"] }]
+      })
+    ).toThrow(ExportError);
   });
 });

@@ -2,7 +2,7 @@
 
 React and Vite local dashboard for Contextarr.
 
-Implemented through Phase 7:
+Implemented through Phase 10:
 
 - dark-first app shell
 - local API-backed Pack Library
@@ -14,6 +14,7 @@ Implemented through Phase 7:
 - SQLite-only review item status actions
 - Export Center and pack-level export preview UI
 - copy/download for generated local export artifacts
+- Composer page for temporary custom exports from selected records
 - optional `VITE_CONTEXTARR_API_TOKEN` support for protected local APIs
 
 Run locally:

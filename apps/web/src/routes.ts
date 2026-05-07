@@ -16,6 +16,10 @@ export function parseHashRoute(hash: string): Route {
     return { name: "reviewQueue" };
   }
 
+  if (parts[0] === "composer") {
+    return { name: "composer" };
+  }
+
   if (parts[0] === "exports") {
     return { name: "exports" };
   }
@@ -41,6 +45,10 @@ export function reviewQueueHref(): string {
 
 export function exportsHref(): string {
   return "#/exports";
+}
+
+export function composerHref(): string {
+  return "#/composer";
 }
 
 export function healthHref(): string {

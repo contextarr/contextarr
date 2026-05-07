@@ -1,5 +1,6 @@
 import type {
   HealthResponse,
+  ComposePreviewRequest,
   ExportArtifact,
   PackDetail,
   PackHealthResponse,
@@ -35,6 +36,7 @@ export interface ApiClient {
   getPackRecords(id: string): Promise<RecordSummary[]>;
   getRecord(id: string): Promise<RecordDetail>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
+  composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   getReviewItems(filters?: { status?: string; severity?: string; type?: string; packId?: string }): Promise<ReviewItemsResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
@@ -78,6 +80,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       requestJson<ExportArtifact>(
         `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`
       ),
+    composePreview: (body: ComposePreviewRequest) =>
+      requestJson<ExportArtifact>("/api/compose/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(
