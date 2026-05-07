@@ -12,6 +12,14 @@ export function parseHashRoute(hash: string): Route {
     return { name: "record", recordId: parts[1] };
   }
 
+  if (parts[0] === "review-queue") {
+    return { name: "reviewQueue" };
+  }
+
+  if (parts[0] === "health") {
+    return { name: "health" };
+  }
+
   return { name: "library" };
 }
 
@@ -21,4 +29,12 @@ export function packHref(packId: string): string {
 
 export function recordHref(recordId: string): string {
   return `#/records/${encodeURIComponent(recordId)}`;
+}
+
+export function reviewQueueHref(): string {
+  return "#/review-queue";
+}
+
+export function healthHref(): string {
+  return "#/health";
 }

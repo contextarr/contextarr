@@ -99,6 +99,23 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("validates a directory of child packs", async () => {
+    const output = createIo();
+    const code = await runCli(["validate", demoPacksDir, "--format", "json"], output.io);
+    const json = JSON.parse(output.stdout);
+
+    expect(code).toBe(0);
+    expect(json).toMatchObject({
+      valid: true,
+      summary: {
+        errors: 0,
+        warnings: 0,
+        infos: 0
+      }
+    });
+    expect(json.results).toHaveLength(5);
+  });
+
   it("returns 2 for usage or read failures", async () => {
     const output = createIo();
     const code = await runCli(["validate", "does-not-exist"], output.io);

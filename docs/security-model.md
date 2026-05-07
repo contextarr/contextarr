@@ -69,6 +69,8 @@ MCP is later-phase and read-only. It must not:
 
 AI-drafted content, when supported later, must enter a review queue. It must not become approved pack content, be exported, or appear in MCP responses by default without human review.
 
+Phase 6 review queue actions are SQLite-only local app state. Accept, Ignore, and Mark Reviewed do not mutate records, manifests, source maps, rules, or export profiles.
+
 ## Telemetry
 
 Telemetry is disabled and out of scope. Contextarr should not phone home by default.

@@ -43,7 +43,58 @@ export interface RebuildIndexResult {
   recordsIndexed: number;
   sourcesIndexed: number;
   exportProfilesIndexed: number;
+  reviewItemsGenerated: number;
   skipped: SkippedPack[];
+}
+
+export type ReviewItemSeverity = "error" | "warning" | "info";
+export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
+export type ReviewItemType =
+  | "validation"
+  | "freshness"
+  | "export_safety"
+  | "review_status"
+  | "trust"
+  | "source_coverage";
+
+export interface ReviewItem {
+  id: string;
+  fingerprint: string;
+  type: ReviewItemType;
+  severity: ReviewItemSeverity;
+  packId: string;
+  recordId: string | null;
+  sourceId: string | null;
+  message: string;
+  suggestedAction: string;
+  status: ReviewItemStatus;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface ReviewItemFilters {
+  status?: ReviewItemStatus;
+  severity?: ReviewItemSeverity;
+  type?: ReviewItemType;
+  packId?: string;
+}
+
+export interface HealthCheck {
+  id: ReviewItemType;
+  label: string;
+  status: "pass" | "warning" | "error";
+  count: number;
+}
+
+export interface PackHealthDetail {
+  packId: string;
+  score: number;
+  status: string;
+  reviewQueueCount: number;
+  checks: HealthCheck[];
+  items: ReviewItem[];
 }
 
 export interface PackSummary {

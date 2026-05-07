@@ -106,6 +106,27 @@ export function createSchema(db: ContextarrDatabase): void {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS review_items (
+      id TEXT PRIMARY KEY,
+      fingerprint TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      pack_id TEXT NOT NULL,
+      record_id TEXT,
+      source_id TEXT,
+      message TEXT NOT NULL,
+      suggested_action TEXT NOT NULL,
+      status TEXT NOT NULL,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_review_items_status ON review_items(status);
+    CREATE INDEX IF NOT EXISTS idx_review_items_pack ON review_items(pack_id);
+    CREATE INDEX IF NOT EXISTS idx_review_items_last_seen ON review_items(last_seen_at);
+
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       type TEXT NOT NULL,
@@ -131,6 +152,7 @@ export function createSchema(db: ContextarrDatabase): void {
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
   ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureReviewItemsTable(db);
 }
 
 export function clearDerivedIndex(db: ContextarrDatabase): void {
@@ -151,4 +173,37 @@ function ensureColumn(db: ContextarrDatabase, table: string, column: string, def
   }
 
   db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+function ensureReviewItemsTable(db: ContextarrDatabase): void {
+  const existing = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'review_items'")
+    .get();
+
+  if (existing) {
+    return;
+  }
+
+  db.exec(`
+    CREATE TABLE review_items (
+      id TEXT PRIMARY KEY,
+      fingerprint TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      pack_id TEXT NOT NULL,
+      record_id TEXT,
+      source_id TEXT,
+      message TEXT NOT NULL,
+      suggested_action TEXT NOT NULL,
+      status TEXT NOT NULL,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_review_items_status ON review_items(status);
+    CREATE INDEX IF NOT EXISTS idx_review_items_pack ON review_items(pack_id);
+    CREATE INDEX IF NOT EXISTS idx_review_items_last_seen ON review_items(last_seen_at);
+  `);
 }

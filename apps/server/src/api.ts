@@ -1,7 +1,19 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { ContextarrDatabase } from "./db";
-import { getIndexStats, getPack, getPackRecords, getPacks, getRecord, rebuildIndex, searchIndex } from "./indexer";
-import type { ServerConfig } from "./types";
+import {
+  getIndexStats,
+  getPack,
+  getPackHealth,
+  getPackRecords,
+  getPacks,
+  getRecord,
+  getReviewItems,
+  rebuildIndex,
+  reviewItemStatuses,
+  searchIndex,
+  updateReviewItemStatus
+} from "./indexer";
+import type { ReviewItemFilters, ReviewItemSeverity, ReviewItemStatus, ReviewItemType, ServerConfig } from "./types";
 
 export interface CreateAppOptions {
   config: ServerConfig;
@@ -40,7 +52,9 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
         packs: stats.packs,
         records: stats.records,
         sources: stats.sources,
-        exportProfiles: stats.exportProfiles
+        exportProfiles: stats.exportProfiles,
+        reviewItems: stats.reviewItems,
+        openReviewItems: stats.openReviewItems
       }
     };
   });
@@ -58,6 +72,15 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return pack;
+  });
+
+  app.get<{ Params: { id: string } }>("/api/packs/:id/health", async (request, reply) => {
+    const health = getPackHealth(db, request.params.id);
+    if (!health) {
+      return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+    }
+
+    return health;
   });
 
   app.get<{
@@ -87,6 +110,50 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       query: request.query.q ?? "",
       results: searchIndex(db, request.query.q ?? "")
     };
+  });
+
+  app.get<{
+    Querystring: {
+      status?: ReviewItemStatus;
+      severity?: ReviewItemSeverity;
+      type?: ReviewItemType;
+      packId?: string;
+    };
+  }>("/api/review-items", async (request) => {
+    const filters: ReviewItemFilters = {
+      status: request.query.status,
+      severity: request.query.severity,
+      type: request.query.type,
+      packId: request.query.packId
+    };
+    const items = getReviewItems(db, filters);
+    const allItems = getReviewItems(db);
+
+    return {
+      items,
+      counts: {
+        total: allItems.length,
+        open: allItems.filter((item) => item.status === "open").length,
+        filtered: items.length
+      }
+    };
+  });
+
+  app.post<{
+    Params: { id: string };
+    Body: { status?: string };
+  }>("/api/review-items/:id/status", async (request, reply) => {
+    const status = request.body?.status;
+    if (!isReviewItemStatus(status)) {
+      return reply.code(400).send({ error: "invalid_status", message: "Review item status is invalid." });
+    }
+
+    const item = updateReviewItemStatus(db, request.params.id, status);
+    if (!item) {
+      return reply.code(404).send({ error: "not_found", message: `Review item not found: ${request.params.id}` });
+    }
+
+    return { item };
   });
 
   app.post("/api/rescan", async () => {
@@ -121,4 +188,8 @@ function getRequestToken(request: FastifyRequest): string | undefined {
 
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
+  return typeof value === "string" && reviewItemStatuses.includes(value as ReviewItemStatus);
 }

@@ -50,15 +50,19 @@ import {
   persistLibraryView
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
-import { packHref, parseHashRoute, recordHref } from "./routes";
+import { filterReviewItems, reviewPackName, summarizeReviewItems, type ReviewFilters } from "./review";
+import { healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
 import type {
   ExportProfileSummary,
+  HealthCheck,
   HealthResponse,
   LibraryViewMode,
   PackDetail,
+  PackHealthResponse,
   PackSummary,
   RecordDetail,
   RecordSummary,
+  ReviewItem,
   Route,
   SearchResult,
   SortKey,
@@ -66,17 +70,17 @@ import type {
 } from "./types";
 
 const navItems = [
-  { label: "Library", icon: Library, active: true },
+  { label: "Library", icon: Library, href: "#/library", route: "library" },
   { label: "Packs", icon: Boxes },
   { label: "Collectors", icon: Layers3 },
   { label: "Sources", icon: Database },
-  { label: "Review Queue", icon: ShieldCheck },
+  { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
   { label: "Composer", icon: PenLine },
   { label: "Exports", icon: CloudDownload },
   { label: "Registry", icon: Package },
-  { label: "Health", icon: HeartPulse },
+  { label: "Health", icon: HeartPulse, href: healthHref(), route: "health" },
   { label: "Settings", icon: Settings }
-];
+] satisfies Array<{ label: string; icon: typeof Library; href?: string; route?: Route["name"] }>;
 
 const coverIconMap = {
   book: BookOpen,
@@ -203,13 +207,17 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar health={health} />
+      <Sidebar health={health} route={route} />
       <main className="workspace">
         <TopBar query={query} searching={searching} onQueryChange={setQuery} />
         {route.name === "pack" ? (
           <PackDetailPage packId={route.packId} packs={packs} />
         ) : route.name === "record" ? (
           <RecordDetailPage recordId={route.recordId} packs={packs} />
+        ) : route.name === "reviewQueue" ? (
+          <ReviewQueuePage packs={packs} onStatusChanged={loadDashboard} />
+        ) : route.name === "health" ? (
+          <HealthPage health={health} packs={packs} />
         ) : (
           <LibraryPage
             packs={packs}
@@ -236,7 +244,7 @@ export function App() {
   );
 }
 
-function Sidebar({ health }: { health: HealthResponse | null }) {
+function Sidebar({ health, route }: { health: HealthResponse | null; route: Route }) {
   return (
     <aside className="sidebar" aria-label="Contextarr navigation">
       <a className="brand" href="#/library">
@@ -248,16 +256,16 @@ function Sidebar({ health }: { health: HealthResponse | null }) {
 
       <nav className="nav-list" aria-label="Primary">
         {navItems.map((item) =>
-          item.active ? (
-            <a className="nav-item is-active" href="#/library" key={item.label}>
+          item.href ? (
+            <a className={route.name === item.route ? "nav-item is-active" : "nav-item"} href={item.href} key={item.label}>
               <item.icon size={18} aria-hidden="true" />
               <span>{item.label}</span>
+              {item.label === "Review Queue" ? <span className="nav-count">{health?.counts.openReviewItems ?? 0}</span> : null}
             </a>
           ) : (
             <button className="nav-item" type="button" disabled key={item.label}>
               <item.icon size={18} aria-hidden="true" />
               <span>{item.label}</span>
-              {item.label === "Review Queue" ? <span className="nav-count">0</span> : null}
             </button>
           )
         )}
@@ -270,7 +278,7 @@ function Sidebar({ health }: { health: HealthResponse | null }) {
         </div>
         <p>{health ? `${health.counts.packs} packs / ${health.counts.records} records` : "Local API status loading"}</p>
         <div className="system-meta">
-          <span>v0.5.0</span>
+          <span>v0.6.0</span>
           <span>{health?.authRequired ? "Token auth" : "Local dev"}</span>
         </div>
       </div>
@@ -918,17 +926,250 @@ function ExportsTab({ profiles }: { profiles: ExportProfileSummary[] }) {
 }
 
 function HealthTab({ pack }: { pack: PackDetail }) {
+  const [health, setHealth] = useState<PackHealthResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHealth(null);
+    setError(null);
+
+    async function loadHealth() {
+      try {
+        const response = await apiClient.getPackHealth(pack.id);
+        if (!cancelled) {
+          setHealth(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load pack health.");
+        }
+      }
+    }
+
+    void loadHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, [pack.id]);
+
+  if (error) {
+    return <StateCard title="Health unavailable" detail={error} />;
+  }
+
+  if (!health) {
+    return <div className="detail-card skeleton-detail" />;
+  }
+
   return (
     <article className="detail-card">
       <h2>Health</h2>
       <div className="stat-grid">
-        <Stat value={`${pack.healthScore}%`} label="Score" />
-        <Stat value={formatPackType(pack.healthStatus)} label="Status" />
-        <Stat value={pack.validation.errors} label="Errors" />
-        <Stat value={pack.validation.warnings} label="Warnings" />
+        <Stat value={`${health.score}%`} label="Score" />
+        <Stat value={formatPackType(health.status)} label="Status" />
+        <Stat value={health.reviewQueueCount} label="Open Items" />
+        <Stat value={health.items.length} label="Active Items" />
       </div>
-      <p className="muted-note">Full deterministic health rules and review queue workflows remain Phase 6.</p>
+      <HealthChecks checks={health.checks} />
+      <ReviewItemList items={health.items} packs={[pack]} compact />
     </article>
+  );
+}
+
+function ReviewQueuePage({
+  packs,
+  onStatusChanged
+}: {
+  packs: PackSummary[];
+  onStatusChanged(): void;
+}) {
+  const [response, setResponse] = useState<{ items: ReviewItem[] } | null>(null);
+  const [filters, setFilters] = useState<ReviewFilters>({
+    status: "open",
+    severity: "all",
+    type: "all",
+    packId: "all"
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadItems = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const reviewResponse = await apiClient.getReviewItems();
+      setResponse({ items: reviewResponse.items });
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load review queue.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
+
+  async function updateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed") {
+    await apiClient.updateReviewItemStatus(item.id, status);
+    await loadItems();
+    onStatusChanged();
+  }
+
+  const items = response?.items ?? [];
+  const visibleItems = filterReviewItems(items, filters);
+  const summary = summarizeReviewItems(items);
+
+  return (
+    <section className="detail-page" aria-labelledby="review-queue-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <span>Review Queue</span>
+          </div>
+          <h1 id="review-queue-title">Review Queue</h1>
+          <p>SQLite-backed attention items generated from local pack checks.</p>
+        </div>
+        <div className="summary-strip">
+          <Stat value={summary.open} label="Open" />
+          <Stat value={summary.errors} label="Errors" />
+          <Stat value={summary.warnings} label="Warnings" />
+        </div>
+      </div>
+
+      <ReviewFiltersBar filters={filters} packs={packs} onChange={setFilters} />
+
+      {error ? (
+        <StateCard title="Review queue unavailable" detail={error} />
+      ) : loading ? (
+        <DetailLoading />
+      ) : items.length === 0 ? (
+        <StateCard title="No review items" detail="All indexed demo packs are healthy." icon={CheckCircle2} />
+      ) : visibleItems.length === 0 ? (
+        <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
+      ) : (
+        <div className="review-list">
+          {visibleItems.map((item) => (
+            <ReviewItemCard item={item} packs={packs} onUpdateStatus={updateStatus} key={item.id} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function HealthPage({ health, packs }: { health: HealthResponse | null; packs: PackSummary[] }) {
+  const [items, setItems] = useState<ReviewItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadItems() {
+      try {
+        const response = await apiClient.getReviewItems();
+        if (!cancelled) {
+          setItems(response.items);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load health items.");
+        }
+      }
+    }
+
+    void loadItems();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const summary = summarizeReviewItems(items);
+  const typeBreakdown = Array.from(
+    items.reduce((map, item) => map.set(item.type, (map.get(item.type) ?? 0) + 1), new Map<string, number>())
+  ).sort((left, right) => right[1] - left[1]);
+
+  return (
+    <section className="detail-page" aria-labelledby="health-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <HeartPulse size={16} aria-hidden="true" />
+            <span>Health</span>
+          </div>
+          <h1 id="health-title">Pack Health</h1>
+          <p>Deterministic local health derived from validation, review, freshness, and source coverage checks.</p>
+        </div>
+        <div className="summary-strip">
+          <Stat value={health?.counts.packs ?? packs.length} label="Packs" />
+          <Stat value={health?.counts.openReviewItems ?? summary.open} label="Open Items" />
+          <Stat value={summary.total} label="Total Items" />
+        </div>
+      </div>
+
+      {error ? <StateCard title="Health unavailable" detail={error} /> : null}
+
+      <div className="detail-grid">
+        <article className="detail-card">
+          <h2>Severity</h2>
+          <div className="stat-grid">
+            <Stat value={summary.errors} label="Errors" />
+            <Stat value={summary.warnings} label="Warnings" />
+            <Stat value={summary.infos} label="Info" />
+          </div>
+        </article>
+        <article className="detail-card">
+          <h2>Issue Types</h2>
+          {typeBreakdown.length === 0 ? (
+            <p className="muted-note">No generated review items.</p>
+          ) : (
+            <ul className="simple-list">
+              {typeBreakdown.map(([type, count]) => (
+                <li key={type}>
+                  <span>{formatPackType(type)}</span>
+                  <strong>{count}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      </div>
+
+      <article className="detail-card">
+        <h2>Pack Health</h2>
+        <div className="table-wrap">
+          <table className="pack-table">
+            <thead>
+              <tr>
+                <th>Pack</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Open Items</th>
+                <th>Records</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packs.map((pack) => (
+                <tr key={pack.id}>
+                  <td>
+                    <a className="pack-title-link" href={packHref(pack.id)}>
+                      {pack.name}
+                    </a>
+                  </td>
+                  <td>{formatPackType(pack.healthStatus)}</td>
+                  <td>{pack.healthScore}%</td>
+                  <td>{pack.reviewQueueCount}</td>
+                  <td>{pack.recordCount}</td>
+                  <td>{formatDate(pack.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
   );
 }
 
@@ -1019,6 +1260,153 @@ function RecordDetailPage({ recordId, packs }: { recordId: string; packs: PackSu
       </div>
     </section>
   );
+}
+
+function ReviewFiltersBar({
+  filters,
+  packs,
+  onChange
+}: {
+  filters: ReviewFilters;
+  packs: PackSummary[];
+  onChange(filters: ReviewFilters): void;
+}) {
+  return (
+    <div className="review-filters">
+      <label className="select-control">
+        <ShieldCheck size={16} aria-hidden="true" />
+        <select value={filters.status} onChange={(event) => onChange({ ...filters, status: event.target.value as ReviewFilters["status"] })}>
+          <option value="all">All status</option>
+          <option value="open">Open</option>
+          <option value="accepted">Accepted</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="ignored">Ignored</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </label>
+      <label className="select-control">
+        <ShieldAlert size={16} aria-hidden="true" />
+        <select value={filters.severity} onChange={(event) => onChange({ ...filters, severity: event.target.value as ReviewFilters["severity"] })}>
+          <option value="all">All severity</option>
+          <option value="error">Errors</option>
+          <option value="warning">Warnings</option>
+          <option value="info">Info</option>
+        </select>
+      </label>
+      <label className="select-control">
+        <Filter size={16} aria-hidden="true" />
+        <select value={filters.type} onChange={(event) => onChange({ ...filters, type: event.target.value as ReviewFilters["type"] })}>
+          <option value="all">All checks</option>
+          <option value="validation">Validation</option>
+          <option value="freshness">Freshness</option>
+          <option value="export_safety">Export Safety</option>
+          <option value="review_status">Review Status</option>
+          <option value="trust">Trust</option>
+          <option value="source_coverage">Source Coverage</option>
+        </select>
+      </label>
+      <label className="select-control">
+        <Package size={16} aria-hidden="true" />
+        <select value={filters.packId} onChange={(event) => onChange({ ...filters, packId: event.target.value })}>
+          <option value="all">All packs</option>
+          {packs.map((pack) => (
+            <option value={pack.id} key={pack.id}>
+              {pack.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function ReviewItemCard({
+  item,
+  packs,
+  onUpdateStatus
+}: {
+  item: ReviewItem;
+  packs: PackSummary[];
+  onUpdateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed"): void;
+}) {
+  return (
+    <article className={`review-card severity-${item.severity}`}>
+      <div className="review-card-main">
+        <div className="review-card-title">
+          <StatusPill value={item.severity} />
+          <span>{formatPackType(item.type)}</span>
+          <em>{item.status}</em>
+        </div>
+        <h2>{item.message}</h2>
+        <p>{item.suggestedAction}</p>
+        <div className="review-card-meta">
+          <a href={packHref(item.packId)}>{reviewPackName(item.packId, packs)}</a>
+          {item.recordId ? <a href={recordHref(item.recordId)}>{item.recordId}</a> : null}
+          {item.sourceId ? <span>{item.sourceId}</span> : null}
+        </div>
+      </div>
+      <div className="review-actions">
+        <button type="button" onClick={() => onUpdateStatus(item, "accepted")} disabled={item.status === "accepted"}>
+          Accept
+        </button>
+        <button type="button" onClick={() => onUpdateStatus(item, "reviewed")} disabled={item.status === "reviewed"}>
+          Mark Reviewed
+        </button>
+        <button type="button" onClick={() => onUpdateStatus(item, "ignored")} disabled={item.status === "ignored"}>
+          Ignore
+        </button>
+        <button type="button" disabled>
+          Edit Later
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ReviewItemList({ items, packs, compact = false }: { items: ReviewItem[]; packs: PackSummary[]; compact?: boolean }) {
+  if (items.length === 0) {
+    return <p className="muted-note">No active review items for this pack.</p>;
+  }
+
+  return (
+    <div className={compact ? "review-list compact" : "review-list"}>
+      {items.map((item) => (
+        <article className={`review-card severity-${item.severity}`} key={item.id}>
+          <div className="review-card-main">
+            <div className="review-card-title">
+              <StatusPill value={item.severity} />
+              <span>{formatPackType(item.type)}</span>
+              <em>{item.status}</em>
+            </div>
+            <h2>{item.message}</h2>
+            <p>{item.suggestedAction}</p>
+            <div className="review-card-meta">
+              <a href={packHref(item.packId)}>{reviewPackName(item.packId, packs)}</a>
+              {item.recordId ? <a href={recordHref(item.recordId)}>{item.recordId}</a> : null}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function HealthChecks({ checks }: { checks: HealthCheck[] }) {
+  return (
+    <div className="health-check-grid">
+      {checks.map((check) => (
+        <div className={`health-check ${check.status}`} key={check.id}>
+          <strong>{check.label}</strong>
+          <span>{check.status === "pass" ? "Pass" : formatPackType(check.status)}</span>
+          <em>{check.count}</em>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatusPill({ value }: { value: string }) {
+  return <span className={`status-pill ${value}`}>{formatPackType(value)}</span>;
 }
 
 function ProfileList({ profiles }: { profiles: ExportProfileSummary[] }) {

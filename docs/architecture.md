@@ -50,7 +50,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 adds hash-based pack and record detail views plus sanitized record rendering. Review queue workflows and export preview remain later phases.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 adds deterministic Pack Health and Review Queue views. Export preview remains a later phase.
 
 ## Renderer Direction
 
@@ -59,6 +59,8 @@ The shared renderer converts Markdown to sanitized HTML for both the web UI and 
 ## Database Direction
 
 SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record search, with safe fallback behavior for punctuation-heavy UI queries.
+
+Review item statuses are local SQLite app state. Rescans preserve statuses by deterministic fingerprints and mark missing generated issues as resolved, but review actions do not edit pack files.
 
 ## Local API Direction
 

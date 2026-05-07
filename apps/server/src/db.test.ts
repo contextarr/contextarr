@@ -44,6 +44,7 @@ describe("SQLite schema migrations", () => {
       expect(columns.map((column) => column.name)).toEqual(
         expect.arrayContaining(["cover_image", "review_queue_count"])
       );
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'review_items'").get()).toBeTruthy();
     } finally {
       db.close();
     }

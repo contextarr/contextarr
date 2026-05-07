@@ -47,6 +47,8 @@
 - Calculate deterministic pack health.
 - Generate review items.
 - Add review queue UI.
+- Store review item statuses in local SQLite only.
+- Keep pack files immutable during review actions.
 
 ## Phase 7: Export Engine
 

@@ -2,7 +2,7 @@
 
 Local Fastify API server and rebuildable SQLite index for Contextarr packs.
 
-Implemented through Phase 3.1:
+Implemented through Phase 6:
 
 - load and validate local pack folders
 - rebuild SQLite derived index from pack files
@@ -10,6 +10,9 @@ Implemented through Phase 3.1:
 - return UI-ready pack summary fields for cover metadata and review queue counts
 - harden search against punctuation-heavy UI input
 - support optional local API token auth via `CONTEXTARR_API_TOKEN`
+- calculate deterministic Pack Health v0
+- persist review item statuses in SQLite without mutating pack files
+- expose Review Queue and pack health API endpoints
 
 Run locally:
 

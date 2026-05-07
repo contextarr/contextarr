@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
-import { formatValidationResult, PackReadError, validatePack } from "@contextarr/pack-validator";
+import {
+  formatValidationResult,
+  PackReadError,
+  validatePack,
+  type ValidationResult
+} from "@contextarr/pack-validator";
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
 
 export type OutputFormat = "text" | "json";
@@ -52,9 +57,14 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
 
       try {
-        const result = validatePack(resolvedTargetPath);
-        io.stdout.write(format === "json" ? `${JSON.stringify(result, null, 2)}\n` : formatValidationResult(result));
-        exitCode = result.valid ? 0 : 1;
+        const targets = getValidationTargets(resolvedTargetPath);
+        const results = targets.map((target) => validatePack(target));
+        io.stdout.write(
+          format === "json"
+            ? `${JSON.stringify(formatValidationJson(resolvedTargetPath, results), null, 2)}\n`
+            : formatValidationText(results)
+        );
+        exitCode = results.every((result) => result.valid) ? 0 : 1;
       } catch (error) {
         io.stderr.write(`${error instanceof PackReadError ? error.message : errorMessage(error)}\n`);
         exitCode = 2;
@@ -110,6 +120,47 @@ function parseFormat(value: string): OutputFormat | undefined {
 
 function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
+}
+
+function getValidationTargets(targetPath: string): string[] {
+  if (fs.existsSync(path.join(targetPath, "contextarr-pack.json"))) {
+    return [targetPath];
+  }
+
+  const childPacks = fs
+    .readdirSync(targetPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(targetPath, entry.name))
+    .filter((candidate) => fs.existsSync(path.join(candidate, "contextarr-pack.json")))
+    .sort((left, right) => left.localeCompare(right));
+
+  return childPacks.length > 0 ? childPacks : [targetPath];
+}
+
+function formatValidationText(results: ValidationResult[]): string {
+  return results.map((result) => formatValidationResult(result)).join(results.length > 1 ? "\n" : "");
+}
+
+function formatValidationJson(targetPath: string, results: ValidationResult[]): ValidationResult | {
+  packPath: string;
+  valid: boolean;
+  results: ValidationResult[];
+  summary: { errors: number; warnings: number; infos: number };
+} {
+  if (results.length === 1) {
+    return results[0];
+  }
+
+  return {
+    packPath: targetPath,
+    valid: results.every((result) => result.valid),
+    results,
+    summary: {
+      errors: results.reduce((count, result) => count + result.summary.errors, 0),
+      warnings: results.reduce((count, result) => count + result.summary.warnings, 0),
+      infos: results.reduce((count, result) => count + result.summary.infos, 0)
+    }
+  };
 }
 
 function errorMessage(error: unknown): string {

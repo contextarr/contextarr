@@ -11,6 +11,8 @@ export interface HealthResponse {
     records: number;
     sources: number;
     exportProfiles: number;
+    reviewItems: number;
+    openReviewItems: number;
   };
 }
 
@@ -86,6 +88,58 @@ export interface PackDetail extends PackSummary {
   exportProfiles: ExportProfileSummary[];
 }
 
+export type ReviewItemSeverity = "error" | "warning" | "info";
+export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
+export type ReviewItemType =
+  | "validation"
+  | "freshness"
+  | "export_safety"
+  | "review_status"
+  | "trust"
+  | "source_coverage";
+
+export interface ReviewItem {
+  id: string;
+  fingerprint: string;
+  type: ReviewItemType;
+  severity: ReviewItemSeverity;
+  packId: string;
+  recordId: string | null;
+  sourceId: string | null;
+  message: string;
+  suggestedAction: string;
+  status: ReviewItemStatus;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface ReviewItemsResponse {
+  items: ReviewItem[];
+  counts: {
+    total: number;
+    open: number;
+    filtered: number;
+  };
+}
+
+export interface HealthCheck {
+  id: ReviewItemType;
+  label: string;
+  status: "pass" | "warning" | "error";
+  count: number;
+}
+
+export interface PackHealthResponse {
+  packId: string;
+  score: number;
+  status: string;
+  reviewQueueCount: number;
+  checks: HealthCheck[];
+  items: ReviewItem[];
+}
+
 export interface RecordSummary {
   id: string;
   packId: string;
@@ -127,4 +181,6 @@ export type LibraryViewMode = "cover" | "compact" | "table";
 export type Route =
   | { name: "library" }
   | { name: "pack"; packId: string }
-  | { name: "record"; recordId: string };
+  | { name: "record"; recordId: string }
+  | { name: "reviewQueue" }
+  | { name: "health" };

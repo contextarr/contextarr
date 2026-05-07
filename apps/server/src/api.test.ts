@@ -8,17 +8,18 @@ import type { ServerConfig } from "./types";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
-function createTestContext(apiToken?: string): { db: ContextarrDatabase; config: ServerConfig } {
+function createTestContext(apiToken?: string, packsDir = demoPacksDir): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
-    packsDir: demoPacksDir,
+    packsDir,
     databasePath: ":memory:",
     apiToken
   };
-  rebuildIndex(db, demoPacksDir);
+  rebuildIndex(db, packsDir);
   return { db, config };
 }
 
@@ -44,9 +45,29 @@ describe("Contextarr API", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 15
+        exportProfiles: 15,
+        reviewItems: 0,
+        openReviewItems: 0
       }
     });
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/health returns pack health checks", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/health" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "ai-workstation-pack",
+      score: 100,
+      status: "healthy",
+      reviewQueueCount: 0
+    });
+    expect(response.json().checks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "validation", status: "pass" })])
+    );
     await app.close();
     db.close();
   });
@@ -71,6 +92,46 @@ describe("Contextarr API", () => {
     );
     await app.close();
     db.close();
+  });
+
+  it("GET /api/review-items lists and filters generated items", async () => {
+    db.close();
+    const fixtureContext = createTestContext(undefined, validatorFixturesDir);
+    const app = createApp(fixtureContext);
+    const allResponse = await app.inject({ method: "GET", url: "/api/review-items" });
+    const filteredResponse = await app.inject({ method: "GET", url: "/api/review-items?severity=error&type=validation" });
+
+    expect(allResponse.statusCode).toBe(200);
+    expect(allResponse.json().items.length).toBeGreaterThan(0);
+    expect(filteredResponse.statusCode).toBe(200);
+    expect(filteredResponse.json().items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ severity: "error", type: "validation" })])
+    );
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/review-items/:id/status updates SQLite-only status", async () => {
+    db.close();
+    const fixtureContext = createTestContext(undefined, validatorFixturesDir);
+    const app = createApp(fixtureContext);
+    const item = (await app.inject({ method: "GET", url: "/api/review-items?status=open" })).json().items[0];
+    const response = await app.inject({
+      method: "POST",
+      url: `/api/review-items/${item.id}/status`,
+      payload: { status: "ignored" }
+    });
+    const invalidResponse = await app.inject({
+      method: "POST",
+      url: `/api/review-items/${item.id}/status`,
+      payload: { status: "not-real" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().item).toMatchObject({ id: item.id, status: "ignored" });
+    expect(invalidResponse.statusCode).toBe(400);
+    await app.close();
+    fixtureContext.db.close();
   });
 
   it("GET /api/packs/:id returns manifest-derived detail", async () => {
@@ -186,6 +247,23 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ authRequired: true });
     expect(JSON.stringify(response.json())).not.toContain("test-token");
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on review and pack health routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const reviewResponse = await app.inject({ method: "GET", url: "/api/review-items" });
+    const healthResponse = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/health",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(reviewResponse.statusCode).toBe(401);
+    expect(healthResponse.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

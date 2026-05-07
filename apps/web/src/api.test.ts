@@ -41,7 +41,7 @@ describe("Contextarr API client", () => {
 
     await client.getHealth();
 
-    expect(requests[0].init?.headers).toBeUndefined();
+    expect(requests[0].init?.headers).toEqual({});
   });
 
   it("reads pack detail, pack records, and record detail", async () => {
@@ -63,6 +63,37 @@ describe("Contextarr API client", () => {
     await expect(client.getPackRecords("pack-1")).resolves.toEqual([{ id: "record-1" }]);
     await expect(client.getRecord("record-1")).resolves.toMatchObject({ body: "# Record" });
     expect(requests).toEqual(["/api/packs/pack-1", "/api/packs/pack-1/records", "/api/records/record-1"]);
+  });
+
+  it("reads pack health and review item routes", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).includes("/status")) {
+          return jsonResponse({ item: { id: "item-1", status: "reviewed" } });
+        }
+        if (String(url).includes("/review-items")) {
+          return jsonResponse({ items: [{ id: "item-1" }], counts: { total: 1, open: 1, filtered: 1 } });
+        }
+        return jsonResponse({ packId: "pack-1", score: 100, checks: [], items: [] });
+      }
+    });
+
+    await expect(client.getPackHealth("pack-1")).resolves.toMatchObject({ packId: "pack-1" });
+    await expect(client.getReviewItems({ status: "open", packId: "pack-1" })).resolves.toMatchObject({
+      counts: { open: 1 }
+    });
+    await expect(client.updateReviewItemStatus("item-1", "reviewed")).resolves.toMatchObject({ status: "reviewed" });
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/packs/pack-1/health",
+      "/api/review-items?status=open&packId=pack-1",
+      "/api/review-items/item-1/status"
+    ]);
+    expect(requests[2].init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
   });
 
   it("throws ApiError for failed responses", async () => {

@@ -1,22 +1,49 @@
 import path from "node:path";
 import type { ContextarrDatabase } from "./db";
 import { clearDerivedIndex } from "./db";
+import {
+  buildHealthChecks,
+  calculateHealthScore,
+  createReviewItemId,
+  generatePackReviewItems,
+  generateSkippedPackReviewItems,
+  type ReviewItemCandidate
+} from "./health";
 import { loadPacks } from "./pack-loader";
-import type { LoadedPack, PackSummary, RebuildIndexResult } from "./types";
+import type {
+  LoadedPack,
+  PackHealthDetail,
+  PackSummary,
+  RebuildIndexResult,
+  ReviewItem,
+  ReviewItemFilters,
+  ReviewItemStatus
+} from "./types";
+
+export const reviewItemStatuses: ReviewItemStatus[] = ["open", "ignored", "accepted", "reviewed", "resolved"];
 
 export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildIndexResult {
   const indexedAt = new Date().toISOString();
   const loaded = loadPacks(packsDir);
+  const reviewCandidates = [
+    ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, new Date(indexedAt))),
+    ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped))
+  ];
 
   const transaction = db.transaction(() => {
+    const reviewItems = syncReviewItems(db, reviewCandidates, indexedAt);
+    const reviewItemsByPack = groupReviewItemsByPack(reviewItems);
+
     clearDerivedIndex(db);
 
     for (const pack of loaded.packs) {
-      insertPack(db, pack, indexedAt);
+      const packReviewItems = reviewItemsByPack.get(pack.manifest.id) ?? [];
+      const health = calculateHealthScore(packReviewItems);
+      insertPack(db, pack, indexedAt, health);
       insertRecords(db, pack);
       insertSources(db, pack);
       insertExportProfiles(db, pack);
-      insertPackHealth(db, pack, indexedAt);
+      insertPackHealth(db, pack, indexedAt, health);
     }
 
     db.prepare(
@@ -43,6 +70,7 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildI
     recordsIndexed: loaded.packs.reduce((count, pack) => count + pack.records.length, 0),
     sourcesIndexed: loaded.packs.reduce((count, pack) => count + pack.sources.length, 0),
     exportProfilesIndexed: loaded.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0),
+    reviewItemsGenerated: reviewCandidates.length,
     skipped: loaded.skipped
   };
 }
@@ -52,6 +80,8 @@ export function getIndexStats(db: ContextarrDatabase): {
   records: number;
   sources: number;
   exportProfiles: number;
+  reviewItems: number;
+  openReviewItems: number;
   lastIndexedAt: string | null;
 } {
   return {
@@ -59,6 +89,8 @@ export function getIndexStats(db: ContextarrDatabase): {
     records: getCount(db, "records"),
     sources: getCount(db, "sources"),
     exportProfiles: getCount(db, "export_profiles"),
+    reviewItems: getCount(db, "review_items"),
+    openReviewItems: getReviewItems(db, { status: "open" }).length,
     lastIndexedAt:
       db
         .prepare("SELECT created_at FROM events WHERE type = ? ORDER BY id DESC LIMIT 1")
@@ -129,6 +161,86 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
     sources,
     exportProfiles
   };
+}
+
+export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilters = {}): ReviewItem[] {
+  const where: string[] = [];
+  const values: unknown[] = [];
+
+  if (filters.status) {
+    where.push("status = ?");
+    values.push(filters.status);
+  }
+
+  if (filters.severity) {
+    where.push("severity = ?");
+    values.push(filters.severity);
+  }
+
+  if (filters.type) {
+    where.push("type = ?");
+    values.push(filters.type);
+  }
+
+  if (filters.packId) {
+    where.push("pack_id = ?");
+    values.push(filters.packId);
+  }
+
+  const sql = `
+    SELECT *
+    FROM review_items
+    ${where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""}
+    ORDER BY
+      CASE severity WHEN 'error' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
+      last_seen_at DESC,
+      pack_id,
+      type,
+      id
+  `;
+
+  return db
+    .prepare(sql)
+    .all(...values)
+    .map((row) => normalizeReviewItem(row as Row));
+}
+
+export function getPackHealth(db: ContextarrDatabase, packId: string): PackHealthDetail | undefined {
+  const health = db
+    .prepare("SELECT pack_id AS packId, score, status FROM pack_health WHERE pack_id = ?")
+    .get(packId) as Row | undefined;
+  if (!health) {
+    return undefined;
+  }
+
+  const items = getReviewItems(db, { packId }).filter((item) => item.status !== "resolved");
+  const score = calculateHealthScore(items);
+
+  return {
+    packId,
+    score: Number(health.score),
+    status: String(health.status),
+    reviewQueueCount: score.reviewQueueCount,
+    checks: buildHealthChecks(items),
+    items
+  };
+}
+
+export function updateReviewItemStatus(
+  db: ContextarrDatabase,
+  itemId: string,
+  status: ReviewItemStatus,
+  updatedAt = new Date().toISOString()
+): ReviewItem | undefined {
+  const existing = db.prepare("SELECT * FROM review_items WHERE id = ?").get(itemId) as Row | undefined;
+  if (!existing) {
+    return undefined;
+  }
+
+  db.prepare("UPDATE review_items SET status = ?, updated_at = ? WHERE id = ?").run(status, updatedAt, itemId);
+  const updated = normalizeReviewItem(db.prepare("SELECT * FROM review_items WHERE id = ?").get(itemId) as Row);
+  refreshPackHealthFromReviewItems(db, updated.packId, updatedAt);
+  return updated;
 }
 
 export function getPackRecords(
@@ -230,11 +342,12 @@ export function searchIndex(db: ContextarrDatabase, query: string): unknown[] {
   return [...packMatches, ...recordMatches];
 }
 
-function insertPack(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string): void {
-  const score = calculateHealthScore(pack);
-  const status = score >= 90 ? "healthy" : score >= 70 ? "degraded" : "needs_review";
-  const reviewQueueCount = countReviewQueueRecords(pack);
-
+function insertPack(
+  db: ContextarrDatabase,
+  pack: LoadedPack,
+  indexedAt: string,
+  health: { score: number; status: string; reviewQueueCount: number }
+): void {
   db.prepare(
     `INSERT INTO packs (
       id, name, version, description, type, visibility, trust_level, author, license,
@@ -273,12 +386,12 @@ function insertPack(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string)
     manifestJson: JSON.stringify(pack.manifest),
     validationErrors: pack.validation.summary.errors,
     validationWarnings: pack.validation.summary.warnings,
-    healthScore: score,
-    healthStatus: status,
+    healthScore: health.score,
+    healthStatus: health.status,
     recordCount: pack.records.length,
     sourceCount: pack.sources.length,
     exportProfileCount: pack.exportProfiles.length,
-    reviewQueueCount,
+    reviewQueueCount: health.reviewQueueCount,
     indexedAt
   });
 }
@@ -378,10 +491,12 @@ function insertExportProfiles(db: ContextarrDatabase, pack: LoadedPack): void {
   }
 }
 
-function insertPackHealth(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string): void {
-  const score = calculateHealthScore(pack);
-  const status = score >= 90 ? "healthy" : score >= 70 ? "degraded" : "needs_review";
-
+function insertPackHealth(
+  db: ContextarrDatabase,
+  pack: LoadedPack,
+  indexedAt: string,
+  health: { score: number; status: string }
+): void {
   db.prepare(
     `INSERT INTO pack_health (
       pack_id, score, status, validation_errors, validation_warnings,
@@ -389,8 +504,8 @@ function insertPackHealth(db: ContextarrDatabase, pack: LoadedPack, indexedAt: s
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     pack.manifest.id,
-    score,
-    status,
+    health.score,
+    health.status,
     pack.validation.summary.errors,
     pack.validation.summary.warnings,
     pack.records.length,
@@ -400,16 +515,108 @@ function insertPackHealth(db: ContextarrDatabase, pack: LoadedPack, indexedAt: s
   );
 }
 
-function calculateHealthScore(pack: LoadedPack): number {
-  return Math.max(0, 100 - pack.validation.summary.errors * 25 - pack.validation.summary.warnings * 5);
-}
-
-function countReviewQueueRecords(pack: LoadedPack): number {
-  return pack.records.filter((record) => record.metadata.review_status !== "approved").length;
-}
-
 function getCount(db: ContextarrDatabase, table: string): number {
   return db.prepare(`SELECT COUNT(*) FROM ${table}`).pluck().get() as number;
+}
+
+function syncReviewItems(
+  db: ContextarrDatabase,
+  candidates: ReviewItemCandidate[],
+  indexedAt: string
+): ReviewItem[] {
+  const fingerprints = candidates.map((candidate) => candidate.fingerprint);
+  const upsert = db.prepare(
+    `INSERT INTO review_items (
+      id, fingerprint, type, severity, pack_id, record_id, source_id,
+      message, suggested_action, status, first_seen_at, last_seen_at,
+      updated_at, metadata_json
+    ) VALUES (
+      @id, @fingerprint, @type, @severity, @packId, @recordId, @sourceId,
+      @message, @suggestedAction, 'open', @indexedAt, @indexedAt,
+      @indexedAt, @metadataJson
+    )
+    ON CONFLICT(fingerprint) DO UPDATE SET
+      type = excluded.type,
+      severity = excluded.severity,
+      pack_id = excluded.pack_id,
+      record_id = excluded.record_id,
+      source_id = excluded.source_id,
+      message = excluded.message,
+      suggested_action = excluded.suggested_action,
+      status = CASE
+        WHEN review_items.status = 'resolved' THEN 'open'
+        ELSE review_items.status
+      END,
+      last_seen_at = excluded.last_seen_at,
+      updated_at = excluded.updated_at,
+      metadata_json = excluded.metadata_json`
+  );
+
+  for (const candidate of candidates) {
+    upsert.run({
+      id: createReviewItemId(candidate.fingerprint),
+      fingerprint: candidate.fingerprint,
+      type: candidate.type,
+      severity: candidate.severity,
+      packId: candidate.packId,
+      recordId: candidate.recordId,
+      sourceId: candidate.sourceId,
+      message: candidate.message,
+      suggestedAction: candidate.suggestedAction,
+      indexedAt,
+      metadataJson: JSON.stringify(candidate.metadata)
+    });
+  }
+
+  if (fingerprints.length === 0) {
+    db.prepare("UPDATE review_items SET status = 'resolved', updated_at = ? WHERE status <> 'resolved'").run(indexedAt);
+  } else {
+    db.prepare(
+      `UPDATE review_items
+       SET status = 'resolved', updated_at = ?
+       WHERE status <> 'resolved' AND fingerprint NOT IN (${fingerprints.map(() => "?").join(",")})`
+    ).run(indexedAt, ...fingerprints);
+  }
+
+  return db
+    .prepare("SELECT * FROM review_items WHERE last_seen_at = ?")
+    .all(indexedAt)
+    .map((row) => normalizeReviewItem(row as Row));
+}
+
+function refreshPackHealthFromReviewItems(db: ContextarrDatabase, packId: string, updatedAt: string): void {
+  const pack = db.prepare("SELECT id FROM packs WHERE id = ?").get(packId);
+  if (!pack) {
+    return;
+  }
+
+  const items = getReviewItems(db, { packId }).filter((item) => item.status !== "resolved");
+  const health = calculateHealthScore(items);
+
+  db.prepare("UPDATE packs SET health_score = ?, health_status = ?, review_queue_count = ? WHERE id = ?").run(
+    health.score,
+    health.status,
+    health.reviewQueueCount,
+    packId
+  );
+  db.prepare("UPDATE pack_health SET score = ?, status = ?, updated_at = ? WHERE pack_id = ?").run(
+    health.score,
+    health.status,
+    updatedAt,
+    packId
+  );
+}
+
+function groupReviewItemsByPack(items: ReviewItem[]): Map<string, ReviewItem[]> {
+  const grouped = new Map<string, ReviewItem[]>();
+
+  for (const item of items.filter((candidate) => candidate.status !== "resolved")) {
+    const existing = grouped.get(item.packId) ?? [];
+    existing.push(item);
+    grouped.set(item.packId, existing);
+  }
+
+  return grouped;
 }
 
 function normalizeRecordSummary(record: Row): unknown {
@@ -427,6 +634,25 @@ function normalizeRecordSummary(record: Row): unknown {
     tags: JSON.parse(String(record.tagsJson)),
     sources: JSON.parse(String(record.sourcesJson)),
     filePath: record.filePath
+  };
+}
+
+function normalizeReviewItem(row: Row): ReviewItem {
+  return {
+    id: String(row.id),
+    fingerprint: String(row.fingerprint),
+    type: row.type as ReviewItem["type"],
+    severity: row.severity as ReviewItem["severity"],
+    packId: String(row.pack_id),
+    recordId: row.record_id ? String(row.record_id) : null,
+    sourceId: row.source_id ? String(row.source_id) : null,
+    message: String(row.message),
+    suggestedAction: String(row.suggested_action),
+    status: row.status as ReviewItem["status"],
+    firstSeenAt: String(row.first_seen_at),
+    lastSeenAt: String(row.last_seen_at),
+    updatedAt: String(row.updated_at),
+    metadata: JSON.parse(String(row.metadata_json))
   };
 }
 

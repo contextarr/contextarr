@@ -6,7 +6,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 ## Status
 
-This repository is in Phase 5: pack detail, sanitized rendering, and static HTML.
+This repository is in Phase 6: Pack Health and Review Queue.
 
 Current scope:
 
@@ -31,13 +31,17 @@ Current scope:
 - Pack detail and record detail views.
 - Shared sanitized Markdown renderer.
 - `contextarr render <path> --out <path>` static HTML command.
+- Deterministic Pack Health v0.
+- SQLite-backed review items and review status actions.
+- Review Queue and Pack Health dashboard pages.
 
 Not included yet:
 
 - MCP implementation.
 - Importers or exporters.
 - Export generation.
-- Full Pack Health and Review Queue workflows.
+- Pack file editing from review actions.
+- Export preview or export generation.
 
 ## Product Positioning
 
@@ -101,9 +105,9 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ```bash
 pnpm install
-pnpm phase5:verify
+pnpm phase6:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
-pnpm demo:validate
+pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
@@ -148,7 +152,10 @@ Available local API endpoints:
 - `GET /api/health`
 - `GET /api/packs`
 - `GET /api/packs/:id`
+- `GET /api/packs/:id/health`
 - `GET /api/packs/:id/records`
 - `GET /api/records/:id`
+- `GET /api/review-items`
+- `POST /api/review-items/:id/status`
 - `GET /api/search?q=`
 - `POST /api/rescan`
