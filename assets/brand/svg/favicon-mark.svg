@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Contextarr logo</title>
+  <desc id="desc">Validated context, ready for agents.</desc>
+  <defs>
+    <linearGradient id="fav-stroke" x1="14" y1="8" x2="50" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3E8"/>
+      <stop offset="0.52" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <linearGradient id="fav-fill" x1="18" y1="18" x2="46" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3E8"/>
+      <stop offset="0.55" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+  </defs>
+  <path d="M32 6 L51 17 C53 18 54 20 54 22 V42 C54 44 53 46 51 47 L35 57 C33 58 31 58 29 57 L13 47 C11 46 10 44 10 42 V22 C10 20 11 18 13 17 L29 7 C30 6 31 6 32 6 Z" fill="none" stroke="url(#fav-stroke)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M18 27 L32 19 L46 27 L32 35 Z" fill="url(#fav-fill)"/>
+  <path d="M18 37 L32 45 L46 37" fill="none" stroke="url(#fav-stroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 45 L32 52 L44 45" fill="none" stroke="url(#fav-stroke)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

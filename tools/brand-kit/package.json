@@ -1,0 +1,20 @@
+{
+  "name": "@contextarr/brand-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic SVG brand asset generator for Contextarr.",
+  "scripts": {
+    "build": "node generate-brand-kit.mjs",
+    "base64": "node export-base64.mjs",
+    "verify": "node verify-brand-kit.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.34.5",
+    "text-to-svg": "^3.1.5",
+    "typeface-chakra-petch": "^1.1.13",
+    "typeface-exo-2": "^1.1.13",
+    "typeface-oxanium": "^1.1.13",
+    "typeface-sora": "^1.1.13"
+  }
+}

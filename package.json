@@ -16,6 +16,8 @@
     "dev:web": "pnpm --filter @contextarr/web dev",
     "dev:mcp": "pnpm --filter @contextarr/mcp dev",
     "contextarr-mcp": "pnpm --filter @contextarr/mcp contextarr-mcp",
+    "brand:build": "pnpm --filter @contextarr/brand-kit build",
+    "brand:verify": "pnpm brand:build && pnpm --filter @contextarr/brand-kit verify",
     "dev": "pnpm --parallel --stream -r --filter @contextarr/server --filter @contextarr/web dev",
     "phase1:verify": "pnpm typecheck && pnpm test",
     "demo:validate": "pnpm --filter @contextarr/cli contextarr validate demo-packs/ai-workstation-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/jellyfin-server-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/claude-code-project-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/internal-support-kb-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/fake-product-line-pack",
@@ -26,7 +28,8 @@
     "phase6:verify": "pnpm phase5:verify && pnpm --filter @contextarr/cli contextarr validate demo-packs --format json && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase7:verify": "pnpm phase6:verify && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated-exports/phase7-demo-packs && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase8:verify": "pnpm phase7:verify && pnpm --filter @contextarr/mcp typecheck && pnpm --filter @contextarr/mcp test",
-    "phase9:verify": "pnpm phase8:verify && pnpm --filter @contextarr/importers test && pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/phase9-smoke --pack-id phase9-markdown-smoke --overwrite && pnpm --filter @contextarr/cli contextarr validate imported-packs/phase9-smoke/phase9-markdown-smoke"
+    "phase9:verify": "pnpm phase8:verify && pnpm --filter @contextarr/importers test && pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/phase9-smoke --pack-id phase9-markdown-smoke --overwrite && pnpm --filter @contextarr/cli contextarr validate imported-packs/phase9-smoke/phase9-markdown-smoke",
+    "phase10:verify": "pnpm phase9:verify && pnpm brand:verify && pnpm typecheck && pnpm test && pnpm --filter @contextarr/web build"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -42,7 +45,8 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3",
-      "esbuild"
+      "esbuild",
+      "sharp"
     ]
   }
 }

@@ -1,20 +1,20 @@
 :root {
   color-scheme: dark;
-  --bg: #080b10;
-  --panel: #0d121a;
-  --panel-2: #111923;
-  --panel-3: #151d28;
-  --line: #253042;
+  --bg: #050a16;
+  --panel: #0b1020;
+  --panel-2: #111827;
+  --panel-3: #1a2340;
+  --line: #253451;
   --line-soft: rgba(148, 163, 184, 0.16);
   --text: #f5f7fb;
   --muted: #a8b3c4;
   --faint: #6e7a8d;
-  --blue: #4f7cff;
-  --cyan: #28d4d7;
+  --blue: #276bff;
+  --cyan: #22d3e8;
   --green: #55d987;
   --amber: #f2a23a;
   --red: #ff6b7a;
-  --violet: #9b7bff;
+  --violet: #7b5cff;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
   --radius: 8px;
   font-family:
@@ -95,10 +95,16 @@ button:disabled {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(79, 124, 255, 0.58);
+  border: 1px solid rgba(34, 211, 232, 0.52);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(79, 124, 255, 0.2), rgba(40, 212, 215, 0.12));
-  color: #7fa3ff;
+  background: linear-gradient(135deg, rgba(39, 107, 255, 0.22), rgba(34, 211, 232, 0.12));
+  box-shadow: 0 10px 28px rgba(39, 107, 255, 0.18);
+}
+
+.brand-mark img {
+  display: block;
+  width: 30px;
+  height: 30px;
 }
 
 .nav-list {

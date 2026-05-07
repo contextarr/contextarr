@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/svg/primary-horizontal.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/brand/svg/primary-horizontal-light.svg">
+    <img alt="Contextarr" src="assets/brand/svg/primary-horizontal-light.svg" width="560">
+  </picture>
+</p>
+
 # Contextarr
 
 Contextarr is a self-hosted context automation system and pack manager for AI assistants and agents.
@@ -5,6 +13,8 @@ Contextarr is a self-hosted context automation system and pack manager for AI as
 It is designed to help power users and teams build, validate, review, render, compose, and export local-first context packs for tools like ChatGPT, Claude, Codex, Claude Code, OpenCode, Cursor, local agents, and read-only MCP clients.
 
 ## Status
+
+Contextarr is an early public preview and is not production ready.
 
 This repository is in Phase 9: Local Importers v1.
 
@@ -108,6 +118,10 @@ Contextarr v0 must stay local-first and data-only:
 - No real private data in this repository.
 
 See [docs/security-model.md](docs/security-model.md) for the full security posture.
+
+## Brand Assets
+
+The public SVG brand kit lives in [assets/brand](assets/brand). PNG previews and base64 exports are generated locally and ignored by Git.
 
 ## Verification
 

@@ -11,6 +11,11 @@ rendered/
 generated-exports/
 imported-packs/
 mockup-images/
+assets/brand/png/
+assets/brand/base64/
+assets/brand/*.png
+assets/brand/browser-preview.png
+/tools/brand-kit/package-lock.json
 
 # Local environment
 .env

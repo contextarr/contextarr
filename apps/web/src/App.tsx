@@ -43,6 +43,7 @@ import {
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
+import { brandMarkUrl } from "./brand";
 import { buildExportOptions, copyTextToClipboard, downloadExportArtifact, getExportTargets } from "./exports";
 import {
   createCoverVisual,
@@ -255,7 +256,7 @@ function Sidebar({ health, route }: { health: HealthResponse | null; route: Rout
     <aside className="sidebar" aria-label="Contextarr navigation">
       <a className="brand" href="#/library">
         <div className="brand-mark">
-          <Boxes size={24} aria-hidden="true" />
+          <img src={brandMarkUrl} alt="" aria-hidden="true" />
         </div>
         <span>Contextarr</span>
       </a>

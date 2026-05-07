@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Contextarr logo</title>
+  <desc id="desc">Validated context, ready for agents.</desc>
+  <defs>
+    <linearGradient id="ca-stroke" x1="52" y1="24" x2="204" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3E8"/>
+      <stop offset="0.45" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <linearGradient id="ca-layer-top" x1="76" y1="74" x2="180" y2="134" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3E8"/>
+      <stop offset="0.5" stop-color="#4F8BFF"/>
+      <stop offset="1" stop-color="#276BFF"/>
+    </linearGradient>
+    <linearGradient id="ca-layer-mid" x1="76" y1="100" x2="180" y2="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F8BFF"/>
+      <stop offset="0.62" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <linearGradient id="ca-layer-bottom" x1="76" y1="125" x2="180" y2="186" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <linearGradient id="ca-word-light" x1="0" y1="0" x2="0" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DCE5F4"/>
+    </linearGradient>
+    <linearGradient id="ca-arr" x1="0" y1="0" x2="160" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#276BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <linearGradient id="ca-tagline" x1="0" y1="0" x2="520" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3E8"/>
+      <stop offset="0.52" stop-color="#4F8BFF"/>
+      <stop offset="1" stop-color="#7B5CFF"/>
+    </linearGradient>
+    <radialGradient id="ca-node" cx="40%" cy="32%" r="70%">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.42" stop-color="#22D3E8"/>
+      <stop offset="1" stop-color="#276BFF"/>
+    </radialGradient>
+    <filter id="ca-soft-glow" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.15 0 0 0 0 0.42 0 0 0 0 1 0 0 0 0.6 0" result="blueGlow"/>
+      <feMerge>
+        <feMergeNode in="blueGlow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="ca-app-shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000814" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <g transform="translate(0 0) scale(1)">
+    <path d="M128 18 L202 61 C206 63 208 67 208 72 V151 C208 156 206 160 202 162 L134 204 C130 207 126 207 122 204 L54 162 C50 160 48 156 48 151 V72 C48 67 50 63 54 61 L122 20 C124 19 126 18 128 18 Z"
+      fill="none" stroke="url(#ca-stroke)" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M128 56 V86" stroke="url(#ca-stroke)" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="128" cy="44" r="13" fill="url(#ca-node)" stroke="url(#ca-stroke)" stroke-width="3"/>
+
+    <path d="M128 115 C132 115 136 117 140 119 L183 142 C188 145 188 151 183 154 L139 179 C132 183 124 183 117 179 L73 154 C68 151 68 145 73 142 L116 119 C120 117 124 115 128 115 Z" fill="url(#ca-layer-bottom)" opacity="1"/>
+    <path d="M128 91 C132 91 136 93 140 95 L183 118 C188 121 188 127 183 130 L139 155 C132 159 124 159 117 155 L73 130 C68 127 68 121 73 118 L116 95 C120 93 124 91 128 91 Z" fill="url(#ca-layer-mid)" opacity="1"/>
+    <path d="M128 67 C132 67 136 69 140 71 L183 94 C188 97 188 103 183 106 L139 131 C132 135 124 135 117 131 L73 106 C68 103 68 97 73 94 L116 71 C120 69 124 67 128 67 Z" fill="url(#ca-layer-top)"/>
+    <path d="M75 142 L128 173 L181 142" fill="none" stroke="#BFE9FF" stroke-opacity="0.36" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M75 167 L128 198 L181 167" fill="none" stroke="#FFFFFF" stroke-opacity="0.26" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

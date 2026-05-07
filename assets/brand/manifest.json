@@ -1,0 +1,87 @@
+{
+  "source": "tools/brand-kit/generate-brand-kit.mjs",
+  "font": {
+    "wordmarkFamily": "Sora",
+    "taglineFamily": "Chakra Petch",
+    "packages": [
+      "typeface-sora",
+      "typeface-chakra-petch"
+    ],
+    "license": "MIT packages, bundled Google Fonts under OFL-1.1",
+    "note": "Wordmark and tagline are converted to SVG paths for portable rendering. Sora carries the product name; Chakra Petch is used only as a compact technical accent."
+  },
+  "palette": {
+    "deepNavy": "#0B1020",
+    "deepNavy2": "#050A16",
+    "indigo": "#1A2340",
+    "electricBlue": "#276BFF",
+    "blue": "#4F8BFF",
+    "violet": "#7B5CFF",
+    "cyan": "#22D3E8",
+    "slate": "#9AA3B2",
+    "white": "#F7FAFF",
+    "ink": "#07101F"
+  },
+  "assets": [
+    {
+      "svg": "assets/brand/svg/primary-horizontal.svg",
+      "pngPreview": "assets/brand/png/primary-horizontal.png"
+    },
+    {
+      "svg": "assets/brand/svg/primary-horizontal-flat.svg",
+      "pngPreview": "assets/brand/png/primary-horizontal-flat.png"
+    },
+    {
+      "svg": "assets/brand/svg/primary-horizontal-light.svg",
+      "pngPreview": "assets/brand/png/primary-horizontal-light.png"
+    },
+    {
+      "svg": "assets/brand/svg/wordmark-only.svg",
+      "pngPreview": "assets/brand/png/wordmark-only.png"
+    },
+    {
+      "svg": "assets/brand/svg/wordmark-only-light.svg",
+      "pngPreview": "assets/brand/png/wordmark-only-light.png"
+    },
+    {
+      "svg": "assets/brand/svg/icon-only.svg",
+      "pngPreview": "assets/brand/png/icon-only.png"
+    },
+    {
+      "svg": "assets/brand/svg/icon-only-flat.svg",
+      "pngPreview": "assets/brand/png/icon-only-flat.png"
+    },
+    {
+      "svg": "assets/brand/svg/mini-mark.svg",
+      "pngPreview": "assets/brand/png/mini-mark.png"
+    },
+    {
+      "svg": "assets/brand/svg/favicon-mark.svg",
+      "pngPreview": "assets/brand/png/favicon-mark.png"
+    },
+    {
+      "svg": "assets/brand/svg/app-icon.svg",
+      "pngPreview": "assets/brand/png/app-icon.png"
+    },
+    {
+      "svg": "assets/brand/svg/monochrome-white.svg",
+      "pngPreview": "assets/brand/png/monochrome-white.png"
+    },
+    {
+      "svg": "assets/brand/svg/monochrome-dark.svg",
+      "pngPreview": "assets/brand/png/monochrome-dark.png"
+    },
+    {
+      "svg": "assets/brand/svg/stacked-lockup.svg",
+      "pngPreview": "assets/brand/png/stacked-lockup.png"
+    },
+    {
+      "svg": "assets/brand/svg/brand-sheet.svg",
+      "pngPreview": "assets/brand/png/brand-sheet.png"
+    },
+    {
+      "svg": "assets/brand/svg/small-size-check.svg",
+      "pngPreview": "assets/brand/png/small-size-check.png"
+    }
+  ]
+}
