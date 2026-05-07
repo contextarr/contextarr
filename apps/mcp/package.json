@@ -3,13 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "contextarr-mcp": "./src/main.ts"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
+    "contextarr-mcp": "tsx src/main.ts",
     "dev": "tsx src/main.ts",
     "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",

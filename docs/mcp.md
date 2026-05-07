@@ -7,10 +7,16 @@ Contextarr includes a local read-only MCP server for exposing validated context 
 ## Run
 
 ```bash
-pnpm --filter @contextarr/mcp dev
+pnpm contextarr-mcp
 ```
 
-The server writes operational logs to stderr. Stdout is reserved for MCP JSON-RPC messages.
+For MCP clients or automated stdio smoke checks that launch through pnpm, use the silent form so pnpm does not print its script banner to stdout:
+
+```bash
+pnpm --silent contextarr-mcp
+```
+
+The server writes operational logs to stderr. Stdout is reserved for MCP JSON-RPC messages. The Claude Desktop example below invokes Node directly and does not need pnpm's silent flag.
 
 ## Tools
 
@@ -58,6 +64,8 @@ Use absolute paths on Windows.
   }
 }
 ```
+
+For local development, `pnpm --filter @contextarr/mcp dev` remains an alias. The canonical workspace command is `pnpm contextarr-mcp`.
 
 ## Safety
 

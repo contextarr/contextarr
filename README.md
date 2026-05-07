@@ -137,10 +137,10 @@ Generated export files are derived artifacts and are ignored under `generated-ex
 Run the read-only MCP server:
 
 ```bash
-pnpm --filter @contextarr/mcp dev
+pnpm contextarr-mcp
 ```
 
-The MCP server uses stdio only. It exposes `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`. See [docs/mcp.md](docs/mcp.md).
+Use `pnpm --silent contextarr-mcp` for pnpm-launched MCP client smoke checks so pnpm's script banner does not write to stdout. The MCP server uses stdio only. It exposes `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`. See [docs/mcp.md](docs/mcp.md).
 
 ## Local API
 

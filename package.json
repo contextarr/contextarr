@@ -15,6 +15,7 @@
     "dev:server": "pnpm --filter @contextarr/server dev",
     "dev:web": "pnpm --filter @contextarr/web dev",
     "dev:mcp": "pnpm --filter @contextarr/mcp dev",
+    "contextarr-mcp": "pnpm --filter @contextarr/mcp contextarr-mcp",
     "dev": "pnpm --parallel --stream -r --filter @contextarr/server --filter @contextarr/web dev",
     "phase1:verify": "pnpm typecheck && pnpm test",
     "demo:validate": "pnpm --filter @contextarr/cli contextarr validate demo-packs/ai-workstation-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/jellyfin-server-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/claude-code-project-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/internal-support-kb-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/fake-product-line-pack",

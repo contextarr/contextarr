@@ -24,8 +24,8 @@ describe("Contextarr MCP stdio protocol", () => {
     async () => {
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-mcp-"));
       const transport = new StdioClientTransport({
-        command: process.execPath,
-        args: ["--import", "tsx", path.join(repoRoot, "apps/mcp/src/main.ts")],
+        command: pnpmCommand(),
+        args: ["--silent", "contextarr-mcp"],
         cwd: repoRoot,
         env: {
           ...getDefaultEnvironment(),
@@ -67,6 +67,21 @@ describe("Contextarr MCP stdio protocol", () => {
     },
     30000
   );
+
+  it("defines and documents the supported local command", () => {
+    const rootPackage = readJson(path.join(repoRoot, "package.json"));
+    const mcpPackage = readJson(path.join(repoRoot, "apps/mcp/package.json"));
+    const readme = fs.readFileSync(path.join(repoRoot, "README.md"), "utf8");
+    const mcpDocs = fs.readFileSync(path.join(repoRoot, "docs/mcp.md"), "utf8");
+
+    expect(rootPackage.scripts["contextarr-mcp"]).toBe("pnpm --filter @contextarr/mcp contextarr-mcp");
+    expect(mcpPackage.scripts["contextarr-mcp"]).toBe("tsx src/main.ts");
+    expect(mcpPackage.bin).toBeUndefined();
+    expect(readme).toContain("pnpm contextarr-mcp");
+    expect(mcpDocs).toContain("pnpm contextarr-mcp");
+    expect(mcpDocs).toContain("pnpm --silent contextarr-mcp");
+    expect(`${readme}\n${mcpDocs}`).not.toContain("pnpm exec contextarr-mcp");
+  });
 });
 
 function parseToolJson(result: unknown): Record<string, unknown> {
@@ -84,4 +99,12 @@ function parseToolJson(result: unknown): Record<string, unknown> {
 
 function isToolContentResult(value: unknown): value is { content: Array<{ type: string; text?: string }> } {
   return typeof value === "object" && value !== null && "content" in value && Array.isArray(value.content);
+}
+
+function pnpmCommand(): string {
+  return process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+}
+
+function readJson(file: string): { scripts: Record<string, string>; bin?: unknown } {
+  return JSON.parse(fs.readFileSync(file, "utf8")) as { scripts: Record<string, string>; bin?: unknown };
 }
