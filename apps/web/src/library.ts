@@ -23,9 +23,17 @@ export interface CoverVisual {
   initials: string;
 }
 
+const demoPackCoverImages: Record<string, string> = {
+  "ai-workstation-pack": "/pack-covers/ai-workstation-pack.webp",
+  "claude-code-project-pack": "/pack-covers/claude-code-project-pack.webp",
+  "fake-product-line-pack": "/pack-covers/fake-product-line-pack.webp",
+  "internal-support-kb-pack": "/pack-covers/internal-support-kb-pack.webp",
+  "jellyfin-server-pack": "/pack-covers/jellyfin-server-pack.webp"
+};
+
 export function getInitialLibraryView(storage = getBrowserStorage()): LibraryViewMode {
   const storedValue = storage?.getItem(libraryViewStorageKey);
-  return isLibraryViewMode(storedValue) ? storedValue : "compact";
+  return isLibraryViewMode(storedValue) ? storedValue : "cover";
 }
 
 export function persistLibraryView(mode: LibraryViewMode, storage = getBrowserStorage()): void {
@@ -88,7 +96,7 @@ export function getFilterOptions(packs: PackSummary[]): {
 export function createCoverVisual(pack: PackSummary): CoverVisual {
   return {
     accentColor: sanitizeAccentColor(pack.accentColor),
-    coverImage: pack.coverImage,
+    coverImage: pack.coverImage ?? demoPackCoverImages[pack.id] ?? null,
     icon: iconForPack(pack),
     initials: pack.name
       .split(/\s+/)

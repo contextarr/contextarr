@@ -69,7 +69,7 @@ describe("Pack library utilities", () => {
   it("creates deterministic fallback cover metadata", () => {
     expect(createCoverVisual(packs[1])).toMatchObject({
       accentColor: "#3b82f6",
-      coverImage: null,
+      coverImage: "/pack-covers/ai-workstation-pack.webp",
       icon: "monitor",
       initials: "AW"
     });
@@ -77,13 +77,13 @@ describe("Pack library utilities", () => {
 
   it("persists only valid library views", () => {
     const storage = createMemoryStorage();
-    expect(getInitialLibraryView(storage)).toBe("compact");
+    expect(getInitialLibraryView(storage)).toBe("cover");
 
     persistLibraryView("table", storage);
     expect(getInitialLibraryView(storage)).toBe("table");
 
     storage.setItem("contextarr.library.view", "invalid");
-    expect(getInitialLibraryView(storage)).toBe("compact");
+    expect(getInitialLibraryView(storage)).toBe("cover");
   });
 
   it("formats pack types for display", () => {
