@@ -1,0 +1,31 @@
+supported_targets:
+  - chatgpt
+  - claude
+  - codex
+required_context_packs:
+  - claude-code-project-pack
+  - ai-workstation-pack
+required_skills:
+  - implementation-planning-skill
+  - security-review-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+  - deprecated
+pairings:
+  - context_pack: claude-code-project-pack
+    skill: implementation-planning-skill
+    target: codex
+    status: supported
+  - context_pack: claude-code-project-pack
+    skill: security-review-skill
+    target: codex
+    status: supported
+  - context_pack: ai-workstation-pack
+    skill: implementation-planning-skill
+    target: codex
+    status: supported
+  - context_pack: ai-workstation-pack
+    skill: security-review-skill
+    target: codex
+    status: supported

@@ -1,0 +1,46 @@
+{
+  "id": "security-review-kit",
+  "name": "Security Review Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for reviewing fictional project and operations notes for safety issues.",
+  "type": "security_review",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "claude-code-project-pack",
+    "jellyfin-server-pack"
+  ],
+  "skills": [
+    "security-review-skill",
+    "homelab-troubleshooting-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "security-review-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#ef4444"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

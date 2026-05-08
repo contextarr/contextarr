@@ -1,0 +1,31 @@
+supported_targets:
+  - chatgpt
+  - claude
+  - codex
+required_context_packs:
+  - claude-code-project-pack
+  - jellyfin-server-pack
+required_skills:
+  - security-review-skill
+  - homelab-troubleshooting-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+  - deprecated
+pairings:
+  - context_pack: claude-code-project-pack
+    skill: security-review-skill
+    target: codex
+    status: supported
+  - context_pack: claude-code-project-pack
+    skill: homelab-troubleshooting-skill
+    target: codex
+    status: supported
+  - context_pack: jellyfin-server-pack
+    skill: security-review-skill
+    target: codex
+    status: supported
+  - context_pack: jellyfin-server-pack
+    skill: homelab-troubleshooting-skill
+    target: codex
+    status: supported

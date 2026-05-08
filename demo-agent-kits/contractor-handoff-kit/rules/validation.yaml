@@ -1,0 +1,10 @@
+required_fields:
+  record:
+    - id
+    - title
+checks:
+  - references_exist
+  - selected_profile_exists
+  - redaction_rules_present
+  - no_execution_claims
+  - approved_sources_only

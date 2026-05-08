@@ -1,0 +1,26 @@
+id: homelab-troubleshooting-kit-chatgpt
+name: Homelab Troubleshooting Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - jellyfin-server-pack
+    - ai-workstation-pack
+  skills:
+    - homelab-troubleshooting-skill
+    - support-ticket-writing-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice

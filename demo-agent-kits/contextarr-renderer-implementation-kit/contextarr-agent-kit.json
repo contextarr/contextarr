@@ -1,0 +1,46 @@
+{
+  "id": "contextarr-renderer-implementation-kit",
+  "name": "Contextarr Renderer Implementation Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for planning a sanitized renderer implementation using demo project context.",
+  "type": "implementation_planning",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "claude-code-project-pack",
+    "ai-workstation-pack"
+  ],
+  "skills": [
+    "implementation-planning-skill",
+    "security-review-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "contextarr-renderer-implementation-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#38bdf8"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

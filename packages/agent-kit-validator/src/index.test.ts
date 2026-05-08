@@ -198,6 +198,159 @@ describe("Agent Kit validator", () => {
     expect(result.valid).toBe(true);
   });
 
+  it("allows non-selected export profiles for additional supported targets", () => {
+    const dir = copyFixtureToTemp("valid-agent-kit", "multi-target-agent-kit");
+    fs.writeFileSync(
+      path.join(dir, "exports/chatgpt.yaml"),
+      `id: valid-agent-kit-chatgpt
+name: Valid Agent Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - valid-minimal-pack
+  skills:
+    - valid-skill
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - kit_summary
+  - included_skills
+  - relevant_context
+`,
+      "utf8"
+    );
+    replaceInFile(
+      path.join(dir, "rules/compatibility.yaml"),
+      "supported_targets:\n  - codex",
+      "supported_targets:\n  - codex\n  - chatgpt"
+    );
+
+    const result = validateAgentKit(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).not.toContainEqual(expect.objectContaining({ code: "agent_kit_export_profile.target_mismatch" }));
+  });
+
+  it("fails non-selected export profiles with unsupported targets", () => {
+    const dir = copyFixtureToTemp("valid-agent-kit", "unsupported-alternate-target-agent-kit");
+    fs.writeFileSync(
+      path.join(dir, "exports/chatgpt.yaml"),
+      `id: valid-agent-kit-chatgpt
+name: Valid Agent Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - valid-minimal-pack
+  skills:
+    - valid-skill
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - kit_summary
+  - included_skills
+  - relevant_context
+`,
+      "utf8"
+    );
+
+    const result = validateAgentKit(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_compatibility.target_blocked" }));
+  });
+
+  it("fails non-selected export profiles that omit required Context Packs", () => {
+    const dir = copyFixtureToTemp("valid-agent-kit", "missing-required-pack-alternate-profile-agent-kit");
+    fs.writeFileSync(
+      path.join(dir, "exports/chatgpt.yaml"),
+      `id: valid-agent-kit-chatgpt
+name: Valid Agent Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs: []
+  skills:
+    - valid-skill
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - kit_summary
+  - included_skills
+  - relevant_context
+`,
+      "utf8"
+    );
+    replaceInFile(
+      path.join(dir, "rules/compatibility.yaml"),
+      "supported_targets:\n  - codex",
+      "supported_targets:\n  - codex\n  - chatgpt"
+    );
+
+    const result = validateAgentKit(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_compatibility.context_pack_required" }));
+  });
+
+  it("fails non-selected export profiles that omit required Skills", () => {
+    const dir = copyFixtureToTemp("valid-agent-kit", "missing-required-skill-alternate-profile-agent-kit");
+    fs.writeFileSync(
+      path.join(dir, "exports/chatgpt.yaml"),
+      `id: valid-agent-kit-chatgpt
+name: Valid Agent Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - valid-minimal-pack
+  skills: []
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - kit_summary
+  - included_skills
+  - relevant_context
+`,
+      "utf8"
+    );
+    replaceInFile(
+      path.join(dir, "rules/compatibility.yaml"),
+      "supported_targets:\n  - codex",
+      "supported_targets:\n  - codex\n  - chatgpt"
+    );
+
+    const result = validateAgentKit(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_compatibility.skill_required" }));
+  });
+
   it("allows normal documentation URLs without treating them as network actions", () => {
     const dir = copyFixtureToTemp("valid-agent-kit", "valid-agent-kit-with-doc-url");
     fs.appendFileSync(path.join(dir, "README.md"), "\nReference docs: https://example.com/contextarr-agent-kit\n", "utf8");

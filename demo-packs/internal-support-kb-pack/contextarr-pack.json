@@ -16,7 +16,7 @@
   "requiresNetwork": false,
   "permissions": {
     "readVault": false,
-    "writeDrafts": true,
+    "writeDrafts": false,
     "runCommands": false,
     "networkAccess": false
   },

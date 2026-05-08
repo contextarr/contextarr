@@ -187,7 +187,7 @@ export function validateAgentKit(
   const skills = validateSkillReferences(resolvedAgentKitPath, manifest, options, issues);
   const profiles = validateExportProfiles(resolvedAgentKitPath, manifest, issues);
   const compatibility = validateRules(resolvedAgentKitPath, manifest, profiles, issues);
-  validateCompatibility(manifest, compatibility, packs, skills, issues);
+  validateCompatibility(manifest, profiles, compatibility, packs, skills, issues);
   validateProfilePolicy(manifest, profiles, compatibility, packs, skills, issues);
   scanTextFiles(resolvedAgentKitPath, allFiles, issues, options.scanText ?? true);
 
@@ -518,12 +518,12 @@ function validateExportProfiles(
       );
     }
 
-    if (profile.target !== manifest.target) {
+    if (profile.id === manifest.exportProfile && profile.target !== manifest.target) {
       addIssue(
         issues,
         "error",
         "agent_kit_export_profile.target_mismatch",
-        `Export profile "${profile.id}" target "${profile.target}" does not match Agent Kit target "${manifest.target}".`,
+        `Selected export profile "${profile.id}" target "${profile.target}" does not match Agent Kit target "${manifest.target}".`,
         relativePath(agentKitPath, file),
         "target"
       );
@@ -646,6 +646,7 @@ function validateRules(
 
 function validateCompatibility(
   manifest: AgentKitManifest,
+  profiles: AgentKitExportProfile[],
   compatibility: AgentKitCompatibilityRules | undefined,
   packs: ReferencedPack[],
   skills: ReferencedSkill[],
@@ -655,40 +656,44 @@ function validateCompatibility(
     return;
   }
 
-  if (compatibility.supported_targets.length > 0 && !compatibility.supported_targets.includes(manifest.target)) {
-    addIssue(
-      issues,
-      "error",
-      "agent_kit_compatibility.target_blocked",
-      `Compatibility rules do not allow target "${manifest.target}".`,
-      `${manifest.rulesPath}/compatibility.yaml`,
-      "supported_targets"
-    );
-  }
-
-  for (const packId of compatibility.required_context_packs) {
-    if (!manifest.contextPacks.includes(packId)) {
+  for (const target of getProfileTargets(manifest, profiles)) {
+    if (compatibility.supported_targets.length > 0 && !compatibility.supported_targets.includes(target)) {
       addIssue(
         issues,
         "error",
-        "agent_kit_compatibility.context_pack_required",
-        `Required Context Pack "${packId}" is not included.`,
+        "agent_kit_compatibility.target_blocked",
+        `Compatibility rules do not allow target "${target}".`,
         `${manifest.rulesPath}/compatibility.yaml`,
-        "required_context_packs"
+        "supported_targets"
       );
     }
   }
 
-  for (const skillId of compatibility.required_skills) {
-    if (!manifest.skills.includes(skillId)) {
-      addIssue(
-        issues,
-        "error",
-        "agent_kit_compatibility.skill_required",
-        `Required Skill "${skillId}" is not included.`,
-        `${manifest.rulesPath}/compatibility.yaml`,
-        "required_skills"
-      );
+  for (const profile of getProfileSelections(manifest, profiles)) {
+    for (const packId of compatibility.required_context_packs) {
+      if (!profile.packIds.includes(packId)) {
+        addIssue(
+          issues,
+          "error",
+          "agent_kit_compatibility.context_pack_required",
+          `Required Context Pack "${packId}" is not included by profile "${profile.id}".`,
+          `${manifest.rulesPath}/compatibility.yaml`,
+          "required_context_packs"
+        );
+      }
+    }
+
+    for (const skillId of compatibility.required_skills) {
+      if (!profile.skillIds.includes(skillId)) {
+        addIssue(
+          issues,
+          "error",
+          "agent_kit_compatibility.skill_required",
+          `Required Skill "${skillId}" is not included by profile "${profile.id}".`,
+          `${manifest.rulesPath}/compatibility.yaml`,
+          "required_skills"
+        );
+      }
     }
   }
 
@@ -719,18 +724,20 @@ function validateCompatibility(
   }
 
   for (const pairing of compatibility.pairings) {
-    const targetMatches = !pairing.target || pairing.target === manifest.target;
-    const packMatches = !pairing.context_pack || manifest.contextPacks.includes(pairing.context_pack);
-    const skillMatches = !pairing.skill || manifest.skills.includes(pairing.skill);
-    if (pairing.status === "blocked" && targetMatches && packMatches && skillMatches) {
-      addIssue(
-        issues,
-        "error",
-        "agent_kit_compatibility.pairing_blocked",
-        "Compatibility rules block one of the selected Agent Kit pairings.",
-        `${manifest.rulesPath}/compatibility.yaml`,
-        "pairings"
-      );
+    for (const profile of getProfileSelections(manifest, profiles)) {
+      const targetMatches = !pairing.target || pairing.target === profile.target;
+      const packMatches = !pairing.context_pack || profile.packIds.includes(pairing.context_pack);
+      const skillMatches = !pairing.skill || profile.skillIds.includes(pairing.skill);
+      if (pairing.status === "blocked" && targetMatches && packMatches && skillMatches) {
+        addIssue(
+          issues,
+          "error",
+          "agent_kit_compatibility.pairing_blocked",
+          `Compatibility rules block one of the selected Agent Kit pairings for profile "${profile.id}".`,
+          `${manifest.rulesPath}/compatibility.yaml`,
+          "pairings"
+        );
+      }
     }
   }
 }
@@ -743,68 +750,99 @@ function validateProfilePolicy(
   skills: ReferencedSkill[],
   issues: AgentKitValidationIssue[]
 ): void {
-  const selectedProfile = profiles.find((profile) => profile.id === manifest.exportProfile);
-  if (!selectedProfile) {
-    return;
-  }
+  for (const profile of profiles) {
+    const selectedPackIds = profile.include?.context_packs ?? manifest.contextPacks;
+    const selectedSkillIds = profile.include?.skills ?? manifest.skills;
+    const selectedRecords = packs.filter((pack) => selectedPackIds.includes(pack.id)).flatMap((pack) => pack.records);
+    const selectedSkills = skills.filter((skill) => selectedSkillIds.includes(skill.id));
+    const selectedDocuments = selectedSkills.flatMap((skill) => skill.documents);
+    const privacyMode = profile.privacy_mode ?? manifest.privacyMode;
+    const excludedTags = new Set(profile.exclude_tags);
+    const sensitiveObjects = [...selectedRecords, ...selectedDocuments].filter(isSensitiveObject);
 
-  const selectedPackIds = selectedProfile.include?.context_packs ?? manifest.contextPacks;
-  const selectedSkillIds = selectedProfile.include?.skills ?? manifest.skills;
-  const selectedRecords = packs.filter((pack) => selectedPackIds.includes(pack.id)).flatMap((pack) => pack.records);
-  const selectedDocuments = skills.filter((skill) => selectedSkillIds.includes(skill.id)).flatMap((skill) => skill.documents);
-  const privacyMode = selectedProfile.privacy_mode ?? manifest.privacyMode;
-  const excludedTags = new Set(selectedProfile.exclude_tags);
-  const sensitiveObjects = [...selectedRecords, ...selectedDocuments].filter(isSensitiveObject);
+    for (const skill of selectedSkills) {
+      if (skill.manifest?.targets.length && !skill.manifest.targets.includes(profile.target)) {
+        addIssue(
+          issues,
+          "warning",
+          "agent_kit.skill_target_missing",
+          `Skill "${skill.id}" does not declare target "${profile.target}" used by profile "${profile.id}".`,
+          "contextarr-agent-kit.json",
+          "target"
+        );
+      }
+    }
 
-  if (privacyMode === "public_safe" && sensitiveObjects.length > 0) {
-    addIssue(
-      issues,
-      "error",
-      "agent_kit_policy.sensitive_public_safe",
-      "Public-safe Agent Kit profiles must not include private, sensitive, secret, or restricted-tag content.",
-      "contextarr-agent-kit.json",
-      "privacyMode"
-    );
-  }
+    if (privacyMode === "public_safe" && sensitiveObjects.length > 0) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_policy.sensitive_public_safe",
+        `Public-safe Agent Kit profile "${profile.id}" must not include private, sensitive, secret, or restricted-tag content.`,
+        "contextarr-agent-kit.json",
+        "privacyMode"
+      );
+    }
 
-  if (privacyMode === "full" && sensitiveObjects.length > 0) {
-    addIssue(
-      issues,
-      "warning",
-      "agent_kit_policy.sensitive_without_redaction",
-      "Selected content includes sensitive/private material while the selected export profile uses full privacy mode.",
-      "contextarr-agent-kit.json",
-      "privacyMode"
-    );
-  }
-
-  const hasSecretContent = sensitiveObjects.some(
-    (item) => item.privacy === "secret" || item.tags.some((tag) => tag === "secret" || tag === "never_export")
-  );
-  if (privacyMode === "redacted" && hasSecretContent && (!excludedTags.has("secret") || !excludedTags.has("never_export"))) {
-    addIssue(
-      issues,
-      "warning",
-      "agent_kit_policy.secret_exclusion_incomplete",
-      "Redacted Agent Kit profiles should exclude both secret and never_export tags.",
-      "contextarr-agent-kit.json",
-      "exportProfile"
-    );
-  }
-
-  if (!compatibility?.allow_unreviewed_drafts) {
-    const unreviewed = [...selectedRecords, ...selectedDocuments].filter((item) => item.review_status !== "approved");
-    if (unreviewed.length > 0) {
+    if (privacyMode === "full" && sensitiveObjects.length > 0) {
       addIssue(
         issues,
         "warning",
-        "agent_kit_policy.unreviewed_content",
-        "Selected content includes records or Skill documents that are not approved.",
+        "agent_kit_policy.sensitive_without_redaction",
+        `Selected content for profile "${profile.id}" includes sensitive/private material while the profile uses full privacy mode.`,
+        "contextarr-agent-kit.json",
+        "privacyMode"
+      );
+    }
+
+    const hasSecretContent = sensitiveObjects.some(
+      (item) => item.privacy === "secret" || item.tags.some((tag) => tag === "secret" || tag === "never_export")
+    );
+    if (privacyMode === "redacted" && hasSecretContent && (!excludedTags.has("secret") || !excludedTags.has("never_export"))) {
+      addIssue(
+        issues,
+        "warning",
+        "agent_kit_policy.secret_exclusion_incomplete",
+        `Redacted Agent Kit profile "${profile.id}" should exclude both secret and never_export tags.`,
         "contextarr-agent-kit.json",
         "exportProfile"
       );
     }
+
+    if (!compatibility?.allow_unreviewed_drafts) {
+      const unreviewed = [...selectedRecords, ...selectedDocuments].filter((item) => item.review_status !== "approved");
+      if (unreviewed.length > 0) {
+        addIssue(
+          issues,
+          "warning",
+          "agent_kit_policy.unreviewed_content",
+          `Selected content for profile "${profile.id}" includes records or Skill documents that are not approved.`,
+          "contextarr-agent-kit.json",
+          "exportProfile"
+        );
+      }
+    }
   }
+}
+
+function getProfileTargets(manifest: AgentKitManifest, profiles: AgentKitExportProfile[]): string[] {
+  return Array.from(new Set([manifest.target, ...profiles.map((profile) => profile.target)]));
+}
+
+function getProfileSelections(
+  manifest: AgentKitManifest,
+  profiles: AgentKitExportProfile[]
+): Array<{ id: string; target: string; packIds: string[]; skillIds: string[] }> {
+  if (profiles.length === 0) {
+    return [{ id: manifest.exportProfile, target: manifest.target, packIds: manifest.contextPacks, skillIds: manifest.skills }];
+  }
+
+  return profiles.map((profile) => ({
+    id: profile.id,
+    target: profile.target,
+    packIds: profile.include?.context_packs ?? manifest.contextPacks,
+    skillIds: profile.include?.skills ?? manifest.skills
+  }));
 }
 
 function readContextPackManifest(packPath: string): ContextPackManifest | undefined {

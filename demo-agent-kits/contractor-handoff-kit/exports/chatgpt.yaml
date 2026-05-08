@@ -1,0 +1,26 @@
+id: contractor-handoff-kit-chatgpt
+name: Contractor Handoff Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - claude-code-project-pack
+    - ai-workstation-pack
+  skills:
+    - contractor-briefing-skill
+    - implementation-planning-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice

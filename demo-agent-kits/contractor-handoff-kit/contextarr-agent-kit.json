@@ -1,0 +1,46 @@
+{
+  "id": "contractor-handoff-kit",
+  "name": "Contractor Handoff Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for preparing contractor handoff briefs from fictional project and workstation context.",
+  "type": "handoff_brief",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "claude-code-project-pack",
+    "ai-workstation-pack"
+  ],
+  "skills": [
+    "contractor-briefing-skill",
+    "implementation-planning-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "contractor-handoff-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#a78bfa"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

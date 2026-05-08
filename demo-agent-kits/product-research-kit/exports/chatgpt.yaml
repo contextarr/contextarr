@@ -1,0 +1,26 @@
+id: product-research-kit-chatgpt
+name: Product Research Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - fake-product-line-pack
+    - internal-support-kb-pack
+  skills:
+    - research-synthesis-skill
+    - internal-kb-answering-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice

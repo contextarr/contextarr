@@ -1,0 +1,12 @@
+redact_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+patterns:
+  - name: placeholder_private_marker
+    regex: "\bPRIVATE_DEMO_MARKER\b"
+    action: remove
+  - name: placeholder_account_marker
+    regex: "\bACCOUNT_DEMO_MARKER\b"
+    action: mask

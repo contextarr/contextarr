@@ -1,0 +1,31 @@
+supported_targets:
+  - chatgpt
+  - claude
+  - codex
+required_context_packs:
+  - internal-support-kb-pack
+  - fake-product-line-pack
+required_skills:
+  - internal-kb-answering-skill
+  - research-synthesis-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+  - deprecated
+pairings:
+  - context_pack: internal-support-kb-pack
+    skill: internal-kb-answering-skill
+    target: codex
+    status: supported
+  - context_pack: internal-support-kb-pack
+    skill: research-synthesis-skill
+    target: codex
+    status: supported
+  - context_pack: fake-product-line-pack
+    skill: internal-kb-answering-skill
+    target: codex
+    status: supported
+  - context_pack: fake-product-line-pack
+    skill: research-synthesis-skill
+    target: codex
+    status: supported

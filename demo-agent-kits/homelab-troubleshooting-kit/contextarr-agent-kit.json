@@ -1,0 +1,46 @@
+{
+  "id": "homelab-troubleshooting-kit",
+  "name": "Homelab Troubleshooting Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for organizing local homelab troubleshooting context into assistant-ready notes.",
+  "type": "operations_support",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "jellyfin-server-pack",
+    "ai-workstation-pack"
+  ],
+  "skills": [
+    "homelab-troubleshooting-skill",
+    "support-ticket-writing-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "homelab-troubleshooting-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#14b8a6"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

@@ -1,0 +1,31 @@
+supported_targets:
+  - chatgpt
+  - claude
+  - codex
+required_context_packs:
+  - internal-support-kb-pack
+  - fake-product-line-pack
+required_skills:
+  - support-ticket-writing-skill
+  - bug-report-structuring-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+  - deprecated
+pairings:
+  - context_pack: internal-support-kb-pack
+    skill: support-ticket-writing-skill
+    target: codex
+    status: supported
+  - context_pack: internal-support-kb-pack
+    skill: bug-report-structuring-skill
+    target: codex
+    status: supported
+  - context_pack: fake-product-line-pack
+    skill: support-ticket-writing-skill
+    target: codex
+    status: supported
+  - context_pack: fake-product-line-pack
+    skill: bug-report-structuring-skill
+    target: codex
+    status: supported

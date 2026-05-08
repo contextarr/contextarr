@@ -1,0 +1,46 @@
+{
+  "id": "support-ticket-writing-kit",
+  "name": "Support Ticket Writing Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for drafting support tickets from fictional product and support context.",
+  "type": "support_writing",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "internal-support-kb-pack",
+    "fake-product-line-pack"
+  ],
+  "skills": [
+    "support-ticket-writing-skill",
+    "bug-report-structuring-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "support-ticket-writing-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#f97316"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

@@ -1,0 +1,31 @@
+supported_targets:
+  - chatgpt
+  - claude
+  - codex
+required_context_packs:
+  - jellyfin-server-pack
+  - ai-workstation-pack
+required_skills:
+  - homelab-troubleshooting-skill
+  - support-ticket-writing-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+  - deprecated
+pairings:
+  - context_pack: jellyfin-server-pack
+    skill: homelab-troubleshooting-skill
+    target: codex
+    status: supported
+  - context_pack: jellyfin-server-pack
+    skill: support-ticket-writing-skill
+    target: codex
+    status: supported
+  - context_pack: ai-workstation-pack
+    skill: homelab-troubleshooting-skill
+    target: codex
+    status: supported
+  - context_pack: ai-workstation-pack
+    skill: support-ticket-writing-skill
+    target: codex
+    status: supported

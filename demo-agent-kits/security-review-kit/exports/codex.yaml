@@ -1,0 +1,26 @@
+id: security-review-kit-codex
+name: Security Review Kit Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - claude-code-project-pack
+    - jellyfin-server-pack
+  skills:
+    - security-review-skill
+    - homelab-troubleshooting-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice

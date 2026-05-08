@@ -1,0 +1,26 @@
+id: internal-kb-answering-kit-chatgpt
+name: Internal KB Answering Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - internal-support-kb-pack
+    - fake-product-line-pack
+  skills:
+    - internal-kb-answering-skill
+    - research-synthesis-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice

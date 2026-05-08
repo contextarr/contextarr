@@ -1,0 +1,46 @@
+{
+  "id": "product-research-kit",
+  "name": "Product Research Kit",
+  "version": "1.0.0",
+  "description": "Public-safe kit for synthesizing fictional product-line notes into a research brief.",
+  "type": "research_brief",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "contextPacks": [
+    "fake-product-line-pack",
+    "internal-support-kb-pack"
+  ],
+  "skills": [
+    "research-synthesis-skill",
+    "internal-kb-answering-skill"
+  ],
+  "target": "codex",
+  "exportProfile": "product-research-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#facc15"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

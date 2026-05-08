@@ -1,0 +1,26 @@
+id: claude-code-implementation-kit-chatgpt
+name: Claude Code Implementation Kit ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  context_packs:
+    - claude-code-project-pack
+  skills:
+    - implementation-planning-skill
+    - bug-report-structuring-skill
+    - security-review-skill
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+  - customer_private
+token_budget: 12000
+sections:
+  - kit_summary
+  - task_goal
+  - included_skills
+  - relevant_context
+  - output_format
+  - constraints
+  - redaction_notice
