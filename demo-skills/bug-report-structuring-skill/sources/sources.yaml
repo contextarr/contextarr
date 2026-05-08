@@ -1,0 +1,25 @@
+sources:
+  - id: bug-report-structuring-skill.bug-template-notes
+    type: manual
+    title: Fake Bug Template Notes
+    path: docs/bug-template-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: bug-report-structuring-skill.severity-rubric
+    type: manual
+    title: Fake Severity Rubric
+    path: docs/severity-rubric.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: bug-report-structuring-skill.qa-handoff-guide
+    type: manual
+    title: Fake QA Handoff Guide
+    path: docs/qa-handoff-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

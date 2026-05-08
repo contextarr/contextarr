@@ -1,0 +1,22 @@
+id: implementation-planning-skill-markdown
+name: Implementation Planning Skill Markdown Export
+target: markdown
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - implementation-planning-skill.scope-boundaries
+    - implementation-planning-skill.work-breakdown
+    - implementation-planning-skill.verification-ladder
+  examples:
+    - implementation-planning-skill.example-phase-handoff
+    - implementation-planning-skill.example-review-response
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

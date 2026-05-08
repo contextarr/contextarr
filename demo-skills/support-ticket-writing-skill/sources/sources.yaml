@@ -1,0 +1,25 @@
+sources:
+  - id: support-ticket-writing-skill.support-style-guide
+    type: manual
+    title: Fake Support Style Guide
+    path: docs/support-style-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: support-ticket-writing-skill.ticket-quality-checklist
+    type: manual
+    title: Fake Ticket Quality Checklist
+    path: docs/ticket-quality-checklist.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: support-ticket-writing-skill.customer-tone-notes
+    type: manual
+    title: Fake Customer Tone Notes
+    path: docs/customer-tone-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

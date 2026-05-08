@@ -1,0 +1,50 @@
+{
+  "id": "implementation-planning-skill",
+  "name": "Implementation Planning Skill",
+  "version": "1.0.0",
+  "description": "Converts accepted product scope into small implementation steps with verification and boundaries.",
+  "type": "planning_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Demo Authors",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": [
+    "chatgpt",
+    "claude",
+    "codex",
+    "generic_markdown"
+  ],
+  "inputs": [
+    "prd_excerpt",
+    "repo_notes"
+  ],
+  "outputs": [
+    "implementation_plan",
+    "acceptance_checks"
+  ],
+  "assets": {
+    "accentColor": "#a78bfa"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

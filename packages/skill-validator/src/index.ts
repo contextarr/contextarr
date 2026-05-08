@@ -557,39 +557,41 @@ function scanTextFiles(
       );
     }
 
-    if (credentialRequestPattern.test(content)) {
-      addIssue(
-        issues,
-        "error",
-        "scan.credential_request",
-        "Skill content must not request API keys, passwords, tokens, or credentials.",
-        relativeFile
-      );
-    }
+    if (!isRulesTextFile(relativeFile)) {
+      if (credentialRequestPattern.test(content)) {
+        addIssue(
+          issues,
+          "error",
+          "scan.credential_request",
+          "Skill content must not request API keys, passwords, tokens, or credentials.",
+          relativeFile
+        );
+      }
 
-    if (shellCommandPattern.test(content)) {
-      addIssue(issues, "error", "scan.shell_command", "Obvious shell command pattern found.", relativeFile);
-    }
+      if (shellCommandPattern.test(content)) {
+        addIssue(issues, "error", "scan.shell_command", "Obvious shell command pattern found.", relativeFile);
+      }
 
-    if (hiddenInstructionPattern.test(content)) {
-      addIssue(issues, "error", "scan.hidden_instruction", "Hidden or deceptive instruction pattern found.", relativeFile);
-    }
+      if (hiddenInstructionPattern.test(content)) {
+        addIssue(issues, "error", "scan.hidden_instruction", "Hidden or deceptive instruction pattern found.", relativeFile);
+      }
 
-    if (isSkillContent && networkInstructionPattern.test(content)) {
-      addIssue(
-        issues,
-        "error",
-        "scan.network_instruction",
-        "Network-like instruction pattern found; Skills must remain non-executable and must not require network actions.",
-        relativeFile
-      );
-    }
-
-    if (!isSkillContent) {
-      continue;
+      if (networkInstructionPattern.test(content)) {
+        addIssue(
+          issues,
+          "error",
+          "scan.network_instruction",
+          "Network-like instruction pattern found; Skills must remain non-executable and must not require network actions.",
+          relativeFile
+        );
+      }
     }
 
     for (const pattern of safetyPatterns) {
+      if (!isSkillContent) {
+        continue;
+      }
+
       if (!pattern.regex.test(content)) {
         continue;
       }
@@ -678,6 +680,10 @@ function isSkillContentTextFile(relativeFile: string): boolean {
     relativeFile.toLowerCase().endsWith(".md") &&
     (relativeFile.startsWith("instructions/") || relativeFile.startsWith("examples/"))
   );
+}
+
+function isRulesTextFile(relativeFile: string): boolean {
+  return relativeFile.startsWith("rules/") && isYamlFile(relativeFile);
 }
 
 function finish(skillPath: string, issues: SkillValidationIssue[]): SkillValidationResult {

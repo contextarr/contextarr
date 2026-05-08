@@ -1,0 +1,25 @@
+sources:
+  - id: security-review-skill.security-review-rubric
+    type: manual
+    title: Fake Security Review Rubric
+    path: docs/security-review-rubric.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: security-review-skill.local-first-boundaries
+    type: manual
+    title: Fake Local First Boundaries
+    path: docs/local-first-boundaries.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: security-review-skill.finding-quality-guide
+    type: manual
+    title: Fake Finding Quality Guide
+    path: docs/finding-quality-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

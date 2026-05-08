@@ -1,0 +1,22 @@
+id: support-ticket-writing-skill-claude
+name: Support Ticket Writing Skill Claude Export
+target: claude
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - support-ticket-writing-skill.triage-response
+    - support-ticket-writing-skill.customer-safe-wording
+    - support-ticket-writing-skill.handoff-summary
+  examples:
+    - support-ticket-writing-skill.example-ticket-intake
+    - support-ticket-writing-skill.example-known-issue-update
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 6000
+sections:
+  - instructions
+  - examples
+  - safety

@@ -1,0 +1,50 @@
+{
+  "id": "contractor-briefing-skill",
+  "name": "Contractor Briefing Skill",
+  "version": "1.0.0",
+  "description": "Creates public-safe task briefs from approved context, with clear boundaries and acceptance checks.",
+  "type": "briefing_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Demo Authors",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": [
+    "chatgpt",
+    "claude",
+    "codex",
+    "generic_markdown"
+  ],
+  "inputs": [
+    "approved_scope",
+    "task_notes"
+  ],
+  "outputs": [
+    "brief",
+    "acceptance_checklist"
+  ],
+  "assets": {
+    "accentColor": "#64748b"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

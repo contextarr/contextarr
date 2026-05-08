@@ -1,0 +1,25 @@
+sources:
+  - id: research-synthesis-skill.research-brief-template
+    type: manual
+    title: Fake Research Brief Template
+    path: docs/research-brief-template.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: research-synthesis-skill.evidence-quality-notes
+    type: manual
+    title: Fake Evidence Quality Notes
+    path: docs/evidence-quality-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: research-synthesis-skill.decision-rubric
+    type: manual
+    title: Fake Decision Rubric
+    path: docs/decision-rubric.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

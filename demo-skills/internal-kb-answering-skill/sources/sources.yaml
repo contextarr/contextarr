@@ -1,0 +1,25 @@
+sources:
+  - id: internal-kb-answering-skill.kb-answer-guide
+    type: manual
+    title: Fake KB Answer Guide
+    path: docs/kb-answer-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: internal-kb-answering-skill.citation-rules
+    type: manual
+    title: Fake Citation Rules
+    path: docs/citation-rules.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: internal-kb-answering-skill.gap-handling-notes
+    type: manual
+    title: Fake Gap Handling Notes
+    path: docs/gap-handling-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

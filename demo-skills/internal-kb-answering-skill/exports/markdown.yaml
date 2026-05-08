@@ -1,0 +1,22 @@
+id: internal-kb-answering-skill-markdown
+name: Internal KB Answering Skill Markdown Export
+target: markdown
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - internal-kb-answering-skill.answer-shape
+    - internal-kb-answering-skill.citation-discipline
+    - internal-kb-answering-skill.gap-escalation
+  examples:
+    - internal-kb-answering-skill.example-policy-question
+    - internal-kb-answering-skill.example-setup-question
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

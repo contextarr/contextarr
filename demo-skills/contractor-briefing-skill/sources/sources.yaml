@@ -1,0 +1,25 @@
+sources:
+  - id: contractor-briefing-skill.brief-template
+    type: manual
+    title: Fake Brief Template
+    path: docs/brief-template.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: contractor-briefing-skill.acceptance-check-guide
+    type: manual
+    title: Fake Acceptance Check Guide
+    path: docs/acceptance-check-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: contractor-briefing-skill.scope-control-notes
+    type: manual
+    title: Fake Scope Control Notes
+    path: docs/scope-control-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

@@ -1,0 +1,25 @@
+sources:
+  - id: implementation-planning-skill.phase-template
+    type: manual
+    title: Fake Phase Template
+    path: docs/phase-template.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: implementation-planning-skill.repo-boundary-notes
+    type: manual
+    title: Fake Repo Boundary Notes
+    path: docs/repo-boundary-notes.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: implementation-planning-skill.verification-guide
+    type: manual
+    title: Fake Verification Guide
+    path: docs/verification-guide.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current

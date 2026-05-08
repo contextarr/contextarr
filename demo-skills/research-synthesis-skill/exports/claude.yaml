@@ -1,0 +1,22 @@
+id: research-synthesis-skill-claude
+name: Research Synthesis Skill Claude Export
+target: claude
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - research-synthesis-skill.evidence-table
+    - research-synthesis-skill.decision-brief
+    - research-synthesis-skill.open-questions
+  examples:
+    - research-synthesis-skill.example-tool-comparison
+    - research-synthesis-skill.example-market-notes
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 6000
+sections:
+  - instructions
+  - examples
+  - safety

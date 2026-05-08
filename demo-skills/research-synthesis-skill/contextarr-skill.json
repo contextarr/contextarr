@@ -1,0 +1,50 @@
+{
+  "id": "research-synthesis-skill",
+  "name": "Research Synthesis Skill",
+  "version": "1.0.0",
+  "description": "Turns provided public notes into a concise evidence summary, decision brief, and open questions.",
+  "type": "research_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Demo Authors",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": [
+    "chatgpt",
+    "claude",
+    "codex",
+    "generic_markdown"
+  ],
+  "inputs": [
+    "research_notes",
+    "source_extracts"
+  ],
+  "outputs": [
+    "brief",
+    "evidence_table"
+  ],
+  "assets": {
+    "accentColor": "#22c55e"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

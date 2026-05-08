@@ -1,0 +1,50 @@
+{
+  "id": "security-review-skill",
+  "name": "Security Review Skill",
+  "version": "1.0.0",
+  "description": "Guides a read-only security review using provided diffs, architecture notes, and test evidence.",
+  "type": "security_review_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Demo Authors",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": [
+    "chatgpt",
+    "claude",
+    "codex",
+    "generic_markdown"
+  ],
+  "inputs": [
+    "diff_notes",
+    "architecture_notes"
+  ],
+  "outputs": [
+    "security_findings",
+    "risk_summary"
+  ],
+  "assets": {
+    "accentColor": "#ef4444"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

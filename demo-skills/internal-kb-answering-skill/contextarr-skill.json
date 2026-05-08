@@ -1,0 +1,50 @@
+{
+  "id": "internal-kb-answering-skill",
+  "name": "Internal KB Answering Skill",
+  "version": "1.0.0",
+  "description": "Converts provided knowledge snippets into accurate internal answers with citations and gaps.",
+  "type": "knowledge_base_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Demo Authors",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": [
+    "chatgpt",
+    "claude",
+    "codex",
+    "generic_markdown"
+  ],
+  "inputs": [
+    "kb_snippets",
+    "question"
+  ],
+  "outputs": [
+    "answer",
+    "gap_list"
+  ],
+  "assets": {
+    "accentColor": "#eab308"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

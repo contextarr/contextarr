@@ -1,0 +1,22 @@
+id: contractor-briefing-skill-markdown
+name: Contractor Briefing Skill Markdown Export
+target: markdown
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - contractor-briefing-skill.brief-frame
+    - contractor-briefing-skill.quality-bar
+    - contractor-briefing-skill.handoff-close
+  examples:
+    - contractor-briefing-skill.example-content-brief
+    - contractor-briefing-skill.example-cleanup-brief
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

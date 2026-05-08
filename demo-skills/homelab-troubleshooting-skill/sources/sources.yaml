@@ -1,0 +1,25 @@
+sources:
+  - id: homelab-troubleshooting-skill.homelab-runbook
+    type: manual
+    title: Fake Homelab Runbook
+    path: docs/homelab-runbook.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: homelab-troubleshooting-skill.safe-ops-checklist
+    type: manual
+    title: Fake Safe Operations Checklist
+    path: docs/safe-ops-checklist.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+  - id: homelab-troubleshooting-skill.incident-note-template
+    type: manual
+    title: Fake Incident Note Template
+    path: docs/incident-note-template.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
