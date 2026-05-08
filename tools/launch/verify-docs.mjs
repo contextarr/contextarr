@@ -258,6 +258,31 @@ if (!failed) {
   if (!packageJson.scripts["phase25:verify"]?.includes("research-delta:verify")) {
     fail("phase25:verify must include research-delta:verify.");
   }
+  const importers = read("docs/importers.md");
+  const requiredPhase26Text = [
+    "Phase 26",
+    "phase26:verify",
+    "contextarr import-skill",
+    "CONTEXTARR_ENABLE_LOCAL_IMPORTS",
+    "CONTEXTARR_IMPORTED_SKILLS_DIR",
+    "POST /api/import-skills/preview",
+    "POST /api/import-skills",
+    "imported-skills/",
+  ];
+  for (const text of requiredPhase26Text) {
+    if (!readme.includes(text) && !importers.includes(text) && !securityModel.includes(text) && !architecture.includes(text)) {
+      fail(`README or docs are missing Phase 26 text: ${text}`);
+    }
+  }
+  if (!roadmap.includes("Phase 26: Local Skill importers. Complete.")) {
+    fail("Roadmap must mark Phase 26 complete.");
+  }
+  if (!securityModel.includes("Phase 26") || !securityModel.includes("imported-skills")) {
+    fail("Security model docs must include Phase 26 Skill importer boundaries.");
+  }
+  if (!packageJson.scripts["phase26:verify"]) {
+    fail("Root package scripts must include phase26:verify.");
+  }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
     fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");

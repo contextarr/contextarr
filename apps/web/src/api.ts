@@ -21,6 +21,9 @@ import type {
   SkillDetail,
   SkillDocument,
   SkillHealthResponse,
+  SkillImportPreview,
+  SkillImportRequest,
+  SkillImportResult,
   SkillSummary
 } from "./types";
 
@@ -53,6 +56,8 @@ export interface ApiClient {
   getSkillExamples(id: string): Promise<SkillDocument[]>;
   getSkillExports(id: string): Promise<SkillDetail["exportProfiles"]>;
   getSkillHealth(id: string): Promise<SkillHealthResponse>;
+  previewSkillImport(request: SkillImportRequest): Promise<SkillImportPreview>;
+  importSkill(request: SkillImportRequest): Promise<SkillImportResult>;
   getAgentKits(): Promise<AgentKitSummary[]>;
   getAgentKit(id: string): Promise<AgentKitDetail>;
   getAgentKitContextPacks(id: string): Promise<AgentKitContextPackSummary[]>;
@@ -133,6 +138,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.exportProfiles;
     },
     getSkillHealth: (id: string) => requestJson<SkillHealthResponse>(`/api/skills/${encodeURIComponent(id)}/health`),
+    previewSkillImport: (body: SkillImportRequest) =>
+      requestJson<SkillImportPreview>("/api/import-skills/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    importSkill: (body: SkillImportRequest) =>
+      requestJson<SkillImportResult>("/api/import-skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
     getAgentKits: async () => {
       const response = await requestJson<{ agentKits: AgentKitSummary[] }>("/api/agent-kits");
       return response.agentKits;

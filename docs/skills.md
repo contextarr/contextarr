@@ -1,6 +1,16 @@
 # Contextarr Skills
 
-Skills are Contextarr objects for reusable AI work instructions. Phase 12 introduced the terminology; Phases 13 through 18 add non-executable Skill schemas, validation, demo Skills, indexing, read-only API surfaces, the Skill Library, deterministic Skill Health and review items, and profile-driven Skill exports. Phase 25 exposes approved Skill metadata and privacy-aware documents through the read-only MCP server.
+Skills are Contextarr objects for reusable AI work instructions. Phase 12 introduced the terminology; Phases 13 through 18 add non-executable Skill schemas, validation, demo Skills, indexing, read-only API surfaces, the Skill Library, deterministic Skill Health and review items, and profile-driven Skill exports. Phase 25 exposes approved Skill metadata and privacy-aware documents through the read-only MCP server. Phase 26 adds local draft Skill importers that keep imported documents private, unreviewed, and excluded from export until reviewed.
+
+## Local Draft Imports
+
+Use the CLI for local draft Skill imports:
+
+```bash
+pnpm --filter @contextarr/cli contextarr import-skill <path> --kind auto --out imported-skills/manual
+```
+
+Supported kinds are `folder`, `markdown`, `prompt-template`, `claude-skill`, and `chatgpt-prompts`. The dashboard Collector flow and API endpoints are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 
 ## Definition
 

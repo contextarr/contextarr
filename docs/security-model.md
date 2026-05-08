@@ -87,13 +87,13 @@ Composer previews reuse the same export engine and redaction rules. They are rea
 
 ## Import Security
 
-Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
+Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. Phase 26 Skill importers produce draft Skills under `imported-skills/` or the configured `CONTEXTARR_IMPORTED_SKILLS_DIR`. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
 
 Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use. Composer excludes `imported_draft` and `never_export` records by default.
 
 ## Skills and Agent Kits
 
-Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. Phase 25 exposes Skills and Agent Kits through read-only stdio MCP tools without execution or file mutation. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. Phase 25 exposes Skills and Agent Kits through read-only stdio MCP tools without execution or file mutation. Phase 26 imports local draft Skills only when explicitly enabled and keeps them private, unreviewed, and excluded from exports until reviewed. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Skill health checks reuse the same local, deterministic review queue model as Context Packs. They do not fetch source URLs, probe local source paths, run commands, execute Skill content, or rewrite Skill files. Review item status changes are stored in SQLite only.
 

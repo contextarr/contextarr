@@ -5,12 +5,17 @@ import { fileURLToPath } from "node:url";
 import { zipSync } from "fflate";
 import { afterEach, describe, expect, it } from "vitest";
 import { validatePack } from "@contextarr/pack-validator";
+import { validateSkill } from "@contextarr/skill-validator";
 import {
   detectImportKind,
+  detectSkillImportKind,
   importToDraftPack,
+  importSkillToDraft,
   ImporterError,
   previewImport,
-  type DraftImportResult
+  previewSkillImport,
+  type DraftImportResult,
+  type DraftSkillImportResult
 } from "./index";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -121,6 +126,130 @@ describe("@contextarr/importers", () => {
       previewImport({ inputPath: fixture("malformed-chatgpt"), kind: "chatgpt", packId: "bad-chatgpt" })
     ).toThrow(ImporterError);
   });
+
+  it("detects Skill importer kinds from local inputs", () => {
+    expect(detectSkillImportKind(fixture("skill-markdown-folder"))).toBe("markdown");
+    expect(detectSkillImportKind(fixture("prompt-templates"))).toBe("prompt-template");
+    expect(detectSkillImportKind(fixture("claude-skill"))).toBe("claude-skill");
+    expect(detectSkillImportKind(fixture("chatgpt-prompts"))).toBe("chatgpt-prompts");
+    expect(detectSkillImportKind(fixture("skill-folder-files"))).toBe("folder");
+  });
+
+  it("previews Skill folder imports and blocks executable or credential-like files", () => {
+    const preview = previewSkillImport({
+      inputPath: fixture("skill-folder-files"),
+      kind: "folder",
+      skillId: "folder-skill-fixture"
+    });
+
+    expect(preview.documents.map((document) => document.title)).toEqual(["Instructions"]);
+    expect(preview.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "skill_import.executable_file", file: "unsafe.ps1" }),
+        expect.objectContaining({ code: "skill_import.blocked_content", file: "credentials.txt" })
+      ])
+    );
+  });
+
+  it("imports Markdown folders with deterministic Skill ids and validates generated drafts", () => {
+    const first = previewSkillImport({
+      inputPath: fixture("skill-markdown-folder"),
+      kind: "markdown",
+      skillId: "markdown-skill-fixture"
+    });
+    const second = previewSkillImport({
+      inputPath: fixture("skill-markdown-folder"),
+      kind: "markdown",
+      skillId: "markdown-skill-fixture"
+    });
+    const result = writeSkillImport({
+      inputPath: fixture("skill-markdown-folder"),
+      kind: "markdown",
+      skillId: "markdown-skill-fixture"
+    });
+
+    expect(second.documents.map((document) => document.id)).toEqual(first.documents.map((document) => document.id));
+    expect(first.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "markdown-skill-fixture.handoff-note",
+          tags: expect.arrayContaining(["imported_draft", "markdown_skill_import", "never_export"])
+        })
+      ])
+    );
+    expect(result.validation.summary.errors).toBe(0);
+    expect(validateSkill(result.skillPath).summary.errors).toBe(0);
+    expect(fs.existsSync(path.join(result.skillPath, "exports"))).toBe(true);
+  });
+
+  it("imports Claude Skill folders and ChatGPT prompt exports", () => {
+    const claude = writeSkillImport({
+      inputPath: fixture("claude-skill"),
+      kind: "claude-skill",
+      skillId: "claude-skill-fixture"
+    });
+    const prompts = writeSkillImport({
+      inputPath: fixture("chatgpt-prompts"),
+      kind: "chatgpt-prompts",
+      skillId: "chatgpt-prompt-skill"
+    });
+
+    expect(claude.documentCount).toBe(2);
+    expect(claude.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "skill_import.executable_file" })]));
+    expect(prompts.documentCount).toBe(2);
+    expect(prompts.validation.summary.errors).toBe(0);
+  });
+
+  it("imports a single ChatGPT prompt object as one draft document", () => {
+    const result = writeSkillImport({
+      inputPath: fixture("chatgpt-single-prompt"),
+      kind: "chatgpt-prompts",
+      skillId: "single-prompt-skill"
+    });
+
+    expect(result.documentCount).toBe(1);
+    expect(result.validation.summary.errors).toBe(0);
+  });
+
+  it("imports prompt templates and honors max docs with a warning", () => {
+    const preview = previewSkillImport({
+      inputPath: fixture("chatgpt-prompts"),
+      kind: "chatgpt-prompts",
+      skillId: "limited-prompt-skill",
+      maxDocs: 1
+    });
+    const promptTemplate = writeSkillImport({
+      inputPath: fixture("prompt-templates"),
+      kind: "prompt-template",
+      skillId: "prompt-template-skill"
+    });
+
+    expect(preview.documents).toHaveLength(1);
+    expect(preview.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "skill_import.max_docs" })]));
+    expect(promptTemplate.documentCount).toBe(1);
+    expect(promptTemplate.validation.summary.errors).toBe(0);
+  });
+
+  it("fails clearly for malformed Skill imports and existing output", () => {
+    const outputDir = tempDir();
+    const options = {
+      inputPath: fixture("skill-markdown-folder"),
+      kind: "markdown" as const,
+      skillId: "existing-skill",
+      outputDir
+    };
+
+    importSkillToDraft(options);
+    expect(() => importSkillToDraft(options)).toThrow(ImporterError);
+    expect(importSkillToDraft({ ...options, overwrite: true }).documentCount).toBe(2);
+    expect(() =>
+      previewSkillImport({
+        inputPath: fixture("malformed-chatgpt-prompts"),
+        kind: "chatgpt-prompts",
+        skillId: "bad-prompts"
+      })
+    ).toThrow(ImporterError);
+  });
 });
 
 function fixture(name: string): string {
@@ -139,6 +268,18 @@ function writeImport(options: {
   packId: string;
 }): DraftImportResult {
   return importToDraftPack({
+    ...options,
+    outputDir: tempDir(),
+    generatedAt: "2026-01-01T00:00:00.000Z"
+  });
+}
+
+function writeSkillImport(options: {
+  inputPath: string;
+  kind: "auto" | "folder" | "markdown" | "prompt-template" | "claude-skill" | "chatgpt-prompts";
+  skillId: string;
+}): DraftSkillImportResult {
+  return importSkillToDraft({
     ...options,
     outputDir: tempDir(),
     generatedAt: "2026-01-01T00:00:00.000Z"

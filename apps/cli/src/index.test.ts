@@ -284,6 +284,98 @@ describe("contextarr CLI", () => {
     expect(existingOutput.stderr).toContain("Draft pack already exists");
   });
 
+  it("imports a Markdown folder to a generated draft Skill", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const code = await runCli(
+      [
+        "import-skill",
+        path.join(importFixturesDir, "skill-markdown-folder"),
+        "--kind",
+        "markdown",
+        "--out",
+        outDir,
+        "--skill-id",
+        "cli-markdown-skill",
+        "--format",
+        "json"
+      ],
+      output.io
+    );
+    const json = JSON.parse(output.stdout);
+
+    expect(code).toBe(0);
+    expect(json).toMatchObject({
+      skillId: "cli-markdown-skill",
+      counts: {
+        documents: 2,
+        sources: 2
+      },
+      validation: {
+        valid: true,
+        errors: 0
+      }
+    });
+    expect(fs.existsSync(path.join(outDir, "cli-markdown-skill", "contextarr-skill.json"))).toBe(true);
+  });
+
+  it("returns expected codes for Skill import read, malformed, and existing-output failures", async () => {
+    const readOutput = createIo();
+    const malformedOutput = createIo();
+    const existingOutput = createIo();
+    const outDir = tempDir();
+
+    expect(await runCli(["import-skill", "does-not-exist", "--out", tempDir()], readOutput.io)).toBe(2);
+    expect(readOutput.stderr).toContain("Input path does not exist");
+
+    expect(
+      await runCli(
+        [
+          "import-skill",
+          path.join(importFixturesDir, "malformed-chatgpt-prompts"),
+          "--kind",
+          "chatgpt-prompts",
+          "--out",
+          outDir
+        ],
+        malformedOutput.io
+      )
+    ).toBe(1);
+    expect(malformedOutput.stderr).toContain("No safe ChatGPT prompt templates were found");
+
+    expect(
+      await runCli(
+        [
+          "import-skill",
+          path.join(importFixturesDir, "skill-markdown-folder"),
+          "--kind",
+          "markdown",
+          "--out",
+          outDir,
+          "--skill-id",
+          "exists-skill"
+        ],
+        existingOutput.io
+      )
+    ).toBe(0);
+    expect(
+      await runCli(
+        [
+          "import-skill",
+          path.join(importFixturesDir, "skill-markdown-folder"),
+          "--kind",
+          "markdown",
+          "--out",
+          outDir,
+          "--skill-id",
+          "exists-skill"
+        ],
+        existingOutput.io
+      )
+    ).toBe(1);
+    expect(existingOutput.stderr).toContain("Draft Skill already exists");
+  });
+
   it("renders a valid pack to static HTML", async () => {
     const output = createIo();
     const outDir = tempDir();

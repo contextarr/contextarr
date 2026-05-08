@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 25: Read-Only MCP for Skills and Agent Kits. Phase 24R: Research Delta Foundation Catch-Up and Phase 24: Agent Kit Export Engine remain complete.
+This repository is in Phase 26: Local Skill Importers. Phase 25: Read-Only MCP for Skills and Agent Kits remains complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -75,14 +75,17 @@ Current scope:
 - Phase 21 rebuildable SQLite index and read-only API endpoints for Agent Kits, included Context Packs, included Skills, export profile metadata, and Agent Kit-scoped search.
 - Phase 22 Agent Kit Composer UI for selecting existing Context Packs and Skills, saving validated local Agent Kit files under the configured local Agent Kit directory, and opening saved Agent Kit detail views.
 - Phase 23 read-only Agent Kit Library and Detail views plus Agent Kit health/review status derived from SQLite.
-- Phase 24 profile-driven Agent Kit export generation that merges selected Context Pack records and Skill documents without execution.
+- Phase 24 Agent Kit Export Engine with profile-driven generation that merges selected Context Pack records and Skill documents without execution.
 - Research Delta foundation fields for Context Pack source provenance, source license status, source hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets (`AGENTS.md`, `CLAUDE.md`, and `llms.txt`).
 - Phase 25 read-only MCP tools for Skills and Agent Kits, including privacy-aware Skill retrieval, Agent Kit context search, and Agent Kit export previews.
+- Phase 26 local Skill importers, CLI command, gated local API endpoints, and gated dashboard Collector flow.
+- Phase 26 local Skill importers for folder, Markdown, prompt template, Claude Skill, and ChatGPT prompt inputs.
+- `contextarr import-skill <path> --kind <kind> --out <path>` draft Skill command.
+- Gated local API and dashboard importer flow enabled only by `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 
 Not included yet:
 
-- Web importer UI.
-- API import endpoints.
+- Always-on web/API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
 - Skill execution or Agent Kit runtime behavior.
@@ -125,7 +128,7 @@ packages/
   pack-validator/      Pack validation engine
   skill-validator/     Skill validation engine
   export-profiles/     Profile-driven export engine
-  importers/           Local draft pack importers
+  importers/           Local draft pack and draft Skill importers
 
 demo-packs/            Fake public-safe demo packs
 demo-skills/           Fake public-safe non-executable demo Skills
@@ -214,6 +217,7 @@ pnpm phase23:verify
 pnpm phase24:verify
 pnpm research-delta:verify
 pnpm phase25:verify
+pnpm phase26:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
@@ -256,6 +260,14 @@ pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures
 
 Imported packs are drafts under ignored local folders such as `imported-packs/`. Imported records are private, unapproved, and tagged to avoid accidental export.
 
+Import local files into a generated draft Skill:
+
+```bash
+pnpm --filter @contextarr/cli contextarr import-skill packages/importers/test/fixtures/skill-markdown-folder --kind markdown --out imported-skills/manual --skill-id manual-skill-draft
+```
+
+Imported Skills are drafts under ignored local folders such as `imported-skills/`. Imported Skill documents are private, unapproved, and tagged `imported_draft` and `never_export`.
+
 Run the read-only MCP server:
 
 ```bash
@@ -284,6 +296,8 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_PORT=3210`
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
 - `CONTEXTARR_SKILLS_DIR=./demo-skills`
+- `CONTEXTARR_ENABLE_LOCAL_IMPORTS=false`
+- `CONTEXTARR_IMPORTED_SKILLS_DIR=./imported-skills`
 - `CONTEXTARR_DEMO_AGENT_KITS_DIR=./demo-agent-kits`
 - `CONTEXTARR_AGENT_KITS_DIR=./agent-kits`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
@@ -317,6 +331,8 @@ Available local API endpoints:
 - `GET /api/skills/:id/examples`
 - `GET /api/skills/:id/exports`
 - `GET /api/search?type=skill&q=`
+- `POST /api/import-skills/preview` disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`
+- `POST /api/import-skills` disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`
 - `GET /api/agent-kits`
 - `GET /api/agent-kits/:id`
 - `GET /api/agent-kits/:id/context-packs`

@@ -358,27 +358,34 @@ export async function getSkillTool(context: ContextarrMcpContext, args: unknown)
 
     const sources = asJsonArray(skill.sources);
     const includeBody = input.includeBody !== false;
+    const warnings = new Set<string>();
+    const instructions = getSkillInstructions(context.db, input.skillId).flatMap((document) =>
+      toMcpSkillDocumentIfVisible(
+        asSkillDocumentDetail(document),
+        sources,
+        includeBody,
+        context.config.allowPrivate,
+        context.config.maxRecordChars,
+        warnings
+      )
+    );
+    const examples = getSkillExamples(context.db, input.skillId).flatMap((document) =>
+      toMcpSkillDocumentIfVisible(
+        asSkillDocumentDetail(document),
+        sources,
+        includeBody,
+        context.config.allowPrivate,
+        context.config.maxRecordChars,
+        warnings
+      )
+    );
+
     return {
       ok: true,
       skill: toMcpSkillDetail(skill),
-      instructions: getSkillInstructions(context.db, input.skillId).map((document) =>
-        toMcpSkillDocument(
-          asSkillDocumentDetail(document),
-          sources,
-          includeBody,
-          context.config.allowPrivate,
-          context.config.maxRecordChars
-        )
-      ),
-      examples: getSkillExamples(context.db, input.skillId).map((document) =>
-        toMcpSkillDocument(
-          asSkillDocumentDetail(document),
-          sources,
-          includeBody,
-          context.config.allowPrivate,
-          context.config.maxRecordChars
-        )
-      )
+      instructions,
+      examples,
+      warnings: [...warnings]
     };
   });
 }
@@ -880,7 +887,8 @@ function resultFromSearchRow(
 
     const canShowSnippet = canIncludeBody(document.privacy, context.config.allowPrivate);
     if (!canShowSnippet) {
-      warnings.add("Non-public Skill document snippets were omitted because private MCP access is disabled.");
+      warnings.add("Non-public Skill documents were omitted because private MCP access is disabled.");
+      return undefined;
     }
 
     return {
@@ -1087,6 +1095,26 @@ function toMcpSkillDocument(
     body,
     warnings
   };
+}
+
+function toMcpSkillDocumentIfVisible(
+  document: SkillDocumentDetail,
+  skillSources: JsonObject[],
+  includeBody: boolean,
+  allowPrivate: boolean,
+  maxRecordChars: number,
+  warnings: Set<string>
+): JsonObject[] {
+  if (document.privacy === "secret") {
+    warnings.add("Secret Skill documents were omitted.");
+    return [];
+  }
+  if (!allowPrivate && document.privacy !== "public_safe") {
+    warnings.add("Non-public Skill documents were omitted because private MCP access is disabled.");
+    return [];
+  }
+
+  return [toMcpSkillDocument(document, skillSources, includeBody, allowPrivate, maxRecordChars)];
 }
 
 function toMcpAgentKitSummary(agentKit: AgentKitSummary): JsonObject {

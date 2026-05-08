@@ -19,10 +19,13 @@ import {
   type ExportArtifact
 } from "@contextarr/export-profiles";
 import {
+  importSkillToDraft,
   importToDraftPack,
   ImporterError,
   type DraftImportResult,
-  type ImporterKind
+  type DraftSkillImportResult,
+  type ImporterKind,
+  type SkillImporterKind
 } from "@contextarr/importers";
 import {
   formatValidationResult,
@@ -121,6 +124,73 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
           });
 
           io.stdout.write(format === "json" ? `${JSON.stringify(formatImportJson(result), null, 2)}\n` : formatImportText(result));
+          exitCode = result.validation.valid ? 0 : 1;
+        } catch (error) {
+          io.stderr.write(`${error instanceof ImporterError ? error.message : errorMessage(error)}\n`);
+          exitCode = error instanceof ImporterError && error.code.startsWith("input.") ? 2 : 1;
+        }
+      }
+    );
+
+  program
+    .command("import-skill")
+    .argument("<path>", "local folder, Markdown folder, prompt templates, Claude Skill, or ChatGPT prompt export to import")
+    .option("--kind <kind>", "import kind: auto, folder, markdown, prompt-template, claude-skill, or chatgpt-prompts", "auto")
+    .option("--out <path>", "output directory for generated draft Skills", "imported-skills")
+    .option("--skill-id <id>", "draft Skill id")
+    .option("--name <name>", "draft Skill display name")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--max-docs <n>", "maximum Skill documents to import", "50")
+    .option("--overwrite", "overwrite an existing generated draft Skill", false)
+    .action(
+      (
+        targetPath: string,
+        options: {
+          kind: string;
+          out: string;
+          skillId?: string;
+          name?: string;
+          format: string;
+          maxDocs: string;
+          overwrite?: boolean;
+        }
+      ) => {
+        const format = parseFormat(options.format);
+        const kind = parseSkillImportKind(options.kind);
+        const maxDocs = parsePositiveInteger(options.maxDocs);
+
+        if (!format) {
+          io.stderr.write(`Unsupported output format: ${options.format}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        if (!kind) {
+          io.stderr.write(`Unsupported Skill import kind: ${options.kind}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        if (!maxDocs) {
+          io.stderr.write(`--max-docs must be a positive integer.\n`);
+          exitCode = 2;
+          return;
+        }
+
+        try {
+          const result = importSkillToDraft({
+            inputPath: resolveUserPath(targetPath),
+            kind,
+            outputDir: resolveUserPath(options.out),
+            skillId: options.skillId,
+            name: options.name,
+            maxDocs,
+            overwrite: Boolean(options.overwrite)
+          });
+
+          io.stdout.write(
+            format === "json" ? `${JSON.stringify(formatSkillImportJson(result), null, 2)}\n` : formatSkillImportText(result)
+          );
           exitCode = result.validation.valid ? 0 : 1;
         } catch (error) {
           io.stderr.write(`${error instanceof ImporterError ? error.message : errorMessage(error)}\n`);
@@ -359,6 +429,12 @@ function parseImportKind(value: string): ImporterKind | undefined {
     : undefined;
 }
 
+function parseSkillImportKind(value: string): SkillImporterKind | undefined {
+  return ["auto", "folder", "markdown", "prompt-template", "claude-skill", "chatgpt-prompts"].includes(value)
+    ? (value as SkillImporterKind)
+    : undefined;
+}
+
 function parsePositiveInteger(value: string): number | undefined {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
@@ -591,6 +667,52 @@ function formatImportJson(result: DraftImportResult): {
     packPath: result.packPath,
     counts: {
       records: result.recordCount,
+      sources: result.sourceCount,
+      warnings: result.warnings.length
+    },
+    warnings: result.warnings,
+    validation: {
+      valid: result.validation.valid,
+      ...result.validation.summary
+    }
+  };
+}
+
+function formatSkillImportText(result: DraftSkillImportResult): string {
+  const lines = [
+    `Imported ${result.documentCount} Skill document(s) from ${result.kind}: ${result.skillPath}`,
+    `Skill: ${result.skillName} (${result.skillId})`,
+    `Sources: ${result.sourceCount}`,
+    `Warnings: ${result.warnings.length}`,
+    `Validation: ${result.validation.summary.errors} error(s), ${result.validation.summary.warnings} warning(s), ${result.validation.summary.infos} info(s)`
+  ];
+
+  for (const warning of result.warnings) {
+    const location = warning.file ? ` ${warning.file}` : "";
+    lines.push(`[WARNING] ${warning.code}${location}: ${warning.message}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatSkillImportJson(result: DraftSkillImportResult): {
+  inputPath: string;
+  kind: string;
+  skillId: string;
+  skillName: string;
+  skillPath: string;
+  counts: { documents: number; sources: number; warnings: number };
+  warnings: DraftSkillImportResult["warnings"];
+  validation: SkillValidationResult["summary"] & { valid: boolean };
+} {
+  return {
+    inputPath: result.inputPath,
+    kind: result.kind,
+    skillId: result.skillId,
+    skillName: result.skillName,
+    skillPath: result.skillPath,
+    counts: {
+      documents: result.documentCount,
       sources: result.sourceCount,
       warnings: result.warnings.length
     },

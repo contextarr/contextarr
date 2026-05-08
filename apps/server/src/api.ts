@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import staticPlugin from "@fastify/static";
 import {
@@ -9,7 +10,13 @@ import {
   ExportError,
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
-import { assertAgentKitDirectorySeparation, getAgentKitIndexDirs } from "./config";
+import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
+import {
+  assertAgentKitDirectorySeparation,
+  assertImportedSkillsDirectory,
+  getAgentKitIndexDirs,
+  getSkillIndexDirs
+} from "./config";
 import type { ContextarrDatabase } from "./db";
 import {
   AgentKitWriteError,
@@ -84,6 +91,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       status: "ok",
       authRequired: Boolean(config.apiToken),
+      localImportsEnabled: config.localImportsEnabled,
       lastIndexedAt: stats.lastIndexedAt,
       counts: {
         packs: stats.packs,
@@ -157,7 +165,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
         skillsDir: config.skillsDir,
         request: parsed.value
       });
-      const result = rebuildIndex(db, config.packsDir, config.skillsDir, getAgentKitIndexDirs(config));
+      const result = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
       const agentKit = getAgentKit(db, saved.id);
 
       return reply.code(201).send({
@@ -282,6 +290,111 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       }
     }
   );
+
+  app.post<{ Body: SkillImportBody }>("/api/import-skills/preview", async (request, reply) => {
+    const gate = assertLocalSkillImportsEnabled(config);
+    if (!gate.ok) {
+      return reply.code(403).send({ error: "local_imports_disabled", message: gate.message });
+    }
+
+    const parsed = parseSkillImportBody(request.body ?? {}, false);
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: "invalid_skill_import_request", message: parsed.message });
+    }
+
+    try {
+      const preview = previewSkillImport(parsed.value);
+      return {
+        ok: true,
+        kind: preview.kind,
+        skillId: preview.skillId,
+        skillName: preview.skillName,
+        counts: {
+          documents: preview.documents.length,
+          sources: preview.sources.length,
+          warnings: preview.warnings.length
+        },
+        documents: preview.documents.map((document) => ({
+          id: document.id,
+          title: document.title,
+          type: document.type,
+          tags: document.tags,
+          sourceId: document.sourceId
+        })),
+        warnings: preview.warnings
+      };
+    } catch (error) {
+      if (error instanceof ImporterError) {
+        return reply
+          .code(statusForImporterError(error))
+          .send({ error: error.code, message: messageForImporterError(error) });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post<{ Body: SkillImportBody }>("/api/import-skills", async (request, reply) => {
+    const gate = assertLocalSkillImportsEnabled(config);
+    if (!gate.ok) {
+      return reply.code(403).send({ error: "local_imports_disabled", message: gate.message });
+    }
+
+    const parsed = parseSkillImportBody(request.body ?? {}, true);
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: "invalid_skill_import_request", message: parsed.message });
+    }
+
+    try {
+      assertImportedSkillsDirectory(config);
+      const candidate = previewSkillImport(parsed.value);
+      assertSkillIdAvailableForImport(db, config, candidate.skillId, Boolean(parsed.overwrite));
+      const result = importSkillToDraft({
+        ...parsed.value,
+        skillId: candidate.skillId,
+        outputDir: config.importedSkillsDir,
+        overwrite: parsed.overwrite
+      });
+      const index = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
+      const indexedSkillPath = getSkillPath(db, result.skillId);
+      if (!indexedSkillPath || !isPathInsideOrSame(config.importedSkillsDir, indexedSkillPath)) {
+        removeDraftSkillQuietly(result.skillPath);
+        throw new ImporterError(
+          "skill_import.index_failed",
+          "Imported Skill could not be indexed from the configured imported Skills directory."
+        );
+      }
+      const skill = getSkill(db, result.skillId);
+
+      return reply.code(201).send({
+        ok: true,
+        skillId: result.skillId,
+        skillName: result.skillName,
+        counts: {
+          documents: result.documentCount,
+          sources: result.sourceCount,
+          warnings: result.warnings.length
+        },
+        warnings: result.warnings,
+        validation: {
+          valid: result.validation.valid,
+          errors: result.validation.summary.errors,
+          warnings: result.validation.summary.warnings,
+          infos: result.validation.summary.infos
+        },
+        skill,
+        index: sanitizeRebuildResultForApi(index)
+      });
+    } catch (error) {
+      if (error instanceof ImporterError) {
+        return reply
+          .code(statusForImporterError(error))
+          .send({ error: error.code, message: messageForImporterError(error) });
+      }
+
+      throw error;
+    }
+  });
 
   app.get("/api/skills", async () => {
     return {
@@ -537,7 +650,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   });
 
   app.post("/api/rescan", async () => {
-    const result = rebuildIndex(db, config.packsDir, config.skillsDir, getAgentKitIndexDirs(config));
+    const result = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
 
     return {
       ok: true,
@@ -548,6 +661,59 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   registerStaticWeb(app, config);
 
   return app;
+}
+
+function assertSkillIdAvailableForImport(
+  db: ContextarrDatabase,
+  config: Pick<ServerConfig, "importedSkillsDir">,
+  skillId: string,
+  overwrite: boolean
+): void {
+  const existingSkillPath = getSkillPath(db, skillId);
+  if (!existingSkillPath) {
+    return;
+  }
+
+  if (!isPathInsideOrSame(config.importedSkillsDir, existingSkillPath)) {
+    throw new ImporterError("output.skill_id_conflict", `Skill ID is already indexed outside imported Skills: ${skillId}`);
+  }
+
+  if (!overwrite) {
+    throw new ImporterError("output.exists", `Draft Skill already exists: ${skillId}`);
+  }
+}
+
+function statusForImporterError(error: ImporterError): 400 | 409 | 422 {
+  if (error.code.startsWith("input.")) {
+    return 400;
+  }
+  if (error.code === "output.exists" || error.code === "output.skill_id_conflict") {
+    return 409;
+  }
+  return 422;
+}
+
+function messageForImporterError(error: ImporterError): string {
+  if (error.code === "output.exists") {
+    return "Draft Skill already exists for that Skill ID.";
+  }
+  if (error.code === "output.skill_id_conflict") {
+    return "Skill ID is already indexed outside imported Skills.";
+  }
+  return error.message;
+}
+
+function isPathInsideOrSame(root: string, target: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function removeDraftSkillQuietly(skillPath: string): void {
+  try {
+    fs.rmSync(skillPath, { recursive: true, force: true });
+  } catch {
+    // Best-effort rollback for derived draft output; callers receive a controlled import error.
+  }
 }
 
 function registerStaticWeb(app: FastifyInstance, config: ServerConfig): void {
@@ -708,6 +874,15 @@ interface ComposePreviewBody {
   tokenBudget?: unknown;
 }
 
+interface SkillImportBody {
+  inputPath?: unknown;
+  kind?: unknown;
+  skillId?: unknown;
+  name?: unknown;
+  maxDocs?: unknown;
+  overwrite?: unknown;
+}
+
 interface SaveAgentKitBody {
   id?: unknown;
   name?: unknown;
@@ -729,6 +904,83 @@ interface SaveAgentKitBody {
   excludeTags?: unknown;
   tokenBudget?: unknown;
   accentColor?: unknown;
+}
+
+function assertLocalSkillImportsEnabled(config: ServerConfig): { ok: true } | { ok: false; message: string } {
+  if (config.localImportsEnabled) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    message: "Local Skill imports are disabled. Set CONTEXTARR_ENABLE_LOCAL_IMPORTS=true to enable this local-only workflow."
+  };
+}
+
+function parseSkillImportBody(
+  body: SkillImportBody,
+  includeOverwrite: boolean
+):
+  | {
+      ok: true;
+      value: {
+        inputPath: string;
+        kind: SkillImporterKind;
+        skillId?: string;
+        name?: string;
+        maxDocs?: number;
+      };
+      overwrite?: boolean;
+    }
+  | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Skill import request body is required." };
+  }
+
+  if (typeof body.inputPath !== "string" || !body.inputPath.trim()) {
+    return { ok: false, message: "Skill import inputPath is required." };
+  }
+
+  const kind = typeof body.kind === "string" && isSkillImporterKind(body.kind) ? body.kind : undefined;
+  if (body.kind !== undefined && !kind) {
+    return { ok: false, message: "Skill import kind is invalid." };
+  }
+
+  if (body.skillId !== undefined && (typeof body.skillId !== "string" || !body.skillId.trim())) {
+    return { ok: false, message: "Skill import skillId is invalid." };
+  }
+
+  if (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim())) {
+    return { ok: false, message: "Skill import name is invalid." };
+  }
+
+  let maxDocs: number | undefined;
+  if (body.maxDocs !== undefined) {
+    if (!Number.isInteger(body.maxDocs) || Number(body.maxDocs) <= 0) {
+      return { ok: false, message: "Skill import maxDocs must be a positive integer." };
+    }
+    maxDocs = Number(body.maxDocs);
+  }
+
+  if (includeOverwrite && body.overwrite !== undefined && typeof body.overwrite !== "boolean") {
+    return { ok: false, message: "Skill import overwrite must be boolean." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      inputPath: body.inputPath.trim(),
+      kind: kind ?? "auto",
+      skillId: trimOptional(body.skillId),
+      name: trimOptional(body.name),
+      maxDocs
+    },
+    overwrite: includeOverwrite ? Boolean(body.overwrite) : false
+  };
+}
+
+function isSkillImporterKind(value: string): value is SkillImporterKind {
+  return ["auto", "folder", "markdown", "prompt-template", "claude-skill", "chatgpt-prompts"].includes(value);
 }
 
 function parseSaveAgentKitBody(

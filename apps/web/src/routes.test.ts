@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   agentKitHref,
   agentKitsHref,
+  collectorsHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -45,6 +46,7 @@ describe("hash routes", () => {
       name: "agentKit",
       agentKitId: "support-ticket-writing-kit"
     });
+    expect(parseHashRoute("#/collectors")).toEqual({ name: "collectors" });
   });
 
   it("parses Skill routes", () => {
@@ -62,6 +64,7 @@ describe("hash routes", () => {
     expect(skillHref("skill/id")).toBe("#/skills/skill%2Fid");
     expect(agentKitsHref()).toBe("#/agent-kits");
     expect(agentKitHref("agent kit/id")).toBe("#/agent-kits/agent%20kit%2Fid");
+    expect(collectorsHref()).toBe("#/collectors");
     expect(reviewQueueHref()).toBe("#/review-queue");
     expect(composerHref()).toBe("#/composer");
     expect(composerHref("agent-kit")).toBe("#/composer/agent-kit");

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./api";
-import { getAgentKitIndexDirs } from "./config";
+import { getAgentKitIndexDirs, getSkillIndexDirs } from "./config";
 import { openDatabase, type ContextarrDatabase } from "./db";
 import { rebuildIndex } from "./indexer";
 import type { ServerConfig } from "./types";
@@ -23,6 +23,7 @@ function createTestContext(
 ): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
+  const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
   const resolvedDemoAgentKitsDir =
     overrides.demoAgentKitsDir ?? (packsDir === demoPacksDir && skillsDir === demoSkillsDir ? demoAgentKitsDir : path.join(os.tmpdir(), "contextarr-no-demo-agent-kits"));
@@ -31,13 +32,15 @@ function createTestContext(
     port: 0,
     packsDir,
     skillsDir,
+    importedSkillsDir,
     agentKitsDir,
     demoAgentKitsDir: resolvedDemoAgentKitsDir,
     databasePath: ":memory:",
     apiToken,
+    localImportsEnabled: false,
     ...overrides
   };
-  rebuildIndex(db, packsDir, config.skillsDir, getAgentKitIndexDirs(config));
+  rebuildIndex(db, packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
   return { db, config };
 }
 
@@ -482,6 +485,182 @@ describe("Contextarr API", () => {
     expect(invalidSearch.statusCode).toBe(400);
     await app.close();
     db.close();
+  });
+
+  it("keeps local Skill import endpoints disabled unless explicitly enabled", async () => {
+    const app = createApp({ config, db });
+    const health = await app.inject({ method: "GET", url: "/api/health" });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/import-skills/preview",
+      payload: {
+        inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder"),
+        kind: "markdown"
+      }
+    });
+
+    expect(health.statusCode).toBe(200);
+    expect(health.json()).toMatchObject({ localImportsEnabled: false });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: "local_imports_disabled" });
+    await app.close();
+    db.close();
+  });
+
+  it("previews and writes local draft Skill imports when enabled", async () => {
+    const importedSkillsDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-imported-skills-"));
+    const fixtureContext = createTestContext(undefined, demoPacksDir, {
+      importedSkillsDir,
+      localImportsEnabled: true
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const preview = await app.inject({
+        method: "POST",
+        url: "/api/import-skills/preview",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder"),
+          kind: "markdown",
+          skillId: "api-imported-skill",
+          maxDocs: 2
+        }
+      });
+      const write = await app.inject({
+        method: "POST",
+        url: "/api/import-skills",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder"),
+          kind: "markdown",
+          skillId: "api-imported-skill",
+          name: "API Imported Skill",
+          overwrite: true
+        }
+      });
+      const skill = await app.inject({ method: "GET", url: "/api/skills/api-imported-skill" });
+      const health = await app.inject({ method: "GET", url: "/api/skills/api-imported-skill/health" });
+
+      expect(preview.statusCode).toBe(200);
+      expect(preview.json()).toMatchObject({
+        ok: true,
+        skillId: "api-imported-skill",
+        counts: {
+          documents: 2,
+          sources: 2
+        }
+      });
+      expect(preview.body).not.toContain(importedSkillsDir);
+      expect(write.statusCode).toBe(201);
+      expect(write.json()).toMatchObject({
+        ok: true,
+        skillId: "api-imported-skill",
+        validation: {
+          valid: true,
+          errors: 0
+        }
+      });
+      expect(write.body).not.toContain(importedSkillsDir);
+      expect(fs.existsSync(path.join(importedSkillsDir, "api-imported-skill", "contextarr-skill.json"))).toBe(true);
+      expect(skill.statusCode).toBe(200);
+      expect(skill.json()).toMatchObject({
+        id: "api-imported-skill",
+        trustLevel: "unreviewed",
+        visibility: "private"
+      });
+      expect(health.statusCode).toBe(200);
+      expect(health.json().reviewQueueCount).toBeGreaterThan(0);
+      expect(health.json().items).toEqual(
+        expect.arrayContaining([expect.objectContaining({ objectType: "skill", type: "review_status" })])
+      );
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(importedSkillsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("protects enabled Skill import endpoints with the optional API token", async () => {
+    const importedSkillsDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-imported-skills-auth-"));
+    const fixtureContext = createTestContext("secret-token", demoPacksDir, {
+      importedSkillsDir,
+      localImportsEnabled: true
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const unauthorized = await app.inject({
+        method: "POST",
+        url: "/api/import-skills/preview",
+        payload: { inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder") }
+      });
+      const unauthorizedWrite = await app.inject({
+        method: "POST",
+        url: "/api/import-skills",
+        payload: { inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder") }
+      });
+      const authorized = await app.inject({
+        method: "POST",
+        url: "/api/import-skills/preview",
+        headers: { Authorization: "Bearer secret-token" },
+        payload: { inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder") }
+      });
+
+      expect(unauthorized.statusCode).toBe(401);
+      expect(unauthorizedWrite.statusCode).toBe(401);
+      expect(authorized.statusCode).toBe(200);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(importedSkillsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects local Skill imports with invalid write payloads and duplicate indexed IDs", async () => {
+    const importedSkillsDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-imported-skills-errors-"));
+    const fixtureContext = createTestContext(undefined, demoPacksDir, {
+      importedSkillsDir,
+      localImportsEnabled: true
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const invalidPayload = await app.inject({
+        method: "POST",
+        url: "/api/import-skills",
+        payload: { kind: "markdown" }
+      });
+      const malformedInput = await app.inject({
+        method: "POST",
+        url: "/api/import-skills",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/malformed-chatgpt-prompts"),
+          kind: "chatgpt-prompts",
+          skillId: "malformed-prompt-import"
+        }
+      });
+      const duplicateSkill = await app.inject({
+        method: "POST",
+        url: "/api/import-skills",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/skill-markdown-folder"),
+          kind: "markdown",
+          skillId: "support-ticket-writing-skill",
+          overwrite: true
+        }
+      });
+
+      expect(invalidPayload.statusCode).toBe(400);
+      expect(malformedInput.statusCode).toBe(422);
+      expect(malformedInput.json()).toMatchObject({ error: "chatgpt_prompts.no_prompts" });
+      expect(duplicateSkill.statusCode).toBe(409);
+      expect(duplicateSkill.json()).toMatchObject({ error: "output.skill_id_conflict" });
+      expect(duplicateSkill.body).not.toContain(importedSkillsDir);
+      expect(fs.existsSync(path.join(importedSkillsDir, "support-ticket-writing-skill"))).toBe(false);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(importedSkillsDir, { recursive: true, force: true });
+    }
   });
 
   it("GET /api/review-items lists and filters generated items", async () => {

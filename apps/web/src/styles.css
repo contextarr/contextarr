@@ -1333,6 +1333,39 @@ h1 {
   gap: 8px;
 }
 
+.collector-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1fr) minmax(300px, 0.85fr);
+  align-items: start;
+}
+
+.collector-form,
+.collector-preview,
+.import-result {
+  display: grid;
+  gap: 12px;
+}
+
+.collector-checkbox {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+
+.import-result > strong {
+  overflow-wrap: anywhere;
+}
+
+.import-result .simple-list {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+
+.import-result .simple-list em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
 .export-workbench {
   display: grid;
   gap: 18px;
@@ -1804,6 +1837,7 @@ h1 {
   .record-detail-layout,
   .page-heading,
   .agent-kit-grid,
+  .collector-grid,
   .export-header,
   .composer-grid,
   .review-card {
@@ -1933,6 +1967,7 @@ h1 {
   .export-stats,
   .review-filters,
   .agent-kit-filters,
+  .collector-grid,
   .composer-filters,
   .composer-record {
     grid-template-columns: 1fr;

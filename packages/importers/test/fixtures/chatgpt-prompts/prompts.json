@@ -1,0 +1,13 @@
+{
+  "prompts": [
+    {
+      "title": "Planning Brief",
+      "prompt": "Turn the supplied fake project notes into a phased plan.",
+      "tags": ["planning", "brief"]
+    },
+    {
+      "title": "Review Checklist",
+      "content": "List review risks, missing tests, and safe next actions."
+    }
+  ]
+}

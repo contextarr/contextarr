@@ -182,9 +182,18 @@
 - Respect redaction rules.
 - Status: complete.
 
+## Phase 26: Local Skill Importers
+
+- Add local draft Skill imports through `contextarr import-skill`.
+- Support folder, Markdown, prompt template, Claude Skill, and ChatGPT prompt inputs.
+- Write draft Skills under ignored `imported-skills/` or `CONTEXTARR_IMPORTED_SKILLS_DIR`.
+- Keep imported Skill documents private, unreviewed, and tagged `never_export`.
+- Enable API/dashboard import flows only when `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
+- Block scripts, executable files, unsafe filenames, shell-command patterns, and credential-like content.
+- Status: complete.
+
 ## Later Only
 
-- Skill importers.
 - Agent Kit templates.
 - Signing and trust model research.
 - Private team registry prototype.

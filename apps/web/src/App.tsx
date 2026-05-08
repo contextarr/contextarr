@@ -100,6 +100,7 @@ import {
 import {
   agentKitHref,
   agentKitsHref,
+  collectorsHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -128,6 +129,9 @@ import type {
   SkillDetail,
   SkillDocument,
   SkillHealthResponse,
+  SkillImportKind,
+  SkillImportPreview,
+  SkillImportResult,
   SkillSummary,
   AgentKitHealthResponse,
   AgentKitExportPreview,
@@ -142,7 +146,7 @@ const navItems = [
   { label: "Skills", icon: BookOpen, href: skillsHref(), route: "skills" },
   { label: "Agent Kits", icon: Sparkles, href: agentKitsHref(), route: "agentKits" },
   { label: "Packs", icon: Boxes },
-  { label: "Collectors", icon: Layers3 },
+  { label: "Collectors", icon: Layers3, href: collectorsHref(), route: "collectors" },
   { label: "Sources", icon: Database },
   { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
   { label: "Composer", icon: PenLine, href: composerHref("agent-kit"), route: "composer" },
@@ -381,6 +385,8 @@ export function App() {
           />
         ) : route.name === "agentKit" ? (
           <AgentKitDetailPage agentKitId={route.agentKitId} />
+        ) : route.name === "collectors" ? (
+          <CollectorsPage health={health} onImported={loadDashboard} />
         ) : route.name === "composer" ? (
           <ComposerPage packs={packs} skills={skills} mode={route.mode ?? "agent-kit"} />
         ) : route.name === "exports" ? (
@@ -935,6 +941,225 @@ function SkillCards({ skills }: { skills: SkillSummary[] }) {
           </a>
         </article>
       ))}
+    </div>
+  );
+}
+
+const skillImportKinds: SkillImportKind[] = ["auto", "folder", "markdown", "prompt-template", "claude-skill", "chatgpt-prompts"];
+
+function CollectorsPage({ health, onImported }: { health: HealthResponse | null; onImported(): void }) {
+  const [inputPath, setInputPath] = useState("");
+  const [kind, setKind] = useState<SkillImportKind>("auto");
+  const [skillId, setSkillId] = useState("");
+  const [name, setName] = useState("");
+  const [maxDocs, setMaxDocs] = useState("50");
+  const [overwrite, setOverwrite] = useState(false);
+  const [preview, setPreview] = useState<SkillImportPreview | null>(null);
+  const [result, setResult] = useState<SkillImportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const localImportsEnabled = Boolean(health?.localImportsEnabled);
+
+  const request = useMemo(
+    () => ({
+      inputPath: inputPath.trim(),
+      kind,
+      skillId: skillId.trim() || undefined,
+      name: name.trim() || undefined,
+      maxDocs: parsePositiveUiInteger(maxDocs),
+      overwrite
+    }),
+    [inputPath, kind, maxDocs, name, overwrite, skillId]
+  );
+  const canSubmit = localImportsEnabled && Boolean(request.inputPath) && Boolean(request.maxDocs) && !busy;
+
+  async function previewImport() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      setPreview(await apiClient.previewSkillImport(request));
+    } catch (loadError) {
+      setPreview(null);
+      setError(loadError instanceof Error ? loadError.message : "Unable to preview Skill import.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function writeImport() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await apiClient.importSkill(request);
+      setResult(response);
+      onImported();
+    } catch (loadError) {
+      setResult(null);
+      setError(loadError instanceof Error ? loadError.message : "Unable to import Skill.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="library-panel collector-page" aria-labelledby="collectors-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <Layers3 size={16} aria-hidden="true" />
+            <span>Collectors</span>
+          </div>
+          <h1 id="collectors-title">Local Skill Import</h1>
+          <p>Generate private draft Skills from local files for human review.</p>
+        </div>
+        <div className="summary-strip">
+          <Stat value={health?.localImportsEnabled ? "On" : "Off"} label="Local Imports" />
+          <Stat value={health?.counts.skills ?? 0} label="Indexed Skills" />
+          <Stat value={health?.counts.openReviewItems ?? 0} label="Open Review" />
+        </div>
+      </div>
+
+      {!localImportsEnabled ? (
+        <div className="state-card warning-card">
+          <ShieldAlert size={34} aria-hidden="true" />
+          <h2>Local imports disabled</h2>
+          <p>Set CONTEXTARR_ENABLE_LOCAL_IMPORTS=true on the local API to enable draft Skill imports.</p>
+        </div>
+      ) : (
+        <div className="collector-grid">
+          <div className="composer-panel collector-form">
+            <h2>Import Source</h2>
+            <label className="field-label">
+              Local path
+              <input value={inputPath} onChange={(event) => setInputPath(event.target.value)} placeholder="D:/local/fake-prompts" />
+            </label>
+            <label className="field-label">
+              Kind
+              <select value={kind} onChange={(event) => setKind(event.target.value as SkillImportKind)}>
+                {skillImportKinds.map((option) => (
+                  <option value={option} key={option}>
+                    {formatPackType(option)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Skill ID
+              <input value={skillId} onChange={(event) => setSkillId(event.target.value)} placeholder="optional-draft-skill-id" />
+            </label>
+            <label className="field-label">
+              Name
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Optional display name" />
+            </label>
+            <label className="field-label">
+              Max docs
+              <input value={maxDocs} onChange={(event) => setMaxDocs(event.target.value)} inputMode="numeric" />
+            </label>
+            <label className="composer-record collector-checkbox">
+              <input checked={overwrite} type="checkbox" onChange={(event) => setOverwrite(event.target.checked)} />
+              <span>
+                <strong>Overwrite existing draft</strong>
+                <small>Only inside the configured imported Skills directory.</small>
+              </span>
+            </label>
+            <div className="inline-actions">
+              <button className="secondary-action" type="button" disabled={!canSubmit} onClick={previewImport}>
+                Preview
+              </button>
+              <button className="primary-action" type="button" disabled={!canSubmit} onClick={writeImport}>
+                <Import size={18} aria-hidden="true" />
+                <span>Import Draft Skill</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="composer-panel collector-preview">
+            <h2>Preview</h2>
+            {error ? <p className="composer-error">{error}</p> : null}
+            {preview ? (
+              <ImportResultPanel
+                title={`${preview.skillName} (${preview.skillId})`}
+                counts={preview.counts}
+                warnings={preview.warnings}
+                documents={preview.documents}
+              />
+            ) : (
+              <p className="muted-note">Preview reads local input and reports draft documents before writing files.</p>
+            )}
+          </div>
+
+          <div className="composer-panel collector-preview">
+            <h2>Imported Draft</h2>
+            {result ? (
+              <ImportResultPanel
+                title={`${result.skillName} (${result.skillId})`}
+                counts={result.counts}
+                warnings={result.warnings}
+                validation={result.validation}
+              />
+            ) : (
+              <p className="muted-note">Written Skills are private, unreviewed, and tagged never_export until reviewed.</p>
+            )}
+            <button className="secondary-action" type="button" disabled>
+              Save as approved Skill later
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ImportResultPanel({
+  title,
+  counts,
+  warnings,
+  documents = [],
+  validation
+}: {
+  title: string;
+  counts: { documents: number; sources: number; warnings: number };
+  warnings: Array<{ code: string; message: string; file?: string }>;
+  documents?: Array<{ id: string; title: string; type: string; tags: string[]; sourceId: string }>;
+  validation?: { valid: boolean; errors: number; warnings: number; infos: number };
+}) {
+  return (
+    <div className="import-result">
+      <strong>{title}</strong>
+      <dl className="fact-grid">
+        <Fact label="Documents" value={counts.documents} />
+        <Fact label="Sources" value={counts.sources} />
+        <Fact label="Warnings" value={counts.warnings} />
+        {validation ? <Fact label="Validation" value={`${validation.errors} errors`} /> : null}
+      </dl>
+      {documents.length > 0 ? (
+        <ul className="simple-list">
+          {documents.slice(0, 6).map((document) => (
+            <li key={document.id}>
+              <span>{document.title}</span>
+              <em>{formatPackType(document.type)}</em>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {warnings.length > 0 ? (
+        <ul className="export-warning-list">
+          {warnings.slice(0, 6).map((warning) => (
+            <li key={`${warning.code}-${warning.file ?? warning.message}`}>
+              {warning.code}{warning.file ? ` ${warning.file}` : ""}: {warning.message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -4083,6 +4308,11 @@ function PlaceholderTab({ title, detail }: { title: string; detail: string }) {
 
 function toErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+function parsePositiveUiInteger(value: string): number | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function formatDate(value: string | null): string {

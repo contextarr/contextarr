@@ -281,11 +281,9 @@ describe("Contextarr MCP tools", () => {
     );
     expect(secretRecord.results).toEqual([]);
     expect(secretRecord.warnings).toEqual(expect.arrayContaining(["Secret records were omitted."]));
-    expect(privateSkill.results).toEqual([
-      expect.objectContaining({ id: "support-ticket-writing.private-mcp-instruction", snippet: null })
-    ]);
+    expect(privateSkill.results).toEqual([]);
     expect(privateSkill.warnings).toEqual(
-      expect.arrayContaining(["Non-public Skill document snippets were omitted because private MCP access is disabled."])
+      expect.arrayContaining(["Non-public Skill documents were omitted because private MCP access is disabled."])
     );
     expect(secretSkill.results).toEqual([]);
     expect(secretSkill.warnings).toEqual(expect.arrayContaining(["Secret Skill documents were omitted."]));
@@ -293,7 +291,7 @@ describe("Contextarr MCP tools", () => {
     expect(JSON.stringify(privateSkill.results)).not.toContain("phase25privateskilltoken");
   });
 
-  it("omits private and secret Skill document bodies unless private access is enabled", async () => {
+  it("omits private and secret Skill documents unless private access is enabled", async () => {
     context = createTestContext();
     insertSyntheticSkillDocument(context.db, {
       id: "support-ticket-writing.private-body-instruction",
@@ -313,10 +311,12 @@ describe("Contextarr MCP tools", () => {
     const defaultResult = await getSkillTool(context, { skillId: "support-ticket-writing-skill" });
     const defaultInstructions = defaultResult.instructions as Array<Record<string, unknown>>;
 
-    expect(defaultInstructions).toEqual(
+    expect(defaultInstructions.some((instruction) => instruction.id === "support-ticket-writing.private-body-instruction")).toBe(false);
+    expect(defaultInstructions.some((instruction) => instruction.id === "support-ticket-writing.secret-body-instruction")).toBe(false);
+    expect(defaultResult.warnings).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "support-ticket-writing.private-body-instruction", bodyIncluded: false, body: null }),
-        expect.objectContaining({ id: "support-ticket-writing.secret-body-instruction", bodyIncluded: false, body: null })
+        "Non-public Skill documents were omitted because private MCP access is disabled.",
+        "Secret Skill documents were omitted."
       ])
     );
 
@@ -329,10 +329,10 @@ describe("Contextarr MCP tools", () => {
           id: "support-ticket-writing.private-body-instruction",
           bodyIncluded: true,
           body: "private skill fixture body"
-        }),
-        expect.objectContaining({ id: "support-ticket-writing.secret-body-instruction", bodyIncluded: false, body: null })
+        })
       ])
     );
+    expect(privateAllowedInstructions.some((instruction) => instruction.id === "support-ticket-writing.secret-body-instruction")).toBe(false);
   });
 
   it("builds Agent Kit export previews through the MCP tool layer", async () => {
@@ -362,8 +362,10 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     port: 0,
     packsDir: demoPacksDir,
     skillsDir: demoSkillsDir,
+    importedSkillsDir: path.join(repoRoot, "imported-skills"),
     agentKitsDir: demoAgentKitsDir,
     databasePath: ":memory:",
+    localImportsEnabled: false,
     rescanOnStart: true,
     maxResults: 8,
     maxRecordChars: 12000,

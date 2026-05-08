@@ -2,7 +2,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { assertAgentKitDirectorySeparation, getAgentKitIndexDirs, loadConfig } from "./config";
+import {
+  assertAgentKitDirectorySeparation,
+  assertSkillDirectorySeparation,
+  getAgentKitIndexDirs,
+  getSkillIndexDirs,
+  loadConfig
+} from "./config";
 
 describe("server config", () => {
   it("keeps writable Agent Kits separate from demo Agent Kits by default", () => {
@@ -11,6 +17,45 @@ describe("server config", () => {
 
     expect(config.agentKitsDir).toBe(path.join(root, "agent-kits"));
     expect(config.demoAgentKitsDir).toBe(path.join(root, "demo-agent-kits"));
+    expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
+    expect(config.localImportsEnabled).toBe(false);
+  });
+
+  it("indexes configured Skills and existing imported Skills without duplicate directories", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+    const skillsDir = path.join(root, "demo-skills");
+    const importedSkillsDir = path.join(root, "imported-skills");
+    fs.mkdirSync(skillsDir, { recursive: true });
+    fs.mkdirSync(importedSkillsDir, { recursive: true });
+
+    const config = loadConfig({
+      INIT_CWD: root,
+      CONTEXTARR_SKILLS_DIR: "./demo-skills",
+      CONTEXTARR_IMPORTED_SKILLS_DIR: "./imported-skills",
+      CONTEXTARR_ENABLE_LOCAL_IMPORTS: "true"
+    });
+
+    expect(config.localImportsEnabled).toBe(true);
+    expect(getSkillIndexDirs(config)).toEqual([skillsDir, importedSkillsDir]);
+  });
+
+  it("rejects indexed and imported Skill directory overlap", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_SKILLS_DIR: "./demo-skills",
+        CONTEXTARR_IMPORTED_SKILLS_DIR: "./demo-skills"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      assertSkillDirectorySeparation({
+        skillsDir: path.join(root, "demo-skills"),
+        importedSkillsDir: path.join(root, "demo-skills", "drafts")
+      })
+    ).toThrow(/must not overlap/);
   });
 
   it("indexes demo kits and existing local saved kits without duplicate directories", () => {

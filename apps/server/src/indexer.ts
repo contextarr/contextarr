@@ -33,6 +33,7 @@ import type {
   ReviewObjectType,
   ReviewItemStatus,
   SkippedAgentKit,
+  SkippedSkill,
   SkillHealthDetail,
   SkillSummary
 } from "./types";
@@ -42,16 +43,17 @@ export const reviewItemStatuses: ReviewItemStatus[] = ["open", "ignored", "accep
 export function rebuildIndex(
   db: ContextarrDatabase,
   packsDir: string,
-  skillsDir?: string,
+  skillsDir?: string | string[],
   agentKitsDir?: string | string[]
 ): RebuildIndexResult {
   const indexedAt = new Date().toISOString();
   const loaded = loadPacks(packsDir);
-  const loadedSkills = skillsDir ? loadSkills(skillsDir) : { skills: [], skipped: [] };
+  const skillDirs = normalizeSkillDirs(skillsDir);
+  const loadedSkills = skillDirs.length > 0 ? loadSkillsForIndex(skillDirs) : { skills: [], skipped: [] };
   const agentKitDirs = normalizeAgentKitDirs(agentKitsDir);
   const loadedAgentKits = agentKitDirs.length > 0
     ? filterAgentKitsWithAvailableReferences(
-        loadAgentKitsForIndex(agentKitDirs, { contextPacksDir: packsDir, skillsDir }),
+        loadAgentKitsForIndex(agentKitDirs, { contextPacksDir: packsDir, skillsDir: skillDirs[0] }),
         new Set(loaded.packs.map((pack) => pack.manifest.id)),
         new Set(loadedSkills.skills.map((skill) => skill.manifest.id))
       )
@@ -125,7 +127,7 @@ export function rebuildIndex(
       indexedAt,
       JSON.stringify({
         packsDir,
-        skillsDir,
+        skillsDir: skillDirs,
         agentKitsDir,
         packsIndexed: loaded.packs.length,
         packsSkipped: loaded.skipped.length,
@@ -179,6 +181,19 @@ export function rebuildIndex(
   };
 }
 
+function normalizeSkillDirs(skillsDir: string | string[] | undefined): string[] {
+  const values = Array.isArray(skillsDir) ? skillsDir : skillsDir ? [skillsDir] : [];
+  const seen = new Set<string>();
+  return values.filter((dir) => {
+    const resolved = path.resolve(dir).toLowerCase();
+    if (seen.has(resolved)) {
+      return false;
+    }
+    seen.add(resolved);
+    return true;
+  });
+}
+
 function normalizeAgentKitDirs(agentKitsDir: string | string[] | undefined): string[] {
   const values = Array.isArray(agentKitsDir) ? agentKitsDir : agentKitsDir ? [agentKitsDir] : [];
   const seen = new Set<string>();
@@ -190,6 +205,39 @@ function normalizeAgentKitDirs(agentKitsDir: string | string[] | undefined): str
     seen.add(resolved);
     return true;
   });
+}
+
+function loadSkillsForIndex(skillDirs: string[]): { skills: LoadedSkill[]; skipped: SkippedSkill[] } {
+  const skills: LoadedSkill[] = [];
+  const skipped: SkippedSkill[] = [];
+  const seenSkillIds = new Set<string>();
+
+  for (const skillsDir of skillDirs) {
+    const result = loadSkills(skillsDir);
+    skipped.push(...result.skipped);
+
+    for (const skill of result.skills) {
+      if (seenSkillIds.has(skill.manifest.id)) {
+        skipped.push({
+          skillPath: skill.skillPath,
+          skillId: skill.manifest.id,
+          issues: [
+            {
+              severity: "error",
+              code: "skill_loader.duplicate_id",
+              message: `Skill ID is duplicated across configured directories: ${skill.manifest.id}`
+            }
+          ]
+        });
+        continue;
+      }
+
+      seenSkillIds.add(skill.manifest.id);
+      skills.push(skill);
+    }
+  }
+
+  return { skills, skipped };
 }
 
 function buildAgentKitReferenceStatuses(

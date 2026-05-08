@@ -105,6 +105,45 @@ describe("Contextarr API client", () => {
     ]);
   });
 
+  it("posts local Skill import preview and write requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/preview")) {
+          return jsonResponse({ ok: true, skillId: "imported-skill", counts: { documents: 2, sources: 2, warnings: 0 } });
+        }
+        return jsonResponse({ ok: true, skillId: "imported-skill", validation: { valid: true, errors: 0 } });
+      }
+    });
+
+    await expect(
+      client.previewSkillImport({
+        inputPath: "D:/local/fake-prompts",
+        kind: "markdown",
+        skillId: "imported-skill",
+        maxDocs: 10
+      })
+    ).resolves.toMatchObject({ skillId: "imported-skill" });
+    await expect(
+      client.importSkill({
+        inputPath: "D:/local/fake-prompts",
+        kind: "markdown",
+        skillId: "imported-skill",
+        overwrite: true
+      })
+    ).resolves.toMatchObject({ validation: { valid: true, errors: 0 } });
+
+    expect(requests.map((request) => request.url)).toEqual(["/api/import-skills/preview", "/api/import-skills"]);
+    expect(requests[0].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    expect(JSON.parse(String(requests[1].init?.body))).toMatchObject({
+      inputPath: "D:/local/fake-prompts",
+      kind: "markdown",
+      skillId: "imported-skill",
+      overwrite: true
+    });
+  });
+
   it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

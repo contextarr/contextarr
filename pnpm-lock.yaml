@@ -86,6 +86,9 @@ importers:
       '@contextarr/export-profiles':
         specifier: workspace:*
         version: link:../../packages/export-profiles
+      '@contextarr/importers':
+        specifier: workspace:*
+        version: link:../../packages/importers
       '@contextarr/pack-validator':
         specifier: workspace:*
         version: link:../../packages/pack-validator
@@ -189,6 +192,9 @@ importers:
       '@contextarr/schema':
         specifier: workspace:*
         version: link:../schema
+      '@contextarr/skill-validator':
+        specifier: workspace:*
+        version: link:../skill-validator
       fflate:
         specifier: ^0.8.2
         version: 0.8.2

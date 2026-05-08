@@ -16,6 +16,7 @@
   "dependencies": {
     "@contextarr/export-profiles": "workspace:*",
     "@contextarr/agent-kit-validator": "workspace:*",
+    "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/schema": "workspace:*",
     "@contextarr/skill-validator": "workspace:*",

@@ -4,10 +4,19 @@ import matter from "gray-matter";
 import YAML from "yaml";
 import { strFromU8, unzipSync } from "fflate";
 import { validatePack, type ValidationResult } from "@contextarr/pack-validator";
-import type { ContextPackManifest, RecordFrontmatter, Source } from "@contextarr/schema";
+import { validateSkill, type SkillValidationResult } from "@contextarr/skill-validator";
+import type {
+  ContextPackManifest,
+  RecordFrontmatter,
+  SkillInstructionFrontmatter,
+  SkillManifest,
+  Source
+} from "@contextarr/schema";
 
 export type ImporterKind = "auto" | "folder" | "markdown" | "obsidian" | "chatgpt" | "claude";
 export type ResolvedImporterKind = Exclude<ImporterKind, "auto">;
+export type SkillImporterKind = "auto" | "folder" | "markdown" | "prompt-template" | "claude-skill" | "chatgpt-prompts";
+export type ResolvedSkillImporterKind = Exclude<SkillImporterKind, "auto">;
 
 export interface ImportWarning {
   code: string;
@@ -34,6 +43,17 @@ export interface ImportedSource {
   status: "current" | "unknown";
 }
 
+export interface ImportedSkillDocument {
+  id: string;
+  title: string;
+  type: string;
+  tags: string[];
+  body: string;
+  sourceId: string;
+  sourcePath: string;
+  metadata: Record<string, unknown>;
+}
+
 export interface PreviewImportOptions {
   inputPath: string;
   kind?: ImporterKind;
@@ -43,6 +63,20 @@ export interface PreviewImportOptions {
 }
 
 export interface ImportToDraftPackOptions extends PreviewImportOptions {
+  outputDir: string;
+  overwrite?: boolean;
+  generatedAt?: string;
+}
+
+export interface PreviewSkillImportOptions {
+  inputPath: string;
+  kind?: SkillImporterKind;
+  skillId?: string;
+  name?: string;
+  maxDocs?: number;
+}
+
+export interface ImportToDraftSkillOptions extends PreviewSkillImportOptions {
   outputDir: string;
   overwrite?: boolean;
   generatedAt?: string;
@@ -70,6 +104,28 @@ export interface DraftImportResult {
   validation: ValidationResult;
 }
 
+export interface DraftSkillPreview {
+  inputPath: string;
+  kind: ResolvedSkillImporterKind;
+  skillId: string;
+  skillName: string;
+  documents: ImportedSkillDocument[];
+  sources: ImportedSource[];
+  warnings: ImportWarning[];
+}
+
+export interface DraftSkillImportResult {
+  inputPath: string;
+  kind: ResolvedSkillImporterKind;
+  skillId: string;
+  skillName: string;
+  skillPath: string;
+  documentCount: number;
+  sourceCount: number;
+  warnings: ImportWarning[];
+  validation: SkillValidationResult;
+}
+
 interface VirtualFile {
   relativePath: string;
   bytes: Uint8Array;
@@ -91,8 +147,29 @@ interface ImportContext {
   ids: Set<string>;
 }
 
+interface SkillImportContext {
+  inputPath: string;
+  inputName: string;
+  skillId: string;
+  warnings: ImportWarning[];
+  maxDocs: number;
+  ids: Set<string>;
+}
+
 interface BuildRecordOptions {
   packId: string;
+  title: string;
+  type: string;
+  tags: string[];
+  body: string;
+  sourcePath: string;
+  sourceType: string;
+  sourceTitle?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface BuildSkillDocumentOptions {
+  skillId: string;
   title: string;
   type: string;
   tags: string[];
@@ -114,9 +191,42 @@ export class ImporterError extends Error {
 }
 
 const defaultMaxRecords = 50;
+const defaultMaxDocs = 50;
 const maxFileBytes = 512 * 1024;
 const textExtensions = new Set([".csv", ".json", ".log", ".md", ".txt", ".yaml", ".yml"]);
 const markdownExtensions = new Set([".md", ".markdown"]);
+const skillTextExtensions = new Set([".md", ".markdown", ".txt", ".prompt", ".template", ".json"]);
+const promptTemplateExtensions = new Set([".md", ".markdown", ".txt", ".prompt", ".template"]);
+const blockedSkillFileExtensions = new Set([
+  ".app",
+  ".apk",
+  ".bat",
+  ".bash",
+  ".bin",
+  ".cmd",
+  ".com",
+  ".cjs",
+  ".dll",
+  ".exe",
+  ".fish",
+  ".jar",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".msi",
+  ".php",
+  ".pl",
+  ".ps1",
+  ".py",
+  ".rb",
+  ".scr",
+  ".sh",
+  ".ts",
+  ".tsx",
+  ".vbs",
+  ".wsf",
+  ".zsh"
+]);
 const skippedDirectoryNames = new Set([
   ".git",
   ".hg",
@@ -141,6 +251,11 @@ const skippedFileExtensions = new Set([
   ".rar",
   ".webp"
 ]);
+
+const shellCommandPattern =
+  /(?:^|[\s`])(rm\s+-rf|sudo\s+|curl\s+[^\n]*\|\s*(?:sh|bash)|powershell(?:\.exe)?\s+-|cmd(?:\.exe)?\s+\/c|bash\s+-c|sh\s+-c|Invoke-WebRequest|Start-Process|chmod\s+\+x|execSync|child_process)(?:\b|[\s`])/i;
+const credentialPattern =
+  /\b(api[_ -]?key|secret|token|password|private[_ -]?key)\b\s*[:=]\s*["']?[^\s"',}]{8,}/i;
 
 export function detectImportKind(inputPath: string): ResolvedImporterKind {
   const warnings: ImportWarning[] = [];
@@ -220,6 +335,90 @@ export function importToDraftPack(options: ImportToDraftPackOptions): DraftImpor
     packName: preview.packName,
     packPath,
     recordCount: preview.records.length,
+    sourceCount: preview.sources.length,
+    warnings: preview.warnings,
+    validation
+  };
+}
+
+export function detectSkillImportKind(inputPath: string): ResolvedSkillImporterKind {
+  const warnings: ImportWarning[] = [];
+  const input = readInputFiles(inputPath, warnings);
+  return detectSkillKindFromInput(input, warnings);
+}
+
+export function previewSkillImport(options: PreviewSkillImportOptions): DraftSkillPreview {
+  const warnings: ImportWarning[] = [];
+  const input = readInputFiles(options.inputPath, warnings);
+  const kind = options.kind && options.kind !== "auto" ? options.kind : detectSkillKindFromInput(input, warnings);
+  const skillId = normalizeId(options.skillId ?? `${kind}-${stripKnownExtension(input.inputName)}`);
+  const skillName = options.name?.trim() || titleCase(`${kind} ${stripKnownExtension(input.inputName)} skill`);
+  const context: SkillImportContext = {
+    inputPath: input.inputPath,
+    inputName: input.inputName,
+    skillId,
+    warnings,
+    maxDocs: options.maxDocs ?? defaultMaxDocs,
+    ids: new Set<string>()
+  };
+  const documents =
+    kind === "folder"
+      ? importSkillFolder(input, context)
+      : kind === "markdown"
+        ? importSkillMarkdown(input, context)
+        : kind === "prompt-template"
+          ? importPromptTemplates(input, context)
+          : kind === "claude-skill"
+            ? importClaudeSkill(input, context)
+            : importChatGptPrompts(input, context);
+
+  if (documents.length === 0) {
+    throw new ImporterError("skill_import.no_documents", `No importable Skill documents found in ${options.inputPath}.`);
+  }
+
+  return {
+    inputPath: input.inputPath,
+    kind,
+    skillId,
+    skillName,
+    documents,
+    sources: documents.map((document) => ({
+      id: document.sourceId,
+      type: String(document.metadata.sourceType ?? "imported_skill_file"),
+      title: String(document.metadata.sourceTitle ?? document.title),
+      path: document.sourcePath,
+      status: "unknown"
+    })),
+    warnings
+  };
+}
+
+export function importSkillToDraft(options: ImportToDraftSkillOptions): DraftSkillImportResult {
+  const generatedAt = options.generatedAt ?? new Date().toISOString();
+  const preview = previewSkillImport(options);
+  const outputRoot = path.resolve(options.outputDir);
+  const skillPath = path.join(outputRoot, preview.skillId);
+
+  assertInside(outputRoot, skillPath);
+
+  if (fs.existsSync(skillPath)) {
+    if (!options.overwrite) {
+      throw new ImporterError("output.exists", `Draft Skill already exists: ${skillPath}`);
+    }
+
+    fs.rmSync(skillPath, { recursive: true, force: true });
+  }
+
+  writeDraftSkill(skillPath, preview, generatedAt);
+  const validation = validateSkill(skillPath);
+
+  return {
+    inputPath: preview.inputPath,
+    kind: preview.kind,
+    skillId: preview.skillId,
+    skillName: preview.skillName,
+    skillPath,
+    documentCount: preview.documents.length,
     sourceCount: preview.sources.length,
     warnings: preview.warnings,
     validation
@@ -427,6 +626,228 @@ function conversationsToRecords(
   return records;
 }
 
+function importSkillFolder(input: InputFiles, context: SkillImportContext): ImportedSkillDocument[] {
+  const documents: ImportedSkillDocument[] = [];
+
+  for (const file of input.files) {
+    if (documents.length >= context.maxDocs) {
+      addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+      break;
+    }
+
+    if (shouldSkipSkillFile(file, context.warnings, skillTextExtensions)) {
+      continue;
+    }
+
+    const text = decodeSafeSkillTextFile(file, context.warnings);
+    if (text === undefined) {
+      continue;
+    }
+
+    const extension = path.extname(file.relativePath).toLowerCase().replace(".", "") || "text";
+    const isMarkdown = markdownExtensions.has(path.extname(file.relativePath).toLowerCase());
+    documents.push(
+      buildImportedSkillDocument(context, {
+        skillId: context.skillId,
+        title: titleFromPath(file.relativePath),
+        type: isMarkdown ? "imported_skill_instruction" : "imported_skill_file",
+        tags: ["folder_skill_import"],
+        body: isMarkdown ? text.trim() : `# ${titleFromPath(file.relativePath)}\n\n\`\`\`${extension}\n${text.trim()}\n\`\`\``,
+        sourcePath: file.relativePath,
+        sourceType: "local_skill_file"
+      })
+    );
+  }
+
+  return documents;
+}
+
+function importSkillMarkdown(input: InputFiles, context: SkillImportContext): ImportedSkillDocument[] {
+  const documents: ImportedSkillDocument[] = [];
+
+  for (const file of input.files) {
+    if (documents.length >= context.maxDocs) {
+      addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+      break;
+    }
+
+    if (shouldSkipSkillFile(file, context.warnings, markdownExtensions)) {
+      continue;
+    }
+
+    const text = decodeSafeSkillTextFile(file, context.warnings);
+    if (text === undefined) {
+      continue;
+    }
+
+    const parsed = matter(text);
+    documents.push(
+      buildImportedSkillDocument(context, {
+        skillId: context.skillId,
+        title: getTitle(parsed.data, parsed.content, file.relativePath),
+        type: "imported_skill_instruction",
+        tags: uniqueTags([...extractFrontmatterTags(parsed.data), ...extractInlineTags(parsed.content), "markdown_skill_import"]),
+        body: parsed.content.trim(),
+        sourcePath: file.relativePath,
+        sourceType: "markdown_skill_file",
+        metadata: {
+          frontmatter: parsed.data
+        }
+      })
+    );
+  }
+
+  return documents;
+}
+
+function importPromptTemplates(input: InputFiles, context: SkillImportContext): ImportedSkillDocument[] {
+  const documents: ImportedSkillDocument[] = [];
+
+  for (const file of input.files) {
+    if (documents.length >= context.maxDocs) {
+      addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+      break;
+    }
+
+    if (shouldSkipSkillFile(file, context.warnings, promptTemplateExtensions)) {
+      continue;
+    }
+
+    const text = decodeSafeSkillTextFile(file, context.warnings);
+    if (text === undefined) {
+      continue;
+    }
+
+    const parsed = markdownExtensions.has(path.extname(file.relativePath).toLowerCase()) ? matter(text) : undefined;
+    const body = parsed ? parsed.content.trim() : text.trim();
+    documents.push(
+      buildImportedSkillDocument(context, {
+        skillId: context.skillId,
+        title: parsed ? getTitle(parsed.data, parsed.content, file.relativePath) : titleFromPath(file.relativePath),
+        type: "imported_prompt_template",
+        tags: uniqueTags([...(parsed ? extractFrontmatterTags(parsed.data) : []), "prompt_template_import"]),
+        body: body.startsWith("#") ? body : `# ${titleFromPath(file.relativePath)}\n\n${body}`,
+        sourcePath: file.relativePath,
+        sourceType: "prompt_template",
+        metadata: parsed ? { frontmatter: parsed.data } : undefined
+      })
+    );
+  }
+
+  return documents;
+}
+
+function importClaudeSkill(input: InputFiles, context: SkillImportContext): ImportedSkillDocument[] {
+  const orderedFiles = [...input.files].sort((left, right) => {
+    const leftSkill = path.basename(left.relativePath).toLowerCase() === "skill.md" ? 0 : 1;
+    const rightSkill = path.basename(right.relativePath).toLowerCase() === "skill.md" ? 0 : 1;
+    return leftSkill - rightSkill || left.relativePath.localeCompare(right.relativePath);
+  });
+  const documents: ImportedSkillDocument[] = [];
+
+  for (const file of orderedFiles) {
+    if (documents.length >= context.maxDocs) {
+      addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+      break;
+    }
+
+    if (shouldSkipSkillFile(file, context.warnings, new Set([".md", ".markdown", ".txt"]))) {
+      continue;
+    }
+
+    const text = decodeSafeSkillTextFile(file, context.warnings);
+    if (text === undefined) {
+      continue;
+    }
+
+    const parsed = markdownExtensions.has(path.extname(file.relativePath).toLowerCase()) ? matter(text) : undefined;
+    const body = parsed ? parsed.content.trim() : text.trim();
+    documents.push(
+      buildImportedSkillDocument(context, {
+        skillId: context.skillId,
+        title: path.basename(file.relativePath).toLowerCase() === "skill.md"
+          ? "Claude Skill Instructions"
+          : parsed
+            ? getTitle(parsed.data, parsed.content, file.relativePath)
+            : titleFromPath(file.relativePath),
+        type: "imported_claude_skill_instruction",
+        tags: uniqueTags([...(parsed ? extractFrontmatterTags(parsed.data) : []), "claude_skill_import"]),
+        body: body.startsWith("#") ? body : `# ${titleFromPath(file.relativePath)}\n\n${body}`,
+        sourcePath: file.relativePath,
+        sourceType: "claude_skill"
+      })
+    );
+  }
+
+  return documents;
+}
+
+function importChatGptPrompts(input: InputFiles, context: SkillImportContext): ImportedSkillDocument[] {
+  const documents: ImportedSkillDocument[] = [];
+  const jsonFiles = input.files.filter((file) => path.extname(file.relativePath).toLowerCase() === ".json");
+
+  if (jsonFiles.length === 0) {
+    throw new ImporterError("chatgpt_prompts.missing_json", "ChatGPT prompt import requires at least one JSON file.");
+  }
+
+  for (const file of jsonFiles) {
+    if (documents.length >= context.maxDocs) {
+      addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+      break;
+    }
+
+    if (shouldSkipSkillFile(file, context.warnings, new Set([".json"]))) {
+      continue;
+    }
+
+    const parsed = parseJsonFile(file, "chatgpt_prompts.parse_failed");
+    const prompts = collectPromptItems(parsed, file.relativePath);
+    if (prompts.length === 0) {
+      addWarning(context.warnings, "chatgpt_prompts.empty", "No prompt templates were found in JSON file.", file.relativePath);
+      continue;
+    }
+
+    for (let index = 0; index < prompts.length; index += 1) {
+      if (documents.length >= context.maxDocs) {
+        addWarning(context.warnings, "skill_import.max_docs", `Max Skill documents limit reached at ${context.maxDocs}.`);
+        break;
+      }
+
+      const prompt = prompts[index];
+      if (isBlockedSkillText(prompt.body)) {
+        addWarning(
+          context.warnings,
+          "skill_import.blocked_content",
+          "Prompt contains shell command or credential-like content and was skipped.",
+          `${file.relativePath}#${index + 1}`
+        );
+        continue;
+      }
+
+      documents.push(
+        buildImportedSkillDocument(context, {
+          skillId: context.skillId,
+          title: prompt.title,
+          type: "imported_chatgpt_prompt",
+          tags: uniqueTags(["chatgpt_prompt_import", ...prompt.tags]),
+          body: prompt.body.startsWith("#") ? prompt.body : `# ${prompt.title}\n\n${prompt.body}`,
+          sourcePath: `${file.relativePath}#${index + 1}`,
+          sourceType: "chatgpt_prompt_export",
+          metadata: {
+            promptIndex: index
+          }
+        })
+      );
+    }
+  }
+
+  if (documents.length === 0) {
+    throw new ImporterError("chatgpt_prompts.no_prompts", "No safe ChatGPT prompt templates were found.");
+  }
+
+  return documents;
+}
+
 function readChatGptMessages(conversation: unknown): Array<{ role: string; text: string }> {
   if (typeof conversation !== "object" || conversation === null) {
     return [];
@@ -499,6 +920,27 @@ function buildImportedRecord(context: ImportContext, options: BuildRecordOptions
 
   return {
     id: recordId,
+    title: options.title,
+    type: options.type,
+    tags: uniqueTags(["imported_draft", "never_export", ...options.tags]),
+    body: options.body || `# ${options.title}`,
+    sourceId,
+    sourcePath: options.sourcePath,
+    metadata: {
+      ...(options.metadata ?? {}),
+      sourceType: options.sourceType,
+      sourceTitle: options.sourceTitle ?? options.title
+    }
+  };
+}
+
+function buildImportedSkillDocument(context: SkillImportContext, options: BuildSkillDocumentOptions): ImportedSkillDocument {
+  const baseId = `${options.skillId}.${normalizeId(options.sourcePath || options.title)}`;
+  const documentId = makeUniqueId(baseId, context.ids);
+  const sourceId = makeUniqueId(`${options.skillId}.source.${normalizeId(options.sourcePath || options.title)}`, context.ids);
+
+  return {
+    id: documentId,
     title: options.title,
     type: options.type,
     tags: uniqueTags(["imported_draft", "never_export", ...options.tags]),
@@ -625,6 +1067,149 @@ function writeDraftPack(packPath: string, preview: DraftPackPreview, generatedAt
   );
 }
 
+function writeDraftSkill(skillPath: string, preview: DraftSkillPreview, generatedAt: string): void {
+  fs.mkdirSync(path.join(skillPath, "instructions"), { recursive: true });
+  fs.mkdirSync(path.join(skillPath, "examples"), { recursive: true });
+  fs.mkdirSync(path.join(skillPath, "exports"), { recursive: true });
+  fs.mkdirSync(path.join(skillPath, "sources"), { recursive: true });
+  fs.mkdirSync(path.join(skillPath, "rules"), { recursive: true });
+
+  const manifest: SkillManifest = {
+    id: preview.skillId,
+    name: preview.skillName,
+    version: "0.0.0-draft",
+    description: `Imported draft Skill generated from ${preview.kind} input.`,
+    type: "imported_skill",
+    visibility: "private",
+    trustLevel: "unreviewed",
+    author: "Contextarr Importer",
+    license: "UNLICENSED",
+    createdAt: generatedAt,
+    updatedAt: generatedAt,
+    lastReviewedAt: null,
+    containsPersonalData: true,
+    containsExecutableCode: false,
+    requiresNetwork: false,
+    permissions: {
+      readVault: false,
+      writeDrafts: false,
+      runCommands: false,
+      networkAccess: false,
+      browserAutomation: false,
+      toolExecution: false
+    },
+    instructionsPath: "instructions",
+    examplesPath: "examples",
+    sourcesPath: "sources/sources.yaml",
+    exportsPath: "exports",
+    rulesPath: "rules",
+    targets: ["chatgpt", "claude", "codex", "generic_markdown"],
+    inputs: ["local_import"],
+    outputs: ["draft_instruction"],
+    assets: {
+      accentColor: "#22D3E8"
+    },
+    compatibility: {
+      contextarr: ">=0.2.0"
+    }
+  };
+
+  fs.writeFileSync(path.join(skillPath, "contextarr-skill.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  fs.writeFileSync(path.join(skillPath, "README.md"), `# ${preview.skillName}\n\nImported draft Skill. Review and approve every document before use.\n`, "utf8");
+  fs.writeFileSync(path.join(skillPath, "CHANGELOG.md"), `# Changelog\n\n## ${generatedAt.slice(0, 10)}\n\n- Created draft Skill from ${preview.kind} import.\n`, "utf8");
+  fs.writeFileSync(
+    path.join(skillPath, "LICENSE"),
+    "Imported draft content remains owned by the original source owner. Review before reuse.\n",
+    "utf8"
+  );
+
+  for (const document of preview.documents) {
+    const frontmatter: SkillInstructionFrontmatter = {
+      id: document.id,
+      title: document.title,
+      type: document.type,
+      skill: preview.skillId,
+      tags: document.tags,
+      confidence: "unknown",
+      source_status: "imported",
+      freshness: "unknown",
+      privacy: "private",
+      sources: [document.sourceId],
+      review_status: "draft"
+    };
+    const fileName = `${document.id.slice(preview.skillId.length + 1)}.md`;
+    fs.writeFileSync(
+      path.join(skillPath, "instructions", safeFileName(fileName)),
+      writeMarkdownSkillDocument(frontmatter, document.body),
+      "utf8"
+    );
+  }
+
+  const sources = preview.sources.map(
+    (source): Source => ({
+      id: source.id,
+      type: source.type,
+      title: source.title,
+      path: source.path,
+      status: source.status,
+      trust: "unreviewed"
+    })
+  );
+  fs.writeFileSync(path.join(skillPath, "sources", "sources.yaml"), YAML.stringify({ sources }), "utf8");
+  fs.writeFileSync(
+    path.join(skillPath, "rules", "validation.yaml"),
+    YAML.stringify({
+      required_fields: {
+        record: ["id", "title", "type", "skill", "tags", "privacy", "sources", "review_status"]
+      },
+      checks: ["draft_skill_documents_require_review", "no_executable_content"]
+    }),
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(skillPath, "rules", "safety.yaml"),
+    YAML.stringify({
+      disallowed: {
+        executable_files: true,
+        shell_commands: true,
+        network_calls: true,
+        credential_requests: true,
+        browser_automation: true,
+        hidden_prompts: true,
+        tool_execution: true
+      },
+      patterns: [
+        {
+          name: "credential_request",
+          regex: "(api key|password|token|secret)",
+          severity: "high",
+          action: "review"
+        },
+        {
+          name: "shell_command",
+          regex: "(sudo|powershell|cmd.exe|bash -c|rm -rf)",
+          severity: "high",
+          action: "review"
+        }
+      ]
+    }),
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(skillPath, "rules", "freshness.yaml"),
+    YAML.stringify({
+      stale_after_days: {
+        imported_skill_instruction: 90,
+        imported_skill_file: 90,
+        imported_prompt_template: 90,
+        imported_claude_skill_instruction: 90,
+        imported_chatgpt_prompt: 90
+      }
+    }),
+    "utf8"
+  );
+}
+
 function readInputFiles(inputPath: string, warnings: ImportWarning[]): InputFiles {
   const resolvedInputPath = path.resolve(inputPath);
   if (!fs.existsSync(resolvedInputPath)) {
@@ -718,6 +1303,44 @@ function detectKindFromInput(input: InputFiles, warnings: ImportWarning[]): Reso
   return "folder";
 }
 
+function detectSkillKindFromInput(input: InputFiles, warnings: ImportWarning[]): ResolvedSkillImporterKind {
+  const lowerName = input.inputName.toLowerCase();
+  const fileNames = input.files.map((file) => file.relativePath.toLowerCase());
+
+  if (lowerName.includes("claude-skill") || fileNames.some((file) => path.basename(file) === "skill.md")) {
+    return "claude-skill";
+  }
+
+  if (
+    lowerName.includes("chatgpt") ||
+    input.files.some((file) => path.extname(file.relativePath).toLowerCase() === ".json" && looksLikePromptJson(file, warnings))
+  ) {
+    return "chatgpt-prompts";
+  }
+
+  if (
+    input.files.some((file) => [".prompt", ".template"].includes(path.extname(file.relativePath).toLowerCase())) ||
+    lowerName.includes("prompt")
+  ) {
+    return "prompt-template";
+  }
+
+  if (input.files.length > 0 && input.files.every((file) => markdownExtensions.has(path.extname(file.relativePath).toLowerCase()))) {
+    return "markdown";
+  }
+
+  return "folder";
+}
+
+function looksLikePromptJson(file: VirtualFile, warnings: ImportWarning[]): boolean {
+  try {
+    return collectPromptItems(JSON.parse(strFromU8(file.bytes)), file.relativePath).length > 0;
+  } catch {
+    addWarning(warnings, "detect.json_parse_failed", "JSON file could not be parsed during Skill import auto detection.", file.relativePath);
+    return false;
+  }
+}
+
 function looksLikeClaudeJson(file: VirtualFile, warnings: ImportWarning[]): boolean {
   if (path.extname(file.relativePath).toLowerCase() !== ".json") {
     return false;
@@ -746,6 +1369,27 @@ function looksLikeClaudeJson(file: VirtualFile, warnings: ImportWarning[]): bool
   }
 }
 
+function shouldSkipSkillFile(file: VirtualFile, warnings: ImportWarning[], allowedExtensions: Set<string>): boolean {
+  const extension = path.extname(file.relativePath).toLowerCase();
+
+  if (isUnsafeRelativePath(file.relativePath)) {
+    addWarning(warnings, "skill_import.unsafe_path", "Unsafe file path skipped during Skill import.", file.relativePath);
+    return true;
+  }
+
+  if (blockedSkillFileExtensions.has(extension)) {
+    addWarning(warnings, "skill_import.executable_file", "Executable or script-like file skipped during Skill import.", file.relativePath);
+    return true;
+  }
+
+  if (!allowedExtensions.has(extension)) {
+    addWarning(warnings, "skill_import.unsupported_file", "Unsupported file skipped during Skill import.", file.relativePath);
+    return true;
+  }
+
+  return false;
+}
+
 function shouldSkipFile(relativePath: string, warnings: ImportWarning[]): boolean {
   const extension = path.extname(relativePath).toLowerCase();
   if (skippedFileExtensions.has(extension) || !textExtensions.has(extension)) {
@@ -754,6 +1398,38 @@ function shouldSkipFile(relativePath: string, warnings: ImportWarning[]): boolea
   }
 
   return false;
+}
+
+function decodeSafeSkillTextFile(file: VirtualFile, warnings: ImportWarning[]): string | undefined {
+  const text = decodeTextFile(file, warnings);
+  if (text === undefined) {
+    return undefined;
+  }
+
+  if (isBlockedSkillText(text)) {
+    addWarning(
+      warnings,
+      "skill_import.blocked_content",
+      "File contains shell command or credential-like content and was skipped.",
+      file.relativePath
+    );
+    return undefined;
+  }
+
+  return text;
+}
+
+function isBlockedSkillText(text: string): boolean {
+  return shellCommandPattern.test(text) || credentialPattern.test(text);
+}
+
+function isUnsafeRelativePath(relativePath: string): boolean {
+  const normalized = normalizePath(relativePath);
+  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized)) {
+    return true;
+  }
+
+  return normalized.split("/").some((part) => !part || part === "." || part === ".." || /[\x00-\x1f<>:"|?*]/.test(part));
 }
 
 function shouldSkipObsidianFile(relativePath: string, warnings: ImportWarning[]): boolean {
@@ -797,7 +1473,84 @@ function parseJsonFile(file: VirtualFile, errorCode: string): unknown {
   }
 }
 
+function collectPromptItems(value: unknown, fallbackSource: string): Array<{ title: string; body: string; tags: string[] }> {
+  const rawItems = collectPromptItemValues(value);
+  if (rawItems.length === 0) {
+    const singleItem = normalizePromptItem(value, fallbackSource, 0);
+    return singleItem ? [singleItem] : [];
+  }
+
+  return rawItems
+    .map((item, index) => normalizePromptItem(item, fallbackSource, index))
+    .filter((item): item is { title: string; body: string; tags: string[] } => Boolean(item));
+}
+
+function collectPromptItemValues(value: unknown): unknown[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+
+  const record = value as { prompts?: unknown; items?: unknown; data?: unknown };
+  if (Array.isArray(record.prompts)) {
+    return record.prompts;
+  }
+  if (Array.isArray(record.items)) {
+    return record.items;
+  }
+  if (Array.isArray(record.data)) {
+    return record.data;
+  }
+
+  return [];
+}
+
+function normalizePromptItem(
+  item: unknown,
+  fallbackSource: string,
+  index: number
+): { title: string; body: string; tags: string[] } | undefined {
+  if (typeof item === "string") {
+    const body = item.trim();
+    return body ? { title: `${titleFromPath(fallbackSource)} Prompt ${index + 1}`, body, tags: [] } : undefined;
+  }
+
+  if (typeof item !== "object" || item === null) {
+    return undefined;
+  }
+
+  const record = item as Record<string, unknown>;
+  const title =
+    stringField(record, "title") ||
+    stringField(record, "name") ||
+    stringField(record, "label") ||
+    `${titleFromPath(fallbackSource)} Prompt ${index + 1}`;
+  const body =
+    stringField(record, "prompt") ||
+    stringField(record, "content") ||
+    stringField(record, "text") ||
+    stringField(record, "instructions") ||
+    stringifyContent(record.messages);
+
+  if (!body.trim()) {
+    return undefined;
+  }
+
+  return {
+    title,
+    body: body.trim(),
+    tags: extractFrontmatterTags(record)
+  };
+}
+
 function writeMarkdownRecord(frontmatter: RecordFrontmatter, body: string): string {
+  return `---\n${YAML.stringify(frontmatter)}---\n\n${body.trim()}\n`;
+}
+
+function writeMarkdownSkillDocument(frontmatter: SkillInstructionFrontmatter, body: string): string {
   return `---\n${YAML.stringify(frontmatter)}---\n\n${body.trim()}\n`;
 }
 
@@ -832,7 +1585,7 @@ function titleFromPath(relativePath: string): string {
 }
 
 function stripKnownExtension(value: string): string {
-  return value.replace(/\.(zip|md|markdown|json|txt|yaml|yml|csv|log)$/i, "");
+  return value.replace(/\.(zip|md|markdown|json|txt|yaml|yml|csv|log|prompt|template)$/i, "");
 }
 
 function normalizeId(value: string): string {

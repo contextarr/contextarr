@@ -1,0 +1,5 @@
+{
+  "title": "Single Prompt Response Coach",
+  "prompt": "Rewrite the draft response with a calm, concise support tone and preserve the customer's stated facts.",
+  "tags": ["support", "tone"]
+}

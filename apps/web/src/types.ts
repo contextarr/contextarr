@@ -1,6 +1,7 @@
 export interface HealthResponse {
   status: string;
   authRequired: boolean;
+  localImportsEnabled?: boolean;
   lastIndexedAt: string | null;
   counts: {
     packs: number;
@@ -413,6 +414,62 @@ export interface SkillDetail extends SkillSummary {
   exportProfiles: ExportProfileSummary[];
 }
 
+export type SkillImportKind = "auto" | "folder" | "markdown" | "prompt-template" | "claude-skill" | "chatgpt-prompts";
+
+export interface SkillImportRequest {
+  inputPath: string;
+  kind: SkillImportKind;
+  skillId?: string;
+  name?: string;
+  maxDocs?: number;
+  overwrite?: boolean;
+}
+
+export interface SkillImportWarning {
+  code: string;
+  message: string;
+  file?: string;
+}
+
+export interface SkillImportPreview {
+  ok: boolean;
+  kind: string;
+  skillId: string;
+  skillName: string;
+  counts: {
+    documents: number;
+    sources: number;
+    warnings: number;
+  };
+  documents: Array<{
+    id: string;
+    title: string;
+    type: string;
+    tags: string[];
+    sourceId: string;
+  }>;
+  warnings: SkillImportWarning[];
+}
+
+export interface SkillImportResult {
+  ok: boolean;
+  skillId: string;
+  skillName: string;
+  counts: {
+    documents: number;
+    sources: number;
+    warnings: number;
+  };
+  warnings: SkillImportWarning[];
+  validation: {
+    valid: boolean;
+    errors: number;
+    warnings: number;
+    infos: number;
+  };
+  skill?: SkillDetail | SkillSummary | null;
+}
+
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
 export type ReviewObjectType = "pack" | "skill" | "agent_kit";
@@ -543,6 +600,7 @@ export type Route =
   | { name: "skill"; skillId: string }
   | { name: "agentKits" }
   | { name: "agentKit"; agentKitId: string }
+  | { name: "collectors" }
   | { name: "reviewQueue" }
   | { name: "composer"; mode?: ComposerMode }
   | { name: "exports" }

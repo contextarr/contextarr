@@ -1,11 +1,11 @@
 import { createApp } from "./api";
-import { getAgentKitIndexDirs, loadConfig } from "./config";
+import { getAgentKitIndexDirs, getSkillIndexDirs, loadConfig } from "./config";
 import { openDatabase } from "./db";
 import { rebuildIndex } from "./indexer";
 
 const config = loadConfig();
 const db = openDatabase(config.databasePath);
-rebuildIndex(db, config.packsDir, config.skillsDir, getAgentKitIndexDirs(config));
+rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
 
 const app = createApp({ config, db });
 

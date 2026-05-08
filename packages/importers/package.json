@@ -13,6 +13,7 @@
   "dependencies": {
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/schema": "workspace:*",
+    "@contextarr/skill-validator": "workspace:*",
     "fflate": "^0.8.2",
     "gray-matter": "^4.0.3",
     "yaml": "^2.6.1"

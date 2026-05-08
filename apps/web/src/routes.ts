@@ -28,6 +28,10 @@ export function parseHashRoute(hash: string): Route {
     return { name: "agentKits" };
   }
 
+  if (parts[0] === "collectors") {
+    return { name: "collectors" };
+  }
+
   if (parts[0] === "review-queue") {
     return { name: "reviewQueue" };
   }
@@ -73,6 +77,10 @@ export function agentKitHref(agentKitId: string): string {
 
 export function agentKitsHref(): string {
   return "#/agent-kits";
+}
+
+export function collectorsHref(): string {
+  return "#/collectors";
 }
 
 export function reviewQueueHref(): string {

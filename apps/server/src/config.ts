@@ -11,15 +11,29 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     port: Number.parseInt(env.CONTEXTARR_PORT ?? "3210", 10),
     packsDir: resolveFrom(invocationRoot, env.CONTEXTARR_PACKS_DIR ?? "./demo-packs"),
     skillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_SKILLS_DIR ?? "./demo-skills"),
+    importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
     agentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KITS_DIR ?? "./agent-kits"),
     demoAgentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_DEMO_AGENT_KITS_DIR ?? "./demo-agent-kits"),
     databasePath: resolveFrom(invocationRoot, env.CONTEXTARR_DATABASE_PATH ?? "./data/contextarr.db"),
     webDistDir: env.CONTEXTARR_WEB_DIST_DIR?.trim() ? resolveFrom(invocationRoot, env.CONTEXTARR_WEB_DIST_DIR) : undefined,
-    apiToken: apiToken ? apiToken : undefined
+    apiToken: apiToken ? apiToken : undefined,
+    localImportsEnabled: parseBoolean(env.CONTEXTARR_ENABLE_LOCAL_IMPORTS)
   };
 
+  assertSkillDirectorySeparation(config);
   assertAgentKitDirectorySeparation(config);
   return config;
+}
+
+export function getSkillIndexDirs(config: Pick<ServerConfig, "skillsDir" | "importedSkillsDir">): string[] {
+  assertSkillDirectorySeparation(config);
+
+  const dirs = [config.skillsDir];
+  if (fs.existsSync(config.importedSkillsDir) && fs.statSync(config.importedSkillsDir).isDirectory()) {
+    dirs.push(config.importedSkillsDir);
+  }
+
+  return uniqueExistingAwareDirs(dirs);
 }
 
 export function getAgentKitIndexDirs(config: Pick<ServerConfig, "agentKitsDir" | "demoAgentKitsDir">): string[] {
@@ -30,6 +44,26 @@ export function getAgentKitIndexDirs(config: Pick<ServerConfig, "agentKitsDir" |
     dirs.push(config.agentKitsDir);
   }
 
+  return uniqueExistingAwareDirs(dirs);
+}
+
+export function assertSkillDirectorySeparation(config: Pick<ServerConfig, "skillsDir" | "importedSkillsDir">): void {
+  const indexed = path.resolve(config.skillsDir);
+  const imported = path.resolve(config.importedSkillsDir);
+  if (pathsOverlap(indexed, imported)) {
+    throw new Error("CONTEXTARR_IMPORTED_SKILLS_DIR must not overlap CONTEXTARR_SKILLS_DIR.");
+  }
+}
+
+export function assertImportedSkillsDirectory(config: Pick<ServerConfig, "importedSkillsDir">): void {
+  const resolved = path.resolve(config.importedSkillsDir);
+  const parent = path.dirname(resolved);
+  if (!fs.existsSync(parent) || !fs.statSync(parent).isDirectory()) {
+    fs.mkdirSync(parent, { recursive: true });
+  }
+}
+
+function uniqueExistingAwareDirs(dirs: string[]): string[] {
   const seen = new Set<string>();
   return dirs.filter((dir) => {
     const resolved = normalizeExistingPathForCompare(dir);
@@ -55,6 +89,10 @@ export function assertAgentKitDirectorySeparation(config: Pick<ServerConfig, "ag
 
 function resolveFrom(root: string, value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(root, value);
+}
+
+function parseBoolean(value: string | undefined): boolean {
+  return value === "1" || value?.toLowerCase() === "true";
 }
 
 function pathsOverlap(left: string, right: string): boolean {

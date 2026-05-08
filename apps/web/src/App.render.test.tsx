@@ -38,6 +38,8 @@ const mocks = vi.hoisted(() => {
       getSkillExamples: vi.fn(),
       getSkillExports: vi.fn(),
       getSkillHealth: vi.fn(),
+      previewSkillImport: vi.fn(),
+      importSkill: vi.fn(),
       getAgentKits: vi.fn(),
       getAgentKit: vi.fn(),
       getAgentKitContextPacks: vi.fn(),
@@ -102,6 +104,32 @@ describe("App Skill UI routes", () => {
     ]);
     mocks.apiClient.getSkillExports.mockResolvedValue([]);
     mocks.apiClient.getSkillHealth.mockResolvedValue(skillHealthFixture());
+    mocks.apiClient.previewSkillImport.mockResolvedValue({
+      ok: true,
+      kind: "markdown",
+      skillId: "imported-skill",
+      skillName: "Imported Skill",
+      counts: { documents: 2, sources: 2, warnings: 0 },
+      documents: [
+        {
+          id: "imported-skill.response-style",
+          title: "Response Style",
+          type: "imported_skill_instruction",
+          tags: ["imported_draft"],
+          sourceId: "imported-skill.source.response-style"
+        }
+      ],
+      warnings: []
+    });
+    mocks.apiClient.importSkill.mockResolvedValue({
+      ok: true,
+      skillId: "imported-skill",
+      skillName: "Imported Skill",
+      counts: { documents: 2, sources: 2, warnings: 0 },
+      warnings: [],
+      validation: { valid: true, errors: 0, warnings: 1, infos: 0 },
+      skill: { ...skillFixture(), id: "imported-skill", name: "Imported Skill", trustLevel: "unreviewed" }
+    });
     mocks.apiClient.getAgentKits.mockResolvedValue([agentKitSummaryFixture()]);
     mocks.apiClient.getAgentKit.mockResolvedValue(agentKitDetailFixture());
     mocks.apiClient.getAgentKitContextPacks.mockResolvedValue([packFixture()]);
@@ -399,6 +427,56 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("1 skills");
   });
 
+  it("renders the local Skill import wizard only when enabled and submits preview/import requests", async () => {
+    mocks.apiClient.getHealth.mockResolvedValue({ ...healthFixture(), localImportsEnabled: true });
+
+    mountApp("#/collectors");
+
+    await waitForText("Local Skill Import");
+    await waitForText("Import Source");
+    setInputValue("D:/local/fake-prompts", "D:/local/fake-prompts");
+    selectOption("Auto", "markdown");
+    setInputValue("optional-draft-skill-id", "imported-skill");
+    await flushPendingUpdates();
+    clickButton("Preview");
+    await waitForText("Imported Skill");
+    clickButton("Import Draft Skill");
+    await waitForText("Validation");
+
+    expect(mocks.apiClient.previewSkillImport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inputPath: "D:/local/fake-prompts",
+        kind: "markdown",
+        skillId: "imported-skill"
+      })
+    );
+    expect(mocks.apiClient.importSkill).toHaveBeenCalledWith(expect.objectContaining({ overwrite: false }));
+  });
+
+  it("shows the local Skill import disabled state by default", async () => {
+    mountApp("#/collectors");
+
+    await waitForText("Local imports disabled");
+    await flushPendingUpdates();
+    expect(mocks.apiClient.previewSkillImport).not.toHaveBeenCalled();
+  });
+
+  it("shows local Skill import API errors", async () => {
+    mocks.apiClient.getHealth.mockResolvedValue({ ...healthFixture(), localImportsEnabled: true });
+    mocks.apiClient.previewSkillImport.mockRejectedValueOnce(new Error("Preview import failed safely."));
+
+    mountApp("#/collectors");
+
+    await waitForText("Import Source");
+    setInputValue("D:/local/fake-prompts", "D:/local/fake-prompts");
+    await flushPendingUpdates();
+    clickButton("Preview");
+    await waitForText("Preview import failed safely.");
+
+    expect(mocks.apiClient.previewSkillImport).toHaveBeenCalled();
+    expect(mocks.apiClient.importSkill).not.toHaveBeenCalled();
+  });
+
   it("renders Agent Kit health and export preview tabs", async () => {
     mountApp("#/agent-kits/implementation-support-kit");
 
@@ -529,6 +607,17 @@ function selectOption(currentLabel: string, value: string): void {
   act(() => {
     select!.value = value;
     select!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+function setInputValue(placeholder: string, value: string): void {
+  const input = Array.from(document.querySelectorAll("input")).find((item) => item.placeholder === placeholder);
+  expect(input).toBeTruthy();
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  act(() => {
+    valueSetter?.call(input, value);
+    input!.dispatchEvent(new Event("input", { bubbles: true }));
+    input!.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
 

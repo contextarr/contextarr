@@ -18,11 +18,13 @@ export interface ServerConfig {
   port: number;
   packsDir: string;
   skillsDir: string;
+  importedSkillsDir: string;
   agentKitsDir: string;
   demoAgentKitsDir?: string;
   databasePath: string;
   webDistDir?: string;
   apiToken?: string;
+  localImportsEnabled: boolean;
 }
 
 export interface LoadedRecord {
