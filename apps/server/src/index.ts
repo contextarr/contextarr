@@ -6,6 +6,7 @@ export {
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,
   getAgentKitExportProfiles,
+  getAgentKitHealth,
   getAgentKitPath,
   getAgentKitSkills,
   getAgentKits,
@@ -25,6 +26,7 @@ export { loadAgentKits } from "./agent-kit-loader";
 export { loadSkills } from "./skill-loader";
 export type {
   AgentKitSummary,
+  AgentKitHealthDetail,
   LoadedAgentKit,
   LoadedPack,
   LoadedRecord,

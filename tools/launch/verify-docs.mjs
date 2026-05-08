@@ -166,6 +166,35 @@ if (!failed) {
     fail("Root package scripts must include phase22:verify.");
   }
 
+  const requiredPhase23Text = [
+    "Phase 23",
+    "phase23:verify",
+    "Agent Kit Library",
+    "read-only Agent Kit",
+    "Agent Kit health",
+    "detail",
+  ];
+  for (const text of requiredPhase23Text) {
+    if (!readme.includes(text)) {
+      fail(`README is missing Phase 23 text: ${text}`);
+    }
+  }
+  if (!architecture.includes("/api/agent-kits/:id/health") || !architecture.includes("Agent Kit health")) {
+    fail("Architecture docs must describe Phase 23 Agent Kit health/detail support.");
+  }
+  if (!agentKits.includes("Phase 23") || !agentKits.includes("Agent Kit Library") || !agentKits.includes("health")) {
+    fail("Agent Kits docs must describe Phase 23 read-only Library/detail/health scopes.");
+  }
+  if (!security.includes("Phase 23") || !security.includes("non-executable")) {
+    fail("Security docs must include Phase 23 non-executable library/detail/health boundaries.");
+  }
+  if (!securityModel.includes("Phase 23") || !securityModel.includes("read-only") || !securityModel.includes("health")) {
+    fail("Security model docs must include Phase 23 read-only health/detail boundaries.");
+  }
+  if (!packageJson.scripts["phase23:verify"]) {
+    fail("Root package scripts must include phase23:verify.");
+  }
+
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
     fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");
   }

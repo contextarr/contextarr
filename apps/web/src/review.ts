@@ -1,4 +1,5 @@
 import type {
+  AgentKitSummary,
   PackSummary,
   ReviewItem,
   ReviewItemSeverity,
@@ -64,4 +65,8 @@ export function reviewPackName(packId: string, packs: PackSummary[]): string {
 
 export function reviewSkillName(skillId: string, skills: SkillSummary[]): string {
   return skills.find((skill) => skill.id === skillId)?.name ?? skillId;
+}
+
+export function reviewAgentKitName(agentKitId: string, agentKits: AgentKitSummary[]): string {
+  return agentKits.find((agentKit) => agentKit.id === agentKitId)?.name ?? agentKitId;
 }

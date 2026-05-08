@@ -44,6 +44,13 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
 import {
+  createAgentKitCoverVisual,
+  filterAndSortAgentKits,
+  getAgentKitFilterOptions,
+  type AgentKitLibraryViewMode,
+  type AgentKitSortKey
+} from "./agent-kits";
+import {
   agentKitFormatOptions,
   agentKitRedactionModeOptions,
   agentKitTargetOptions,
@@ -82,9 +89,17 @@ import {
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
 import { renderSkillDocumentHtml } from "./skill-rendering";
-import { filterReviewItems, reviewPackName, reviewSkillName, summarizeReviewItems, type ReviewFilters } from "./review";
+import {
+  filterReviewItems,
+  reviewAgentKitName,
+  reviewPackName,
+  reviewSkillName,
+  summarizeReviewItems,
+  type ReviewFilters
+} from "./review";
 import {
   agentKitHref,
+  agentKitsHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -114,6 +129,9 @@ import type {
   SkillDocument,
   SkillHealthResponse,
   SkillSummary,
+  AgentKitHealthResponse,
+  AgentKitExportPreview,
+  AgentKitSummary,
   AgentKitDetail,
   SortKey,
   SourceSummary
@@ -122,6 +140,7 @@ import type {
 const navItems = [
   { label: "Library", icon: Library, href: "#/library", route: "library" },
   { label: "Skills", icon: BookOpen, href: skillsHref(), route: "skills" },
+  { label: "Agent Kits", icon: Sparkles, href: agentKitsHref(), route: "agentKits" },
   { label: "Packs", icon: Boxes },
   { label: "Collectors", icon: Layers3 },
   { label: "Sources", icon: Database },
@@ -148,12 +167,15 @@ const detailTabs = ["overview", "records", "sources", "exports", "health", "acti
 type DetailTab = (typeof detailTabs)[number];
 const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exports", "health"] as const;
 type SkillDetailTab = (typeof skillDetailTabs)[number];
+const agentKitDetailTabs = ["overview", "context-packs", "skills", "rules", "exports", "health"] as const;
+type AgentKitDetailTab = (typeof agentKitDetailTabs)[number];
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => currentRoute());
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [agentKits, setAgentKits] = useState<AgentKitSummary[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -168,6 +190,8 @@ export function App() {
   const [authError, setAuthError] = useState(false);
   const [skillError, setSkillError] = useState<string | null>(null);
   const [skillAuthError, setSkillAuthError] = useState(false);
+  const [agentKitError, setAgentKitError] = useState<string | null>(null);
+  const [agentKitAuthError, setAgentKitAuthError] = useState(false);
 
   useEffect(() => {
     function handleHashChange() {
@@ -184,6 +208,8 @@ export function App() {
     setAuthError(false);
     setSkillError(null);
     setSkillAuthError(false);
+    setAgentKitError(null);
+    setAgentKitAuthError(false);
 
     try {
       const [healthResponse, packResponse] = await Promise.all([apiClient.getHealth(), apiClient.getPacks()]);
@@ -207,6 +233,18 @@ export function App() {
         setSkillError("API token required by environment configuration.");
       } else {
         setSkillError(loadError instanceof Error ? loadError.message : "Unable to load Skill API data.");
+      }
+    }
+
+    try {
+      setAgentKits(await apiClient.getAgentKits());
+    } catch (loadError) {
+      setAgentKits([]);
+      if (loadError instanceof ApiError && loadError.status === 401) {
+        setAgentKitAuthError(true);
+        setAgentKitError("API token required by environment configuration.");
+      } else {
+        setAgentKitError(loadError instanceof Error ? loadError.message : "Unable to load Agent Kit API data.");
       }
     } finally {
       setLoading(false);
@@ -284,6 +322,22 @@ export function App() {
       ),
     [debouncedQuery, searchResults, skills]
   );
+  const visibleAgentKits = useMemo(
+    () =>
+      filterAndSortAgentKits(
+        agentKits,
+        {
+          query: debouncedQuery,
+          type: "all",
+          trustLevel: "all",
+          healthStatus: "all",
+          target: "all",
+          sortBy: "name"
+        },
+        searchResults
+      ),
+    [agentKits, debouncedQuery, searchResults]
+  );
 
   function handleViewModeChange(mode: LibraryViewMode) {
     setViewMode(mode);
@@ -313,7 +367,18 @@ export function App() {
         ) : route.name === "skill" ? (
           <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
-          <ReviewQueuePage packs={packs} skills={skills} onStatusChanged={loadDashboard} />
+          <ReviewQueuePage packs={packs} skills={skills} agentKits={agentKits} onStatusChanged={loadDashboard} />
+        ) : route.name === "agentKits" ? (
+          <AgentKitLibraryPage
+            agentKits={agentKits}
+            visibleAgentKits={visibleAgentKits}
+            query={debouncedQuery}
+            searchResults={searchResults}
+            loading={loading}
+            error={agentKitError}
+            authError={agentKitAuthError}
+            onRetry={loadDashboard}
+          />
         ) : route.name === "agentKit" ? (
           <AgentKitDetailPage agentKitId={route.agentKitId} />
         ) : route.name === "composer" ? (
@@ -321,7 +386,7 @@ export function App() {
         ) : route.name === "exports" ? (
           <ExportsPage packs={packs} skills={skills} />
         ) : route.name === "health" ? (
-          <HealthPage health={health} packs={packs} skills={skills} />
+          <HealthPage health={health} packs={packs} skills={skills} agentKits={agentKits} />
         ) : (
           <LibraryPage
             packs={packs}
@@ -870,6 +935,236 @@ function SkillCards({ skills }: { skills: SkillSummary[] }) {
           </a>
         </article>
       ))}
+    </div>
+  );
+}
+
+function AgentKitLibraryPage({
+  agentKits,
+  visibleAgentKits,
+  query,
+  searchResults,
+  loading,
+  error,
+  authError,
+  onRetry
+}: {
+  agentKits: AgentKitSummary[];
+  visibleAgentKits: AgentKitSummary[];
+  query: string;
+  searchResults: SearchResult[];
+  loading: boolean;
+  error: string | null;
+  authError: boolean;
+  onRetry(): void;
+}) {
+  const [viewMode, setViewMode] = useState<AgentKitLibraryViewMode>("cards");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [trustFilter, setTrustFilter] = useState("all");
+  const [healthFilter, setHealthFilter] = useState("all");
+  const [targetFilter, setTargetFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<AgentKitSortKey>("name");
+  const filterOptions = useMemo(() => getAgentKitFilterOptions(agentKits), [agentKits]);
+  const filteredAgentKits = useMemo(
+    () =>
+      filterAndSortAgentKits(
+        visibleAgentKits,
+        {
+          query,
+          type: typeFilter,
+          trustLevel: trustFilter,
+          healthStatus: healthFilter,
+          target: targetFilter,
+          sortBy
+        },
+        searchResults
+      ),
+    [healthFilter, query, searchResults, sortBy, targetFilter, trustFilter, typeFilter, visibleAgentKits]
+  );
+
+  return (
+    <section className="library-panel" aria-labelledby="agent-kits-title">
+      <div className="library-header">
+        <div>
+          <div className="eyebrow">
+            <Sparkles size={16} aria-hidden="true" />
+            <span>Agent Kits</span>
+          </div>
+          <h1 id="agent-kits-title">Agent Kit Library</h1>
+          <p>Browse local task-ready pairings of Context Packs and non-executable Skills.</p>
+        </div>
+
+        <div className="library-controls">
+          <div className="segmented" aria-label="Agent Kit view mode">
+            <button className={viewMode === "cards" ? "is-selected" : ""} type="button" onClick={() => setViewMode("cards")}>
+              <List size={16} aria-hidden="true" />
+              <span>Cards</span>
+            </button>
+            <button className={viewMode === "table" ? "is-selected" : ""} type="button" onClick={() => setViewMode("table")}>
+              <Table2 size={16} aria-hidden="true" />
+              <span>Table</span>
+            </button>
+          </div>
+          <label className="select-control">
+            <ArrowDownUp size={16} aria-hidden="true" />
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as AgentKitSortKey)}>
+              <option value="name">Name</option>
+              <option value="health">Health</option>
+              <option value="lastReviewed">Last reviewed</option>
+              <option value="contextPacks">Context packs</option>
+              <option value="skills">Skills</option>
+            </select>
+          </label>
+          <label className="select-control">
+            <Filter size={16} aria-hidden="true" />
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="all">All types</option>
+              {filterOptions.types.map((type) => (
+                <option value={type} key={type}>
+                  {formatPackType(type)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-control compact-select">
+            <Sparkles size={16} aria-hidden="true" />
+            <select value={targetFilter} onChange={(event) => setTargetFilter(event.target.value)}>
+              <option value="all">All targets</option>
+              {filterOptions.targets.map((target) => (
+                <option value={target} key={target}>
+                  {formatPackType(target)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-control compact-select">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <select value={trustFilter} onChange={(event) => setTrustFilter(event.target.value)}>
+              <option value="all">All trust</option>
+              {filterOptions.trustLevels.map((trust) => (
+                <option value={trust} key={trust}>
+                  {formatPackType(trust)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="select-control compact-select">
+            <HeartPulse size={16} aria-hidden="true" />
+            <select value={healthFilter} onChange={(event) => setHealthFilter(event.target.value)}>
+              <option value="all">All health</option>
+              {filterOptions.healthStatuses.map((status) => (
+                <option value={status} key={status}>
+                  {formatPackType(status)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="library-count">{agentKits.length} kits</div>
+      </div>
+
+      {error ? (
+        <ErrorState authError={authError} onRetry={onRetry} />
+      ) : loading ? (
+        <LoadingLibrary viewMode="compact" />
+      ) : agentKits.length === 0 ? (
+        <EmptyState title="No Agent Kits indexed" detail="The local API returned an empty Agent Kit library." />
+      ) : filteredAgentKits.length === 0 ? (
+        <EmptyState title="No Agent Kits match" detail="Search and filters did not match the indexed Agent Kit library." />
+      ) : viewMode === "table" ? (
+        <AgentKitTable agentKits={filteredAgentKits} />
+      ) : (
+        <AgentKitCards agentKits={filteredAgentKits} />
+      )}
+    </section>
+  );
+}
+
+function AgentKitCards({ agentKits }: { agentKits: AgentKitSummary[] }) {
+  return (
+    <div className="compact-grid skill-grid">
+      {agentKits.map((agentKit) => (
+        <article className="compact-card skill-card" key={agentKit.id}>
+          <a href={agentKitHref(agentKit.id)} aria-label={`Open ${agentKit.name}`}>
+            <AgentKitCover agentKit={agentKit} variant="thumb" />
+          </a>
+          <div className="compact-main">
+            <h2>
+              <a className="pack-title-link" href={agentKitHref(agentKit.id)}>
+                {agentKit.name}
+              </a>
+            </h2>
+            <p>{agentKit.description}</p>
+            <span className="pack-type">{formatPackType(agentKit.target)}</span>
+          </div>
+          <div className="compact-metrics">
+            <AgentKitHealthBadge agentKit={agentKit} />
+            <AgentKitTrustBadge agentKit={agentKit} />
+            <span>{agentKit.contextPackCount} packs</span>
+            <span>{agentKit.skillCount} skills</span>
+            <span>{formatDate(agentKit.lastReviewedAt)}</span>
+          </div>
+          <a className="ghost-action open-action" href={agentKitHref(agentKit.id)} aria-label={`Open ${agentKit.name}`}>
+            <MoreVertical size={17} aria-hidden="true" />
+          </a>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function AgentKitTable({ agentKits }: { agentKits: AgentKitSummary[] }) {
+  return (
+    <div className="table-wrap">
+      <table className="pack-table">
+        <thead>
+          <tr>
+            <th>Agent Kit</th>
+            <th>Target</th>
+            <th>Trust</th>
+            <th>Health</th>
+            <th>Packs</th>
+            <th>Skills</th>
+            <th>Review Queue</th>
+            <th>Open</th>
+          </tr>
+        </thead>
+        <tbody>
+          {agentKits.map((agentKit) => (
+            <tr key={agentKit.id}>
+              <td>
+                <div className="table-pack">
+                  <AgentKitCover agentKit={agentKit} variant="mini" />
+                  <div>
+                    <strong>
+                      <a className="pack-title-link" href={agentKitHref(agentKit.id)}>
+                        {agentKit.name}
+                      </a>
+                    </strong>
+                    <span>{agentKit.description}</span>
+                  </div>
+                </div>
+              </td>
+              <td>{formatPackType(agentKit.target)}</td>
+              <td><AgentKitTrustBadge agentKit={agentKit} /></td>
+              <td><AgentKitHealthBadge agentKit={agentKit} /></td>
+              <td>{agentKit.contextPackCount}</td>
+              <td>{agentKit.skillCount}</td>
+              <td>
+                <span className={agentKit.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
+                  {agentKit.reviewQueueCount}
+                </span>
+              </td>
+              <td>
+                <a className="ghost-action open-action" href={agentKitHref(agentKit.id)} aria-label={`Open ${agentKit.name}`}>
+                  <ExternalLink size={17} aria-hidden="true" />
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -2641,10 +2936,12 @@ function HealthTab({ pack }: { pack: PackDetail }) {
 function ReviewQueuePage({
   packs,
   skills,
+  agentKits,
   onStatusChanged
 }: {
   packs: PackSummary[];
   skills: SkillSummary[];
+  agentKits: AgentKitSummary[];
   onStatusChanged(): void;
 }) {
   const [response, setResponse] = useState<{ items: ReviewItem[] } | null>(null);
@@ -2694,7 +2991,7 @@ function ReviewQueuePage({
             <span>Review Queue</span>
           </div>
           <h1 id="review-queue-title">Review Queue</h1>
-      <p>SQLite-backed attention items generated from local Context Pack and Skill checks.</p>
+      <p>SQLite-backed attention items generated from local Context Pack, Skill, and Agent Kit checks.</p>
         </div>
         <div className="summary-strip">
           <Stat value={summary.open} label="Open" />
@@ -2703,20 +3000,20 @@ function ReviewQueuePage({
         </div>
       </div>
 
-      <ReviewFiltersBar filters={filters} packs={packs} skills={skills} onChange={setFilters} />
+      <ReviewFiltersBar filters={filters} packs={packs} skills={skills} agentKits={agentKits} onChange={setFilters} />
 
       {error ? (
         <StateCard title="Review queue unavailable" detail={error} />
       ) : loading ? (
         <DetailLoading />
       ) : items.length === 0 ? (
-        <StateCard title="No review items" detail="All indexed demo packs and Skills are healthy." icon={CheckCircle2} />
+        <StateCard title="No review items" detail="All indexed demo packs, Skills, and Agent Kits are healthy." icon={CheckCircle2} />
       ) : visibleItems.length === 0 ? (
         <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
       ) : (
         <div className="review-list">
           {visibleItems.map((item) => (
-            <ReviewItemCard item={item} packs={packs} skills={skills} onUpdateStatus={updateStatus} key={item.id} />
+            <ReviewItemCard item={item} packs={packs} skills={skills} agentKits={agentKits} onUpdateStatus={updateStatus} key={item.id} />
           ))}
         </div>
       )}
@@ -2724,7 +3021,17 @@ function ReviewQueuePage({
   );
 }
 
-function HealthPage({ health, packs, skills }: { health: HealthResponse | null; packs: PackSummary[]; skills: SkillSummary[] }) {
+function HealthPage({
+  health,
+  packs,
+  skills,
+  agentKits
+}: {
+  health: HealthResponse | null;
+  packs: PackSummary[];
+  skills: SkillSummary[];
+  agentKits: AgentKitSummary[];
+}) {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -2764,11 +3071,12 @@ function HealthPage({ health, packs, skills }: { health: HealthResponse | null; 
             <span>Health</span>
           </div>
           <h1 id="health-title">System Health</h1>
-          <p>Deterministic local health derived from Context Pack and Skill validation, review, freshness, and source coverage checks.</p>
+          <p>Deterministic local health derived from Context Pack, Skill, and Agent Kit validation, review, freshness, and source coverage checks.</p>
         </div>
         <div className="summary-strip">
           <Stat value={health?.counts.packs ?? packs.length} label="Packs" />
           <Stat value={health?.counts.skills ?? skills.length} label="Skills" />
+          <Stat value={health?.counts.agentKits ?? agentKits.length} label="Agent Kits" />
           <Stat value={health?.counts.openReviewItems ?? summary.open} label="Open Items" />
         </div>
       </div>
@@ -2868,12 +3176,53 @@ function HealthPage({ health, packs, skills }: { health: HealthResponse | null; 
           </table>
         </div>
       </article>
+
+      <article className="detail-card">
+        <h2>Agent Kit Health</h2>
+        <div className="table-wrap">
+          <table className="pack-table">
+            <thead>
+              <tr>
+                <th>Agent Kit</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Open Items</th>
+                <th>Packs</th>
+                <th>Skills</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agentKits.map((agentKit) => (
+                <tr key={agentKit.id}>
+                  <td>
+                    <a className="pack-title-link" href={agentKitHref(agentKit.id)}>
+                      {agentKit.name}
+                    </a>
+                  </td>
+                  <td>{formatPackType(agentKit.healthStatus)}</td>
+                  <td>{agentKit.healthScore}%</td>
+                  <td>{agentKit.reviewQueueCount}</td>
+                  <td>{agentKit.contextPackCount}</td>
+                  <td>{agentKit.skillCount}</td>
+                  <td>{formatDate(agentKit.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
     </section>
   );
 }
 
 function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
   const [agentKit, setAgentKit] = useState<AgentKitDetail | null>(null);
+  const [health, setHealth] = useState<AgentKitHealthResponse | null>(null);
+  const [activeTab, setActiveTab] = useState<AgentKitDetailTab>("overview");
+  const [preview, setPreview] = useState<AgentKitExportPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewingProfileId, setPreviewingProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -2881,12 +3230,16 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setActiveTab("overview");
+    setPreview(null);
+    setPreviewError(null);
 
     async function loadAgentKit() {
       try {
-        const response = await apiClient.getAgentKit(agentKitId);
+        const [response, healthResponse] = await Promise.all([apiClient.getAgentKit(agentKitId), apiClient.getAgentKitHealth(agentKitId)]);
         if (!cancelled) {
           setAgentKit(response);
+          setHealth(healthResponse);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -2905,6 +3258,19 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
     };
   }, [agentKitId]);
 
+  async function previewExport(profileId: string) {
+    setPreviewingProfileId(profileId);
+    setPreview(null);
+    setPreviewError(null);
+    try {
+      setPreview(await apiClient.getAgentKitExportPreview(agentKitId, profileId));
+    } catch (loadError) {
+      setPreviewError(loadError instanceof Error ? loadError.message : "Unable to preview Agent Kit export.");
+    } finally {
+      setPreviewingProfileId(null);
+    }
+  }
+
   if (loading) {
     return <DetailLoading />;
   }
@@ -2912,7 +3278,7 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
   if (error || !agentKit) {
     return (
       <section className="detail-page">
-        <BackLink href={composerHref("agent-kit")} label="Agent Kit Composer" />
+        <BackLink href={agentKitsHref()} label="Agent Kit Library" />
         <StateCard title="Agent Kit unavailable" detail={error ?? "The local API did not return this Agent Kit."} />
       </section>
     );
@@ -2920,12 +3286,9 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
 
   return (
     <section className="detail-page" aria-labelledby="agent-kit-detail-title">
-      <BackLink href={composerHref("agent-kit")} label="Agent Kit Composer" />
+      <BackLink href={agentKitsHref()} label="Agent Kit Library" />
       <div className="pack-detail-hero">
-        <div className="pack-cover pack-cover-large" style={{ "--accent": agentKit.accentColor ?? "#22d3e8" } as CSSProperties}>
-          <Sparkles size={52} aria-hidden="true" />
-          <span>{agentKit.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</span>
-        </div>
+        <AgentKitCover agentKit={agentKit} variant="large" />
         <div>
           <div className="eyebrow">
             <Sparkles size={16} aria-hidden="true" />
@@ -2934,14 +3297,8 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
           <h1 id="agent-kit-detail-title">{agentKit.name}</h1>
           <p>{agentKit.description}</p>
           <div className="hero-badges">
-            <span className={`health-badge ${agentKit.healthStatus}`}>
-              <HeartPulse size={14} aria-hidden="true" />
-              {agentKit.healthScore}%
-            </span>
-            <span className="trust-badge">
-              <ShieldCheck size={14} aria-hidden="true" />
-              {formatPackType(agentKit.trustLevel)}
-            </span>
+            <AgentKitHealthBadge agentKit={agentKit} />
+            <AgentKitTrustBadge agentKit={agentKit} />
             <span className="version-pill">{agentKit.version}</span>
           </div>
           <div className="last-reviewed">
@@ -2951,7 +3308,21 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
         </div>
       </div>
 
-      <div className="detail-grid">
+      <div className="detail-tabs" role="tablist" aria-label={`${agentKit.name} detail tabs`}>
+        {agentKitDetailTabs.map((tab) => (
+          <button
+            type="button"
+            className={activeTab === tab ? "is-selected" : ""}
+            onClick={() => setActiveTab(tab)}
+            key={tab}
+          >
+            {formatPackType(tab)}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "overview" ? (
+        <div className="detail-grid">
         <article className="detail-card summary-card">
           <h2>
             <Sparkles size={19} aria-hidden="true" />
@@ -2963,9 +3334,23 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
             <Fact label="Privacy" value={formatPackType(agentKit.privacyMode)} />
             <Fact label="Context Packs" value={agentKit.counts.contextPacks} />
             <Fact label="Skills" value={agentKit.counts.skills} />
+            <Fact label="Export Profiles" value={agentKit.counts.exportProfiles} />
+            <Fact label="Token Budget" value={agentKit.tokenBudget ?? "Warning only"} />
           </dl>
         </article>
+        <article className="detail-card">
+          <h2>Boundaries</h2>
+          <ul className="simple-list">
+            <li><span>No execution</span><strong>{String(agentKit.manifest.containsExecutableCode === false)}</strong></li>
+            <li><span>No network requirement</span><strong>{String(agentKit.manifest.requiresNetwork === false)}</strong></li>
+            <li><span>Visibility</span><strong>{formatPackType(agentKit.visibility)}</strong></li>
+            <li><span>Review Queue</span><strong>{agentKit.reviewQueueCount}</strong></li>
+          </ul>
+        </article>
+        </div>
+      ) : null}
 
+      {activeTab === "context-packs" ? (
         <article className="detail-card">
           <h2>Context Packs</h2>
           <ul className="simple-list">
@@ -2977,7 +3362,9 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
             ))}
           </ul>
         </article>
+      ) : null}
 
+      {activeTab === "skills" ? (
         <article className="detail-card">
           <h2>Skills</h2>
           <ul className="simple-list">
@@ -2989,12 +3376,90 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
             ))}
           </ul>
         </article>
+      ) : null}
 
+      {activeTab === "rules" ? (
+        <article className="detail-card">
+          <h2>Rules</h2>
+          <dl className="fact-grid">
+            <Fact label="Default Export" value={String(agentKit.manifest.exportProfile ?? "Not set")} />
+            <Fact label="Compatibility" value={formatPackType(String((agentKit.manifest.compatibility as { contextarr?: string } | undefined)?.contextarr ?? "current"))} />
+            <Fact label="Required Packs" value={agentKit.contextPacks.length} />
+            <Fact label="Required Skills" value={agentKit.skills.length} />
+          </dl>
+          <p className="muted-note">Agent Kits prepare validated export briefs only; Contextarr does not run kits or execute Skills.</p>
+        </article>
+      ) : null}
+
+      {activeTab === "exports" ? (
         <article className="detail-card">
           <h2>Export Profiles</h2>
-          <ProfileList profiles={agentKit.exportProfiles} />
+          <div className="profile-grid">
+            {agentKit.exportProfiles.map((profile) => (
+              <article className="profile-card" key={profile.id}>
+                <strong>{profile.name}</strong>
+                <span>{formatPackType(profile.target)} / {profile.format}</span>
+                <em>{profile.privacyMode ?? "redacted"}</em>
+                <button
+                  className="ghost-action"
+                  type="button"
+                  onClick={() => void previewExport(profile.id)}
+                  disabled={previewingProfileId === profile.id}
+                >
+                  Preview
+                </button>
+              </article>
+            ))}
+          </div>
+          {previewError ? <p className="error-note">{previewError}</p> : null}
+          {preview ? (
+            <div className="export-preview">
+              <div className="export-preview-header">
+                <div>
+                  <h3>{preview.filename}</h3>
+                  <p>{formatPackType(preview.target)} / {preview.format}</p>
+                </div>
+                <span className="status-pill info">{formatPackType(preview.contentStatus)}</span>
+              </div>
+              <div className="stat-grid">
+                <Stat value={preview.includedContextPacks.length} label="Context Packs" />
+                <Stat value={preview.includedSkills.length} label="Skills" />
+                <Stat value={preview.warnings.length} label="Warnings" />
+              </div>
+              {preview.warnings.length > 0 ? (
+                <ul className="simple-list">
+                  {preview.warnings.map((warning) => (
+                    <li key={warning.code}>
+                      <span>{warning.message}</span>
+                      <strong>{warning.code}</strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
         </article>
-      </div>
+      ) : null}
+
+      {activeTab === "health" ? (
+        <article className="detail-card">
+          <h2>Health</h2>
+          {health ? (
+            <>
+              <div className="stat-grid">
+                <Stat value={`${health.score}%`} label="Score" />
+                <Stat value={formatPackType(health.status)} label="Status" />
+                <Stat value={health.reviewQueueCount} label="Open Items" />
+                <Stat value={health.items.length} label="Active Items" />
+              </div>
+              <HealthChecks checks={health.checks} />
+              <ReviewItemList items={health.items} packs={[]} skills={[]} agentKits={[agentKit]} compact />
+            </>
+          ) : (
+            <p className="muted-note">Agent Kit health is unavailable.</p>
+          )}
+        </article>
+      ) : null}
     </section>
   );
 }
@@ -3092,15 +3557,19 @@ function ReviewFiltersBar({
   filters,
   packs,
   skills,
+  agentKits,
   onChange
 }: {
   filters: ReviewFilters;
   packs: PackSummary[];
   skills: SkillSummary[];
+  agentKits: AgentKitSummary[];
   onChange(filters: ReviewFilters): void;
 }) {
   const selectableObjects =
-    filters.objectType === "skill"
+    filters.objectType === "agent_kit"
+      ? agentKits.map((agentKit) => ({ id: agentKit.id, name: agentKit.name }))
+      : filters.objectType === "skill"
       ? skills.map((skill) => ({ id: skill.id, name: skill.name }))
       : filters.objectType === "pack"
         ? packs.map((pack) => ({ id: pack.id, name: pack.name }))
@@ -3123,6 +3592,7 @@ function ReviewFiltersBar({
           <option value="all">All objects</option>
           <option value="pack">Context Packs</option>
           <option value="skill">Skills</option>
+          <option value="agent_kit">Agent Kits</option>
         </select>
       </label>
       <label className="select-control">
@@ -3164,13 +3634,21 @@ function ReviewFiltersBar({
         </select>
       </label>
       <label className="select-control">
-        {filters.objectType === "skill" ? <BookOpen size={16} aria-hidden="true" /> : <Package size={16} aria-hidden="true" />}
+        {filters.objectType === "agent_kit" ? (
+          <Sparkles size={16} aria-hidden="true" />
+        ) : filters.objectType === "skill" ? (
+          <BookOpen size={16} aria-hidden="true" />
+        ) : (
+          <Package size={16} aria-hidden="true" />
+        )}
         <select
           value={filters.objectId}
           onChange={(event) => onChange({ ...filters, objectId: event.target.value })}
           disabled={filters.objectType === "all"}
         >
-          <option value="all">{filters.objectType === "skill" ? "All skills" : "All packs"}</option>
+          <option value="all">
+            {filters.objectType === "agent_kit" ? "All Agent Kits" : filters.objectType === "skill" ? "All skills" : "All packs"}
+          </option>
           {selectableObjects.map((object) => (
             <option value={object.id} key={object.id}>
               {object.name}
@@ -3186,11 +3664,13 @@ function ReviewItemCard({
   item,
   packs,
   skills,
+  agentKits,
   onUpdateStatus
 }: {
   item: ReviewItem;
   packs: PackSummary[];
   skills: SkillSummary[];
+  agentKits: AgentKitSummary[];
   onUpdateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed"): void;
 }) {
   return (
@@ -3204,7 +3684,7 @@ function ReviewItemCard({
         <h2>{item.message}</h2>
         <p>{item.suggestedAction}</p>
         <div className="review-card-meta">
-          {reviewObjectAnchor(item, packs, skills)}
+          {reviewObjectAnchor(item, packs, skills, agentKits)}
           {item.recordId ? reviewDocumentAnchor(item) : null}
           {item.sourceId ? <span>{item.sourceId}</span> : null}
         </div>
@@ -3231,11 +3711,13 @@ function ReviewItemList({
   items,
   packs,
   skills = [],
+  agentKits = [],
   compact = false
 }: {
   items: ReviewItem[];
   packs: PackSummary[];
   skills?: SkillSummary[];
+  agentKits?: AgentKitSummary[];
   compact?: boolean;
 }) {
   if (items.length === 0) {
@@ -3255,7 +3737,7 @@ function ReviewItemList({
             <h2>{item.message}</h2>
             <p>{item.suggestedAction}</p>
             <div className="review-card-meta">
-              {reviewObjectAnchor(item, packs, skills)}
+              {reviewObjectAnchor(item, packs, skills, agentKits)}
               {item.recordId ? reviewDocumentAnchor(item) : null}
             </div>
           </div>
@@ -3281,7 +3763,12 @@ function reviewFiltersToQuery(filters: ReviewFilters): {
   };
 }
 
-function reviewObjectAnchor(item: ReviewItem, packs: PackSummary[], skills: SkillSummary[]) {
+function reviewObjectAnchor(item: ReviewItem, packs: PackSummary[], skills: SkillSummary[], agentKits: AgentKitSummary[]) {
+  if (item.objectType === "agent_kit") {
+    const agentKitId = item.agentKitId ?? item.objectId;
+    return <a href={agentKitHref(agentKitId)}>{reviewAgentKitName(agentKitId, agentKits)}</a>;
+  }
+
   if (item.objectType === "skill") {
     const skillId = item.skillId ?? item.objectId;
     return <a href={skillHref(skillId)}>{reviewSkillName(skillId, skills)}</a>;
@@ -3370,6 +3857,23 @@ function SkillCover({ skill, variant }: { skill: SkillSummary; variant: "large" 
   );
 }
 
+function AgentKitCover({ agentKit, variant }: { agentKit: AgentKitSummary; variant: "large" | "thumb" | "mini" }) {
+  const cover = createAgentKitCoverVisual(agentKit);
+
+  return (
+    <div className={`pack-cover pack-cover-${variant}`} style={{ "--accent": cover.accentColor } as CSSProperties}>
+      {cover.coverImage ? (
+        <img src={cover.coverImage} alt="" />
+      ) : (
+        <>
+          <Sparkles size={variant === "mini" ? 18 : variant === "thumb" ? 30 : 52} aria-hidden="true" />
+          <span>{cover.initials}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function HealthBadge({ pack }: { pack: PackSummary }) {
   return (
     <span className={`health-badge ${pack.healthStatus}`}>
@@ -3388,6 +3892,15 @@ function SkillHealthBadge({ skill }: { skill: SkillSummary }) {
   );
 }
 
+function AgentKitHealthBadge({ agentKit }: { agentKit: AgentKitSummary }) {
+  return (
+    <span className={`health-badge ${agentKit.healthStatus}`}>
+      <HeartPulse size={14} aria-hidden="true" />
+      {agentKit.healthScore}%
+    </span>
+  );
+}
+
 function TrustBadge({ pack }: { pack: PackSummary }) {
   return (
     <span className="trust-badge">
@@ -3402,6 +3915,15 @@ function SkillTrustBadge({ skill }: { skill: SkillSummary }) {
     <span className="trust-badge">
       <ShieldCheck size={14} aria-hidden="true" />
       {formatPackType(skill.trustLevel)}
+    </span>
+  );
+}
+
+function AgentKitTrustBadge({ agentKit }: { agentKit: AgentKitSummary }) {
+  return (
+    <span className="trust-badge">
+      <ShieldCheck size={14} aria-hidden="true" />
+      {formatPackType(agentKit.trustLevel)}
     </span>
   );
 }

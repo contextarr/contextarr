@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 22: Agent Kit Composer UI.
+This repository is in Phase 23: Agent Kit Library/Detail/Health.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -74,6 +74,7 @@ Current scope:
 - Eight public-safe demo Agent Kits under `demo-agent-kits/`.
 - Phase 21 rebuildable SQLite index and read-only API endpoints for Agent Kits, included Context Packs, included Skills, export profile metadata, and Agent Kit-scoped search.
 - Phase 22 Agent Kit Composer UI for selecting existing Context Packs and Skills, saving validated local Agent Kit files under the configured local Agent Kit directory, and opening saved Agent Kit detail views.
+- Phase 23 read-only Agent Kit Library and Detail views plus Agent Kit health/review status derived from SQLite.
 
 Not included yet:
 
@@ -208,6 +209,7 @@ pnpm phase11:verify
 pnpm phase12:verify
 pnpm phase21:verify
 pnpm phase22:verify
+pnpm phase23:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill

@@ -175,6 +175,21 @@ export interface AgentKitDetail extends AgentKitSummary {
   exportProfiles: ExportProfileSummary[];
 }
 
+export interface AgentKitExportPreview {
+  agentKitId: string;
+  profileId: string;
+  target: string;
+  format: string;
+  privacyMode?: string | null;
+  tokenBudget?: number | null;
+  filename: string;
+  content: string | null;
+  contentStatus: string;
+  includedContextPacks: AgentKitContextPackSummary[];
+  includedSkills: AgentKitSkillSummary[];
+  warnings: ExportWarning[];
+}
+
 export interface CreateAgentKitRequest {
   id?: string;
   name: string;
@@ -355,7 +370,7 @@ export interface SkillDetail extends SkillSummary {
 
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
-export type ReviewObjectType = "pack" | "skill";
+export type ReviewObjectType = "pack" | "skill" | "agent_kit";
 export type ReviewItemType =
   | "validation"
   | "freshness"
@@ -379,6 +394,7 @@ export interface ReviewItem {
   severity: ReviewItemSeverity;
   packId: string;
   skillId: string | null;
+  agentKitId: string | null;
   recordId: string | null;
   sourceId: string | null;
   message: string;
@@ -400,7 +416,7 @@ export interface ReviewItemsResponse {
 }
 
 export interface HealthCheck {
-  id: ReviewItemType;
+  id: string;
   label: string;
   status: "pass" | "warning" | "error";
   count: number;
@@ -417,6 +433,15 @@ export interface PackHealthResponse {
 
 export interface SkillHealthResponse {
   skillId: string;
+  score: number;
+  status: string;
+  reviewQueueCount: number;
+  checks: HealthCheck[];
+  items: ReviewItem[];
+}
+
+export interface AgentKitHealthResponse {
+  agentKitId: string;
   score: number;
   status: string;
   reviewQueueCount: number;
@@ -471,6 +496,7 @@ export type Route =
   | { name: "record"; recordId: string }
   | { name: "skills" }
   | { name: "skill"; skillId: string }
+  | { name: "agentKits" }
   | { name: "agentKit"; agentKitId: string }
   | { name: "reviewQueue" }
   | { name: "composer"; mode?: ComposerMode }

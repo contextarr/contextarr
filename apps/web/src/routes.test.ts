@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agentKitHref,
+  agentKitsHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -39,6 +40,7 @@ describe("hash routes", () => {
   });
 
   it("parses Agent Kit detail routes", () => {
+    expect(parseHashRoute("#/agent-kits")).toEqual({ name: "agentKits" });
     expect(parseHashRoute("#/agent-kits/support-ticket-writing-kit")).toEqual({
       name: "agentKit",
       agentKitId: "support-ticket-writing-kit"
@@ -58,6 +60,7 @@ describe("hash routes", () => {
     expect(recordHref("record/id")).toBe("#/records/record%2Fid");
     expect(skillsHref()).toBe("#/skills");
     expect(skillHref("skill/id")).toBe("#/skills/skill%2Fid");
+    expect(agentKitsHref()).toBe("#/agent-kits");
     expect(agentKitHref("agent kit/id")).toBe("#/agent-kits/agent%20kit%2Fid");
     expect(reviewQueueHref()).toBe("#/review-queue");
     expect(composerHref()).toBe("#/composer");

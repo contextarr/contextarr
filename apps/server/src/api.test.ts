@@ -205,6 +205,37 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("rejects remote Context Pack cover image refs before they reach web clients", async () => {
+    const packId = "ai-workstation-pack";
+    const manifestJson = db.prepare("SELECT manifest_json FROM packs WHERE id = ?").pluck().get(packId) as string;
+    const manifest = JSON.parse(manifestJson) as Record<string, unknown>;
+    db.prepare("UPDATE packs SET manifest_json = ?, cover_image = ? WHERE id = ?").run(
+      JSON.stringify({
+        ...manifest,
+        assets: {
+          ...(manifest.assets as Record<string, unknown>),
+          coverImage: "https://example.invalid/pack-cover.png"
+        }
+      }),
+      "https://example.invalid/pack-cover.png",
+      packId
+    );
+
+    const app = createApp({ config, db });
+    const detail = await app.inject({ method: "GET", url: `/api/packs/${packId}` });
+    const list = await app.inject({ method: "GET", url: "/api/packs" });
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().coverImage).toBeNull();
+    expect(detail.json().manifest.assets).not.toHaveProperty("coverImage");
+    expect(list.statusCode).toBe(200);
+    expect(list.json().packs.find((pack: { id: string }) => pack.id === packId).coverImage).toBeNull();
+    expect(JSON.stringify(detail.json())).not.toContain("example.invalid");
+    expect(JSON.stringify(list.json())).not.toContain("example.invalid");
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/skills returns demo Skill summaries", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/skills" });
@@ -301,6 +332,57 @@ describe("Contextarr API", () => {
       expect(healthResponse.statusCode).toBe(200);
       expect(healthResponse.json()).toMatchObject({
         skillId: skill.id,
+        score: 100,
+        status: "healthy",
+        reviewQueueCount: 0
+      });
+    }
+
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id/health returns deterministic Agent Kit health checks", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/health" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      agentKitId: "support-ticket-writing-kit",
+      score: 100,
+      status: "healthy",
+      reviewQueueCount: 0
+    });
+    expect(response.json().checks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "validation", status: "pass" })])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id/health returns 404 for unknown Agent Kits", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/agent-kits/missing-local-kit/health" });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({
+      error: "not_found",
+      message: "Agent Kit not found: missing-local-kit"
+    });
+    await app.close();
+    db.close();
+  });
+
+  it("keeps every demo Agent Kit healthy with an empty review queue", async () => {
+    const app = createApp({ config, db });
+    const agentKitsResponse = await app.inject({ method: "GET", url: "/api/agent-kits" });
+
+    expect(agentKitsResponse.statusCode).toBe(200);
+    for (const agentKit of agentKitsResponse.json().agentKits as Array<{ id: string }>) {
+      const healthResponse = await app.inject({ method: "GET", url: `/api/agent-kits/${agentKit.id}/health` });
+      expect(healthResponse.statusCode).toBe(200);
+      expect(healthResponse.json()).toMatchObject({
+        agentKitId: agentKit.id,
         score: 100,
         status: "healthy",
         reviewQueueCount: 0
@@ -559,6 +641,62 @@ describe("Contextarr API", () => {
         payload: { status: "ignored" }
       });
       const after = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+
+      expect(update.statusCode).toBe(200);
+      expect(after.json().reviewQueueCount).toBe(before.json().reviewQueueCount - 1);
+      expect(after.json().score).toBeGreaterThan(before.json().score);
+      expect(after.json().status).toBe(expectedHealthStatus(after.json().score));
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("GET /api/review-items filters Agent Kit items and status updates refresh Agent Kit health", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-agent-kit-status-"));
+    const agentKitRoot = path.join(tempRoot, "support-ticket-writing-kit");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), agentKitRoot, { recursive: true });
+      const manifestPath = path.join(agentKitRoot, "contextarr-agent-kit.json");
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { lastReviewedAt: string };
+      manifest.lastReviewedAt = "2025-01-01T00:00:00Z";
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, {
+        demoAgentKitsDir: tempRoot,
+        agentKitsDir: path.join(os.tmpdir(), "contextarr-no-local-agent-kits")
+      });
+      const app = createApp(fixtureContext);
+      const before = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/health" });
+      const filtered = await app.inject({
+        method: "GET",
+        url: "/api/review-items?objectType=agent_kit&objectId=support-ticket-writing-kit"
+      });
+      const reviewItem = before.json().items.find((item: { type: string }) => item.type === "freshness");
+
+      expect(before.statusCode).toBe(200);
+      expect(filtered.statusCode).toBe(200);
+      expect(filtered.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            objectType: "agent_kit",
+            objectId: "support-ticket-writing-kit",
+            agentKitId: "support-ticket-writing-kit",
+            type: "freshness"
+          })
+        ])
+      );
+      expect(reviewItem).toBeDefined();
+
+      const update = await app.inject({
+        method: "POST",
+        url: `/api/review-items/${reviewItem.id}/status`,
+        payload: { status: "ignored" }
+      });
+      const after = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/health" });
 
       expect(update.statusCode).toBe(200);
       expect(after.json().reviewQueueCount).toBe(before.json().reviewQueueCount - 1);
@@ -1078,9 +1216,40 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("rejects remote Agent Kit cover image refs before they reach web clients", async () => {
+    const agentKitId = "support-ticket-writing-kit";
+    const manifestJson = db.prepare("SELECT manifest_json FROM agent_kits WHERE id = ?").pluck().get(agentKitId) as string;
+    const manifest = JSON.parse(manifestJson) as Record<string, unknown>;
+    db.prepare("UPDATE agent_kits SET manifest_json = ?, cover_image = ? WHERE id = ?").run(
+      JSON.stringify({
+        ...manifest,
+        assets: {
+          ...(manifest.assets as Record<string, unknown>),
+          coverImage: "https://example.invalid/agent-kit-cover.png"
+        }
+      }),
+      "https://example.invalid/agent-kit-cover.png",
+      agentKitId
+    );
+
+    const app = createApp({ config, db });
+    const detail = await app.inject({ method: "GET", url: `/api/agent-kits/${agentKitId}` });
+    const list = await app.inject({ method: "GET", url: "/api/agent-kits" });
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().coverImage).toBeNull();
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().agentKits.find((kit: { id: string }) => kit.id === agentKitId).coverImage).toBeNull();
+    expect(JSON.stringify(detail.json())).not.toContain("example.invalid");
+    expect(JSON.stringify(list.json())).not.toContain("example.invalid");
+    await app.close();
+    db.close();
+  });
+
   it("sanitizes referenced Context Pack cover images in Agent Kit responses", async () => {
     db.prepare("UPDATE packs SET cover_image = ? WHERE id = ?").run("D:\\private\\pack-cover.png", "internal-support-kb-pack");
-    db.prepare("UPDATE packs SET cover_image = ? WHERE id = ?").run("/home/rob/private/pack-cover.png", "fake-product-line-pack");
+    db.prepare("UPDATE packs SET cover_image = ? WHERE id = ?").run("https://example.invalid/pack-cover.png", "fake-product-line-pack");
 
     const app = createApp({ config, db });
     const contextPacks = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/context-packs" });
@@ -1094,7 +1263,8 @@ describe("Contextarr API", () => {
     expect(preview.statusCode).toBe(200);
     expect(preview.json().includedContextPacks.map((pack: { coverImage: string | null }) => pack.coverImage)).toEqual([null, null]);
     expect(JSON.stringify(contextPacks.json())).not.toContain("D:\\private");
-    expect(JSON.stringify(preview.json())).not.toContain("/home/rob/private");
+    expect(JSON.stringify(contextPacks.json())).not.toContain("example.invalid");
+    expect(JSON.stringify(preview.json())).not.toContain("example.invalid");
     await app.close();
     db.close();
   });
@@ -1585,6 +1755,12 @@ describe("Contextarr API", () => {
       url: "/api/skills/support-ticket-writing-skill/health",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedAgentKitHealth = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/health" });
+    const allowedAgentKitHealth = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/health",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(blockedSkills.statusCode).toBe(401);
     expect(allowedSkills.statusCode).toBe(200);
@@ -1598,6 +1774,8 @@ describe("Contextarr API", () => {
     expect(allowedRescan.statusCode).toBe(200);
     expect(blockedSkillHealth.statusCode).toBe(401);
     expect(allowedSkillHealth.statusCode).toBe(200);
+    expect(blockedAgentKitHealth.statusCode).toBe(401);
+    expect(allowedAgentKitHealth.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

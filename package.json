@@ -46,7 +46,8 @@
     "agent-kits:validate": "pnpm --filter @contextarr/cli contextarr validate-agent-kit demo-agent-kits",
     "phase20:verify": "pnpm phase19:verify && pnpm agent-kits:validate && pnpm --filter @contextarr/agent-kit-validator test",
     "phase21:verify": "pnpm phase20:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/server rescan",
-    "phase22:verify": "pnpm phase21:verify && pnpm docs:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build"
+    "phase22:verify": "pnpm phase21:verify && pnpm docs:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
+    "phase23:verify": "pnpm phase22:verify && pnpm docs:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

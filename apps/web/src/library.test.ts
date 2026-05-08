@@ -75,6 +75,13 @@ describe("Pack library utilities", () => {
     });
   });
 
+  it("falls back instead of rendering remote or absolute pack cover image refs", () => {
+    expect(createCoverVisual(pack({ coverImage: "assets/local-cover.svg" })).coverImage).toBe("assets/local-cover.svg");
+    expect(createCoverVisual(pack({ coverImage: "https://example.invalid/pixel.png" })).coverImage).toBeNull();
+    expect(createCoverVisual(pack({ coverImage: "D:\\private\\cover.png" })).coverImage).toBeNull();
+    expect(createCoverVisual(pack({ coverImage: "../private/cover.png" })).coverImage).toBeNull();
+  });
+
   it("persists only valid library views", () => {
     const storage = createMemoryStorage();
     expect(getInitialLibraryView(storage)).toBe("compact");

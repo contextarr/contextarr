@@ -39,6 +39,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 20: fake public-safe demo Agent Kits. Complete.
 - Phase 21: Agent Kit index and API. Complete.
 - Phase 22: Agent Kit Composer UI. Complete.
+- Phase 23: Agent Kit Library, detail, and health. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -46,7 +47,7 @@ Contextarr prepares Agent Kits. It does not run them.
 
 ## Deferred
 
-- Agent Kit health and export engine.
+- Agent Kit export engine.
 - Read-only MCP for Skills and Agent Kits.
 - Web importer UI.
 - API import endpoints.

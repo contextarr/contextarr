@@ -105,7 +105,7 @@ describe("Contextarr API client", () => {
     ]);
   });
 
-  it("reads Agent Kit library, detail, relationships, and posts save requests", async () => {
+  it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({
       fetchImpl: async (url, init) => {
@@ -115,6 +115,23 @@ describe("Contextarr API client", () => {
         }
         if (String(url).endsWith("/skills")) {
           return jsonResponse({ skills: [{ id: "skill-1" }] });
+        }
+        if (String(url).endsWith("/health")) {
+          return jsonResponse({ agentKitId: "kit-1", score: 100, checks: [], items: [] });
+        }
+        if (String(url).endsWith("/exports/profile-1/preview")) {
+          return jsonResponse({
+            agentKitId: "kit-1",
+            profileId: "profile-1",
+            target: "codex",
+            format: "markdown",
+            filename: "profile-1.md",
+            content: null,
+            contentStatus: "scheduled_for_phase_24",
+            includedContextPacks: [],
+            includedSkills: [],
+            warnings: []
+          });
         }
         if (String(url).includes("/api/agent-kits/kit-1")) {
           return jsonResponse({ id: "kit-1", name: "Kit One" });
@@ -130,6 +147,10 @@ describe("Contextarr API client", () => {
     await expect(client.getAgentKit("kit-1")).resolves.toMatchObject({ name: "Kit One" });
     await expect(client.getAgentKitContextPacks("kit-1")).resolves.toEqual([{ id: "pack-1" }]);
     await expect(client.getAgentKitSkills("kit-1")).resolves.toEqual([{ id: "skill-1" }]);
+    await expect(client.getAgentKitHealth("kit-1")).resolves.toMatchObject({ agentKitId: "kit-1" });
+    await expect(client.getAgentKitExportPreview("kit-1", "profile-1")).resolves.toMatchObject({
+      contentStatus: "scheduled_for_phase_24"
+    });
     await expect(
       client.saveAgentKit({
         id: "kit-1",
@@ -173,13 +194,15 @@ describe("Contextarr API client", () => {
       "/api/agent-kits/kit-1",
       "/api/agent-kits/kit-1/context-packs",
       "/api/agent-kits/kit-1/skills",
+      "/api/agent-kits/kit-1/health",
+      "/api/agent-kits/kit-1/exports/profile-1/preview",
       "/api/agent-kits"
     ]);
-    expect(requests[4].init).toMatchObject({
+    expect(requests[6].init).toMatchObject({
       method: "POST",
       headers: { "Content-Type": "application/json" }
     });
-    const body = JSON.parse(String(requests[4].init?.body));
+    const body = JSON.parse(String(requests[6].init?.body));
     expect(body).toMatchObject({
       name: "Kit One",
       contextPacks: ["pack-1"],

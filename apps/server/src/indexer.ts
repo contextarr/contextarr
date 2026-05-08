@@ -5,10 +5,13 @@ import {
   buildHealthChecks,
   calculateHealthScore,
   createReviewItemId,
+  generateAgentKitReviewItems,
   generatePackReviewItems,
+  generateSkippedAgentKitReviewItems,
   generateSkippedPackReviewItems,
   generateSkillReviewItems,
   generateSkippedSkillReviewItems,
+  type AgentKitReferenceStatus,
   type ReviewItemCandidate
 } from "./health";
 import { loadAgentKits, type LoadAgentKitsOptions } from "./agent-kit-loader";
@@ -20,6 +23,7 @@ import type {
   LoadedPack,
   LoadedSkill,
   LoadedSkillDocument,
+  AgentKitHealthDetail,
   PackHealthDetail,
   PackSummary,
   RebuildIndexResult,
@@ -51,11 +55,30 @@ export function rebuildIndex(
         new Set(loadedSkills.skills.map((skill) => skill.manifest.id))
       )
     : { agentKits: [], skipped: [] };
-  const reviewCandidates = [
-    ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, new Date(indexedAt))),
+  const now = new Date(indexedAt);
+  const packAndSkillReviewCandidates = [
+    ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, now)),
     ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped)),
-    ...loadedSkills.skills.flatMap((skill) => generateSkillReviewItems(skill, new Date(indexedAt))),
+    ...loadedSkills.skills.flatMap((skill) => generateSkillReviewItems(skill, now)),
     ...loadedSkills.skipped.flatMap((skipped) => generateSkippedSkillReviewItems(skipped))
+  ];
+  const existingReviewItemStatuses = getExistingReviewItemStatuses(db, packAndSkillReviewCandidates);
+  const reviewCandidates = [
+    ...packAndSkillReviewCandidates,
+    ...loadedAgentKits.agentKits.flatMap((agentKit) =>
+      generateAgentKitReviewItems(
+        agentKit,
+        now,
+        buildAgentKitReferenceStatuses(
+          agentKit,
+          loaded.packs,
+          loadedSkills.skills,
+          packAndSkillReviewCandidates,
+          existingReviewItemStatuses
+        )
+      )
+    ),
+    ...loadedAgentKits.skipped.flatMap((skipped) => generateSkippedAgentKitReviewItems(skipped))
   ];
 
   const transaction = db.transaction(() => {
@@ -85,7 +108,8 @@ export function rebuildIndex(
     }
 
     for (const agentKit of loadedAgentKits.agentKits) {
-      const health = calculateHealthScore([]);
+      const agentKitReviewItems = reviewItemsByObject.get(reviewObjectKey("agent_kit", agentKit.manifest.id)) ?? [];
+      const health = calculateHealthScore(agentKitReviewItems);
       insertAgentKit(db, agentKit, indexedAt, health);
       insertAgentKitRelationships(db, agentKit);
       insertAgentKitExportProfiles(db, agentKit);
@@ -159,6 +183,103 @@ function normalizeAgentKitDirs(agentKitsDir: string | string[] | undefined): str
     seen.add(resolved);
     return true;
   });
+}
+
+function buildAgentKitReferenceStatuses(
+  agentKit: LoadedAgentKit,
+  packs: LoadedPack[],
+  skills: LoadedSkill[],
+  candidates: ReviewItemCandidate[],
+  existingStatuses: Map<string, ReviewItemStatus> = new Map()
+): AgentKitReferenceStatus[] {
+  const packMap = new Map(packs.map((pack) => [pack.manifest.id, pack]));
+  const skillMap = new Map(skills.map((skill) => [skill.manifest.id, skill]));
+
+  return [
+    ...agentKit.manifest.contextPacks.map((packId): AgentKitReferenceStatus => {
+      const pack = packMap.get(packId);
+      const referenceItems = candidates
+        .filter((candidate) => candidate.objectType === "pack" && candidate.objectId === packId)
+        .map((item) => ({
+          severity: item.severity,
+          status: reviewItemStatusForCandidate(item, existingStatuses)
+        }));
+      const activeItems = activeReviewItems(referenceItems);
+      const openItems = referenceItems.filter((item) => item.status === "open");
+      const health = calculateHealthScore(referenceItems);
+
+      return {
+        kind: "context_pack",
+        id: packId,
+        found: Boolean(pack),
+        trustLevel: pack?.manifest.trustLevel,
+        healthScore: health.score,
+        healthStatus: health.status,
+        activeIssueCount: activeItems.length,
+        activeErrorCount: activeItems.filter((item) => item.severity === "error").length,
+        activeWarningCount: activeItems.filter((item) => item.severity === "warning").length,
+        reviewQueueCount: health.reviewQueueCount,
+        openErrorCount: openItems.filter((item) => item.severity === "error").length,
+        openWarningCount: openItems.filter((item) => item.severity === "warning").length
+      };
+    }),
+    ...agentKit.manifest.skills.map((skillId): AgentKitReferenceStatus => {
+      const skill = skillMap.get(skillId);
+      const referenceItems = candidates
+        .filter((candidate) => candidate.objectType === "skill" && candidate.objectId === skillId)
+        .map((item) => ({
+          severity: item.severity,
+          status: reviewItemStatusForCandidate(item, existingStatuses)
+        }));
+      const activeItems = activeReviewItems(referenceItems);
+      const openItems = referenceItems.filter((item) => item.status === "open");
+      const health = calculateHealthScore(referenceItems);
+
+      return {
+        kind: "skill",
+        id: skillId,
+        found: Boolean(skill),
+        trustLevel: skill?.manifest.trustLevel,
+        healthScore: health.score,
+        healthStatus: health.status,
+        activeIssueCount: activeItems.length,
+        activeErrorCount: activeItems.filter((item) => item.severity === "error").length,
+        activeWarningCount: activeItems.filter((item) => item.severity === "warning").length,
+        reviewQueueCount: health.reviewQueueCount,
+        openErrorCount: openItems.filter((item) => item.severity === "error").length,
+        openWarningCount: openItems.filter((item) => item.severity === "warning").length
+      };
+    })
+  ];
+}
+
+function getExistingReviewItemStatuses(
+  db: ContextarrDatabase,
+  candidates: ReviewItemCandidate[]
+): Map<string, ReviewItemStatus> {
+  const statuses = new Map<string, ReviewItemStatus>();
+  const selectStatus = db.prepare("SELECT status FROM review_items WHERE fingerprint = ?");
+
+  for (const fingerprint of new Set(candidates.map((candidate) => candidate.fingerprint))) {
+    const row = selectStatus.get(fingerprint) as Row | undefined;
+    if (typeof row?.status === "string" && reviewItemStatuses.includes(row.status as ReviewItemStatus)) {
+      statuses.set(fingerprint, row.status as ReviewItemStatus);
+    }
+  }
+
+  return statuses;
+}
+
+function reviewItemStatusForCandidate(
+  candidate: ReviewItemCandidate,
+  existingStatuses: Map<string, ReviewItemStatus>
+): ReviewItemStatus {
+  const status = existingStatuses.get(candidate.fingerprint);
+  return status ?? "open";
+}
+
+function activeReviewItems<T extends { status: ReviewItemStatus }>(items: T[]): T[] {
+  return items.filter((item) => item.status !== "ignored" && item.status !== "resolved");
 }
 
 function loadAgentKitsForIndex(
@@ -294,7 +415,8 @@ export function getPacks(db: ContextarrDatabase): PackSummary[] {
       FROM packs
       ORDER BY name`
     )
-    .all() as PackSummary[];
+    .all()
+    .map((pack) => normalizePackSummary(pack as Row));
 }
 
 export function getPack(db: ContextarrDatabase, packId: string): unknown | undefined {
@@ -325,10 +447,10 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
     updatedAt: pack.updated_at,
     lastReviewedAt: pack.last_reviewed_at,
     accentColor: pack.accent_color,
-    coverImage: pack.cover_image,
+    coverImage: safePublicAssetRef(typeof pack.cover_image === "string" ? pack.cover_image : undefined),
     reviewQueueCount: pack.review_queue_count,
     packPath: pack.pack_path,
-    manifest: JSON.parse(String(pack.manifest_json)),
+    manifest: sanitizePackManifestForApi(JSON.parse(String(pack.manifest_json)) as Record<string, unknown>),
     counts: {
       records: pack.record_count,
       sources: pack.source_count,
@@ -683,6 +805,11 @@ export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilter
     values.push(filters.skillId);
   }
 
+  if (filters.agentKitId) {
+    where.push("object_type = 'agent_kit' AND object_id = ?");
+    values.push(filters.agentKitId);
+  }
+
   const sql = `
     SELECT *
     FROM review_items
@@ -738,6 +865,27 @@ export function getSkillHealth(db: ContextarrDatabase, skillId: string): SkillHe
     skillId,
     score: Number(skill.score),
     status: String(skill.status),
+    reviewQueueCount: score.reviewQueueCount,
+    checks: buildHealthChecks(items),
+    items
+  };
+}
+
+export function getAgentKitHealth(db: ContextarrDatabase, agentKitId: string): AgentKitHealthDetail | undefined {
+  const agentKit = db
+    .prepare("SELECT id AS agentKitId, health_score AS score, health_status AS status FROM agent_kits WHERE id = ?")
+    .get(agentKitId) as Row | undefined;
+  if (!agentKit) {
+    return undefined;
+  }
+
+  const items = getReviewItems(db, { agentKitId }).filter((item) => item.status !== "resolved");
+  const score = calculateHealthScore(items);
+
+  return {
+    agentKitId,
+    score: Number(agentKit.score),
+    status: String(agentKit.status),
     reviewQueueCount: score.reviewQueueCount,
     checks: buildHealthChecks(items),
     items
@@ -908,7 +1056,7 @@ function insertPack(
     containsExecutableCode: pack.manifest.containsExecutableCode ? 1 : 0,
     requiresNetwork: pack.manifest.requiresNetwork ? 1 : 0,
     accentColor: pack.manifest.assets.accentColor ?? null,
-    coverImage: pack.manifest.assets.coverImage ?? null,
+    coverImage: safePublicAssetRef(pack.manifest.assets.coverImage),
     packPath: path.resolve(pack.packPath),
     manifestJson: JSON.stringify(pack.manifest),
     validationErrors: pack.validation.summary.errors,
@@ -1330,11 +1478,11 @@ function syncReviewItems(
   const fingerprints = candidates.map((candidate) => candidate.fingerprint);
   const upsert = db.prepare(
     `INSERT INTO review_items (
-      id, fingerprint, object_type, object_id, type, severity, pack_id, skill_id, record_id, source_id,
+      id, fingerprint, object_type, object_id, type, severity, pack_id, skill_id, agent_kit_id, record_id, source_id,
       message, suggested_action, status, first_seen_at, last_seen_at,
       updated_at, metadata_json
     ) VALUES (
-      @id, @fingerprint, @objectType, @objectId, @type, @severity, @packId, @skillId, @recordId, @sourceId,
+      @id, @fingerprint, @objectType, @objectId, @type, @severity, @packId, @skillId, @agentKitId, @recordId, @sourceId,
       @message, @suggestedAction, 'open', @indexedAt, @indexedAt,
       @indexedAt, @metadataJson
     )
@@ -1345,14 +1493,12 @@ function syncReviewItems(
       severity = excluded.severity,
       pack_id = excluded.pack_id,
       skill_id = excluded.skill_id,
+      agent_kit_id = excluded.agent_kit_id,
       record_id = excluded.record_id,
       source_id = excluded.source_id,
       message = excluded.message,
       suggested_action = excluded.suggested_action,
-      status = CASE
-        WHEN review_items.status = 'resolved' THEN 'open'
-        ELSE review_items.status
-      END,
+      status = review_items.status,
       last_seen_at = excluded.last_seen_at,
       updated_at = excluded.updated_at,
       metadata_json = excluded.metadata_json`
@@ -1368,6 +1514,7 @@ function syncReviewItems(
       severity: candidate.severity,
       packId: candidate.packId,
       skillId: candidate.skillId,
+      agentKitId: candidate.agentKitId,
       recordId: candidate.recordId,
       sourceId: candidate.sourceId,
       message: candidate.message,
@@ -1399,6 +1546,11 @@ function refreshObjectHealthFromReviewItems(
   objectId: string,
   updatedAt: string
 ): void {
+  if (objectType === "agent_kit") {
+    refreshAgentKitHealthFromReviewItems(db, objectId, updatedAt);
+    return;
+  }
+
   if (objectType === "skill") {
     refreshSkillHealthFromReviewItems(db, objectId, updatedAt);
     return;
@@ -1444,6 +1596,23 @@ function refreshSkillHealthFromReviewItems(db: ContextarrDatabase, skillId: stri
     health.status,
     health.reviewQueueCount,
     skillId
+  );
+}
+
+function refreshAgentKitHealthFromReviewItems(db: ContextarrDatabase, agentKitId: string, _updatedAt: string): void {
+  const agentKit = db.prepare("SELECT id FROM agent_kits WHERE id = ?").get(agentKitId);
+  if (!agentKit) {
+    return;
+  }
+
+  const items = getReviewItems(db, { agentKitId }).filter((item) => item.status !== "resolved");
+  const health = calculateHealthScore(items);
+
+  db.prepare("UPDATE agent_kits SET health_score = ?, health_status = ?, review_queue_count = ? WHERE id = ?").run(
+    health.score,
+    health.status,
+    health.reviewQueueCount,
+    agentKitId
   );
 }
 
@@ -1531,6 +1700,30 @@ function normalizeSkillSummary(skill: Row): SkillSummary {
   };
 }
 
+function normalizePackSummary(pack: Row): PackSummary {
+  return {
+    id: String(pack.id),
+    name: String(pack.name),
+    version: String(pack.version),
+    description: String(pack.description),
+    type: String(pack.type),
+    visibility: String(pack.visibility),
+    trustLevel: String(pack.trustLevel),
+    healthScore: Number(pack.healthScore),
+    healthStatus: String(pack.healthStatus),
+    validationErrors: Number(pack.validationErrors),
+    validationWarnings: Number(pack.validationWarnings),
+    recordCount: Number(pack.recordCount),
+    sourceCount: Number(pack.sourceCount),
+    exportProfileCount: Number(pack.exportProfileCount),
+    accentColor: pack.accentColor ? String(pack.accentColor) : undefined,
+    coverImage: safePublicAssetRef(typeof pack.coverImage === "string" ? pack.coverImage : undefined),
+    reviewQueueCount: Number(pack.reviewQueueCount),
+    lastReviewedAt: pack.lastReviewedAt ? String(pack.lastReviewedAt) : null,
+    updatedAt: String(pack.updatedAt)
+  };
+}
+
 function normalizeAgentKitSummary(agentKit: Row): AgentKitSummary {
   return {
     id: String(agentKit.id),
@@ -1598,6 +1791,48 @@ function normalizeSkillDocument(document: Row): unknown {
     sources: JSON.parse(String(document.sourcesJson)),
     body: document.body,
     metadata: {}
+  };
+}
+
+function sanitizePackManifestForApi(manifest: Record<string, unknown>): Record<string, unknown> {
+  const permissions = isRecord(manifest.permissions) ? manifest.permissions : {};
+  const assets = isRecord(manifest.assets) ? manifest.assets : {};
+  const compatibility = isRecord(manifest.compatibility) ? manifest.compatibility : {};
+  const sanitizedAssets: Record<string, unknown> = {};
+  if (typeof assets.accentColor === "string") {
+    sanitizedAssets.accentColor = assets.accentColor;
+  }
+  const coverImage = safePublicAssetRef(typeof assets.coverImage === "string" ? assets.coverImage : undefined);
+  if (coverImage) {
+    sanitizedAssets.coverImage = coverImage;
+  }
+
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    type: manifest.type,
+    visibility: manifest.visibility,
+    trustLevel: manifest.trustLevel,
+    author: manifest.author,
+    license: manifest.license,
+    createdAt: manifest.createdAt,
+    updatedAt: manifest.updatedAt,
+    lastReviewedAt: manifest.lastReviewedAt,
+    containsPersonalData: manifest.containsPersonalData,
+    containsExecutableCode: manifest.containsExecutableCode,
+    requiresNetwork: manifest.requiresNetwork,
+    permissions: {
+      readVault: permissions.readVault,
+      writeDrafts: permissions.writeDrafts,
+      runCommands: permissions.runCommands,
+      networkAccess: permissions.networkAccess
+    },
+    assets: sanitizedAssets,
+    compatibility: {
+      contextarr: compatibility.contextarr
+    }
   };
 }
 
@@ -1697,12 +1932,14 @@ function safePublicAssetRef(value: string | undefined): string | null {
 
   const normalized = value.trim().replace(/\\/g, "/");
   if (
+    /^[A-Za-z][A-Za-z0-9+.-]*:/i.test(normalized) ||
     /^file:/i.test(normalized) ||
     /^[A-Za-z]:\//.test(normalized) ||
     normalized.startsWith("/") ||
     normalized.startsWith("//") ||
     normalized.startsWith("../") ||
-    normalized === ".."
+    normalized === ".." ||
+    /[\u0000-\u001F"'<>]/.test(normalized)
   ) {
     return null;
   }
@@ -1736,7 +1973,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeReviewItem(row: Row): ReviewItem {
-  const objectType = row.object_type === "skill" ? "skill" : "pack";
+  const objectType = row.object_type === "agent_kit" ? "agent_kit" : row.object_type === "skill" ? "skill" : "pack";
   const objectId = row.object_id ? String(row.object_id) : String(row.pack_id);
 
   return {
@@ -1748,6 +1985,7 @@ function normalizeReviewItem(row: Row): ReviewItem {
     severity: row.severity as ReviewItem["severity"],
     packId: String(row.pack_id),
     skillId: objectType === "skill" ? String(row.skill_id ?? objectId) : null,
+    agentKitId: objectType === "agent_kit" ? String(row.agent_kit_id ?? objectId) : null,
     recordId: row.record_id ? String(row.record_id) : null,
     sourceId: row.source_id ? String(row.source_id) : null,
     message: String(row.message),

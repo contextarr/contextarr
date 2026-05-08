@@ -34,7 +34,7 @@ The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP end
 
 ## Skills And Agent Kits
 
-Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Contextarr prepares Agent Kits. It does not run them.
+Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Phase 23 adds read-only Agent Kit Library and detail views plus local health/status artifacts. Contextarr prepares Agent Kits. It does not run them.
 
 Agent Kit saves are constrained to `CONTEXTARR_AGENT_KITS_DIR`, defaulting to ignored `agent-kits/`. The browser sends object IDs and metadata only; it never sends an output path. Saved kits are validated before they are indexed.
 

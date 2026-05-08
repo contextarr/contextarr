@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { openDatabase } from "./db";
 import {
   getIndexStats,
+  getAgentKitHealth,
   getPackHealth,
   getReviewItems,
   getSkillHealth,
@@ -291,6 +292,228 @@ describe("SQLite indexer", () => {
       expect(updatedHealth?.reviewQueueCount).toBe(health!.reviewQueueCount - 1);
       expect(updatedHealth!.score).toBeGreaterThan(health!.score);
       expect(updatedHealth!.status).toBe(calculateExpectedStatus(updatedHealth!.score));
+    } finally {
+      db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("tracks open review queue counts for valid unhealthy Agent Kits", () => {
+    const db = openDatabase(":memory:");
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-health-"));
+    const agentKitRoot = path.join(tempRoot, "support-ticket-writing-kit");
+
+    try {
+      fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), agentKitRoot, { recursive: true });
+      const manifestPath = path.join(agentKitRoot, "contextarr-agent-kit.json");
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { lastReviewedAt: string };
+      manifest.lastReviewedAt = "2025-01-01T00:00:00Z";
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+
+      rebuildIndex(db, demoPacksDir, demoSkillsDir, tempRoot);
+      const health = getAgentKitHealth(db, "support-ticket-writing-kit");
+      const items = getReviewItems(db, { objectType: "agent_kit", objectId: "support-ticket-writing-kit" });
+
+      expect(health).toMatchObject({
+        agentKitId: "support-ticket-writing-kit"
+      });
+      expect(health!.reviewQueueCount).toBeGreaterThanOrEqual(1);
+      expect(health!.score).toBeLessThan(100);
+      expect(health!.status).toBe(calculateExpectedStatus(health!.score));
+      expect(items).toEqual(expect.arrayContaining([expect.objectContaining({
+        objectType: "agent_kit",
+        objectId: "support-ticket-writing-kit",
+        agentKitId: "support-ticket-writing-kit",
+        type: "freshness",
+        status: "open"
+      })]));
+
+      const statusItem = items.find((item) => item.type === "freshness");
+      expect(statusItem).toBeDefined();
+      updateReviewItemStatus(db, statusItem!.id, "ignored", "2026-05-08T00:00:00.000Z");
+
+      const updatedHealth = getAgentKitHealth(db, "support-ticket-writing-kit");
+      expect(updatedHealth?.items.find((item) => item.id === statusItem!.id)?.status).toBe("ignored");
+      expect(updatedHealth?.reviewQueueCount).toBe(health!.reviewQueueCount - 1);
+      expect(updatedHealth!.score).toBeGreaterThan(health!.score);
+      expect(updatedHealth!.status).toBe(calculateExpectedStatus(updatedHealth!.score));
+    } finally {
+      db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["ignored", "resolved"] as const)(
+    "stops Agent Kit reference health from bubbling child review items that are %s across rescans",
+    (status) => {
+      const db = openDatabase(":memory:");
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `contextarr-agent-kit-${status}-reference-health-`));
+      const packsRoot = path.join(tempRoot, "packs");
+      const agentKitRoot = path.join(tempRoot, "agent-kits", "support-ticket-writing-kit");
+
+      try {
+        fs.mkdirSync(packsRoot, { recursive: true });
+        fs.cpSync(path.join(demoPacksDir, "internal-support-kb-pack"), path.join(packsRoot, "internal-support-kb-pack"), {
+          recursive: true
+        });
+        fs.cpSync(path.join(demoPacksDir, "fake-product-line-pack"), path.join(packsRoot, "fake-product-line-pack"), {
+          recursive: true
+        });
+        fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), agentKitRoot, { recursive: true });
+
+        const recordsDir = path.join(packsRoot, "internal-support-kb-pack", "records");
+        const staleRecordPath = path.join(recordsDir, fs.readdirSync(recordsDir).find((file) => file.endsWith(".md"))!);
+        const staleRecord = fs.readFileSync(staleRecordPath, "utf8").replace(/last_reviewed: .+/, "last_reviewed: 2025-01-01");
+        fs.writeFileSync(staleRecordPath, staleRecord, "utf8");
+
+        rebuildIndex(db, packsRoot, demoSkillsDir, path.dirname(agentKitRoot));
+        const packFreshnessItem = getReviewItems(db, {
+          objectType: "pack",
+          objectId: "internal-support-kb-pack",
+          type: "freshness",
+          status: "open"
+        }).find((item) => item.recordId);
+        expect(packFreshnessItem).toBeDefined();
+        expect(getReviewItems(db, {
+          objectType: "agent_kit",
+          objectId: "support-ticket-writing-kit",
+          type: "review_status",
+          status: "open"
+        })).toEqual(expect.arrayContaining([expect.objectContaining({
+          message: expect.stringContaining("internal-support-kb-pack")
+        })]));
+
+        updateReviewItemStatus(db, packFreshnessItem!.id, status, "2026-05-08T00:00:00.000Z");
+        rebuildIndex(db, packsRoot, demoSkillsDir, path.dirname(agentKitRoot));
+
+        expect(getReviewItems(db).find((item) => item.id === packFreshnessItem!.id)?.status).toBe(status);
+        expect(getReviewItems(db, {
+          objectType: "agent_kit",
+          objectId: "support-ticket-writing-kit",
+          type: "review_status",
+          status: "open"
+        }).filter((item) => item.message.includes("internal-support-kb-pack"))).toEqual([]);
+
+        const health = getAgentKitHealth(db, "support-ticket-writing-kit");
+        expect(health?.items.filter((item) => item.status === "open" && item.message.includes("internal-support-kb-pack"))).toEqual([]);
+      } finally {
+        db.close();
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each(["accepted", "reviewed"] as const)(
+    "keeps Agent Kit reference health active when child review items are %s across rescans",
+    (status) => {
+      const db = openDatabase(":memory:");
+      const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), `contextarr-agent-kit-${status}-reference-`));
+      const packsRoot = path.join(tempRoot, "packs");
+      const agentKitRoot = path.join(tempRoot, "agent-kits", "support-ticket-writing-kit");
+
+      try {
+        fs.mkdirSync(packsRoot, { recursive: true });
+        fs.cpSync(path.join(demoPacksDir, "internal-support-kb-pack"), path.join(packsRoot, "internal-support-kb-pack"), {
+          recursive: true
+        });
+        fs.cpSync(path.join(demoPacksDir, "fake-product-line-pack"), path.join(packsRoot, "fake-product-line-pack"), {
+          recursive: true
+        });
+        fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), agentKitRoot, { recursive: true });
+
+        const recordsDir = path.join(packsRoot, "internal-support-kb-pack", "records");
+        const staleRecordPath = path.join(recordsDir, fs.readdirSync(recordsDir).find((file) => file.endsWith(".md"))!);
+        const staleRecord = fs.readFileSync(staleRecordPath, "utf8").replace(/last_reviewed: .+/, "last_reviewed: 2025-01-01");
+        fs.writeFileSync(staleRecordPath, staleRecord, "utf8");
+
+        rebuildIndex(db, packsRoot, demoSkillsDir, path.dirname(agentKitRoot));
+        const packFreshnessItem = getReviewItems(db, {
+          objectType: "pack",
+          objectId: "internal-support-kb-pack",
+          type: "freshness",
+          status: "open"
+        }).find((item) => item.recordId);
+        expect(packFreshnessItem).toBeDefined();
+
+        updateReviewItemStatus(db, packFreshnessItem!.id, status, "2026-05-08T00:00:00.000Z");
+        rebuildIndex(db, packsRoot, demoSkillsDir, path.dirname(agentKitRoot));
+
+        expect(getReviewItems(db).find((item) => item.id === packFreshnessItem!.id)?.status).toBe(status);
+        const agentKitReferenceItems = getReviewItems(db, {
+          objectType: "agent_kit",
+          objectId: "support-ticket-writing-kit",
+          type: "review_status",
+          status: "open"
+        }).filter((item) => item.message.includes("internal-support-kb-pack"));
+        expect(agentKitReferenceItems).toEqual([expect.objectContaining({
+          message: expect.stringContaining("active accepted/reviewed review item")
+        })]);
+
+        const health = getAgentKitHealth(db, "support-ticket-writing-kit");
+        expect(health?.score).toBeLessThan(100);
+        expect(health?.items).toEqual(expect.arrayContaining([expect.objectContaining({
+          type: "review_status",
+          status: "open",
+          metadata: expect.objectContaining({
+            activeIssueCount: 1,
+            reviewQueueCount: 0
+          })
+        })]));
+      } finally {
+        db.close();
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it("uses persisted child Skill review item statuses for Agent Kit reference health on rescan", () => {
+    const db = openDatabase(":memory:");
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-skill-reference-health-"));
+    const skillsRoot = path.join(tempRoot, "skills");
+    const agentKitRoot = path.join(tempRoot, "agent-kits", "support-ticket-writing-kit");
+
+    try {
+      fs.mkdirSync(skillsRoot, { recursive: true });
+      fs.cpSync(path.join(demoSkillsDir, "support-ticket-writing-skill"), path.join(skillsRoot, "support-ticket-writing-skill"), {
+        recursive: true
+      });
+      fs.cpSync(path.join(demoSkillsDir, "bug-report-structuring-skill"), path.join(skillsRoot, "bug-report-structuring-skill"), {
+        recursive: true
+      });
+      fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), agentKitRoot, { recursive: true });
+
+      const instructionsDir = path.join(skillsRoot, "support-ticket-writing-skill", "instructions");
+      const draftInstructionPath = path.join(instructionsDir, fs.readdirSync(instructionsDir).find((file) => file.endsWith(".md"))!);
+      const draftInstruction = fs.readFileSync(draftInstructionPath, "utf8").replace("review_status: approved", "review_status: draft");
+      fs.writeFileSync(draftInstructionPath, draftInstruction, "utf8");
+
+      rebuildIndex(db, demoPacksDir, skillsRoot, path.dirname(agentKitRoot));
+      const skillStatusItem = getReviewItems(db, {
+        objectType: "skill",
+        objectId: "support-ticket-writing-skill",
+        type: "review_status",
+        status: "open"
+      }).find((item) => item.recordId);
+      expect(skillStatusItem).toBeDefined();
+      expect(getReviewItems(db, {
+        objectType: "agent_kit",
+        objectId: "support-ticket-writing-kit",
+        type: "review_status",
+        status: "open"
+      })).toEqual(expect.arrayContaining([expect.objectContaining({
+        message: expect.stringContaining("support-ticket-writing-skill")
+      })]));
+
+      updateReviewItemStatus(db, skillStatusItem!.id, "resolved", "2026-05-08T00:00:00.000Z");
+      rebuildIndex(db, demoPacksDir, skillsRoot, path.dirname(agentKitRoot));
+
+      expect(getReviewItems(db).find((item) => item.id === skillStatusItem!.id)?.status).toBe("resolved");
+      expect(getReviewItems(db, {
+        objectType: "agent_kit",
+        objectId: "support-ticket-writing-kit",
+        type: "review_status",
+        status: "open"
+      }).filter((item) => item.message.includes("support-ticket-writing-skill"))).toEqual([]);
     } finally {
       db.close();
       fs.rmSync(tempRoot, { recursive: true, force: true });

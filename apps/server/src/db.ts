@@ -279,6 +279,7 @@ export function createSchema(db: ContextarrDatabase): void {
       severity TEXT NOT NULL,
       pack_id TEXT NOT NULL,
       skill_id TEXT,
+      agent_kit_id TEXT,
       record_id TEXT,
       source_id TEXT,
       message TEXT NOT NULL,
@@ -356,9 +357,12 @@ export function createSchema(db: ContextarrDatabase): void {
   ensureColumn(db, "review_items", "object_type", "TEXT NOT NULL DEFAULT 'pack'");
   ensureColumn(db, "review_items", "object_id", "TEXT");
   ensureColumn(db, "review_items", "skill_id", "TEXT");
+  ensureColumn(db, "review_items", "agent_kit_id", "TEXT");
   db.prepare("UPDATE review_items SET object_type = 'pack' WHERE object_type IS NULL OR object_type = ''").run();
   db.prepare("UPDATE review_items SET object_id = pack_id WHERE object_id IS NULL OR object_id = ''").run();
   db.exec("CREATE INDEX IF NOT EXISTS idx_review_items_object ON review_items(object_type, object_id);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_review_items_skill ON review_items(skill_id);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_review_items_agent_kit ON review_items(agent_kit_id);");
   db.exec("CREATE INDEX IF NOT EXISTS idx_agent_kit_context_packs_pack ON agent_kit_context_packs(pack_id);");
   db.exec("CREATE INDEX IF NOT EXISTS idx_agent_kit_skills_skill ON agent_kit_skills(skill_id);");
   ensureReviewItemsTable(db);
@@ -443,6 +447,7 @@ function ensureReviewItemsTable(db: ContextarrDatabase): void {
       severity TEXT NOT NULL,
       pack_id TEXT NOT NULL,
       skill_id TEXT,
+      agent_kit_id TEXT,
       record_id TEXT,
       source_id TEXT,
       message TEXT NOT NULL,
@@ -456,6 +461,8 @@ function ensureReviewItemsTable(db: ContextarrDatabase): void {
 
     CREATE INDEX IF NOT EXISTS idx_review_items_status ON review_items(status);
     CREATE INDEX IF NOT EXISTS idx_review_items_pack ON review_items(pack_id);
+    CREATE INDEX IF NOT EXISTS idx_review_items_skill ON review_items(skill_id);
+    CREATE INDEX IF NOT EXISTS idx_review_items_agent_kit ON review_items(agent_kit_id);
     CREATE INDEX IF NOT EXISTS idx_review_items_last_seen ON review_items(last_seen_at);
   `);
 }

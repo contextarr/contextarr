@@ -88,7 +88,7 @@ export function getFilterOptions(packs: PackSummary[]): {
 export function createCoverVisual(pack: PackSummary): CoverVisual {
   return {
     accentColor: sanitizeAccentColor(pack.accentColor),
-    coverImage: pack.coverImage,
+    coverImage: sanitizeLocalCoverImage(pack.coverImage),
     icon: iconForPack(pack),
     initials: pack.name
       .split(/\s+/)
@@ -153,6 +153,27 @@ function iconForPack(pack: PackSummary): CoverVisual["icon"] {
 
 function sanitizeAccentColor(value: string | null | undefined): string {
   return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#38bdf8";
+}
+
+function sanitizeLocalCoverImage(value: string | null | undefined): string | null {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/\\/g, "/");
+  if (
+    /^[A-Za-z][A-Za-z0-9+.-]*:/i.test(normalized) ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("//") ||
+    normalized.startsWith("../") ||
+    normalized === ".." ||
+    /[\u0000-\u001F"'<>]/.test(normalized)
+  ) {
+    return null;
+  }
+
+  return normalized;
 }
 
 function normalize(value: string): string {

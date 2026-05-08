@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { filterReviewItems, reviewPackName, reviewSkillName, summarizeReviewItems } from "./review";
-import type { PackSummary, ReviewItem, SkillSummary } from "./types";
+import { filterReviewItems, reviewAgentKitName, reviewPackName, reviewSkillName, summarizeReviewItems } from "./review";
+import type { AgentKitSummary, PackSummary, ReviewItem, SkillSummary } from "./types";
 
 const items: ReviewItem[] = [
   reviewItem({ id: "one", status: "open", severity: "error", type: "validation", packId: "pack-a" }),
@@ -15,6 +15,16 @@ const items: ReviewItem[] = [
     status: "open",
     severity: "warning",
     type: "review_status"
+  }),
+  reviewItem({
+    id: "five",
+    objectType: "agent_kit",
+    objectId: "kit-a",
+    packId: "kit-a",
+    agentKitId: "kit-a",
+    status: "open",
+    severity: "warning",
+    type: "export_readiness"
   })
 ];
 
@@ -25,14 +35,15 @@ describe("review utilities", () => {
       items[1]
     ]);
     expect(filterReviewItems(items, filters({ objectType: "skill" }))).toEqual([items[3]]);
+    expect(filterReviewItems(items, filters({ objectType: "agent_kit" }))).toEqual([items[4]]);
   });
 
   it("summarizes review item counts", () => {
     expect(summarizeReviewItems(items)).toEqual({
-      total: 4,
-      open: 2,
+      total: 5,
+      open: 3,
       errors: 1,
-      warnings: 2,
+      warnings: 3,
       infos: 1
     });
   });
@@ -46,6 +57,11 @@ describe("review utilities", () => {
     expect(reviewSkillName("skill-a", [skill({ id: "skill-a", name: "Skill A" })])).toBe("Skill A");
     expect(reviewSkillName("missing", [])).toBe("missing");
   });
+
+  it("resolves Agent Kit names", () => {
+    expect(reviewAgentKitName("kit-a", [agentKit({ id: "kit-a", name: "Kit A" })])).toBe("Kit A");
+    expect(reviewAgentKitName("missing", [])).toBe("missing");
+  });
 });
 
 function reviewItem(overrides: Partial<ReviewItem>): ReviewItem {
@@ -58,6 +74,7 @@ function reviewItem(overrides: Partial<ReviewItem>): ReviewItem {
     severity: "warning",
     packId: "pack-a",
     skillId: null,
+    agentKitId: null,
     recordId: null,
     sourceId: null,
     message: "Message",
@@ -67,6 +84,33 @@ function reviewItem(overrides: Partial<ReviewItem>): ReviewItem {
     lastSeenAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     metadata: {},
+    ...overrides
+  };
+}
+
+function agentKit(overrides: Partial<AgentKitSummary>): AgentKitSummary {
+  return {
+    id: "kit",
+    name: "Kit",
+    version: "0.1.0",
+    description: "Kit",
+    type: "demo",
+    visibility: "local",
+    trustLevel: "local",
+    healthScore: 100,
+    healthStatus: "healthy",
+    validationErrors: 0,
+    validationWarnings: 0,
+    contextPackCount: 0,
+    skillCount: 0,
+    exportProfileCount: 0,
+    accentColor: null,
+    coverImage: null,
+    reviewQueueCount: 0,
+    lastReviewedAt: null,
+    updatedAt: "2026-05-07T00:00:00.000Z",
+    target: "codex",
+    privacyMode: "redacted",
     ...overrides
   };
 }

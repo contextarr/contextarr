@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
+  AgentKitHealthResponse,
   HealthResponse,
   PackSummary,
   ReviewItem,
@@ -41,6 +42,8 @@ const mocks = vi.hoisted(() => {
       getAgentKit: vi.fn(),
       getAgentKitContextPacks: vi.fn(),
       getAgentKitSkills: vi.fn(),
+      getAgentKitHealth: vi.fn(),
+      getAgentKitExportPreview: vi.fn(),
       saveAgentKit: vi.fn(),
       getExportPreview: vi.fn(),
       getSkillExportPreview: vi.fn(),
@@ -99,10 +102,12 @@ describe("App Skill UI routes", () => {
     ]);
     mocks.apiClient.getSkillExports.mockResolvedValue([]);
     mocks.apiClient.getSkillHealth.mockResolvedValue(skillHealthFixture());
-    mocks.apiClient.getAgentKits.mockResolvedValue([]);
+    mocks.apiClient.getAgentKits.mockResolvedValue([agentKitSummaryFixture()]);
     mocks.apiClient.getAgentKit.mockResolvedValue(agentKitDetailFixture());
     mocks.apiClient.getAgentKitContextPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getAgentKitSkills.mockResolvedValue([skillFixture()]);
+    mocks.apiClient.getAgentKitHealth.mockResolvedValue(agentKitHealthFixture());
+    mocks.apiClient.getAgentKitExportPreview.mockResolvedValue(agentKitPreviewFixture());
     mocks.apiClient.saveAgentKit.mockResolvedValue({
       id: "implementation-support-kit",
       message: "Agent Kit saved locally."
@@ -267,6 +272,39 @@ describe("App Skill UI routes", () => {
     );
   });
 
+  it("requests and updates Agent Kit-scoped review items from the shared Review Queue", async () => {
+    const item = agentKitReviewItemFixture();
+    mocks.apiClient.getReviewItems.mockResolvedValue({
+      items: [item],
+      counts: { total: 1, open: 1, filtered: 1 }
+    });
+
+    mountApp("#/review-queue");
+
+    await waitForText("Review Agent Kit References");
+    selectOption("All objects", "agent_kit");
+    await flushPendingUpdates();
+    selectOption("All Agent Kits", "implementation-support-kit");
+    await flushPendingUpdates();
+
+    expect(mocks.apiClient.getReviewItems).toHaveBeenLastCalledWith(
+      expect.objectContaining({ objectType: "agent_kit", objectId: "implementation-support-kit" })
+    );
+
+    mocks.apiClient.getReviewItems.mockResolvedValueOnce({
+      items: [{ ...item, status: "ignored" }],
+      counts: { total: 1, open: 0, filtered: 0 }
+    });
+    clickButton("Ignore");
+    await flushPendingUpdates();
+
+    expect(mocks.apiClient.updateReviewItemStatus).toHaveBeenCalledWith("agent-kit-review-item", "ignored");
+    expect(mocks.apiClient.getReviewItems).toHaveBeenLastCalledWith(
+      expect.objectContaining({ objectType: "agent_kit", objectId: "implementation-support-kit", status: "open" })
+    );
+    await waitForText("No matching review items");
+  });
+
   it("renders Skill rows on the Health page", async () => {
     mountApp("#/health");
     await flushPendingUpdates();
@@ -346,10 +384,37 @@ describe("App Skill UI routes", () => {
 
     await waitForText("Implementation Support Kit");
     expect(mocks.apiClient.getAgentKit).toHaveBeenCalledWith("implementation-support-kit");
+    expect(mocks.apiClient.getAgentKitHealth).toHaveBeenCalledWith("implementation-support-kit");
     expect(document.body.textContent).toContain("Kit Summary");
-    expect(document.body.textContent).toContain("AI Workstation Pack");
-    expect(document.body.textContent).toContain("Support Ticket Writing Skill");
-    expect(document.body.textContent).toContain("Implementation Support Kit Codex Export");
+    expect(document.body.textContent).toContain("Context Packs");
+    expect(document.body.textContent).toContain("Skills");
+  });
+
+  it("renders the Agent Kit library route", async () => {
+    mountApp("#/agent-kits");
+
+    await waitForText("Implementation Support Kit");
+    expect(document.body.textContent).toContain("Implementation Support Kit");
+    expect(document.body.textContent).toContain("1 packs");
+    expect(document.body.textContent).toContain("1 skills");
+  });
+
+  it("renders Agent Kit health and export preview tabs", async () => {
+    mountApp("#/agent-kits/implementation-support-kit");
+
+    await waitForText("Implementation Support Kit");
+    clickButton("Health");
+    await waitForText("Open Items");
+    expect(document.body.textContent).toContain("Validation");
+
+    clickButton("Exports");
+    await waitForText("Implementation Support Kit Codex Export");
+    clickButton("Preview");
+    await waitForText("Agent Kit export content generation is scheduled for Phase 24.");
+    expect(mocks.apiClient.getAgentKitExportPreview).toHaveBeenCalledWith(
+      "implementation-support-kit",
+      "implementation-support-kit-codex"
+    );
   });
 
   it("renders the Agent Kit detail error state", async () => {
@@ -471,6 +536,10 @@ function healthFixture(): HealthResponse {
       skillExamples: 2,
       skillSources: 3,
       skillExportProfiles: 6,
+      agentKits: 1,
+      agentKitContextPackRefs: 1,
+      agentKitSkillRefs: 1,
+      agentKitExportProfiles: 1,
       reviewItems: 0,
       openReviewItems: 0
     }
@@ -626,6 +695,51 @@ function skillHealthFixture(): SkillHealthResponse {
   };
 }
 
+function agentKitSummaryFixture() {
+  const detail = agentKitDetailFixture();
+  return {
+    id: detail.id,
+    name: detail.name,
+    version: detail.version,
+    description: detail.description,
+    type: detail.type,
+    visibility: detail.visibility,
+    trustLevel: detail.trustLevel,
+    healthScore: detail.healthScore,
+    healthStatus: detail.healthStatus,
+    validationErrors: detail.validationErrors,
+    validationWarnings: detail.validationWarnings,
+    contextPackCount: detail.contextPackCount,
+    skillCount: detail.skillCount,
+    exportProfileCount: detail.exportProfileCount,
+    accentColor: detail.accentColor,
+    coverImage: detail.coverImage,
+    reviewQueueCount: detail.reviewQueueCount,
+    lastReviewedAt: detail.lastReviewedAt,
+    updatedAt: detail.updatedAt,
+    target: detail.target,
+    privacyMode: detail.privacyMode
+  };
+}
+
+function agentKitHealthFixture(): AgentKitHealthResponse {
+  return {
+    agentKitId: "implementation-support-kit",
+    score: 100,
+    status: "healthy",
+    reviewQueueCount: 0,
+    checks: [
+      {
+        id: "validation",
+        label: "Validation",
+        status: "pass",
+        count: 0
+      }
+    ],
+    items: []
+  };
+}
+
 function agentKitDetailFixture() {
   return {
     id: "implementation-support-kit",
@@ -652,7 +766,14 @@ function agentKitDetailFixture() {
     author: "Contextarr Demo",
     license: "MIT",
     createdAt: "2026-05-08T00:00:00.000Z",
-    manifest: {},
+    manifest: {
+      containsExecutableCode: false,
+      requiresNetwork: false,
+      exportProfile: "implementation-support-kit-codex",
+      compatibility: {
+        contextarr: ">=0.1.0"
+      }
+    },
     counts: {
       contextPacks: 1,
       skills: 1,
@@ -681,6 +802,28 @@ function agentKitDetailFixture() {
   };
 }
 
+function agentKitPreviewFixture() {
+  return {
+    agentKitId: "implementation-support-kit",
+    profileId: "implementation-support-kit-codex",
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    tokenBudget: 12000,
+    filename: "implementation-support-kit-codex.md",
+    content: null,
+    contentStatus: "scheduled_for_phase_24",
+    includedContextPacks: [packFixture()],
+    includedSkills: [skillFixture()],
+    warnings: [
+      {
+        code: "agent_kit_export_engine_later",
+        message: "Agent Kit export content generation is scheduled for Phase 24."
+      }
+    ]
+  };
+}
+
 function reviewItemFixture(): ReviewItem {
   return {
     id: "skill-review-item",
@@ -691,6 +834,7 @@ function reviewItemFixture(): ReviewItem {
     severity: "warning",
     packId: "support-ticket-writing-skill",
     skillId: "support-ticket-writing-skill",
+    agentKitId: null,
     recordId: "support-ticket-writing-skill.response-style",
     sourceId: null,
     message: "Review Skill Document",
@@ -699,6 +843,29 @@ function reviewItemFixture(): ReviewItem {
     firstSeenAt: "2026-05-07T00:00:00.000Z",
     lastSeenAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
+    metadata: {}
+  };
+}
+
+function agentKitReviewItemFixture(): ReviewItem {
+  return {
+    id: "agent-kit-review-item",
+    fingerprint: "agent_kit|implementation-support-kit|review_status",
+    objectType: "agent_kit",
+    objectId: "implementation-support-kit",
+    type: "review_status",
+    severity: "warning",
+    packId: "implementation-support-kit",
+    skillId: null,
+    agentKitId: "implementation-support-kit",
+    recordId: null,
+    sourceId: null,
+    message: "Review Agent Kit References",
+    suggestedAction: "Review referenced packs and skills before relying on this Agent Kit.",
+    status: "open",
+    firstSeenAt: "2026-05-08T00:00:00.000Z",
+    lastSeenAt: "2026-05-08T00:00:00.000Z",
+    updatedAt: "2026-05-08T00:00:00.000Z",
     metadata: {}
   };
 }

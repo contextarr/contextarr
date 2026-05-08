@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import type { ExportProfile } from "@contextarr/schema";
-import type { ValidationIssue } from "@contextarr/pack-validator";
 import type {
   HealthCheck,
+  LoadedAgentKit,
   LoadedPack,
   LoadedRecord,
   LoadedSkill,
@@ -15,6 +15,7 @@ import type {
   ReviewItemSeverity,
   ReviewItemStatus,
   ReviewItemType,
+  SkippedAgentKit,
   SkippedPack,
   SkippedSkill
 } from "./types";
@@ -27,6 +28,7 @@ export interface ReviewItemCandidate {
   severity: ReviewItemSeverity;
   packId: string;
   skillId: string | null;
+  agentKitId: string | null;
   recordId: string | null;
   sourceId: string | null;
   message: string;
@@ -38,6 +40,29 @@ export interface HealthScore {
   score: number;
   status: "healthy" | "degraded" | "needs_review";
   reviewQueueCount: number;
+}
+
+export interface AgentKitReferenceStatus {
+  kind: "context_pack" | "skill";
+  id: string;
+  found: boolean;
+  trustLevel?: string;
+  healthScore?: number;
+  healthStatus?: string;
+  activeIssueCount?: number;
+  activeErrorCount?: number;
+  activeWarningCount?: number;
+  reviewQueueCount?: number;
+  openErrorCount?: number;
+  openWarningCount?: number;
+}
+
+interface ReviewValidationIssue {
+  severity: ReviewItemSeverity;
+  code: string;
+  message: string;
+  file?: string;
+  path?: string;
 }
 
 const healthCheckLabels: Record<ReviewItemType, string> = {
@@ -59,6 +84,7 @@ const defaultRedactTags = new Set(["secret", "never_export", "sensitive", "priva
 const sensitivePrivacyValues = new Set(["private", "sensitive", "secret"]);
 const supportedSkillTargets = new Set(["chatgpt", "claude", "codex", "claude_code", "markdown", "generic_markdown", "json"]);
 const deprecatedSkillTargets = new Set(["legacy_prompt", "plain_prompt"]);
+const agentKitStaleAfterDays = 180;
 
 export function createReviewItemId(fingerprint: string): string {
   return `ri_${crypto.createHash("sha256").update(fingerprint).digest("hex").slice(0, 24)}`;
@@ -151,6 +177,34 @@ export function generateSkippedSkillReviewItems(skipped: SkippedSkill): ReviewIt
   return skipped.issues.map((issue) => validationIssueToCandidate("skill", skillId, issue, skipped.skillPath));
 }
 
+export function generateAgentKitReviewItems(
+  agentKit: LoadedAgentKit,
+  now = new Date(),
+  references: AgentKitReferenceStatus[] = []
+): ReviewItemCandidate[] {
+  const items: ReviewItemCandidate[] = [];
+
+  for (const issue of agentKit.validation.issues) {
+    items.push(validationIssueToCandidate("agent_kit", agentKit.manifest.id, issue, agentKit.agentKitPath));
+  }
+
+  items.push(...reviewAgentKitFreshness(agentKit, now));
+  items.push(...reviewAgentKitTrust(agentKit));
+  items.push(...reviewAgentKitExportReadiness(agentKit));
+  items.push(...reviewAgentKitSafety(agentKit));
+  items.push(...reviewAgentKitReferences(agentKit, references));
+
+  return items;
+}
+
+export function generateSkippedAgentKitReviewItems(skipped: SkippedAgentKit): ReviewItemCandidate[] {
+  const agentKitId = skipped.agentKitId ?? path.basename(skipped.agentKitPath);
+
+  return skipped.issues.map((issue) =>
+    validationIssueToCandidate("agent_kit", agentKitId, issue, skipped.agentKitPath)
+  );
+}
+
 export function calculateHealthScore(items: Array<Pick<ReviewItem, "severity" | "status">>): HealthScore {
   const active = items.filter((item) => item.status !== "ignored" && item.status !== "resolved");
   const errors = active.filter((item) => item.severity === "error").length;
@@ -185,13 +239,14 @@ export function buildHealthChecks(items: Array<Pick<ReviewItem, "type" | "severi
 function validationIssueToCandidate(
   objectType: ReviewObjectType,
   objectId: string,
-  issue: Pick<ValidationIssue, "severity" | "code" | "message" | "file" | "path">,
+  issue: ReviewValidationIssue,
   rootPath?: string
 ): ReviewItemCandidate {
   const safeFile = sanitizeIssueFile(issue.file, rootPath);
   const safePath = sanitizeIssuePath(issue.path);
   const safeMessage = sanitizeIssueMessage(issue.message, rootPath);
   const reviewType = reviewTypeForValidationIssue(issue.code);
+  const subject = objectType === "agent_kit" ? "Agent Kit" : objectType === "skill" ? "Skill" : "pack";
 
   return candidate({
     objectType,
@@ -199,10 +254,7 @@ function validationIssueToCandidate(
     severity: issue.severity,
     packId: objectId,
     message: safeMessage,
-    suggestedAction:
-      objectType === "skill"
-        ? "Fix the validation issue in the source Skill before activation."
-        : "Fix the validation issue in the source pack before activation.",
+    suggestedAction: `Fix the validation issue in the source ${subject} before activation.`,
     parts: [objectId, issue.code, safeFile ?? "", safePath ?? ""],
     metadata: { code: issue.code, file: safeFile, path: safePath }
   });
@@ -216,8 +268,13 @@ function reviewTypeForValidationIssue(code: string): ReviewItemType {
   if (
     code.startsWith("scan.") ||
     code.startsWith("rules.safety.") ||
+    code === "agent_kit.execution_claimed" ||
+    code === "agent_kit.reserved_capability" ||
     code === "skill.executable_file" ||
-    code === "skill.script_file"
+    code === "skill.script_file" ||
+    code === "agent_kit.executable_file" ||
+    code === "agent_kit.script_file" ||
+    code.startsWith("agent_kit_scan.")
   ) {
     return "disallowed_pattern";
   }
@@ -226,12 +283,49 @@ function reviewTypeForValidationIssue(code: string): ReviewItemType {
     return "source_coverage";
   }
 
+  if (
+    code === "agent_kit.context_pack_missing" ||
+    code === "agent_kit.skill_missing" ||
+    code === "agent_kit_reference.unindexed_context_pack" ||
+    code === "agent_kit_reference.unindexed_skill"
+  ) {
+    return "source_coverage";
+  }
+
   if (code.startsWith("examples.")) {
     return "example_coverage";
   }
 
-  if (code.startsWith("exports.") || code.startsWith("skill_export_profile.")) {
+  if (
+    code.startsWith("exports.") ||
+    code.startsWith("skill_export_profile.") ||
+    code.startsWith("agent_kit_exports.") ||
+    code.startsWith("agent_kit_export_profile.")
+  ) {
     return "export_readiness";
+  }
+
+  if (
+    code.startsWith("agent_kit_policy.") ||
+    code.startsWith("agent_kit_rules.redaction") ||
+    code === "agent_kit_manifest.executable_code" ||
+    code === "agent_kit_manifest.requires_network" ||
+    code === "agent_kit_manifest.read_vault" ||
+    code === "agent_kit_manifest.write_drafts" ||
+    code === "agent_kit_manifest.run_commands" ||
+    code === "agent_kit_manifest.network_access" ||
+    code === "agent_kit_manifest.browser_automation" ||
+    code === "agent_kit_manifest.tool_execution"
+  ) {
+    return "safety_rules";
+  }
+
+  if (
+    code === "agent_kit.skill_target_missing" ||
+    code === "agent_kit_manifest.unsupported_target" ||
+    code.startsWith("agent_kit_compatibility.")
+  ) {
+    return "target_compatibility";
   }
 
   return "validation";
@@ -723,6 +817,289 @@ function reviewSkillAiDrafts(skill: LoadedSkill): ReviewItemCandidate[] {
     );
 }
 
+function reviewAgentKitFreshness(agentKit: LoadedAgentKit, now: Date): ReviewItemCandidate[] {
+  const lastReviewedAt = agentKit.manifest.lastReviewedAt;
+
+  if (!lastReviewedAt) {
+    return [
+      candidate({
+        objectType: "agent_kit",
+        type: "freshness",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: `Agent Kit "${agentKit.manifest.name}" is missing a last reviewed timestamp.`,
+        suggestedAction: "Review the Agent Kit and add lastReviewedAt metadata.",
+        parts: [agentKit.manifest.id, "missing-last-reviewed"]
+      })
+    ];
+  }
+
+  const ageDays = daysBetween(lastReviewedAt, now);
+  if (ageDays <= agentKitStaleAfterDays) {
+    return [];
+  }
+
+  return [
+    candidate({
+      objectType: "agent_kit",
+      type: "freshness",
+      severity: "warning",
+      packId: agentKit.manifest.id,
+      message: `Agent Kit "${agentKit.manifest.name}" was reviewed ${ageDays} days ago.`,
+      suggestedAction: `Review this Agent Kit because its freshness window is ${agentKitStaleAfterDays} days.`,
+      parts: [agentKit.manifest.id, "stale-review"],
+      metadata: { ageDays, staleAfterDays: agentKitStaleAfterDays, lastReviewedAt }
+    })
+  ];
+}
+
+function reviewAgentKitTrust(agentKit: LoadedAgentKit): ReviewItemCandidate[] {
+  const items: ReviewItemCandidate[] = [];
+
+  if (agentKit.manifest.visibility !== "local") {
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "trust",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: `Agent Kit visibility is ${agentKit.manifest.visibility}.`,
+        suggestedAction: "Keep Agent Kits local until registry and trust workflows are implemented.",
+        parts: [agentKit.manifest.id, "visibility", agentKit.manifest.visibility],
+        metadata: { visibility: agentKit.manifest.visibility }
+      })
+    );
+  }
+
+  if (agentKit.manifest.trustLevel === "deprecated" || agentKit.manifest.trustLevel === "blocked") {
+    const severity = agentKit.manifest.trustLevel === "blocked" ? "error" : "warning";
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "trust",
+        severity,
+        packId: agentKit.manifest.id,
+        message: `Agent Kit trust level is ${agentKit.manifest.trustLevel}.`,
+        suggestedAction: "Review the Agent Kit trust level before recommending it for export.",
+        parts: [agentKit.manifest.id, "trust", agentKit.manifest.trustLevel],
+        metadata: { trustLevel: agentKit.manifest.trustLevel }
+      })
+    );
+  }
+
+  return items;
+}
+
+function reviewAgentKitExportReadiness(agentKit: LoadedAgentKit): ReviewItemCandidate[] {
+  const items: ReviewItemCandidate[] = [];
+
+  if (agentKit.exportProfiles.length === 0) {
+    return [
+      candidate({
+        objectType: "agent_kit",
+        type: "export_readiness",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: "Agent Kit has no export profiles.",
+        suggestedAction: "Add at least one export profile before showing this Agent Kit as export-ready.",
+        parts: [agentKit.manifest.id, "missing-export-profiles"]
+      })
+    ];
+  }
+
+  if (!agentKit.exportProfiles.some((profile) => profile.id === agentKit.manifest.exportProfile)) {
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "export_readiness",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: `Agent Kit default export profile "${agentKit.manifest.exportProfile}" is missing.`,
+        suggestedAction: "Add the default Agent Kit export profile or update the manifest exportProfile field.",
+        parts: [agentKit.manifest.id, agentKit.manifest.exportProfile, "missing-default-export-profile"],
+        metadata: { exportProfile: agentKit.manifest.exportProfile }
+      })
+    );
+  }
+
+  if (!agentKit.exportProfiles.some((profile) => profile.target === agentKit.manifest.target)) {
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "target_compatibility",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: `Agent Kit target "${agentKit.manifest.target}" has no matching export profile.`,
+        suggestedAction: "Add a matching export profile or update the Agent Kit target.",
+        parts: [agentKit.manifest.id, agentKit.manifest.target, "missing-target-export"],
+        metadata: { target: agentKit.manifest.target }
+      })
+    );
+  }
+
+  return items;
+}
+
+function reviewAgentKitSafety(agentKit: LoadedAgentKit): ReviewItemCandidate[] {
+  const manifest = agentKit.manifest as unknown as Record<string, unknown>;
+  const items: ReviewItemCandidate[] = [];
+
+  for (const field of ["containsExecutableCode", "requiresNetwork"]) {
+    if (manifest[field] !== false) {
+      items.push(
+        candidate({
+          objectType: "agent_kit",
+          type: "safety_rules",
+          severity: "error",
+          packId: agentKit.manifest.id,
+          message: `${field} must be false for Agent Kits.`,
+          suggestedAction: "Remove executable or network capability claims from the Agent Kit manifest.",
+          parts: [agentKit.manifest.id, field, String(manifest[field])],
+          metadata: { field, value: manifest[field] }
+        })
+      );
+    }
+  }
+
+  const permissions = isRecord(manifest.permissions) ? manifest.permissions : {};
+  for (const permission of [
+    "readVault",
+    "writeDrafts",
+    "runCommands",
+    "networkAccess",
+    "browserAutomation",
+    "toolExecution"
+  ]) {
+    if (permissions[permission] !== false) {
+      items.push(
+        candidate({
+          objectType: "agent_kit",
+          type: "safety_rules",
+          severity: "error",
+          packId: agentKit.manifest.id,
+          message: `permissions.${permission} must be false for Agent Kits.`,
+          suggestedAction: "Keep Agent Kit permissions data-only and non-executable.",
+          parts: [agentKit.manifest.id, "permissions", permission, String(permissions[permission])],
+          metadata: { permission, value: permissions[permission] }
+        })
+      );
+    }
+  }
+
+  if (agentKit.manifest.containsPersonalData && agentKit.manifest.privacyMode === "public_safe") {
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "export_safety",
+        severity: "error",
+        packId: agentKit.manifest.id,
+        message: "Agent Kit declares personal data while using public_safe privacy mode.",
+        suggestedAction: "Switch to redacted mode or remove personal data before public-safe use.",
+        parts: [agentKit.manifest.id, "personal-data-public-safe"],
+        metadata: { containsPersonalData: true, privacyMode: agentKit.manifest.privacyMode }
+      })
+    );
+  }
+
+  if (agentKit.manifest.containsPersonalData && agentKit.manifest.privacyMode === "full") {
+    items.push(
+      candidate({
+        objectType: "agent_kit",
+        type: "export_safety",
+        severity: "warning",
+        packId: agentKit.manifest.id,
+        message: "Agent Kit declares personal data while using full privacy mode.",
+        suggestedAction: "Confirm this Agent Kit is only used locally or switch to redacted mode.",
+        parts: [agentKit.manifest.id, "personal-data-full"],
+        metadata: { containsPersonalData: true, privacyMode: agentKit.manifest.privacyMode }
+      })
+    );
+  }
+
+  return items;
+}
+
+function reviewAgentKitReferences(
+  agentKit: LoadedAgentKit,
+  references: AgentKitReferenceStatus[]
+): ReviewItemCandidate[] {
+  const items: ReviewItemCandidate[] = [];
+
+  for (const reference of references) {
+    const label = agentKitReferenceLabel(reference.kind);
+
+    if (!reference.found) {
+      items.push(
+        candidate({
+          objectType: "agent_kit",
+          type: "source_coverage",
+          severity: "error",
+          packId: agentKit.manifest.id,
+          message: `Agent Kit references missing ${label} "${reference.id}".`,
+          suggestedAction: `Restore the referenced ${label} or remove it from the Agent Kit.`,
+          parts: [agentKit.manifest.id, reference.kind, reference.id, "missing-reference"],
+          metadata: { referenceKind: reference.kind, referenceId: reference.id }
+        })
+      );
+      continue;
+    }
+
+    if (reference.trustLevel === "deprecated" || reference.trustLevel === "blocked") {
+      const severity = reference.trustLevel === "blocked" ? "error" : "warning";
+      items.push(
+        candidate({
+          objectType: "agent_kit",
+          type: "trust",
+          severity,
+          packId: agentKit.manifest.id,
+          message: `Agent Kit references ${label} "${reference.id}" with ${reference.trustLevel} trust.`,
+          suggestedAction: `Replace or review the ${label} before using this Agent Kit.`,
+          parts: [agentKit.manifest.id, reference.kind, reference.id, reference.trustLevel],
+          metadata: { referenceKind: reference.kind, referenceId: reference.id, trustLevel: reference.trustLevel }
+        })
+      );
+    }
+
+    const activeIssueCount = reference.activeIssueCount ?? reference.reviewQueueCount ?? 0;
+    if (activeIssueCount > 0) {
+      const openCount = reference.reviewQueueCount ?? 0;
+      const reviewItemPhrase =
+        openCount > 0
+          ? `${openCount} open review item(s)`
+          : `${activeIssueCount} active accepted/reviewed review item(s)`;
+      items.push(
+        candidate({
+          objectType: "agent_kit",
+          type: "review_status",
+          severity: (reference.activeErrorCount ?? reference.openErrorCount ?? 0) > 0 ? "error" : "warning",
+          packId: agentKit.manifest.id,
+          message: `Agent Kit references ${label} "${reference.id}" with ${reviewItemPhrase}.`,
+          suggestedAction: `Resolve, ignore, or document the referenced ${label} review items before relying on this Agent Kit.`,
+          parts: [agentKit.manifest.id, reference.kind, reference.id, "open-review-items"],
+          metadata: {
+            referenceKind: reference.kind,
+            referenceId: reference.id,
+            healthScore: reference.healthScore,
+            healthStatus: reference.healthStatus,
+            activeIssueCount,
+            activeErrorCount: reference.activeErrorCount ?? 0,
+            activeWarningCount: reference.activeWarningCount ?? 0,
+            reviewQueueCount: reference.reviewQueueCount,
+            openErrorCount: reference.openErrorCount ?? 0,
+            openWarningCount: reference.openWarningCount ?? 0
+          }
+        })
+      );
+    }
+  }
+
+  return items;
+}
+
+function agentKitReferenceLabel(kind: AgentKitReferenceStatus["kind"]): string {
+  return kind === "context_pack" ? "Context Pack" : "Skill";
+}
+
 function canonicalSkillTarget(target: string): string {
   return target === "generic_markdown" ? "markdown" : target;
 }
@@ -764,10 +1141,24 @@ function readRedactionTags(pack: LoadedPack): Set<string> {
   return tags;
 }
 
-function daysBetween(localDate: string, now: Date): number {
-  const reviewedAt = new Date(`${localDate}T00:00:00.000Z`).getTime();
+function daysBetween(reviewedDate: string, now: Date): number {
+  const reviewedAt = reviewedDateUtc(reviewedDate, now);
   const nowUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return Math.max(0, Math.floor((nowUtc - reviewedAt) / 86_400_000));
+}
+
+function reviewedDateUtc(value: string, now: Date): number {
+  const localDate = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (localDate) {
+    return Date.UTC(Number(localDate[1]), Number(localDate[2]) - 1, Number(localDate[3]));
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  }
+
+  return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
 }
 
 function candidate(options: {
@@ -793,10 +1184,15 @@ function candidate(options: {
     severity: options.severity,
     packId: options.packId,
     skillId: objectType === "skill" ? options.packId : null,
+    agentKitId: objectType === "agent_kit" ? options.packId : null,
     recordId: options.recordId ?? null,
     sourceId: options.sourceId ?? null,
     message: options.message,
     suggestedAction: options.suggestedAction,
     metadata: options.metadata ?? {}
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

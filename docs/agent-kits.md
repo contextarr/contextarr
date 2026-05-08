@@ -42,11 +42,21 @@ Phase 21 and Phase 22 add local API endpoints:
 - `GET /api/agent-kits/:id/exports`
 - `GET /api/agent-kits/:id/exports/:profileId/preview`
 - `GET /api/search?type=agent-kit&q=`
+- `GET /api/agent-kits/:id/health`
 - `POST /api/agent-kits`
 
 `POST /api/agent-kits` accepts metadata plus selected Context Pack IDs and Skill IDs. It does not accept a filesystem path. The server writes a data-only Agent Kit inside the configured local Agent Kit directory, validates it before indexing, and then refreshes the derived SQLite index.
 
 The preview route returns metadata and selected relationship summaries only until the full Agent Kit export engine lands in Phase 24.
+
+## Phase 23: Library, Detail, and Health
+
+Phase 23 adds read-only Agent Kit Library and detail surfaces and local-only health/review material.
+
+- Library and detail are derived views of local Agent Kit files and SQLite state.
+- Health checks are deterministic and persisted as local status rows.
+- No Agent Kit runner, evaluator, or execution endpoint is added.
+- Agent Kit health/detail exports stay read-only and do not modify source files.
 
 ## Source Of Truth
 

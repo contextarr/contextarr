@@ -24,6 +24,10 @@ export function parseHashRoute(hash: string): Route {
     return { name: "agentKit", agentKitId: parts[1] };
   }
 
+  if (parts[0] === "agent-kits") {
+    return { name: "agentKits" };
+  }
+
   if (parts[0] === "review-queue") {
     return { name: "reviewQueue" };
   }
@@ -65,6 +69,10 @@ export function skillHref(skillId: string): string {
 
 export function agentKitHref(agentKitId: string): string {
   return `#/agent-kits/${encodeURIComponent(agentKitId)}`;
+}
+
+export function agentKitsHref(): string {
+  return "#/agent-kits";
 }
 
 export function reviewQueueHref(): string {

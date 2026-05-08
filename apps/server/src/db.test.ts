@@ -123,7 +123,7 @@ describe("SQLite schema migrations", () => {
 
       const columns = db.prepare("PRAGMA table_info(review_items)").all() as Array<{ name: string }>;
       expect(columns.map((column) => column.name)).toEqual(
-        expect.arrayContaining(["object_type", "object_id", "skill_id"])
+        expect.arrayContaining(["object_type", "object_id", "skill_id", "agent_kit_id"])
       );
       expect(
         db.prepare("SELECT object_type AS objectType, object_id AS objectId FROM review_items WHERE id = ?").get("ri_legacy")

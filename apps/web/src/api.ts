@@ -1,6 +1,8 @@
 import type {
   AgentKitContextPackSummary,
   AgentKitDetail,
+  AgentKitExportPreview,
+  AgentKitHealthResponse,
   AgentKitSkillSummary,
   AgentKitSummary,
   CreateAgentKitRequest,
@@ -55,6 +57,8 @@ export interface ApiClient {
   getAgentKit(id: string): Promise<AgentKitDetail>;
   getAgentKitContextPacks(id: string): Promise<AgentKitContextPackSummary[]>;
   getAgentKitSkills(id: string): Promise<AgentKitSkillSummary[]>;
+  getAgentKitHealth(id: string): Promise<AgentKitHealthResponse>;
+  getAgentKitExportPreview(agentKitId: string, profileId: string): Promise<AgentKitExportPreview>;
   saveAgentKit(request: CreateAgentKitRequest): Promise<SaveAgentKitResponse>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
@@ -67,6 +71,7 @@ export interface ApiClient {
     objectId?: string;
     packId?: string;
     skillId?: string;
+    agentKitId?: string;
   }): Promise<ReviewItemsResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
@@ -145,6 +150,11 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       );
       return response.skills;
     },
+    getAgentKitHealth: (id: string) => requestJson<AgentKitHealthResponse>(`/api/agent-kits/${encodeURIComponent(id)}/health`),
+    getAgentKitExportPreview: (agentKitId: string, profileId: string) =>
+      requestJson<AgentKitExportPreview>(
+        `/api/agent-kits/${encodeURIComponent(agentKitId)}/exports/${encodeURIComponent(profileId)}/preview`
+      ),
     saveAgentKit: (body: CreateAgentKitRequest) =>
       requestJson<SaveAgentKitResponse>("/api/agent-kits", {
         method: "POST",

@@ -21,6 +21,7 @@ import {
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,
   getAgentKitExportProfiles,
+  getAgentKitHealth,
   getAgentKitSkills,
   getAgentKits,
   getIndexStats,
@@ -223,6 +224,15 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       exportProfiles: getAgentKitExportProfiles(db, request.params.id)
     };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kits/:id/health", async (request, reply) => {
+    const health = getAgentKitHealth(db, request.params.id);
+    if (!health) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+    }
+
+    return health;
   });
 
   app.get<{ Params: { id: string; profileId: string } }>(
@@ -450,6 +460,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       objectId?: string;
       packId?: string;
       skillId?: string;
+      agentKitId?: string;
     };
   }>("/api/review-items", async (request) => {
     const filters: ReviewItemFilters = {
@@ -459,7 +470,8 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       objectType: request.query.objectType,
       objectId: request.query.objectId,
       packId: request.query.packId,
-      skillId: request.query.skillId
+      skillId: request.query.skillId,
+      agentKitId: request.query.agentKitId
     };
     const items = getReviewItems(db, filters);
     const allItems = getReviewItems(db);
