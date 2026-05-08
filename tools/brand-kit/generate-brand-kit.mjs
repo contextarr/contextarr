@@ -144,6 +144,23 @@ function wordMetrics(text, size) {
   return wordFont.getMetrics(text, { x: 0, y: 0, fontSize: size, anchor: "top" });
 }
 
+function letteredTextWidth(text, size, tracking) {
+  let width = 0;
+  let hasGlyph = false;
+  for (const char of text) {
+    if (char === " ") {
+      width += size * 0.55 + tracking;
+      continue;
+    }
+    if (hasGlyph) {
+      width += tracking;
+    }
+    width += taglineFont.getMetrics(char, { x: 0, y: 0, fontSize: size, anchor: "top" }).width;
+    hasGlyph = true;
+  }
+  return width;
+}
+
 function wordmarkGroup({
   x,
   y,
@@ -156,15 +173,23 @@ function wordmarkGroup({
   const contextText = "Context";
   const arrText = "arr";
   const contextWidth = wordMetrics(contextText, size).width;
+  const arrX = x + contextWidth - size * 0.018;
+  const arrWidth = wordMetrics(arrText, size).width;
+  const wordmarkWidth = arrX + arrWidth - x;
   const contextD = wordFont.getD(contextText, { x, y, fontSize: size, anchor: "top" });
-  const arrD = wordFont.getD(arrText, { x: x + contextWidth - size * 0.018, y, fontSize: size, anchor: "top" });
+  const arrD = wordFont.getD(arrText, { x: arrX, y, fontSize: size, anchor: "top" });
+  const taglineText = "VALIDATED CONTEXT. READY FOR AGENTS.";
+  const taglineSize = Math.round(size * 0.17);
+  const taglineTracking = Math.max(1.6, size * 0.045);
+  const taglineWidth = letteredTextWidth(taglineText, taglineSize, taglineTracking);
+  const tagX = x + (wordmarkWidth - taglineWidth) / 2;
   const tag = tagline
     ? letteredText({
-        text: "VALIDATED CONTEXT. READY FOR AGENTS.",
-        x: x + 2,
+        text: taglineText,
+        x: tagX,
         y: y + size + 16,
-        size: Math.round(size * 0.17),
-        tracking: Math.max(1.6, size * 0.045),
+        size: taglineSize,
+        tracking: taglineTracking,
         fill: taglineFill,
       })
     : "";
@@ -179,14 +204,19 @@ ${tag}
 function letteredText({ text, x, y, size, tracking, fill }) {
   let cursor = x;
   const paths = [];
+  let hasGlyph = false;
   for (const char of text) {
     if (char === " ") {
       cursor += size * 0.55 + tracking;
       continue;
     }
+    if (hasGlyph) {
+      cursor += tracking;
+    }
     const d = taglineFont.getD(char, { x: cursor, y, fontSize: size, anchor: "top" });
     paths.push(`<path d="${d}"/>`);
-    cursor += taglineFont.getMetrics(char, { x: 0, y: 0, fontSize: size, anchor: "top" }).width + tracking;
+    cursor += taglineFont.getMetrics(char, { x: 0, y: 0, fontSize: size, anchor: "top" }).width;
+    hasGlyph = true;
   }
   return `    <g fill="${fill}">
       ${paths.join("\n      ")}
