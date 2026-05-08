@@ -1,0 +1,15 @@
+id: valid-skill-chatgpt
+name: Valid Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - valid-skill.core
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 4000
+sections:
+  - instructions
+  - safety

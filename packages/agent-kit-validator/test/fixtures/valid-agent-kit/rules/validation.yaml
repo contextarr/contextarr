@@ -1,0 +1,7 @@
+required_fields:
+  record:
+    - id
+    - title
+checks:
+  - references_exist
+  - no_execution_claims

@@ -12,6 +12,7 @@
     "test": "vitest run --root ../.. apps/cli/src"
   },
   "dependencies": {
+    "@contextarr/agent-kit-validator": "workspace:*",
     "@contextarr/export-profiles": "workspace:*",
     "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",

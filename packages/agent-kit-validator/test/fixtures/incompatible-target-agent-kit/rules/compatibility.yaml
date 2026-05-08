@@ -1,0 +1,14 @@
+supported_targets:
+  - claude
+required_context_packs:
+  - valid-minimal-pack
+required_skills:
+  - valid-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+pairings:
+  - context_pack: valid-minimal-pack
+    skill: valid-skill
+    target: codex
+    status: supported

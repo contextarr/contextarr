@@ -1,0 +1,7 @@
+redact_tags:
+  - secret
+  - never_export
+patterns:
+  - name: private_marker
+    regex: "\\bPRIVATE_TEST_MARKER\\b"
+    action: remove

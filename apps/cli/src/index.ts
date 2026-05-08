@@ -3,6 +3,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
 import {
+  AgentKitReadError,
+  formatAgentKitValidationResult,
+  validateAgentKit,
+  type AgentKitValidationResult
+} from "@contextarr/agent-kit-validator";
+import {
   buildPackExport,
   buildPackExports,
   buildSkillExport,
@@ -122,7 +128,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
   program
     .command("validate")
-    .argument("<path>", "pack, Skill, or directory of child objects to validate")
+    .argument("<path>", "pack, Skill, Agent Kit, or directory of child objects to validate")
     .option("--format <format>", "output format: text or json", "text")
     .action((targetPath: string, options: { format: string }) => {
       const format = parseFormat(options.format);
@@ -144,7 +150,11 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       try {
         const targets = getValidationTargets(resolvedTargetPath);
         const results = targets.map((target) =>
-          target.kind === "skill" ? validateSkill(target.path) : validatePack(target.path)
+          target.kind === "skill"
+            ? validateSkill(target.path)
+            : target.kind === "agent-kit"
+              ? validateAgentKit(target.path)
+              : validatePack(target.path)
         );
         io.stdout.write(
           format === "json"
@@ -153,7 +163,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         );
         exitCode = results.every((result) => result.valid) ? 0 : 1;
       } catch (error) {
-        io.stderr.write(`${error instanceof PackReadError || error instanceof SkillReadError ? error.message : errorMessage(error)}\n`);
+        io.stderr.write(
+          `${error instanceof PackReadError || error instanceof SkillReadError || error instanceof AgentKitReadError ? error.message : errorMessage(error)}\n`
+        );
         exitCode = 2;
       }
     });
@@ -189,6 +201,41 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         exitCode = results.every((result) => result.valid) ? 0 : 1;
       } catch (error) {
         io.stderr.write(`${error instanceof SkillReadError ? error.message : errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("validate-agent-kit")
+    .argument("<path>", "Agent Kit directory or directory of child Agent Kits to validate")
+    .option("--format <format>", "output format: text or json", "text")
+    .action((targetPath: string, options: { format: string }) => {
+      const format = parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      const resolvedTargetPath = resolveUserPath(targetPath);
+
+      if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
+        io.stderr.write(`Agent Kit path is not a readable directory: ${targetPath}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const results = getAgentKitTargets(resolvedTargetPath).map((target) => validateAgentKit(target));
+        io.stdout.write(
+          format === "json"
+            ? `${JSON.stringify(formatValidationJson(resolvedTargetPath, results), null, 2)}\n`
+            : formatValidationText(results)
+        );
+        exitCode = results.every((result) => result.valid) ? 0 : 1;
+      } catch (error) {
+        io.stderr.write(`${error instanceof AgentKitReadError ? error.message : errorMessage(error)}\n`);
         exitCode = 2;
       }
     });
@@ -298,8 +345,9 @@ function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
 }
 
-type ValidationTarget = { kind: "pack" | "skill"; path: string };
-type AnyValidationResult = ValidationResult | SkillValidationResult;
+type ValidationTarget = { kind: "pack" | "skill" | "agent-kit"; path: string };
+type ExportTarget = { kind: "pack" | "skill"; path: string };
+type AnyValidationResult = ValidationResult | SkillValidationResult | AgentKitValidationResult;
 
 function getValidationTargets(targetPath: string): ValidationTarget[] {
   if (fs.existsSync(path.join(targetPath, "contextarr-pack.json"))) {
@@ -308,6 +356,10 @@ function getValidationTargets(targetPath: string): ValidationTarget[] {
 
   if (fs.existsSync(path.join(targetPath, "contextarr-skill.json"))) {
     return [{ kind: "skill", path: targetPath }];
+  }
+
+  if (fs.existsSync(path.join(targetPath, "contextarr-agent-kit.json"))) {
+    return [{ kind: "agent-kit", path: targetPath }];
   }
 
   const childTargets = fs
@@ -320,6 +372,9 @@ function getValidationTargets(targetPath: string): ValidationTarget[] {
       }
       if (fs.existsSync(path.join(candidate, "contextarr-skill.json"))) {
         return [{ kind: "skill", path: candidate }];
+      }
+      if (fs.existsSync(path.join(candidate, "contextarr-agent-kit.json"))) {
+        return [{ kind: "agent-kit", path: candidate }];
       }
       return [];
     })
@@ -358,8 +413,23 @@ function getSkillTargets(targetPath: string): string[] {
   return childSkills.length > 0 ? childSkills : [targetPath];
 }
 
-function getExportTargets(targetPath: string): ValidationTarget[] {
-  const targets = getValidationTargets(targetPath);
+function getAgentKitTargets(targetPath: string): string[] {
+  if (fs.existsSync(path.join(targetPath, "contextarr-agent-kit.json"))) {
+    return [targetPath];
+  }
+
+  const childAgentKits = fs
+    .readdirSync(targetPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(targetPath, entry.name))
+    .filter((candidate) => fs.existsSync(path.join(candidate, "contextarr-agent-kit.json")))
+    .sort((left, right) => left.localeCompare(right));
+
+  return childAgentKits.length > 0 ? childAgentKits : [targetPath];
+}
+
+function getExportTargets(targetPath: string): ExportTarget[] {
+  const targets = getValidationTargets(targetPath).filter((target): target is ExportTarget => target.kind !== "agent-kit");
   if (targets.length === 0) {
     return [{ kind: "pack", path: targetPath }];
   }
@@ -413,7 +483,13 @@ function assertInsidePath(root: string, candidate: string): void {
 
 function formatValidationText(results: AnyValidationResult[]): string {
   return results
-    .map((result) => ("skillPath" in result ? formatSkillValidationResult(result) : formatValidationResult(result)))
+    .map((result) =>
+      "agentKitPath" in result
+        ? formatAgentKitValidationResult(result)
+        : "skillPath" in result
+          ? formatSkillValidationResult(result)
+          : formatValidationResult(result)
+    )
     .join(results.length > 1 ? "\n" : "");
 }
 
@@ -421,6 +497,7 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   targetPath: string;
   packPath?: string;
   skillPath?: string;
+  agentKitPath?: string;
   valid: boolean;
   results: AnyValidationResult[];
   summary: { errors: number; warnings: number; infos: number };
@@ -429,8 +506,9 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
     return results[0];
   }
 
+  const displayTargetPath = displayPath(targetPath);
   const aggregate = {
-    targetPath,
+    targetPath: displayTargetPath,
     valid: results.every((result) => result.valid),
     results,
     summary: {
@@ -441,11 +519,15 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   };
 
   if (results.every((result) => "packPath" in result)) {
-    return { packPath: targetPath, ...aggregate };
+    return { packPath: displayTargetPath, ...aggregate };
   }
 
   if (results.every((result) => "skillPath" in result)) {
-    return { skillPath: targetPath, ...aggregate };
+    return { skillPath: displayTargetPath, ...aggregate };
+  }
+
+  if (results.every((result) => "agentKitPath" in result)) {
+    return { agentKitPath: displayTargetPath, ...aggregate };
   }
 
   return aggregate;
@@ -499,6 +581,16 @@ function formatImportJson(result: DraftImportResult): {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function displayPath(value: string): string {
+  const cwd = path.resolve(process.env.INIT_CWD ?? process.cwd());
+  const relative = path.relative(cwd, path.resolve(value));
+  if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) {
+    return relative.replace(/\\/g, "/");
+  }
+
+  return path.basename(value);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

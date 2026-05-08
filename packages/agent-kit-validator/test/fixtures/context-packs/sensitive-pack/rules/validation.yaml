@@ -1,0 +1,11 @@
+required_fields:
+  record:
+    - id
+    - title
+    - type
+    - confidence
+    - source_status
+    - privacy
+checks:
+  - no_executable_code
+  - source_ids_exist

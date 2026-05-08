@@ -41,7 +41,8 @@
     "phase15:verify": "pnpm phase14:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/server rescan",
     "phase16:verify": "pnpm phase15:verify && pnpm --filter @contextarr/web typecheck && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase17:verify": "pnpm phase16:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
-    "phase18:verify": "pnpm phase17:verify && pnpm skills:validate && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-skills --all --out generated-exports/phase18-demo-skills && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build"
+    "phase18:verify": "pnpm phase17:verify && pnpm skills:validate && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-skills --all --out generated-exports/phase18-demo-skills && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
+    "phase19:verify": "pnpm phase18:verify && pnpm --filter @contextarr/agent-kit-validator test && pnpm --filter @contextarr/cli contextarr validate-agent-kit packages/agent-kit-validator/test/fixtures/valid-agent-kit && pnpm --filter @contextarr/cli contextarr validate packages/agent-kit-validator/test/fixtures/valid-agent-kit --format json"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

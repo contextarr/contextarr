@@ -41,6 +41,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@contextarr/agent-kit-validator':
+        specifier: workspace:*
+        version: link:../../packages/agent-kit-validator
       '@contextarr/export-profiles':
         specifier: workspace:*
         version: link:../../packages/export-profiles
@@ -132,6 +135,27 @@ importers:
       vite:
         specifier: ^6.3.5
         version: 6.4.2(@types/node@22.19.17)(tsx@4.21.0)(yaml@2.8.4)
+
+  packages/agent-kit-validator:
+    dependencies:
+      '@contextarr/pack-validator':
+        specifier: workspace:*
+        version: link:../pack-validator
+      '@contextarr/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@contextarr/skill-validator':
+        specifier: workspace:*
+        version: link:../skill-validator
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.4
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
 
   packages/export-profiles:
     dependencies:

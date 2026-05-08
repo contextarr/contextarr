@@ -235,6 +235,100 @@ export const skillSafetyRulesSchema = z
   })
   .passthrough();
 
+export const agentKitManifestSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    version: z.string().min(1),
+    description: z.string().min(1),
+    type: z.string().min(1),
+    visibility: z.enum(["local", "private", "public"]),
+    trustLevel: trustLevelSchema,
+    author: z.string().min(1),
+    license: z.string().min(1),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+    lastReviewedAt: isoDateTimeSchema.nullable(),
+    containsPersonalData: z.boolean(),
+    containsExecutableCode: z.boolean(),
+    requiresNetwork: z.boolean(),
+    permissions: z
+      .object({
+        readVault: z.literal(false).default(false),
+        writeDrafts: z.literal(false).default(false),
+        runCommands: z.literal(false).default(false),
+        networkAccess: z.literal(false).default(false),
+        browserAutomation: z.literal(false).default(false),
+        toolExecution: z.literal(false).default(false)
+      })
+      .strict()
+      .default({}),
+    contextPacks: z.array(idSchema).min(1),
+    skills: z.array(idSchema).min(1),
+    target: z.string().min(1),
+    exportProfile: idSchema,
+    privacyMode: z.enum(["redacted", "full", "public_safe"]).default("redacted"),
+    tokenBudget: z.number().int().positive().optional(),
+    rulesPath: z.string().min(1),
+    exportsPath: z.string().min(1),
+    examplesPath: z.string().min(1).optional(),
+    assets: z
+      .object({
+        coverImage: z.string().min(1).optional(),
+        accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional()
+      })
+      .strict()
+      .default({}),
+    compatibility: z
+      .object({
+        contextarr: z.string().min(1)
+      })
+      .strict()
+  })
+  .strict();
+
+export const agentKitExportProfileSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    target: z.string().min(1),
+    format: z.enum(["markdown", "json", "text"]),
+    privacy_mode: z.enum(["redacted", "full", "public_safe"]).default("redacted"),
+    include: z
+      .object({
+        context_packs: z.array(idSchema).optional(),
+        skills: z.array(idSchema).optional()
+      })
+      .strict()
+      .optional(),
+    exclude_tags: z.array(z.string().min(1)).default([]),
+    token_budget: z.number().int().positive().optional(),
+    sections: z.array(z.string().min(1)).default([])
+  })
+  .strict();
+
+export const agentKitCompatibilityRulesSchema = z
+  .object({
+    supported_targets: z.array(z.string().min(1)).default([]),
+    required_context_packs: z.array(idSchema).default([]),
+    required_skills: z.array(idSchema).default([]),
+    allow_unreviewed_drafts: z.boolean().default(false),
+    blocked_trust_levels: z.array(trustLevelSchema.or(z.string().min(1))).default([]),
+    pairings: z
+      .array(
+        z
+          .object({
+            context_pack: idSchema.optional(),
+            skill: idSchema.optional(),
+            target: z.string().min(1).optional(),
+            status: z.enum(["supported", "warning", "blocked"]).default("supported")
+          })
+          .strict()
+      )
+      .default([])
+  })
+  .strict();
+
 export const validationRulesSchema = z
   .object({
     required_fields: z
@@ -283,3 +377,6 @@ export type SkillManifest = z.infer<typeof skillManifestSchema>;
 export type SkillInstructionFrontmatter = z.infer<typeof skillInstructionFrontmatterSchema>;
 export type SkillExportProfile = z.infer<typeof skillExportProfileSchema>;
 export type SkillSafetyRules = z.infer<typeof skillSafetyRulesSchema>;
+export type AgentKitManifest = z.infer<typeof agentKitManifestSchema>;
+export type AgentKitExportProfile = z.infer<typeof agentKitExportProfileSchema>;
+export type AgentKitCompatibilityRules = z.infer<typeof agentKitCompatibilityRulesSchema>;

@@ -1,0 +1,41 @@
+{
+  "id": "execution-claim-agent-kit",
+  "name": "Execution Claim Agent Kit",
+  "version": "1.0.0",
+  "description": "A fake public-safe Agent Kit fixture for validator tests.",
+  "type": "support_workflow",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Tests",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": null,
+  "containsPersonalData": false,
+  "containsExecutableCode": true,
+  "requiresNetwork": true,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": true,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": true
+  },
+  "runsAgent": true,
+  "contextPacks": ["valid-minimal-pack"],
+  "skills": ["valid-skill"],
+  "target": "codex",
+  "exportProfile": "valid-agent-kit-codex",
+  "privacyMode": "redacted",
+  "tokenBudget": 12000,
+  "rulesPath": "rules",
+  "exportsPath": "exports",
+  "examplesPath": "examples",
+  "assets": {
+    "accentColor": "#22c55e"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

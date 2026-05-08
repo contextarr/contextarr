@@ -17,6 +17,7 @@
       "@contextarr/schema": ["packages/schema/src/index.ts"],
       "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"],
       "@contextarr/skill-validator": ["packages/skill-validator/src/index.ts"],
+      "@contextarr/agent-kit-validator": ["packages/agent-kit-validator/src/index.ts"],
       "@contextarr/importers": ["packages/importers/src/index.ts"],
       "@contextarr/export-profiles": ["packages/export-profiles/src/index.ts"],
       "@contextarr/server": ["apps/server/src/index.ts"],

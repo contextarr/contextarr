@@ -1,0 +1,14 @@
+supported_targets:
+  - codex
+required_context_packs:
+  - sensitive-pack
+required_skills:
+  - valid-skill
+allow_unreviewed_drafts: false
+blocked_trust_levels:
+  - blocked
+pairings:
+  - context_pack: sensitive-pack
+    skill: valid-skill
+    target: codex
+    status: supported

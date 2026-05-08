@@ -1,0 +1,14 @@
+id: codex-context
+name: Codex Context
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - valid.overview
+exclude_tags:
+  - secret
+token_budget: 8000
+sections:
+  - summary
+  - sources

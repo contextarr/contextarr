@@ -1,0 +1,20 @@
+id: sensitive-unredacted-agent-kit-codex
+name: Valid Agent Kit Codex Export
+target: codex
+format: markdown
+privacy_mode: full
+include:
+  context_packs:
+    - sensitive-pack
+  skills:
+    - valid-skill
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - kit_summary
+  - included_skills
+  - relevant_context
+  - constraints
+  - redaction_notice

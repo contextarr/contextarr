@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentKitCompatibilityRulesSchema,
+  agentKitExportProfileSchema,
+  agentKitManifestSchema,
   contextPackManifestSchema,
   exportProfileSchema,
   recordFrontmatterSchema,
@@ -213,5 +216,120 @@ describe("Contextarr schemas", () => {
         ]
       }).success
     ).toBe(true);
+  });
+
+  it("accepts non-executable Agent Kit manifests, export profiles, and compatibility rules", () => {
+    expect(
+      agentKitManifestSchema.safeParse({
+        id: "support-ticket-kit",
+        name: "Support Ticket Agent Kit",
+        version: "1.0.0",
+        description: "Combines fake support context and non-executable Skill instructions.",
+        type: "support_workflow",
+        visibility: "local",
+        trustLevel: "local",
+        author: "Contextarr Demo",
+        license: "MIT",
+        createdAt: "2026-05-07T00:00:00Z",
+        updatedAt: "2026-05-07T00:00:00Z",
+        lastReviewedAt: null,
+        containsPersonalData: false,
+        containsExecutableCode: false,
+        requiresNetwork: false,
+        permissions: {
+          readVault: false,
+          writeDrafts: false,
+          runCommands: false,
+          networkAccess: false,
+          browserAutomation: false,
+          toolExecution: false
+        },
+        contextPacks: ["internal-support-kb-pack"],
+        skills: ["support-ticket-writing-skill"],
+        target: "codex",
+        exportProfile: "support-ticket-kit-codex",
+        privacyMode: "redacted",
+        tokenBudget: 12000,
+        rulesPath: "rules",
+        exportsPath: "exports",
+        examplesPath: "examples",
+        assets: {
+          accentColor: "#22c55e"
+        },
+        compatibility: {
+          contextarr: ">=0.3.0"
+        }
+      }).success
+    ).toBe(true);
+
+    expect(
+      agentKitExportProfileSchema.safeParse({
+        id: "support-ticket-kit-codex",
+        name: "Support Ticket Agent Kit Codex Export",
+        target: "codex",
+        format: "markdown",
+        privacy_mode: "redacted",
+        include: {
+          context_packs: ["internal-support-kb-pack"],
+          skills: ["support-ticket-writing-skill"]
+        },
+        exclude_tags: ["secret", "never_export"],
+        token_budget: 12000,
+        sections: ["kit_summary", "included_skills", "relevant_context"]
+      }).success
+    ).toBe(true);
+
+    expect(
+      agentKitCompatibilityRulesSchema.safeParse({
+        supported_targets: ["codex"],
+        required_context_packs: ["internal-support-kb-pack"],
+        required_skills: ["support-ticket-writing-skill"],
+        allow_unreviewed_drafts: false,
+        blocked_trust_levels: ["blocked"],
+        pairings: [
+          {
+            context_pack: "internal-support-kb-pack",
+            skill: "support-ticket-writing-skill",
+            target: "codex",
+            status: "supported"
+          }
+        ]
+      }).success
+    ).toBe(true);
+  });
+
+  it("rejects Agent Kit capability drift fields at schema boundaries", () => {
+    expect(
+      agentKitManifestSchema.safeParse({
+        id: "bad-kit",
+        name: "Bad Kit",
+        version: "1.0.0",
+        description: "Invalid fixture.",
+        type: "support_workflow",
+        visibility: "local",
+        trustLevel: "local",
+        author: "Contextarr Tests",
+        license: "MIT",
+        createdAt: "2026-05-07T00:00:00Z",
+        updatedAt: "2026-05-07T00:00:00Z",
+        lastReviewedAt: null,
+        containsPersonalData: false,
+        containsExecutableCode: false,
+        requiresNetwork: false,
+        contextPacks: ["valid-minimal-pack"],
+        skills: ["valid-skill"],
+        target: "codex",
+        exportProfile: "bad-kit-codex",
+        privacyMode: "redacted",
+        rulesPath: "rules",
+        exportsPath: "exports",
+        compatibility: {
+          contextarr: ">=0.3.0"
+        },
+        telemetry: {
+          enabled: true
+        }
+      }).success
+    ).toBe(false);
   });
 });

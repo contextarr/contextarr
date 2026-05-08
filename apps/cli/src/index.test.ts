@@ -14,6 +14,10 @@ const skillFixturesDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../packages/skill-validator/test/fixtures"
 );
+const agentKitFixturesDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../packages/agent-kit-validator/test/fixtures"
+);
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
@@ -112,7 +116,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(json).toMatchObject({
-      packPath: demoPacksDir,
+      packPath: "demo-packs",
       valid: true,
       summary: {
         errors: 0,
@@ -163,6 +167,48 @@ describe("contextarr CLI", () => {
     expect(code).toBe(1);
     expect(json.valid).toBe(false);
     expect(json.issues).toContainEqual(expect.objectContaining({ code: "skill_manifest.schema" }));
+  });
+
+  it("validates Agent Kits through the unified and explicit commands", async () => {
+    const unifiedOutput = createIo();
+    const agentKitOutput = createIo();
+
+    expect(await runCli(["validate", path.join(agentKitFixturesDir, "valid-agent-kit"), "--format", "json"], unifiedOutput.io)).toBe(0);
+    expect(JSON.parse(unifiedOutput.stdout)).toMatchObject({
+      agentKitId: "valid-agent-kit",
+      valid: true,
+      summary: {
+        errors: 0
+      }
+    });
+    expect(unifiedOutput.stdout).not.toMatch(/[A-Za-z]:[\\/]/);
+
+    expect(await runCli(["validate-agent-kit", path.join(agentKitFixturesDir, "valid-agent-kit")], agentKitOutput.io)).toBe(0);
+    expect(agentKitOutput.stdout).toContain("Agent Kit validation passed");
+    expect(agentKitOutput.stdout).not.toMatch(/[A-Za-z]:[\\/]/);
+  });
+
+  it("returns 1 for invalid Agent Kit validation", async () => {
+    const output = createIo();
+    const code = await runCli(["validate-agent-kit", path.join(agentKitFixturesDir, "execution-claim-agent-kit")], output.io);
+
+    expect(code).toBe(1);
+    expect(output.stdout).toContain("agent_kit.execution_claimed");
+    expect(output.stdout).not.toMatch(/[A-Za-z]:[\\/]/);
+  });
+
+  it("does not leak absolute paths for Agent Kit directory JSON validation", async () => {
+    const output = createIo();
+    const code = await runCli(["validate-agent-kit", agentKitFixturesDir, "--format", "json"], output.io);
+    const json = JSON.parse(output.stdout);
+
+    expect(code).toBe(1);
+    expect(json).toMatchObject({
+      valid: false,
+      agentKitPath: "packages/agent-kit-validator/test/fixtures"
+    });
+    expect(json.results.length).toBeGreaterThan(1);
+    expect(output.stdout).not.toMatch(/[A-Za-z]:[\\/]/);
   });
 
   it("imports a Markdown folder to a generated draft pack", async () => {
