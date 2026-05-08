@@ -171,6 +171,15 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       id: "support-ticket-writing-skill",
+      healthScore: 100,
+      healthStatus: "healthy",
+      validationErrors: 0,
+      validationWarnings: 0,
+      instructionCount: 3,
+      exampleCount: 2,
+      sourceCount: 3,
+      exportProfileCount: 4,
+      coverImage: null,
       counts: {
         instructions: 3,
         examples: 2,
@@ -200,6 +209,49 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("allowlists Skill API manifest and document metadata fields", async () => {
+    const skillId = "support-ticket-writing-skill";
+    const manifestJson = db.prepare("SELECT manifest_json FROM skills WHERE id = ?").pluck().get(skillId) as string;
+    const manifest = JSON.parse(manifestJson) as Record<string, unknown>;
+    db.prepare("UPDATE skills SET manifest_json = ? WHERE id = ?").run(
+      JSON.stringify({
+        ...manifest,
+        localPath: "D:\\private\\skills",
+        secretToken: "not-a-real-token",
+        assets: {
+          ...(manifest.assets as Record<string, unknown>),
+          coverImage: "https://example.invalid/pixel.png"
+        }
+      }),
+      skillId
+    );
+    db.prepare("UPDATE skill_instructions SET metadata_json = ? WHERE skill_id = ?").run(
+      JSON.stringify({
+        id: "support-ticket-writing-skill.customer-safe-wording",
+        localPath: "D:\\private\\instruction.md",
+        secretToken: "not-a-real-token"
+      }),
+      skillId
+    );
+
+    const app = createApp({ config, db });
+    const detail = await app.inject({ method: "GET", url: `/api/skills/${skillId}` });
+    const instructions = await app.inject({ method: "GET", url: `/api/skills/${skillId}/instructions` });
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().manifest).not.toHaveProperty("localPath");
+    expect(detail.json().manifest).not.toHaveProperty("secretToken");
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
+    expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
+    expect(instructions.statusCode).toBe(200);
+    expect(instructions.json().instructions[0].metadata).toEqual({});
+    expect(JSON.stringify(instructions.json())).not.toContain("not-a-real-token");
+    expect(JSON.stringify(instructions.json())).not.toContain("D:\\private");
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/skills/:id/instructions and examples return sanitized metadata-ready documents", async () => {
     const app = createApp({ config, db });
     const instructions = await app.inject({
@@ -220,9 +272,11 @@ describe("Contextarr API", () => {
       expect.arrayContaining([expect.objectContaining({ id: "support-ticket-writing-skill.customer-safe-wording" })])
     );
     expect(instructions.json().instructions[0]).not.toHaveProperty("filePath");
+    expect(instructions.json().instructions[0].metadata).toEqual({});
     expect(examples.statusCode).toBe(200);
     expect(examples.json().examples).toHaveLength(2);
     expect(examples.json().examples[0]).not.toHaveProperty("filePath");
+    expect(examples.json().examples[0].metadata).toEqual({});
     expect(exportsResponse.statusCode).toBe(200);
     expect(exportsResponse.json().exportProfiles).toHaveLength(4);
     await app.close();

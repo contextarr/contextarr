@@ -65,6 +65,41 @@ describe("Contextarr API client", () => {
     expect(requests).toEqual(["/api/packs/pack-1", "/api/packs/pack-1/records", "/api/records/record-1"]);
   });
 
+  it("reads Skill library, detail, documents, and exports", async () => {
+    const requests: string[] = [];
+    const client = createApiClient({
+      fetchImpl: async (url) => {
+        requests.push(String(url));
+        if (String(url).endsWith("/instructions")) {
+          return jsonResponse({ instructions: [{ id: "skill.instruction" }] });
+        }
+        if (String(url).endsWith("/examples")) {
+          return jsonResponse({ examples: [{ id: "skill.example" }] });
+        }
+        if (String(url).endsWith("/exports")) {
+          return jsonResponse({ exportProfiles: [{ id: "skill-codex" }] });
+        }
+        if (String(url).includes("/api/skills/skill-1")) {
+          return jsonResponse({ id: "skill-1", name: "Skill One" });
+        }
+        return jsonResponse({ skills: [{ id: "skill-1" }] });
+      }
+    });
+
+    await expect(client.getSkills()).resolves.toEqual([{ id: "skill-1" }]);
+    await expect(client.getSkill("skill-1")).resolves.toMatchObject({ name: "Skill One" });
+    await expect(client.getSkillInstructions("skill-1")).resolves.toEqual([{ id: "skill.instruction" }]);
+    await expect(client.getSkillExamples("skill-1")).resolves.toEqual([{ id: "skill.example" }]);
+    await expect(client.getSkillExports("skill-1")).resolves.toEqual([{ id: "skill-codex" }]);
+    expect(requests).toEqual([
+      "/api/skills",
+      "/api/skills/skill-1",
+      "/api/skills/skill-1/instructions",
+      "/api/skills/skill-1/examples",
+      "/api/skills/skill-1/exports"
+    ]);
+  });
+
   it("reads pack health and review item routes", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

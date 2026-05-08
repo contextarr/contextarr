@@ -91,11 +91,11 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 ## Skills and Agent Kits
 
-Phase 15 implements non-executable Skill schemas, validation, fake demo Skills, and read-only Skill API indexing. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 16 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, and read-only Skill Library/detail UI screens. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Skill manifest paths must stay inside the Skill folder. Skill API responses must not expose local Skill filesystem paths. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
+Skill manifest paths must stay inside the Skill folder. Skill API responses must not expose local Skill filesystem paths. Skill instructions and examples rendered in the web app must pass through the shared sanitized Markdown renderer. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
 
 ## Telemetry
 

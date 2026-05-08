@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 15 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, and read-only Skill indexing/API. Context Packs remain the core source-backed knowledge object; Agent Kits remain future work.
+Phase 16 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API, and a read-only Skill Library/detail UI. Context Packs remain the core source-backed knowledge object; Agent Kits remain future work.
 
 ## Core Decisions
 
@@ -62,7 +62,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports. Phase 11 added same-origin serving of built web assets for the Docker preview.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports. Phase 11 added same-origin serving of built web assets for the Docker preview. Phase 16 adds read-only Skill Library and Skill detail screens with sanitized instruction and example rendering.
 
 ## Renderer Direction
 
@@ -84,7 +84,7 @@ Composed exports are temporary derived artifacts. The web UI can preview, copy, 
 
 ## Local API Direction
 
-The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 adds read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`.
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`.
 
 When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
 
@@ -115,4 +115,4 @@ The second PRD adds Skills and future Agent Kits:
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, and Phase 15 indexes Skills into read-only SQLite/API surfaces. Agent Kit files remain future work. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, and MCP responses must remain derived artifacts.
+Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, and Phase 16 displays Skills in a read-only dashboard surface. Agent Kit files remain future work. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.

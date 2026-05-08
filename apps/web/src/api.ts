@@ -9,7 +9,10 @@ import type {
   RecordSummary,
   ReviewItemsResponse,
   ReviewItemStatus,
-  SearchResponse
+  SearchResponse,
+  SkillDetail,
+  SkillDocument,
+  SkillSummary
 } from "./types";
 
 export class ApiError extends Error {
@@ -35,6 +38,11 @@ export interface ApiClient {
   getPackHealth(id: string): Promise<PackHealthResponse>;
   getPackRecords(id: string): Promise<RecordSummary[]>;
   getRecord(id: string): Promise<RecordDetail>;
+  getSkills(): Promise<SkillSummary[]>;
+  getSkill(id: string): Promise<SkillDetail>;
+  getSkillInstructions(id: string): Promise<SkillDocument[]>;
+  getSkillExamples(id: string): Promise<SkillDocument[]>;
+  getSkillExports(id: string): Promise<SkillDetail["exportProfiles"]>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   getReviewItems(filters?: { status?: string; severity?: string; type?: string; packId?: string }): Promise<ReviewItemsResponse>;
@@ -76,6 +84,27 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.records;
     },
     getRecord: (id: string) => requestJson<RecordDetail>(`/api/records/${encodeURIComponent(id)}`),
+    getSkills: async () => {
+      const response = await requestJson<{ skills: SkillSummary[] }>("/api/skills");
+      return response.skills;
+    },
+    getSkill: (id: string) => requestJson<SkillDetail>(`/api/skills/${encodeURIComponent(id)}`),
+    getSkillInstructions: async (id: string) => {
+      const response = await requestJson<{ instructions: SkillDocument[] }>(
+        `/api/skills/${encodeURIComponent(id)}/instructions`
+      );
+      return response.instructions;
+    },
+    getSkillExamples: async (id: string) => {
+      const response = await requestJson<{ examples: SkillDocument[] }>(`/api/skills/${encodeURIComponent(id)}/examples`);
+      return response.examples;
+    },
+    getSkillExports: async (id: string) => {
+      const response = await requestJson<{ exportProfiles: SkillDetail["exportProfiles"] }>(
+        `/api/skills/${encodeURIComponent(id)}/exports`
+      );
+      return response.exportProfiles;
+    },
     getExportPreview: (packId: string, profileId: string) =>
       requestJson<ExportArtifact>(
         `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`

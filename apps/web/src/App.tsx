@@ -63,8 +63,20 @@ import {
   persistLibraryView
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
+import { renderSkillDocumentHtml } from "./skill-rendering";
 import { filterReviewItems, reviewPackName, summarizeReviewItems, type ReviewFilters } from "./review";
-import { composerHref, exportsHref, healthHref, packHref, parseHashRoute, recordHref, reviewQueueHref } from "./routes";
+import {
+  composerHref,
+  exportsHref,
+  healthHref,
+  packHref,
+  parseHashRoute,
+  recordHref,
+  reviewQueueHref,
+  skillHref,
+  skillsHref
+} from "./routes";
+import { createSkillCoverVisual, filterAndSortSkills, getSkillFilterOptions } from "./skills";
 import type {
   ExportArtifact,
   ExportProfileSummary,
@@ -79,12 +91,16 @@ import type {
   ReviewItem,
   Route,
   SearchResult,
+  SkillDetail,
+  SkillDocument,
+  SkillSummary,
   SortKey,
   SourceSummary
 } from "./types";
 
 const navItems = [
   { label: "Library", icon: Library, href: "#/library", route: "library" },
+  { label: "Skills", icon: BookOpen, href: skillsHref(), route: "skills" },
   { label: "Packs", icon: Boxes },
   { label: "Collectors", icon: Layers3 },
   { label: "Sources", icon: Database },
@@ -103,16 +119,20 @@ const coverIconMap = {
   database: Database,
   monitor: Monitor,
   package: Package,
-  server: Server
+  server: Server,
+  sparkles: Sparkles
 };
 
 const detailTabs = ["overview", "records", "sources", "exports", "health", "activity", "changelog"] as const;
 type DetailTab = (typeof detailTabs)[number];
+const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exports", "health"] as const;
+type SkillDetailTab = (typeof skillDetailTabs)[number];
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => currentRoute());
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [packs, setPacks] = useState<PackSummary[]>([]);
+  const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -125,6 +145,8 @@ export function App() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
+  const [skillError, setSkillError] = useState<string | null>(null);
+  const [skillAuthError, setSkillAuthError] = useState(false);
 
   useEffect(() => {
     function handleHashChange() {
@@ -139,6 +161,8 @@ export function App() {
     setLoading(true);
     setError(null);
     setAuthError(false);
+    setSkillError(null);
+    setSkillAuthError(false);
 
     try {
       const [healthResponse, packResponse] = await Promise.all([apiClient.getHealth(), apiClient.getPacks()]);
@@ -150,6 +174,18 @@ export function App() {
         setError("API token required by environment configuration.");
       } else {
         setError(loadError instanceof Error ? loadError.message : "Unable to load Contextarr API data.");
+      }
+    }
+
+    try {
+      setSkills(await apiClient.getSkills());
+    } catch (loadError) {
+      setSkills([]);
+      if (loadError instanceof ApiError && loadError.status === 401) {
+        setSkillAuthError(true);
+        setSkillError("API token required by environment configuration.");
+      } else {
+        setSkillError(loadError instanceof Error ? loadError.message : "Unable to load Skill API data.");
       }
     } finally {
       setLoading(false);
@@ -213,6 +249,20 @@ export function App() {
       ),
     [debouncedQuery, healthFilter, packs, searchResults, sortBy, trustFilter, typeFilter]
   );
+  const visibleSkills = useMemo(
+    () =>
+      filterAndSortSkills(
+        skills,
+        {
+          query: debouncedQuery,
+          type: "all",
+          trustLevel: "all",
+          healthStatus: "all"
+        },
+        searchResults
+      ),
+    [debouncedQuery, searchResults, skills]
+  );
 
   function handleViewModeChange(mode: LibraryViewMode) {
     setViewMode(mode);
@@ -228,6 +278,19 @@ export function App() {
           <PackDetailPage packId={route.packId} packs={packs} />
         ) : route.name === "record" ? (
           <RecordDetailPage recordId={route.recordId} packs={packs} />
+        ) : route.name === "skills" ? (
+          <SkillLibraryPage
+            skills={skills}
+            visibleSkills={visibleSkills}
+            query={debouncedQuery}
+            searchResults={searchResults}
+            loading={loading}
+            error={skillError}
+            authError={skillAuthError}
+            onRetry={loadDashboard}
+          />
+        ) : route.name === "skill" ? (
+          <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
           <ReviewQueuePage packs={packs} onStatusChanged={loadDashboard} />
         ) : route.name === "composer" ? (
@@ -294,7 +357,11 @@ function Sidebar({ health, route }: { health: HealthResponse | null; route: Rout
           <HeartPulse size={17} aria-hidden="true" />
           <span>{health?.status === "ok" ? "System Healthy" : "System Pending"}</span>
         </div>
-        <p>{health ? `${health.counts.packs} packs / ${health.counts.records} records` : "Local API status loading"}</p>
+        <p>
+          {health
+            ? `${health.counts.packs} packs / ${health.counts.records} records / ${health.counts.skills} skills`
+            : "Local API status loading"}
+        </p>
         <div className="system-meta">
           <span>v0.7.0</span>
           <span>{health?.authRequired ? "Token auth" : "Local dev"}</span>
@@ -637,6 +704,438 @@ function DenseTable({ packs }: { packs: PackSummary[] }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SkillLibraryPage({
+  skills,
+  visibleSkills,
+  query,
+  searchResults,
+  loading,
+  error,
+  authError,
+  onRetry
+}: {
+  skills: SkillSummary[];
+  visibleSkills: SkillSummary[];
+  query: string;
+  searchResults: SearchResult[];
+  loading: boolean;
+  error: string | null;
+  authError: boolean;
+  onRetry(): void;
+}) {
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [trustFilter, setTrustFilter] = useState("all");
+  const [healthFilter, setHealthFilter] = useState("all");
+  const filterOptions = useMemo(() => getSkillFilterOptions(skills), [skills]);
+  const filteredSkills = useMemo(
+    () =>
+      filterAndSortSkills(
+        visibleSkills,
+        {
+          query,
+          type: typeFilter,
+          trustLevel: trustFilter,
+          healthStatus: healthFilter
+        },
+        searchResults
+      ),
+    [healthFilter, query, searchResults, trustFilter, typeFilter, visibleSkills]
+  );
+
+  return (
+    <section className="library-panel" aria-labelledby="skills-title">
+      <div className="library-header">
+        <div>
+          <div className="eyebrow">
+            <BookOpen size={16} aria-hidden="true" />
+            <span>Skills</span>
+          </div>
+          <h1 id="skills-title">Skill Library</h1>
+          <p>Browse local non-executable instruction artifacts and inspect their sources, examples, and export profiles.</p>
+        </div>
+
+        <div className="library-controls">
+          <label className="select-control">
+            <Filter size={16} aria-hidden="true" />
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="all">All types</option>
+              {filterOptions.types.map((type) => (
+                <option value={type} key={type}>
+                  {formatPackType(type)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="select-control compact-select">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <select value={trustFilter} onChange={(event) => setTrustFilter(event.target.value)}>
+              <option value="all">All trust</option>
+              {filterOptions.trustLevels.map((trust) => (
+                <option value={trust} key={trust}>
+                  {formatPackType(trust)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="select-control compact-select">
+            <HeartPulse size={16} aria-hidden="true" />
+            <select value={healthFilter} onChange={(event) => setHealthFilter(event.target.value)}>
+              <option value="all">All health</option>
+              {filterOptions.healthStatuses.map((status) => (
+                <option value={status} key={status}>
+                  {formatPackType(status)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button className="primary-action" type="button" disabled>
+            <Sparkles size={18} aria-hidden="true" />
+            <span>New Skill</span>
+          </button>
+        </div>
+
+        <div className="library-count">{skills.length} skills</div>
+      </div>
+
+      {error ? (
+        <ErrorState authError={authError} onRetry={onRetry} />
+      ) : loading ? (
+        <LoadingLibrary viewMode="compact" />
+      ) : skills.length === 0 ? (
+        <EmptyState title="No skills indexed" detail="The local API returned an empty Skill library." />
+      ) : filteredSkills.length === 0 ? (
+        <EmptyState title="No skills match" detail="Search and filters did not match the indexed Skill library." />
+      ) : (
+        <SkillCards skills={filteredSkills} />
+      )}
+    </section>
+  );
+}
+
+function SkillCards({ skills }: { skills: SkillSummary[] }) {
+  return (
+    <div className="compact-grid skill-grid">
+      {skills.map((skill) => (
+        <article className="compact-card skill-card" key={skill.id}>
+          <a href={skillHref(skill.id)} aria-label={`Open ${skill.name}`}>
+            <SkillCover skill={skill} variant="thumb" />
+          </a>
+          <div className="compact-main">
+            <h2>
+              <a className="pack-title-link" href={skillHref(skill.id)}>
+                {skill.name}
+              </a>
+            </h2>
+            <p>{skill.description}</p>
+            <span className="pack-type">{formatPackType(skill.type)}</span>
+          </div>
+          <div className="compact-metrics">
+            <SkillHealthBadge skill={skill} />
+            <SkillTrustBadge skill={skill} />
+            <span>{skill.instructionCount} instructions</span>
+            <span>{skill.exampleCount} examples</span>
+            <span>{formatDate(skill.lastReviewedAt)}</span>
+          </div>
+          <a className="ghost-action open-action" href={skillHref(skill.id)} aria-label={`Open ${skill.name}`}>
+            <MoreVertical size={17} aria-hidden="true" />
+          </a>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function SkillDetailPage({ skillId }: { skillId: string }) {
+  const [skill, setSkill] = useState<SkillDetail | null>(null);
+  const [instructions, setInstructions] = useState<SkillDocument[]>([]);
+  const [examples, setExamples] = useState<SkillDocument[]>([]);
+  const [activeTab, setActiveTab] = useState<SkillDetailTab>("overview");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [instructionError, setInstructionError] = useState<string | null>(null);
+  const [exampleError, setExampleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setInstructionError(null);
+    setExampleError(null);
+    setActiveTab("overview");
+
+    async function loadSkillDetail() {
+      try {
+        const skillResponse = await apiClient.getSkill(skillId);
+        if (!cancelled) {
+          setSkill(skillResponse);
+        }
+
+        const [instructionResponse, exampleResponse] = await Promise.allSettled([
+          apiClient.getSkillInstructions(skillId),
+          apiClient.getSkillExamples(skillId)
+        ]);
+        if (!cancelled) {
+          if (instructionResponse.status === "fulfilled") {
+            setInstructions(instructionResponse.value);
+          } else {
+            setInstructions([]);
+            setInstructionError(toErrorMessage(instructionResponse.reason, "Unable to load Skill instructions."));
+          }
+
+          if (exampleResponse.status === "fulfilled") {
+            setExamples(exampleResponse.value);
+          } else {
+            setExamples([]);
+            setExampleError(toErrorMessage(exampleResponse.reason, "Unable to load Skill examples."));
+          }
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load Skill detail.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadSkillDetail();
+    return () => {
+      cancelled = true;
+    };
+  }, [skillId]);
+
+  if (loading) {
+    return <DetailLoading />;
+  }
+
+  if (error || !skill) {
+    return (
+      <section className="detail-page">
+        <BackLink href={skillsHref()} label="Skill Library" />
+        <StateCard title="Skill unavailable" detail={error ?? "The local API did not return this Skill."} />
+      </section>
+    );
+  }
+
+  return (
+    <section className="detail-page" aria-labelledby="skill-detail-title">
+      <BackLink href={skillsHref()} label="Skill Library" />
+      <div className="pack-detail-hero">
+        <SkillCover skill={skill} variant="large" />
+        <div>
+          <div className="eyebrow">
+            <BookOpen size={16} aria-hidden="true" />
+            <span>{formatPackType(skill.type)}</span>
+          </div>
+          <h1 id="skill-detail-title">{skill.name}</h1>
+          <p>{skill.description}</p>
+          <div className="hero-badges">
+            <SkillHealthBadge skill={skill} />
+            <SkillTrustBadge skill={skill} />
+            <span className="version-pill">{skill.version}</span>
+          </div>
+          <div className="last-reviewed">
+            <CalendarDays size={15} aria-hidden="true" />
+            <span>Last reviewed: {formatDate(skill.lastReviewedAt)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="detail-tabs" role="tablist" aria-label={`${skill.name} detail tabs`}>
+        {skillDetailTabs.map((tab) => (
+          <button
+            type="button"
+            className={activeTab === tab ? "is-selected" : ""}
+            onClick={() => setActiveTab(tab)}
+            key={tab}
+          >
+            {formatPackType(tab)}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "overview" ? <SkillOverview skill={skill} /> : null}
+      {activeTab === "instructions" ? (
+        <SkillDocumentsTab
+          title="Instructions"
+          documents={instructions}
+          emptyDetail="This Skill has no indexed instructions."
+          errorDetail={instructionError}
+        />
+      ) : null}
+      {activeTab === "examples" ? (
+        <SkillDocumentsTab
+          title="Examples"
+          documents={examples}
+          emptyDetail="This Skill has no indexed examples."
+          errorDetail={exampleError}
+        />
+      ) : null}
+      {activeTab === "sources" ? <SourcesTab sources={skill.sources} /> : null}
+      {activeTab === "exports" ? <SkillExportsTab skill={skill} /> : null}
+      {activeTab === "health" ? <SkillHealthTab skill={skill} /> : null}
+    </section>
+  );
+}
+
+function SkillOverview({ skill }: {
+  skill: SkillDetail;
+}) {
+  return (
+    <div className="detail-grid">
+      <article className="detail-card summary-card">
+        <h2>
+          <BookOpen size={19} aria-hidden="true" />
+          Summary
+        </h2>
+        <p>{skill.description}</p>
+        <TagList values={[skill.type, skill.visibility, skill.trustLevel]} />
+        <dl className="fact-grid">
+          <Fact label="Author" value={skill.author} />
+          <Fact label="License" value={skill.license} />
+          <Fact label="Created" value={formatDate(skill.createdAt)} />
+          <Fact label="Updated" value={formatDate(skill.updatedAt)} />
+        </dl>
+      </article>
+
+      <article className="detail-card">
+        <h2>
+          <Rows3 size={19} aria-hidden="true" />
+          Skill Stats
+        </h2>
+        <div className="stat-grid">
+          <Stat value={skill.counts.instructions} label="Instructions" />
+          <Stat value={skill.counts.examples} label="Examples" />
+          <Stat value={skill.counts.sources} label="Sources" />
+          <Stat value={skill.counts.exportProfiles} label="Export Profiles" />
+        </div>
+      </article>
+
+      <article className="detail-card">
+        <h2>
+          <Sparkles size={19} aria-hidden="true" />
+          Targets
+        </h2>
+        <TagList values={[...skill.targets, ...skill.inputs, ...skill.outputs]} />
+      </article>
+
+      <article className="detail-card">
+        <h2>
+          <CloudDownload size={19} aria-hidden="true" />
+          Export Profiles
+        </h2>
+        <ProfileList profiles={skill.exportProfiles} />
+      </article>
+
+      <article className="detail-card warning-card">
+        <h2>
+          <ShieldAlert size={19} aria-hidden="true" />
+          Health Placeholder
+        </h2>
+        <p>
+          Phase 16 displays indexed validation status. Deterministic Skill health and review queue items arrive in Phase 17.
+        </p>
+      </article>
+    </div>
+  );
+}
+
+function SkillDocumentsTab({
+  title,
+  documents,
+  emptyDetail,
+  errorDetail
+}: {
+  title: string;
+  documents: SkillDocument[];
+  emptyDetail: string;
+  errorDetail?: string | null;
+}) {
+  const [selectedId, setSelectedId] = useState(documents[0]?.id ?? "");
+
+  useEffect(() => {
+    setSelectedId(documents[0]?.id ?? "");
+  }, [documents]);
+
+  const selected = documents.find((document) => document.id === selectedId) ?? documents[0];
+
+  if (errorDetail) {
+    return <StateCard title={`${title} unavailable`} detail={errorDetail} icon={ShieldAlert} />;
+  }
+
+  if (!selected) {
+    return <StateCard title={title} detail={emptyDetail} icon={BookOpen} />;
+  }
+
+  return (
+    <div className="records-tab">
+      <aside className="record-list-panel">
+        <h2>{title}</h2>
+        {documents.map((document) => (
+          <button
+            type="button"
+            className={document.id === selected.id ? "record-list-item is-selected" : "record-list-item"}
+            onClick={() => setSelectedId(document.id)}
+            key={document.id}
+          >
+            <strong>{document.title}</strong>
+            <span>{formatPackType(document.type)} / {document.sources.length} source</span>
+          </button>
+        ))}
+      </aside>
+      <article className="detail-card record-preview">
+        <div className="record-preview-header">
+          <div>
+            <p className="eyebrow">{formatPackType(selected.type)}</p>
+            <h2>{selected.title}</h2>
+          </div>
+          <StatusPill value={selected.reviewStatus} />
+        </div>
+        <div className="record-meta-strip">
+          <span>{formatPackType(selected.freshness)}</span>
+          <span>{formatPackType(selected.privacy)}</span>
+          <span>{formatPackType(selected.sourceStatus)}</span>
+        </div>
+        <TagList values={selected.tags} />
+        <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderSkillDocumentHtml(selected.body) }} />
+      </article>
+    </div>
+  );
+}
+
+function SkillExportsTab({ skill }: { skill: SkillDetail }) {
+  return (
+    <article className="detail-card">
+      <h2>Skill Export Profiles</h2>
+      <ProfileList profiles={skill.exportProfiles} />
+      <p className="muted-note">Skill export previews are enabled in Phase 18. Phase 16 keeps this surface read-only metadata.</p>
+    </article>
+  );
+}
+
+function SkillHealthTab({ skill }: { skill: SkillDetail }) {
+  return (
+    <article className="detail-card">
+      <h2>
+        <HeartPulse size={19} aria-hidden="true" />
+        Skill Health
+      </h2>
+      <div className="stat-grid">
+        <Stat value={`${skill.health.score}%`} label="Score" />
+        <Stat value={formatPackType(skill.health.status)} label="Status" />
+        <Stat value={skill.validation.errors} label="Validation Errors" />
+        <Stat value={skill.validation.warnings} label="Validation Warnings" />
+      </div>
+      <p className="muted-note">Full deterministic Skill health and Skill review items arrive in Phase 17.</p>
+    </article>
   );
 }
 
@@ -2036,11 +2535,38 @@ function PackCover({ pack, variant }: { pack: PackSummary; variant: "large" | "t
   );
 }
 
+function SkillCover({ skill, variant }: { skill: SkillSummary; variant: "large" | "thumb" | "mini" }) {
+  const cover = createSkillCoverVisual(skill);
+  const Icon = coverIconMap[cover.icon];
+
+  return (
+    <div className={`pack-cover pack-cover-${variant}`} style={{ "--accent": cover.accentColor } as CSSProperties}>
+      {cover.coverImage ? (
+        <img src={cover.coverImage} alt="" />
+      ) : (
+        <>
+          <Icon size={variant === "mini" ? 18 : variant === "thumb" ? 30 : 52} aria-hidden="true" />
+          <span>{cover.initials}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 function HealthBadge({ pack }: { pack: PackSummary }) {
   return (
     <span className={`health-badge ${pack.healthStatus}`}>
       <HeartPulse size={14} aria-hidden="true" />
       {pack.healthScore}%
+    </span>
+  );
+}
+
+function SkillHealthBadge({ skill }: { skill: SkillSummary }) {
+  return (
+    <span className={`health-badge ${skill.healthStatus}`}>
+      <HeartPulse size={14} aria-hidden="true" />
+      {skill.healthScore}%
     </span>
   );
 }
@@ -2054,11 +2580,20 @@ function TrustBadge({ pack }: { pack: PackSummary }) {
   );
 }
 
+function SkillTrustBadge({ skill }: { skill: SkillSummary }) {
+  return (
+    <span className="trust-badge">
+      <ShieldCheck size={14} aria-hidden="true" />
+      {formatPackType(skill.trustLevel)}
+    </span>
+  );
+}
+
 function TagList({ values }: { values: string[] }) {
   return (
     <div className="tag-list">
-      {values.map((value) => (
-        <span className="tag-chip" key={value}>
+      {values.map((value, index) => (
+        <span className="tag-chip" key={`${value}-${index}`}>
           <Tags size={13} aria-hidden="true" />
           {formatPackType(value)}
         </span>
@@ -2166,6 +2701,10 @@ function PlaceholderTab({ title, detail }: { title: string; detail: string }) {
       <p>{detail}</p>
     </article>
   );
+}
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function formatDate(value: string | null): string {

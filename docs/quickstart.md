@@ -36,7 +36,13 @@ Docker serves the built web app and the API from the same local Fastify server. 
 pnpm phase11:verify
 ```
 
-This runs the full Phase 10 verification chain, launch docs checks, and a Docker Compose smoke test.
+For the latest second-PRD verification chain, run:
+
+```bash
+pnpm phase16:verify
+```
+
+This runs the original launch verification chain plus Skill validation, demo Skill validation, Skill API checks, and the Skill Library web checks.
 
 ## Safety
 

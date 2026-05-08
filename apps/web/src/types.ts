@@ -39,6 +39,32 @@ export interface PackSummary {
   updatedAt: string;
 }
 
+export interface SkillSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  validationErrors: number;
+  validationWarnings: number;
+  instructionCount: number;
+  exampleCount: number;
+  sourceCount: number;
+  exportProfileCount: number;
+  accentColor?: string | null;
+  coverImage: string | null;
+  reviewQueueCount: number;
+  lastReviewedAt: string | null;
+  updatedAt: string;
+  targets: string[];
+  inputs: string[];
+  outputs: string[];
+}
+
 export interface SourceSummary {
   id: string;
   type: string;
@@ -153,6 +179,46 @@ export interface PackDetail extends PackSummary {
   exportProfiles: ExportProfileSummary[];
 }
 
+export interface SkillDocument {
+  id: string;
+  skillId: string;
+  title: string;
+  type: string;
+  confidence: string;
+  sourceStatus: string;
+  freshness: string;
+  privacy: string;
+  lastReviewed?: string | null;
+  reviewStatus: string;
+  tags: string[];
+  sources: string[];
+  body: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SkillDetail extends SkillSummary {
+  author: string;
+  license: string;
+  createdAt: string;
+  manifest: Record<string, unknown>;
+  counts: {
+    instructions: number;
+    examples: number;
+    sources: number;
+    exportProfiles: number;
+  };
+  validation: {
+    errors: number;
+    warnings: number;
+  };
+  health: {
+    score: number;
+    status: string;
+  };
+  sources: SourceSummary[];
+  exportProfiles: ExportProfileSummary[];
+}
+
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
 export type ReviewItemType =
@@ -249,6 +315,8 @@ export type Route =
   | { name: "library" }
   | { name: "pack"; packId: string }
   | { name: "record"; recordId: string }
+  | { name: "skills" }
+  | { name: "skill"; skillId: string }
   | { name: "reviewQueue" }
   | { name: "composer" }
   | { name: "exports" }

@@ -12,6 +12,14 @@ export function parseHashRoute(hash: string): Route {
     return { name: "record", recordId: parts[1] };
   }
 
+  if (parts[0] === "skills" && parts[1]) {
+    return { name: "skill", skillId: parts[1] };
+  }
+
+  if (parts[0] === "skills") {
+    return { name: "skills" };
+  }
+
   if (parts[0] === "review-queue") {
     return { name: "reviewQueue" };
   }
@@ -37,6 +45,14 @@ export function packHref(packId: string): string {
 
 export function recordHref(recordId: string): string {
   return `#/records/${encodeURIComponent(recordId)}`;
+}
+
+export function skillsHref(): string {
+  return "#/skills";
+}
+
+export function skillHref(skillId: string): string {
+  return `#/skills/${encodeURIComponent(skillId)}`;
 }
 
 export function reviewQueueHref(): string {

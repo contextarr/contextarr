@@ -16,9 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 15: Skill index and API.
+This repository is in Phase 16: Skill Library UI.
 
-The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, and read-only local API indexing.
+The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, and a read-only Skill Library/detail UI.
 
 Current scope:
 
@@ -63,8 +63,9 @@ Current scope:
 - Zod schemas and validator for non-executable Skills.
 - `contextarr validate-skill <path>` and unified Skill detection in `contextarr validate <path>`.
 - Eight public-safe demo Skills under `demo-skills/`.
-- Rebuildable SQLite index and read-only API endpoints for Skills, instructions, examples, sources, and export profiles.
+- Phase 15 rebuildable SQLite index and read-only API endpoints for Skills, instructions, examples, sources, and export profiles.
 - `GET /api/search?type=skill&q=` for Skill-scoped local search.
+- Skill Library and Skill detail screens with sanitized instruction/example rendering.
 
 Not included yet:
 
@@ -73,7 +74,8 @@ Not included yet:
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
 - Demo Agent Kits.
-- Skill Library UI.
+- Skill Health and Review Queue.
+- Skill export preview/generation.
 - Agent Kit UI/API/MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
 

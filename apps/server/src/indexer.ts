@@ -243,8 +243,16 @@ export function getSkill(db: ContextarrDatabase, skillId: string): unknown | und
     updatedAt: skill.updated_at,
     lastReviewedAt: skill.last_reviewed_at,
     accentColor: skill.accent_color,
-    coverImage: skill.cover_image,
+    coverImage: null,
     reviewQueueCount: skill.review_queue_count,
+    healthScore: skill.health_score,
+    healthStatus: skill.health_status,
+    validationErrors: skill.validation_errors,
+    validationWarnings: skill.validation_warnings,
+    instructionCount: skill.instruction_count,
+    exampleCount: skill.example_count,
+    sourceCount: skill.source_count,
+    exportProfileCount: skill.export_profile_count,
     manifest: sanitizeSkillManifestForApi(JSON.parse(String(skill.manifest_json)) as Record<string, unknown>),
     targets: JSON.parse(String(skill.targets_json)),
     inputs: JSON.parse(String(skill.inputs_json)),
@@ -577,7 +585,7 @@ function insertSkill(db: ContextarrDatabase, skill: LoadedSkill, indexedAt: stri
     containsExecutableCode: skill.manifest.containsExecutableCode ? 1 : 0,
     requiresNetwork: skill.manifest.requiresNetwork ? 1 : 0,
     accentColor: skill.manifest.assets.accentColor ?? null,
-    coverImage: skill.manifest.assets.coverImage ?? null,
+    coverImage: null,
     skillPath: path.resolve(skill.skillPath),
     manifestJson: JSON.stringify(skill.manifest),
     validationErrors: skill.validation.summary.errors,
@@ -975,7 +983,7 @@ function normalizeSkillSummary(skill: Row): SkillSummary {
     sourceCount: Number(skill.sourceCount),
     exportProfileCount: Number(skill.exportProfileCount),
     accentColor: skill.accentColor ? String(skill.accentColor) : undefined,
-    coverImage: skill.coverImage ? String(skill.coverImage) : null,
+    coverImage: null,
     reviewQueueCount: Number(skill.reviewQueueCount),
     lastReviewedAt: skill.lastReviewedAt ? String(skill.lastReviewedAt) : null,
     updatedAt: String(skill.updatedAt),
@@ -1018,27 +1026,51 @@ function normalizeSkillDocument(document: Row): unknown {
     tags: JSON.parse(String(document.tagsJson)),
     sources: JSON.parse(String(document.sourcesJson)),
     body: document.body,
-    metadata: JSON.parse(String(document.metadataJson))
+    metadata: {}
   };
 }
 
 function sanitizeSkillManifestForApi(manifest: Record<string, unknown>): Record<string, unknown> {
-  const {
-    instructionsPath: _instructionsPath,
-    examplesPath: _examplesPath,
-    sourcesPath: _sourcesPath,
-    exportsPath: _exportsPath,
-    rulesPath: _rulesPath,
-    assets,
-    ...safeManifest
-  } = manifest;
+  const permissions = isRecord(manifest.permissions) ? manifest.permissions : {};
+  const assets = isRecord(manifest.assets) ? manifest.assets : {};
+  const compatibility = isRecord(manifest.compatibility) ? manifest.compatibility : {};
 
-  if (assets && typeof assets === "object" && !Array.isArray(assets)) {
-    const { accentColor } = assets as { accentColor?: unknown };
-    safeManifest.assets = accentColor ? { accentColor } : {};
-  }
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    type: manifest.type,
+    visibility: manifest.visibility,
+    trustLevel: manifest.trustLevel,
+    author: manifest.author,
+    license: manifest.license,
+    createdAt: manifest.createdAt,
+    updatedAt: manifest.updatedAt,
+    lastReviewedAt: manifest.lastReviewedAt,
+    containsPersonalData: manifest.containsPersonalData,
+    containsExecutableCode: manifest.containsExecutableCode,
+    requiresNetwork: manifest.requiresNetwork,
+    permissions: {
+      readVault: permissions.readVault,
+      writeDrafts: permissions.writeDrafts,
+      runCommands: permissions.runCommands,
+      networkAccess: permissions.networkAccess,
+      browserAutomation: permissions.browserAutomation,
+      toolExecution: permissions.toolExecution
+    },
+    targets: manifest.targets,
+    inputs: manifest.inputs,
+    outputs: manifest.outputs,
+    assets: assets.accentColor ? { accentColor: assets.accentColor } : {},
+    compatibility: {
+      contextarr: compatibility.contextarr
+    }
+  };
+}
 
-  return safeManifest;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function normalizeReviewItem(row: Row): ReviewItem {
