@@ -91,7 +91,9 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 ## Skills and Agent Kits
 
-Phase 16 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, and read-only Skill Library/detail UI screens. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 17 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, and deterministic Skill health/review items. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+
+Skill health checks reuse the same local, deterministic review queue model as Context Packs. They do not fetch source URLs, probe local source paths, run commands, execute Skill content, or rewrite Skill files. Review item status changes are stored in SQLite only.
 
 Contextarr prepares Agent Kits. It does not run them.
 

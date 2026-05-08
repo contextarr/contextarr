@@ -24,7 +24,7 @@ export function loadSkills(skillsDir: string): LoadSkillsResult {
             {
               severity: "error",
               code: "skills_dir.missing",
-              message: `Skills directory does not exist: ${skillsDir}`
+              message: "Skills directory does not exist."
             }
           ]
         }
@@ -71,7 +71,7 @@ export function loadSkills(skillsDir: string): LoadSkillsResult {
           {
             severity: "error",
             code: "skill_loader.read_failed",
-            message: error instanceof Error ? error.message : String(error)
+            message: stripLocalPaths(error instanceof Error ? error.message : String(error), skillPath)
           }
         ]
       });
@@ -168,4 +168,14 @@ function resolveManifestPath(skillPath: string, manifestPath: string): string | 
 
 function normalizePath(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+function stripLocalPaths(message: string, rootPath: string): string {
+  const normalizedRoot = normalizePath(path.resolve(rootPath));
+  const normalizedMessage = normalizePath(message).replaceAll(normalizedRoot, "[local path]");
+
+  return normalizedMessage
+    .replace(/\b[A-Za-z]:\/[^\s"'`<>|]+/g, "[local path]")
+    .replace(/(?<!:)\/\/[^/\s"'`<>|]+\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g, "[local path]")
+    .replace(/\\\\[^\s"'`<>|]+/g, "[local path]");
 }

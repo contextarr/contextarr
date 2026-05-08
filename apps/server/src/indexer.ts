@@ -7,6 +7,8 @@ import {
   createReviewItemId,
   generatePackReviewItems,
   generateSkippedPackReviewItems,
+  generateSkillReviewItems,
+  generateSkippedSkillReviewItems,
   type ReviewItemCandidate
 } from "./health";
 import { loadPacks } from "./pack-loader";
@@ -20,7 +22,9 @@ import type {
   RebuildIndexResult,
   ReviewItem,
   ReviewItemFilters,
+  ReviewObjectType,
   ReviewItemStatus,
+  SkillHealthDetail,
   SkillSummary
 } from "./types";
 
@@ -32,17 +36,19 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir
   const loadedSkills = skillsDir ? loadSkills(skillsDir) : { skills: [], skipped: [] };
   const reviewCandidates = [
     ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, new Date(indexedAt))),
-    ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped))
+    ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped)),
+    ...loadedSkills.skills.flatMap((skill) => generateSkillReviewItems(skill, new Date(indexedAt))),
+    ...loadedSkills.skipped.flatMap((skipped) => generateSkippedSkillReviewItems(skipped))
   ];
 
   const transaction = db.transaction(() => {
     const reviewItems = syncReviewItems(db, reviewCandidates, indexedAt);
-    const reviewItemsByPack = groupReviewItemsByPack(reviewItems);
+    const reviewItemsByObject = groupReviewItemsByObject(reviewItems);
 
     clearDerivedIndex(db);
 
     for (const pack of loaded.packs) {
-      const packReviewItems = reviewItemsByPack.get(pack.manifest.id) ?? [];
+      const packReviewItems = reviewItemsByObject.get(reviewObjectKey("pack", pack.manifest.id)) ?? [];
       const health = calculateHealthScore(packReviewItems);
       insertPack(db, pack, indexedAt, health);
       insertRecords(db, pack);
@@ -52,7 +58,9 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir
     }
 
     for (const skill of loadedSkills.skills) {
-      insertSkill(db, skill, indexedAt);
+      const skillReviewItems = reviewItemsByObject.get(reviewObjectKey("skill", skill.manifest.id)) ?? [];
+      const health = calculateHealthScore(skillReviewItems);
+      insertSkill(db, skill, indexedAt, health);
       insertSkillDocuments(db, "skill_instructions", skill, skill.instructions);
       insertSkillDocuments(db, "skill_examples", skill, skill.examples);
       insertSkillSources(db, skill);
@@ -333,9 +341,24 @@ export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilter
     values.push(filters.type);
   }
 
+  if (filters.objectType) {
+    where.push("object_type = ?");
+    values.push(filters.objectType);
+  }
+
+  if (filters.objectId) {
+    where.push("object_id = ?");
+    values.push(filters.objectId);
+  }
+
   if (filters.packId) {
-    where.push("pack_id = ?");
+    where.push("object_type = 'pack' AND object_id = ?");
     values.push(filters.packId);
+  }
+
+  if (filters.skillId) {
+    where.push("object_type = 'skill' AND object_id = ?");
+    values.push(filters.skillId);
   }
 
   const sql = `
@@ -345,7 +368,8 @@ export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilter
     ORDER BY
       CASE severity WHEN 'error' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
       last_seen_at DESC,
-      pack_id,
+      object_type,
+      object_id,
       type,
       id
   `;
@@ -377,6 +401,27 @@ export function getPackHealth(db: ContextarrDatabase, packId: string): PackHealt
   };
 }
 
+export function getSkillHealth(db: ContextarrDatabase, skillId: string): SkillHealthDetail | undefined {
+  const skill = db
+    .prepare("SELECT id AS skillId, health_score AS score, health_status AS status FROM skills WHERE id = ?")
+    .get(skillId) as Row | undefined;
+  if (!skill) {
+    return undefined;
+  }
+
+  const items = getReviewItems(db, { skillId }).filter((item) => item.status !== "resolved");
+  const score = calculateHealthScore(items);
+
+  return {
+    skillId,
+    score: Number(skill.score),
+    status: String(skill.status),
+    reviewQueueCount: score.reviewQueueCount,
+    checks: buildHealthChecks(items),
+    items
+  };
+}
+
 export function updateReviewItemStatus(
   db: ContextarrDatabase,
   itemId: string,
@@ -390,7 +435,7 @@ export function updateReviewItemStatus(
 
   db.prepare("UPDATE review_items SET status = ?, updated_at = ? WHERE id = ?").run(status, updatedAt, itemId);
   const updated = normalizeReviewItem(db.prepare("SELECT * FROM review_items WHERE id = ?").get(itemId) as Row);
-  refreshPackHealthFromReviewItems(db, updated.packId, updatedAt);
+  refreshObjectHealthFromReviewItems(db, updated.objectType, updated.objectId, updatedAt);
   return updated;
 }
 
@@ -551,7 +596,12 @@ function insertPack(
   });
 }
 
-function insertSkill(db: ContextarrDatabase, skill: LoadedSkill, indexedAt: string): void {
+function insertSkill(
+  db: ContextarrDatabase,
+  skill: LoadedSkill,
+  indexedAt: string,
+  health: { score: number; status: string; reviewQueueCount: number }
+): void {
   db.prepare(
     `INSERT INTO skills (
       id, name, version, description, type, visibility, trust_level, author, license,
@@ -564,9 +614,9 @@ function insertSkill(db: ContextarrDatabase, skill: LoadedSkill, indexedAt: stri
       @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
       @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
       @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @skillPath,
-      @manifestJson, @validationErrors, @validationWarnings, 100,
-      'healthy', @instructionCount, @exampleCount, @sourceCount, @exportProfileCount,
-      0, @targetsJson, @inputsJson, @outputsJson, @indexedAt
+      @manifestJson, @validationErrors, @validationWarnings, @healthScore,
+      @healthStatus, @instructionCount, @exampleCount, @sourceCount, @exportProfileCount,
+      @reviewQueueCount, @targetsJson, @inputsJson, @outputsJson, @indexedAt
     )`
   ).run({
     id: skill.manifest.id,
@@ -590,10 +640,13 @@ function insertSkill(db: ContextarrDatabase, skill: LoadedSkill, indexedAt: stri
     manifestJson: JSON.stringify(skill.manifest),
     validationErrors: skill.validation.summary.errors,
     validationWarnings: skill.validation.summary.warnings,
+    healthScore: health.score,
+    healthStatus: health.status,
     instructionCount: skill.instructions.length,
     exampleCount: skill.examples.length,
     sourceCount: skill.sources.length,
     exportProfileCount: skill.exportProfiles.length,
+    reviewQueueCount: health.reviewQueueCount,
     targetsJson: JSON.stringify(skill.manifest.targets),
     inputsJson: JSON.stringify(skill.manifest.inputs),
     outputsJson: JSON.stringify(skill.manifest.outputs),
@@ -834,18 +887,21 @@ function syncReviewItems(
   const fingerprints = candidates.map((candidate) => candidate.fingerprint);
   const upsert = db.prepare(
     `INSERT INTO review_items (
-      id, fingerprint, type, severity, pack_id, record_id, source_id,
+      id, fingerprint, object_type, object_id, type, severity, pack_id, skill_id, record_id, source_id,
       message, suggested_action, status, first_seen_at, last_seen_at,
       updated_at, metadata_json
     ) VALUES (
-      @id, @fingerprint, @type, @severity, @packId, @recordId, @sourceId,
+      @id, @fingerprint, @objectType, @objectId, @type, @severity, @packId, @skillId, @recordId, @sourceId,
       @message, @suggestedAction, 'open', @indexedAt, @indexedAt,
       @indexedAt, @metadataJson
     )
     ON CONFLICT(fingerprint) DO UPDATE SET
+      object_type = excluded.object_type,
+      object_id = excluded.object_id,
       type = excluded.type,
       severity = excluded.severity,
       pack_id = excluded.pack_id,
+      skill_id = excluded.skill_id,
       record_id = excluded.record_id,
       source_id = excluded.source_id,
       message = excluded.message,
@@ -863,9 +919,12 @@ function syncReviewItems(
     upsert.run({
       id: createReviewItemId(candidate.fingerprint),
       fingerprint: candidate.fingerprint,
+      objectType: candidate.objectType,
+      objectId: candidate.objectId,
       type: candidate.type,
       severity: candidate.severity,
       packId: candidate.packId,
+      skillId: candidate.skillId,
       recordId: candidate.recordId,
       sourceId: candidate.sourceId,
       message: candidate.message,
@@ -891,6 +950,20 @@ function syncReviewItems(
     .map((row) => normalizeReviewItem(row as Row));
 }
 
+function refreshObjectHealthFromReviewItems(
+  db: ContextarrDatabase,
+  objectType: ReviewObjectType,
+  objectId: string,
+  updatedAt: string
+): void {
+  if (objectType === "skill") {
+    refreshSkillHealthFromReviewItems(db, objectId, updatedAt);
+    return;
+  }
+
+  refreshPackHealthFromReviewItems(db, objectId, updatedAt);
+}
+
 function refreshPackHealthFromReviewItems(db: ContextarrDatabase, packId: string, updatedAt: string): void {
   const pack = db.prepare("SELECT id FROM packs WHERE id = ?").get(packId);
   if (!pack) {
@@ -914,16 +987,38 @@ function refreshPackHealthFromReviewItems(db: ContextarrDatabase, packId: string
   );
 }
 
-function groupReviewItemsByPack(items: ReviewItem[]): Map<string, ReviewItem[]> {
+function refreshSkillHealthFromReviewItems(db: ContextarrDatabase, skillId: string, _updatedAt: string): void {
+  const skill = db.prepare("SELECT id FROM skills WHERE id = ?").get(skillId);
+  if (!skill) {
+    return;
+  }
+
+  const items = getReviewItems(db, { skillId }).filter((item) => item.status !== "resolved");
+  const health = calculateHealthScore(items);
+
+  db.prepare("UPDATE skills SET health_score = ?, health_status = ?, review_queue_count = ? WHERE id = ?").run(
+    health.score,
+    health.status,
+    health.reviewQueueCount,
+    skillId
+  );
+}
+
+function groupReviewItemsByObject(items: ReviewItem[]): Map<string, ReviewItem[]> {
   const grouped = new Map<string, ReviewItem[]>();
 
   for (const item of items.filter((candidate) => candidate.status !== "resolved")) {
-    const existing = grouped.get(item.packId) ?? [];
+    const key = reviewObjectKey(item.objectType, item.objectId);
+    const existing = grouped.get(key) ?? [];
     existing.push(item);
-    grouped.set(item.packId, existing);
+    grouped.set(key, existing);
   }
 
   return grouped;
+}
+
+function reviewObjectKey(objectType: ReviewObjectType, objectId: string): string {
+  return `${objectType}:${objectId}`;
 }
 
 function getSkillDocuments(
@@ -1074,12 +1169,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeReviewItem(row: Row): ReviewItem {
+  const objectType = row.object_type === "skill" ? "skill" : "pack";
+  const objectId = row.object_id ? String(row.object_id) : String(row.pack_id);
+
   return {
     id: String(row.id),
     fingerprint: String(row.fingerprint),
+    objectType,
+    objectId,
     type: row.type as ReviewItem["type"],
     severity: row.severity as ReviewItem["severity"],
     packId: String(row.pack_id),
+    skillId: objectType === "skill" ? String(row.skill_id ?? objectId) : null,
     recordId: row.record_id ? String(row.record_id) : null,
     sourceId: row.source_id ? String(row.source_id) : null,
     message: String(row.message),

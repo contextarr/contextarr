@@ -64,7 +64,7 @@ import {
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
 import { renderSkillDocumentHtml } from "./skill-rendering";
-import { filterReviewItems, reviewPackName, summarizeReviewItems, type ReviewFilters } from "./review";
+import { filterReviewItems, reviewPackName, reviewSkillName, summarizeReviewItems, type ReviewFilters } from "./review";
 import {
   composerHref,
   exportsHref,
@@ -93,6 +93,7 @@ import type {
   SearchResult,
   SkillDetail,
   SkillDocument,
+  SkillHealthResponse,
   SkillSummary,
   SortKey,
   SourceSummary
@@ -292,13 +293,13 @@ export function App() {
         ) : route.name === "skill" ? (
           <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
-          <ReviewQueuePage packs={packs} onStatusChanged={loadDashboard} />
+          <ReviewQueuePage packs={packs} skills={skills} onStatusChanged={loadDashboard} />
         ) : route.name === "composer" ? (
           <ComposerPage packs={packs} />
         ) : route.name === "exports" ? (
           <ExportsPage packs={packs} />
         ) : route.name === "health" ? (
-          <HealthPage health={health} packs={packs} />
+          <HealthPage health={health} packs={packs} skills={skills} />
         ) : (
           <LibraryPage
             packs={packs}
@@ -1035,14 +1036,16 @@ function SkillOverview({ skill }: {
         <ProfileList profiles={skill.exportProfiles} />
       </article>
 
-      <article className="detail-card warning-card">
+      <article className="detail-card">
         <h2>
-          <ShieldAlert size={19} aria-hidden="true" />
-          Health Placeholder
+          <HeartPulse size={19} aria-hidden="true" />
+          Skill Health
         </h2>
-        <p>
-          Phase 16 displays indexed validation status. Deterministic Skill health and review queue items arrive in Phase 17.
-        </p>
+        <div className="stat-grid">
+          <Stat value={`${skill.healthScore}%`} label="Score" />
+          <Stat value={formatPackType(skill.healthStatus)} label="Status" />
+          <Stat value={skill.reviewQueueCount} label="Open Items" />
+        </div>
       </article>
     </div>
   );
@@ -1116,12 +1119,47 @@ function SkillExportsTab({ skill }: { skill: SkillDetail }) {
     <article className="detail-card">
       <h2>Skill Export Profiles</h2>
       <ProfileList profiles={skill.exportProfiles} />
-      <p className="muted-note">Skill export previews are enabled in Phase 18. Phase 16 keeps this surface read-only metadata.</p>
+      <p className="muted-note">Skill export previews are enabled in Phase 18. Phase 17 keeps this surface read-only metadata.</p>
     </article>
   );
 }
 
 function SkillHealthTab({ skill }: { skill: SkillDetail }) {
+  const [health, setHealth] = useState<SkillHealthResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHealth(null);
+    setError(null);
+
+    async function loadHealth() {
+      try {
+        const response = await apiClient.getSkillHealth(skill.id);
+        if (!cancelled) {
+          setHealth(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load Skill health.");
+        }
+      }
+    }
+
+    void loadHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, [skill.id]);
+
+  if (error) {
+    return <StateCard title="Skill health unavailable" detail={error} />;
+  }
+
+  if (!health) {
+    return <div className="detail-card skeleton-detail" />;
+  }
+
   return (
     <article className="detail-card">
       <h2>
@@ -1129,12 +1167,15 @@ function SkillHealthTab({ skill }: { skill: SkillDetail }) {
         Skill Health
       </h2>
       <div className="stat-grid">
-        <Stat value={`${skill.health.score}%`} label="Score" />
-        <Stat value={formatPackType(skill.health.status)} label="Status" />
+        <Stat value={`${health.score}%`} label="Score" />
+        <Stat value={formatPackType(health.status)} label="Status" />
+        <Stat value={health.reviewQueueCount} label="Open Items" />
+        <Stat value={health.items.length} label="Active Items" />
         <Stat value={skill.validation.errors} label="Validation Errors" />
         <Stat value={skill.validation.warnings} label="Validation Warnings" />
       </div>
-      <p className="muted-note">Full deterministic Skill health and Skill review items arrive in Phase 17.</p>
+      <HealthChecks checks={health.checks} />
+      <ReviewItemList items={health.items} packs={[]} skills={[skill]} compact />
     </article>
   );
 }
@@ -2072,17 +2113,20 @@ function HealthTab({ pack }: { pack: PackDetail }) {
 
 function ReviewQueuePage({
   packs,
+  skills,
   onStatusChanged
 }: {
   packs: PackSummary[];
+  skills: SkillSummary[];
   onStatusChanged(): void;
 }) {
   const [response, setResponse] = useState<{ items: ReviewItem[] } | null>(null);
   const [filters, setFilters] = useState<ReviewFilters>({
+    objectType: "all",
+    objectId: "all",
     status: "open",
     severity: "all",
-    type: "all",
-    packId: "all"
+    type: "all"
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2091,14 +2135,14 @@ function ReviewQueuePage({
     setLoading(true);
     setError(null);
     try {
-      const reviewResponse = await apiClient.getReviewItems();
+      const reviewResponse = await apiClient.getReviewItems(reviewFiltersToQuery(filters));
       setResponse({ items: reviewResponse.items });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load review queue.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     void loadItems();
@@ -2123,7 +2167,7 @@ function ReviewQueuePage({
             <span>Review Queue</span>
           </div>
           <h1 id="review-queue-title">Review Queue</h1>
-          <p>SQLite-backed attention items generated from local pack checks.</p>
+      <p>SQLite-backed attention items generated from local Context Pack and Skill checks.</p>
         </div>
         <div className="summary-strip">
           <Stat value={summary.open} label="Open" />
@@ -2132,20 +2176,20 @@ function ReviewQueuePage({
         </div>
       </div>
 
-      <ReviewFiltersBar filters={filters} packs={packs} onChange={setFilters} />
+      <ReviewFiltersBar filters={filters} packs={packs} skills={skills} onChange={setFilters} />
 
       {error ? (
         <StateCard title="Review queue unavailable" detail={error} />
       ) : loading ? (
         <DetailLoading />
       ) : items.length === 0 ? (
-        <StateCard title="No review items" detail="All indexed demo packs are healthy." icon={CheckCircle2} />
+        <StateCard title="No review items" detail="All indexed demo packs and Skills are healthy." icon={CheckCircle2} />
       ) : visibleItems.length === 0 ? (
         <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
       ) : (
         <div className="review-list">
           {visibleItems.map((item) => (
-            <ReviewItemCard item={item} packs={packs} onUpdateStatus={updateStatus} key={item.id} />
+            <ReviewItemCard item={item} packs={packs} skills={skills} onUpdateStatus={updateStatus} key={item.id} />
           ))}
         </div>
       )}
@@ -2153,7 +2197,7 @@ function ReviewQueuePage({
   );
 }
 
-function HealthPage({ health, packs }: { health: HealthResponse | null; packs: PackSummary[] }) {
+function HealthPage({ health, packs, skills }: { health: HealthResponse | null; packs: PackSummary[]; skills: SkillSummary[] }) {
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -2192,13 +2236,13 @@ function HealthPage({ health, packs }: { health: HealthResponse | null; packs: P
             <HeartPulse size={16} aria-hidden="true" />
             <span>Health</span>
           </div>
-          <h1 id="health-title">Pack Health</h1>
-          <p>Deterministic local health derived from validation, review, freshness, and source coverage checks.</p>
+          <h1 id="health-title">System Health</h1>
+          <p>Deterministic local health derived from Context Pack and Skill validation, review, freshness, and source coverage checks.</p>
         </div>
         <div className="summary-strip">
           <Stat value={health?.counts.packs ?? packs.length} label="Packs" />
+          <Stat value={health?.counts.skills ?? skills.length} label="Skills" />
           <Stat value={health?.counts.openReviewItems ?? summary.open} label="Open Items" />
-          <Stat value={summary.total} label="Total Items" />
         </div>
       </div>
 
@@ -2257,6 +2301,40 @@ function HealthPage({ health, packs }: { health: HealthResponse | null; packs: P
                   <td>{pack.reviewQueueCount}</td>
                   <td>{pack.recordCount}</td>
                   <td>{formatDate(pack.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article className="detail-card">
+        <h2>Skill Health</h2>
+        <div className="table-wrap">
+          <table className="pack-table">
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Open Items</th>
+                <th>Instructions</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {skills.map((skill) => (
+                <tr key={skill.id}>
+                  <td>
+                    <a className="pack-title-link" href={skillHref(skill.id)}>
+                      {skill.name}
+                    </a>
+                  </td>
+                  <td>{formatPackType(skill.healthStatus)}</td>
+                  <td>{skill.healthScore}%</td>
+                  <td>{skill.reviewQueueCount}</td>
+                  <td>{skill.instructionCount}</td>
+                  <td>{formatDate(skill.updatedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -2359,14 +2437,40 @@ function RecordDetailPage({ recordId, packs }: { recordId: string; packs: PackSu
 function ReviewFiltersBar({
   filters,
   packs,
+  skills,
   onChange
 }: {
   filters: ReviewFilters;
   packs: PackSummary[];
+  skills: SkillSummary[];
   onChange(filters: ReviewFilters): void;
 }) {
+  const selectableObjects =
+    filters.objectType === "skill"
+      ? skills.map((skill) => ({ id: skill.id, name: skill.name }))
+      : filters.objectType === "pack"
+        ? packs.map((pack) => ({ id: pack.id, name: pack.name }))
+        : [];
+
   return (
     <div className="review-filters">
+      <label className="select-control">
+        <Layers3 size={16} aria-hidden="true" />
+        <select
+          value={filters.objectType}
+          onChange={(event) =>
+            onChange({
+              ...filters,
+              objectType: event.target.value as ReviewFilters["objectType"],
+              objectId: "all"
+            })
+          }
+        >
+          <option value="all">All objects</option>
+          <option value="pack">Context Packs</option>
+          <option value="skill">Skills</option>
+        </select>
+      </label>
       <label className="select-control">
         <ShieldCheck size={16} aria-hidden="true" />
         <select value={filters.status} onChange={(event) => onChange({ ...filters, status: event.target.value as ReviewFilters["status"] })}>
@@ -2394,18 +2498,28 @@ function ReviewFiltersBar({
           <option value="validation">Validation</option>
           <option value="freshness">Freshness</option>
           <option value="export_safety">Export Safety</option>
+          <option value="export_readiness">Export Readiness</option>
+          <option value="example_coverage">Example Coverage</option>
+          <option value="safety_rules">Safety Rules</option>
+          <option value="target_compatibility">Target Compatibility</option>
+          <option value="disallowed_pattern">Disallowed Pattern</option>
+          <option value="ai_draft">AI Draft</option>
           <option value="review_status">Review Status</option>
           <option value="trust">Trust</option>
           <option value="source_coverage">Source Coverage</option>
         </select>
       </label>
       <label className="select-control">
-        <Package size={16} aria-hidden="true" />
-        <select value={filters.packId} onChange={(event) => onChange({ ...filters, packId: event.target.value })}>
-          <option value="all">All packs</option>
-          {packs.map((pack) => (
-            <option value={pack.id} key={pack.id}>
-              {pack.name}
+        {filters.objectType === "skill" ? <BookOpen size={16} aria-hidden="true" /> : <Package size={16} aria-hidden="true" />}
+        <select
+          value={filters.objectId}
+          onChange={(event) => onChange({ ...filters, objectId: event.target.value })}
+          disabled={filters.objectType === "all"}
+        >
+          <option value="all">{filters.objectType === "skill" ? "All skills" : "All packs"}</option>
+          {selectableObjects.map((object) => (
+            <option value={object.id} key={object.id}>
+              {object.name}
             </option>
           ))}
         </select>
@@ -2417,10 +2531,12 @@ function ReviewFiltersBar({
 function ReviewItemCard({
   item,
   packs,
+  skills,
   onUpdateStatus
 }: {
   item: ReviewItem;
   packs: PackSummary[];
+  skills: SkillSummary[];
   onUpdateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed"): void;
 }) {
   return (
@@ -2434,8 +2550,8 @@ function ReviewItemCard({
         <h2>{item.message}</h2>
         <p>{item.suggestedAction}</p>
         <div className="review-card-meta">
-          <a href={packHref(item.packId)}>{reviewPackName(item.packId, packs)}</a>
-          {item.recordId ? <a href={recordHref(item.recordId)}>{item.recordId}</a> : null}
+          {reviewObjectAnchor(item, packs, skills)}
+          {item.recordId ? reviewDocumentAnchor(item) : null}
           {item.sourceId ? <span>{item.sourceId}</span> : null}
         </div>
       </div>
@@ -2457,9 +2573,19 @@ function ReviewItemCard({
   );
 }
 
-function ReviewItemList({ items, packs, compact = false }: { items: ReviewItem[]; packs: PackSummary[]; compact?: boolean }) {
+function ReviewItemList({
+  items,
+  packs,
+  skills = [],
+  compact = false
+}: {
+  items: ReviewItem[];
+  packs: PackSummary[];
+  skills?: SkillSummary[];
+  compact?: boolean;
+}) {
   if (items.length === 0) {
-    return <p className="muted-note">No active review items for this pack.</p>;
+    return <p className="muted-note">No active review items for this object.</p>;
   }
 
   return (
@@ -2475,14 +2601,51 @@ function ReviewItemList({ items, packs, compact = false }: { items: ReviewItem[]
             <h2>{item.message}</h2>
             <p>{item.suggestedAction}</p>
             <div className="review-card-meta">
-              <a href={packHref(item.packId)}>{reviewPackName(item.packId, packs)}</a>
-              {item.recordId ? <a href={recordHref(item.recordId)}>{item.recordId}</a> : null}
+              {reviewObjectAnchor(item, packs, skills)}
+              {item.recordId ? reviewDocumentAnchor(item) : null}
             </div>
           </div>
         </article>
       ))}
     </div>
   );
+}
+
+function reviewFiltersToQuery(filters: ReviewFilters): {
+  status?: string;
+  severity?: string;
+  type?: string;
+  objectType?: string;
+  objectId?: string;
+} {
+  return {
+    status: filters.status === "all" ? undefined : filters.status,
+    severity: filters.severity === "all" ? undefined : filters.severity,
+    type: filters.type === "all" ? undefined : filters.type,
+    objectType: filters.objectType === "all" ? undefined : filters.objectType,
+    objectId: filters.objectId === "all" ? undefined : filters.objectId
+  };
+}
+
+function reviewObjectAnchor(item: ReviewItem, packs: PackSummary[], skills: SkillSummary[]) {
+  if (item.objectType === "skill") {
+    const skillId = item.skillId ?? item.objectId;
+    return <a href={skillHref(skillId)}>{reviewSkillName(skillId, skills)}</a>;
+  }
+
+  return <a href={packHref(item.packId)}>{reviewPackName(item.packId, packs)}</a>;
+}
+
+function reviewDocumentAnchor(item: ReviewItem) {
+  if (!item.recordId) {
+    return null;
+  }
+
+  if (item.objectType === "skill") {
+    return <span>{item.recordId}</span>;
+  }
+
+  return <a href={recordHref(item.recordId)}>{item.recordId}</a>;
 }
 
 function HealthChecks({ checks }: { checks: HealthCheck[] }) {

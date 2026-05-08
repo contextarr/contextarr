@@ -213,9 +213,12 @@ export function createSchema(db: ContextarrDatabase): void {
     CREATE TABLE IF NOT EXISTS review_items (
       id TEXT PRIMARY KEY,
       fingerprint TEXT NOT NULL UNIQUE,
+      object_type TEXT NOT NULL DEFAULT 'pack',
+      object_id TEXT,
       type TEXT NOT NULL,
       severity TEXT NOT NULL,
       pack_id TEXT NOT NULL,
+      skill_id TEXT,
       record_id TEXT,
       source_id TEXT,
       message TEXT NOT NULL,
@@ -283,6 +286,12 @@ export function createSchema(db: ContextarrDatabase): void {
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
   ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "review_items", "object_type", "TEXT NOT NULL DEFAULT 'pack'");
+  ensureColumn(db, "review_items", "object_id", "TEXT");
+  ensureColumn(db, "review_items", "skill_id", "TEXT");
+  db.prepare("UPDATE review_items SET object_type = 'pack' WHERE object_type IS NULL OR object_type = ''").run();
+  db.prepare("UPDATE review_items SET object_id = pack_id WHERE object_id IS NULL OR object_id = ''").run();
+  db.exec("CREATE INDEX IF NOT EXISTS idx_review_items_object ON review_items(object_type, object_id);");
   ensureReviewItemsTable(db);
 }
 
@@ -354,9 +363,12 @@ function ensureReviewItemsTable(db: ContextarrDatabase): void {
     CREATE TABLE review_items (
       id TEXT PRIMARY KEY,
       fingerprint TEXT NOT NULL UNIQUE,
+      object_type TEXT NOT NULL DEFAULT 'pack',
+      object_id TEXT,
       type TEXT NOT NULL,
       severity TEXT NOT NULL,
       pack_id TEXT NOT NULL,
+      skill_id TEXT,
       record_id TEXT,
       source_id TEXT,
       message TEXT NOT NULL,

@@ -39,10 +39,10 @@ pnpm phase11:verify
 For the latest second-PRD verification chain, run:
 
 ```bash
-pnpm phase16:verify
+pnpm phase17:verify
 ```
 
-This runs the original launch verification chain plus Skill validation, demo Skill validation, Skill API checks, and the Skill Library web checks.
+This runs the original launch verification chain plus Skill validation, demo Skill validation, Skill API checks, Skill Library web checks, and deterministic Skill Health/Review Queue checks.
 
 ## Safety
 

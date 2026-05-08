@@ -12,6 +12,7 @@ import type {
   SearchResponse,
   SkillDetail,
   SkillDocument,
+  SkillHealthResponse,
   SkillSummary
 } from "./types";
 
@@ -43,9 +44,18 @@ export interface ApiClient {
   getSkillInstructions(id: string): Promise<SkillDocument[]>;
   getSkillExamples(id: string): Promise<SkillDocument[]>;
   getSkillExports(id: string): Promise<SkillDetail["exportProfiles"]>;
+  getSkillHealth(id: string): Promise<SkillHealthResponse>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
-  getReviewItems(filters?: { status?: string; severity?: string; type?: string; packId?: string }): Promise<ReviewItemsResponse>;
+  getReviewItems(filters?: {
+    status?: string;
+    severity?: string;
+    type?: string;
+    objectType?: string;
+    objectId?: string;
+    packId?: string;
+    skillId?: string;
+  }): Promise<ReviewItemsResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -105,6 +115,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       );
       return response.exportProfiles;
     },
+    getSkillHealth: (id: string) => requestJson<SkillHealthResponse>(`/api/skills/${encodeURIComponent(id)}/health`),
     getExportPreview: (packId: string, profileId: string) =>
       requestJson<ExportArtifact>(
         `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`

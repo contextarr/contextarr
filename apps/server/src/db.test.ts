@@ -84,4 +84,58 @@ describe("SQLite schema migrations", () => {
       db.close();
     }
   });
+
+  it("adds object-aware review item columns to an existing Phase 6 database", () => {
+    const db = new Database(":memory:");
+
+    try {
+      db.exec(`
+        CREATE TABLE review_items (
+          id TEXT PRIMARY KEY,
+          fingerprint TEXT NOT NULL UNIQUE,
+          type TEXT NOT NULL,
+          severity TEXT NOT NULL,
+          pack_id TEXT NOT NULL,
+          record_id TEXT,
+          source_id TEXT,
+          message TEXT NOT NULL,
+          suggested_action TEXT NOT NULL,
+          status TEXT NOT NULL,
+          first_seen_at TEXT NOT NULL,
+          last_seen_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          metadata_json TEXT NOT NULL
+        );
+
+        INSERT INTO review_items (
+          id, fingerprint, type, severity, pack_id, record_id, source_id,
+          message, suggested_action, status, first_seen_at, last_seen_at,
+          updated_at, metadata_json
+        ) VALUES (
+          'ri_legacy', 'legacy-fingerprint', 'validation', 'warning', 'legacy-pack',
+          NULL, NULL, 'Legacy item', 'Review it', 'open',
+          '2026-05-07T00:00:00.000Z', '2026-05-07T00:00:00.000Z',
+          '2026-05-07T00:00:00.000Z', '{}'
+        );
+      `);
+
+      createSchema(db);
+
+      const columns = db.prepare("PRAGMA table_info(review_items)").all() as Array<{ name: string }>;
+      expect(columns.map((column) => column.name)).toEqual(
+        expect.arrayContaining(["object_type", "object_id", "skill_id"])
+      );
+      expect(
+        db.prepare("SELECT object_type AS objectType, object_id AS objectId FROM review_items WHERE id = ?").get("ri_legacy")
+      ).toEqual({
+        objectType: "pack",
+        objectId: "legacy-pack"
+      });
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_review_items_object'").get()
+      ).toBeTruthy();
+    } finally {
+      db.close();
+    }
+  });
 });

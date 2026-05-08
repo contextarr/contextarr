@@ -4,7 +4,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "./db";
-import { getIndexStats, getPackHealth, getReviewItems, rebuildIndex, searchIndex, updateReviewItemStatus } from "./indexer";
+import {
+  getIndexStats,
+  getPackHealth,
+  getReviewItems,
+  getSkillHealth,
+  rebuildIndex,
+  searchIndex,
+  updateReviewItemStatus
+} from "./indexer";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
@@ -179,6 +187,53 @@ describe("SQLite indexer", () => {
     }
   });
 
+  it("tracks open review queue counts for valid unhealthy Skills", () => {
+    const db = openDatabase(":memory:");
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-skill-health-"));
+    const skillRoot = path.join(tempRoot, "valid-skill");
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill"), skillRoot, { recursive: true });
+      const instructionPath = path.join(skillRoot, "instructions", "core.md");
+      fs.writeFileSync(
+        instructionPath,
+        fs.readFileSync(instructionPath, "utf8").replace("review_status: approved", "review_status: draft"),
+        "utf8"
+      );
+
+      rebuildIndex(db, demoPacksDir, tempRoot);
+      const health = getSkillHealth(db, "valid-skill");
+      const items = getReviewItems(db, { objectType: "skill", objectId: "valid-skill" });
+
+      expect(health).toMatchObject({
+        skillId: "valid-skill"
+      });
+      expect(health!.reviewQueueCount).toBeGreaterThanOrEqual(1);
+      expect(health!.score).toBeLessThan(100);
+      expect(health!.status).not.toBe("healthy");
+      expect(items).toEqual(expect.arrayContaining([expect.objectContaining({
+        objectType: "skill",
+        objectId: "valid-skill",
+        skillId: "valid-skill",
+        type: "review_status",
+        status: "open"
+      })]));
+
+      const statusItem = items.find((item) => item.type === "review_status");
+      expect(statusItem).toBeDefined();
+      updateReviewItemStatus(db, statusItem!.id, "ignored", "2026-05-07T00:00:00.000Z");
+
+      const updatedHealth = getSkillHealth(db, "valid-skill");
+      expect(updatedHealth?.items.find((item) => item.id === statusItem!.id)?.status).toBe("ignored");
+      expect(updatedHealth?.reviewQueueCount).toBe(health!.reviewQueueCount - 1);
+      expect(updatedHealth!.score).toBeGreaterThan(health!.score);
+      expect(updatedHealth!.status).toBe(calculateExpectedStatus(updatedHealth!.score));
+    } finally {
+      db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it("searches record title, body, and tags with FTS", () => {
     const db = openDatabase(":memory:");
 
@@ -239,3 +294,11 @@ describe("SQLite indexer", () => {
     }
   });
 });
+
+function calculateExpectedStatus(score: number): string {
+  if (score >= 90) {
+    return "healthy";
+  }
+
+  return score >= 70 ? "degraded" : "needs_review";
+}

@@ -16,9 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 16: Skill Library UI.
+This repository is in Phase 17: Skill Health and Review Queue.
 
-The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, and a read-only Skill Library/detail UI.
+The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, and deterministic Skill health/review items.
 
 Current scope:
 
@@ -66,6 +66,7 @@ Current scope:
 - Phase 15 rebuildable SQLite index and read-only API endpoints for Skills, instructions, examples, sources, and export profiles.
 - `GET /api/search?type=skill&q=` for Skill-scoped local search.
 - Skill Library and Skill detail screens with sanitized instruction/example rendering.
+- Deterministic Skill Health v0, object-aware Review Queue items, and SQLite-only Skill review status actions.
 
 Not included yet:
 
@@ -74,7 +75,6 @@ Not included yet:
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
 - Demo Agent Kits.
-- Skill Health and Review Queue.
 - Skill export preview/generation.
 - Agent Kit UI/API/MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
@@ -199,8 +199,10 @@ Useful launch docs:
 pnpm install
 pnpm phase11:verify
 pnpm phase12:verify
+pnpm phase17:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
+pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
@@ -285,6 +287,7 @@ Available local API endpoints:
 - `GET /api/search?q=`
 - `GET /api/skills`
 - `GET /api/skills/:id`
+- `GET /api/skills/:id/health`
 - `GET /api/skills/:id/instructions`
 - `GET /api/skills/:id/examples`
 - `GET /api/skills/:id/exports`

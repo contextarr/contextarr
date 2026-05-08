@@ -79,6 +79,9 @@ describe("Contextarr API client", () => {
         if (String(url).endsWith("/exports")) {
           return jsonResponse({ exportProfiles: [{ id: "skill-codex" }] });
         }
+        if (String(url).endsWith("/health")) {
+          return jsonResponse({ skillId: "skill-1", score: 100, checks: [], items: [] });
+        }
         if (String(url).includes("/api/skills/skill-1")) {
           return jsonResponse({ id: "skill-1", name: "Skill One" });
         }
@@ -91,12 +94,14 @@ describe("Contextarr API client", () => {
     await expect(client.getSkillInstructions("skill-1")).resolves.toEqual([{ id: "skill.instruction" }]);
     await expect(client.getSkillExamples("skill-1")).resolves.toEqual([{ id: "skill.example" }]);
     await expect(client.getSkillExports("skill-1")).resolves.toEqual([{ id: "skill-codex" }]);
+    await expect(client.getSkillHealth("skill-1")).resolves.toMatchObject({ skillId: "skill-1" });
     expect(requests).toEqual([
       "/api/skills",
       "/api/skills/skill-1",
       "/api/skills/skill-1/instructions",
       "/api/skills/skill-1/examples",
-      "/api/skills/skill-1/exports"
+      "/api/skills/skill-1/exports",
+      "/api/skills/skill-1/health"
     ]);
   });
 
@@ -116,13 +121,13 @@ describe("Contextarr API client", () => {
     });
 
     await expect(client.getPackHealth("pack-1")).resolves.toMatchObject({ packId: "pack-1" });
-    await expect(client.getReviewItems({ status: "open", packId: "pack-1" })).resolves.toMatchObject({
+    await expect(client.getReviewItems({ status: "open", objectType: "skill", objectId: "skill-1" })).resolves.toMatchObject({
       counts: { open: 1 }
     });
     await expect(client.updateReviewItemStatus("item-1", "reviewed")).resolves.toMatchObject({ status: "reviewed" });
     expect(requests.map((request) => request.url)).toEqual([
       "/api/packs/pack-1/health",
-      "/api/review-items?status=open&packId=pack-1",
+      "/api/review-items?status=open&objectType=skill&objectId=skill-1",
       "/api/review-items/item-1/status"
     ]);
     expect(requests[2].init).toMatchObject({

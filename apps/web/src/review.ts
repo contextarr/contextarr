@@ -1,10 +1,19 @@
-import type { PackSummary, ReviewItem, ReviewItemSeverity, ReviewItemStatus, ReviewItemType } from "./types";
+import type {
+  PackSummary,
+  ReviewItem,
+  ReviewItemSeverity,
+  ReviewItemStatus,
+  ReviewItemType,
+  ReviewObjectType,
+  SkillSummary
+} from "./types";
 
 export interface ReviewFilters {
+  objectType: ReviewObjectType | "all";
+  objectId: string;
   status: ReviewItemStatus | "all";
   severity: ReviewItemSeverity | "all";
   type: ReviewItemType | "all";
-  packId: string;
 }
 
 export function filterReviewItems(items: ReviewItem[], filters: ReviewFilters): ReviewItem[] {
@@ -21,7 +30,11 @@ export function filterReviewItems(items: ReviewItem[], filters: ReviewFilters): 
       return false;
     }
 
-    if (filters.packId !== "all" && item.packId !== filters.packId) {
+    if (filters.objectType !== "all" && item.objectType !== filters.objectType) {
+      return false;
+    }
+
+    if (filters.objectId !== "all" && item.objectId !== filters.objectId) {
       return false;
     }
 
@@ -47,4 +60,8 @@ export function summarizeReviewItems(items: ReviewItem[]): {
 
 export function reviewPackName(packId: string, packs: PackSummary[]): string {
   return packs.find((pack) => pack.id === packId)?.name ?? packId;
+}
+
+export function reviewSkillName(skillId: string, skills: SkillSummary[]): string {
+  return skills.find((skill) => skill.id === skillId)?.name ?? skillId;
 }

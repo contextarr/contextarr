@@ -114,6 +114,24 @@ describe("validateSkill", () => {
     expect(relaxedResult.issues).toContainEqual(expect.objectContaining({ code: "rules.safety.relaxed_disallowed" }));
   });
 
+  it("keeps missing safety rules reviewable as a warning", () => {
+    const missingSafetyFile = validateMutatedFixture("valid-skill", (skillPath) => {
+      fs.rmSync(path.join(skillPath, "rules", "safety.yaml"), { force: true });
+    });
+    const missingRulesDirectory = validateMutatedFixture("valid-skill", (skillPath) => {
+      fs.rmSync(path.join(skillPath, "rules"), { recursive: true, force: true });
+    });
+
+    expect(missingSafetyFile.valid).toBe(true);
+    expect(missingSafetyFile.issues).toContainEqual(
+      expect.objectContaining({ code: "rules.safety_missing", severity: "warning" })
+    );
+    expect(missingRulesDirectory.valid).toBe(true);
+    expect(missingRulesDirectory.issues).toContainEqual(
+      expect.objectContaining({ code: "rules.missing_directory", severity: "warning" })
+    );
+  });
+
   it("enforces custom safety patterns from rules/safety.yaml", () => {
     const result = validateSkill(fixture("custom-safety-pattern-skill"));
 

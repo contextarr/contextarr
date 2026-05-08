@@ -100,7 +100,7 @@ export function validateSkill(skillPath: string, options: ValidateSkillOptions =
     throw new SkillReadError(`Skill path is not a directory: ${resolvedSkillPath}`);
   }
 
-  const allFiles = listFiles(resolvedSkillPath, issues);
+  const allFiles = listFiles(resolvedSkillPath, resolvedSkillPath, issues);
   scanFileTypes(resolvedSkillPath, allFiles, issues);
 
   const manifestFile = path.join(resolvedSkillPath, "contextarr-skill.json");
@@ -215,7 +215,7 @@ function validateInstructions(
     return [];
   }
 
-  const instructionFiles = listFiles(instructionsDir, issues).filter((file) => file.toLowerCase().endsWith(".md"));
+  const instructionFiles = listFiles(skillPath, instructionsDir, issues).filter((file) => file.toLowerCase().endsWith(".md"));
   if (instructionFiles.length === 0) {
     addIssue(
       issues,
@@ -304,7 +304,7 @@ function validateExamples(
     return [];
   }
 
-  const exampleFiles = listFiles(examplesDir, issues).filter((file) => file.toLowerCase().endsWith(".md"));
+  const exampleFiles = listFiles(skillPath, examplesDir, issues).filter((file) => file.toLowerCase().endsWith(".md"));
   if (exampleFiles.length === 0) {
     addIssue(issues, "warning", "examples.empty", "Examples folder contains no Markdown examples.", manifest.examplesPath);
   }
@@ -428,7 +428,7 @@ function validateExportProfiles(
     return;
   }
 
-  const exportFiles = listFiles(exportsDir, issues).filter(isYamlFile);
+  const exportFiles = listFiles(skillPath, exportsDir, issues).filter(isYamlFile);
   if (exportFiles.length === 0) {
     addIssue(issues, "warning", "exports.empty", "Export profiles folder contains no YAML profiles.", manifest.exportsPath);
   }
@@ -490,7 +490,7 @@ function validateRules(
   if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
     addIssue(
       issues,
-      "error",
+      "warning",
       "rules.missing_directory",
       `Rules folder does not exist: ${manifest.rulesPath}.`,
       manifest.rulesPath
@@ -500,7 +500,7 @@ function validateRules(
 
   const safetyFile = path.join(rulesDir, "safety.yaml");
   if (!fs.existsSync(safetyFile)) {
-    addIssue(issues, "error", "rules.safety_missing", "Skill safety rules are required.", `${manifest.rulesPath}/safety.yaml`);
+    addIssue(issues, "warning", "rules.safety_missing", "Skill safety rules are required.", `${manifest.rulesPath}/safety.yaml`);
   } else {
     const safetyRules = readYamlSchemaFile(skillPath, safetyFile, skillSafetyRulesSchema, issues, "rules.safety");
     if (safetyRules) {
@@ -727,7 +727,7 @@ function validateSafetyRuleLockdown(
   }
 }
 
-function listFiles(root: string, issues: SkillValidationIssue[]): string[] {
+function listFiles(skillPath: string, root: string, issues: SkillValidationIssue[]): string[] {
   const files: string[] = [];
 
   function walk(dir: string): void {
@@ -735,14 +735,14 @@ function listFiles(root: string, issues: SkillValidationIssue[]): string[] {
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
     } catch (error) {
-      addIssue(issues, "error", "filesystem.read_failed", errorMessage(error), dir);
+      addIssue(issues, "error", "filesystem.read_failed", errorMessage(error), relativePath(skillPath, dir));
       return;
     }
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isSymbolicLink()) {
-        addIssue(issues, "warning", "filesystem.symlink", "Symlinks are ignored during validation.", fullPath);
+        addIssue(issues, "warning", "filesystem.symlink", "Symlinks are ignored during validation.", relativePath(skillPath, fullPath));
         continue;
       }
 

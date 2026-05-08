@@ -121,12 +121,14 @@
 
 - Add Skill Library views.
 - Keep Skill actions read-only.
+- Status: complete.
 
 ## Phase 17: Skill Health and Review Queue
 
 - Add deterministic Skill health.
 - Add Skill review items.
 - Keep review actions local app state unless later scoped otherwise.
+- Status: complete.
 
 ## Phase 18: Skill Export Engine
 

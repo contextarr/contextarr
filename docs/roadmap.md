@@ -7,14 +7,14 @@ Contextarr currently supports:
 - Pack schema validation and CLI validation.
 - Five fake public-safe demo packs.
 - Rebuildable SQLite index and local Fastify API.
-- React/Vite dashboard with Library, pack detail, record detail, Pack Health, Review Queue, Exports, and Composer.
+- React/Vite dashboard with Library, pack detail, record detail, Pack Health, Skill Health, Review Queue, Exports, and Composer.
 - Sanitized Markdown rendering and static HTML rendering.
 - Profile-driven exports for ChatGPT, Claude, Codex, Markdown, and JSON records.
 - CLI/core local importers for draft packs.
 - Read-only stdio MCP.
 - Docker Compose local preview.
 - Phase 12 terminology planning for Skills and Agent Kits.
-- Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, and Skill Library/detail UI.
+- Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, and deterministic Skill Health/Review Queue support.
 
 ## Second PRD Direction
 
@@ -32,7 +32,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 14: fake public-safe demo Skills. Complete.
 - Phase 15: Skill index and API. Complete.
 - Phase 16: Skill Library UI. Complete.
-- Phase 17: Skill Health and Review Queue.
+- Phase 17: Skill Health and Review Queue. Complete.
 - Phase 18: Skill export engine.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.

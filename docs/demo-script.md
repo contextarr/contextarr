@@ -12,12 +12,14 @@ Stop re-explaining your systems to AI.
 4. Open Contextarr locally.
 5. Show the AI Workstation Pack.
 6. Show records, sources, Pack Health, and review queue.
-7. Export a Claude or Codex context pack.
-8. Use the export or read-only MCP to answer the same question.
-9. Show the improved answer.
-10. Open the raw Markdown files to prove local ownership.
-11. Open the Docker preview at `http://127.0.0.1:3210`.
-12. End with the quickstart docs and the GitHub repo.
+7. Open Skills and show the Support Ticket Writing Skill.
+8. Show instructions, examples, sources, Skill Health, and the Skill-filtered review queue.
+9. Export a Claude or Codex context pack.
+10. Use the export or read-only MCP to answer the same question.
+11. Show the improved answer.
+12. Open the raw Markdown files to prove local ownership.
+13. Open the Docker preview at `http://127.0.0.1:3210`.
+14. End with the quickstart docs and the GitHub repo.
 
 ## Demo Data Rules
 

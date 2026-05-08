@@ -40,6 +40,14 @@ function createWebDistFixture(): string {
   return webDistDir;
 }
 
+function expectedHealthStatus(score: number): string {
+  if (score >= 90) {
+    return "healthy";
+  }
+
+  return score >= 70 ? "degraded" : "needs_review";
+}
+
 describe("Contextarr API", () => {
   let db: ContextarrDatabase;
   let config: ServerConfig;
@@ -209,6 +217,44 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/skills/:id/health returns deterministic Skill health checks", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/skills/support-ticket-writing-skill/health" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      skillId: "support-ticket-writing-skill",
+      score: 100,
+      status: "healthy",
+      reviewQueueCount: 0
+    });
+    expect(response.json().checks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "validation", status: "pass" })])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("keeps every demo Skill healthy with an empty review queue", async () => {
+    const app = createApp({ config, db });
+    const skillsResponse = await app.inject({ method: "GET", url: "/api/skills" });
+
+    expect(skillsResponse.statusCode).toBe(200);
+    for (const skill of skillsResponse.json().skills as Array<{ id: string }>) {
+      const healthResponse = await app.inject({ method: "GET", url: `/api/skills/${skill.id}/health` });
+      expect(healthResponse.statusCode).toBe(200);
+      expect(healthResponse.json()).toMatchObject({
+        skillId: skill.id,
+        score: 100,
+        status: "healthy",
+        reviewQueueCount: 0
+      });
+    }
+
+    await app.close();
+    db.close();
+  });
+
   it("allowlists Skill API manifest and document metadata fields", async () => {
     const skillId = "support-ticket-writing-skill";
     const manifestJson = db.prepare("SELECT manifest_json FROM skills WHERE id = ?").pluck().get(skillId) as string;
@@ -313,6 +359,237 @@ describe("Contextarr API", () => {
     expect(filteredResponse.json().items).toEqual(
       expect.arrayContaining([expect.objectContaining({ severity: "error", type: "validation" })])
     );
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("GET /api/review-items filters generated Skill items by object subject", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-skill-health-"));
+    const skillRoot = path.join(tempRoot, "valid-skill");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill"), skillRoot, { recursive: true });
+      const instructionPath = path.join(skillRoot, "instructions", "core.md");
+      fs.writeFileSync(
+        instructionPath,
+        fs.readFileSync(instructionPath, "utf8").replace("review_status: approved", "review_status: draft"),
+        "utf8"
+      );
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: tempRoot });
+      const app = createApp(fixtureContext);
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/review-items?objectType=skill&objectId=valid-skill"
+      });
+      const health = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            objectType: "skill",
+            objectId: "valid-skill",
+            skillId: "valid-skill",
+            type: "review_status"
+          })
+        ])
+      );
+      expect(health.statusCode).toBe(200);
+      expect(health.json()).toMatchObject({ skillId: "valid-skill" });
+      expect(health.json().items).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "review_status", status: "open" })])
+      );
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps missing Skill safety rules reviewable through Skill health", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-skill-safety-"));
+    const skillRoot = path.join(tempRoot, "valid-skill");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill"), skillRoot, { recursive: true });
+      fs.rmSync(path.join(skillRoot, "rules", "safety.yaml"), { force: true });
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: tempRoot });
+      const app = createApp(fixtureContext);
+      const skill = await app.inject({ method: "GET", url: "/api/skills/valid-skill" });
+      const health = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+
+      expect(skill.statusCode).toBe(200);
+      expect(health.statusCode).toBe(200);
+      expect(health.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            objectType: "skill",
+            skillId: "valid-skill",
+            type: "safety_rules",
+            severity: "warning"
+          })
+        ])
+      );
+      expect(JSON.stringify(health.json())).not.toContain(tempRoot);
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a missing Skill rules directory reviewable through Skill health", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-skill-rules-"));
+    const skillRoot = path.join(tempRoot, "valid-skill");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill"), skillRoot, { recursive: true });
+      fs.rmSync(path.join(skillRoot, "rules"), { recursive: true, force: true });
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: tempRoot });
+      const app = createApp(fixtureContext);
+      const skill = await app.inject({ method: "GET", url: "/api/skills/valid-skill" });
+      const health = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+
+      expect(skill.statusCode).toBe(200);
+      expect(health.statusCode).toBe(200);
+      expect(health.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            objectType: "skill",
+            skillId: "valid-skill",
+            type: "safety_rules",
+            severity: "warning"
+          })
+        ])
+      );
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("POST /api/review-items/:id/status refreshes Skill health score and status", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-skill-status-"));
+    const skillRoot = path.join(tempRoot, "valid-skill");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill"), skillRoot, { recursive: true });
+      const instructionPath = path.join(skillRoot, "instructions", "core.md");
+      fs.writeFileSync(
+        instructionPath,
+        fs.readFileSync(instructionPath, "utf8").replace("review_status: approved", "review_status: draft"),
+        "utf8"
+      );
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: tempRoot });
+      const app = createApp(fixtureContext);
+      const before = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+      const reviewItem = before.json().items.find((item: { type: string }) => item.type === "review_status");
+
+      expect(before.statusCode).toBe(200);
+      expect(reviewItem).toBeDefined();
+
+      const update = await app.inject({
+        method: "POST",
+        url: `/api/review-items/${reviewItem.id}/status`,
+        payload: { status: "ignored" }
+      });
+      const after = await app.inject({ method: "GET", url: "/api/skills/valid-skill/health" });
+
+      expect(update.statusCode).toBe(200);
+      expect(after.json().reviewQueueCount).toBe(before.json().reviewQueueCount - 1);
+      expect(after.json().score).toBeGreaterThan(before.json().score);
+      expect(after.json().status).toBe(expectedHealthStatus(after.json().score));
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("reports broken Skill source references as review items", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-skill-source-"));
+    const skillRoot = path.join(tempRoot, "missing-source-reference-skill");
+    db.close();
+
+    try {
+      fs.cpSync(path.join(repoRoot, "packages/skill-validator/test/fixtures/missing-source-reference-skill"), skillRoot, {
+        recursive: true
+      });
+
+      const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: tempRoot });
+      const app = createApp(fixtureContext);
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/review-items?objectType=skill&objectId=missing-source-reference-skill"
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            objectType: "skill",
+            objectId: "missing-source-reference-skill",
+            type: "source_coverage"
+          })
+        ])
+      );
+      expect(JSON.stringify(response.json())).not.toContain(tempRoot);
+      await app.close();
+      fixtureContext.db.close();
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("sanitizes missing Skills directory paths from review APIs", async () => {
+    const missingSkillsDir = path.join(os.tmpdir(), `contextarr-missing-skills-${Date.now()}`);
+    db.close();
+
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: missingSkillsDir });
+    const app = createApp(fixtureContext);
+    const response = await app.inject({ method: "GET", url: "/api/review-items?objectType=skill" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          objectType: "skill",
+          type: "validation",
+          severity: "error"
+        })
+      ])
+    );
+    expect(JSON.stringify(response.json())).not.toContain(missingSkillsDir);
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("sanitizes skipped issue paths from rescan responses", async () => {
+    const missingSkillsDir = path.join(os.tmpdir(), `contextarr-missing-skills-${Date.now()}`);
+    db.close();
+
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { skillsDir: missingSkillsDir });
+    const app = createApp(fixtureContext);
+    const response = await app.inject({ method: "POST", url: "/api/rescan" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().skippedSkills).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          issues: expect.arrayContaining([expect.objectContaining({ code: "skills_dir.missing" })])
+        })
+      ])
+    );
+    expect(JSON.stringify(response.json())).not.toContain(missingSkillsDir);
     await app.close();
     fixtureContext.db.close();
   });
@@ -567,6 +844,8 @@ describe("Contextarr API", () => {
       skillsIndexed: 8,
       skillInstructionsIndexed: 24
     });
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(JSON.stringify(response.json())).not.toContain("demo-skills");
     await app.close();
     db.close();
   });
@@ -679,6 +958,12 @@ describe("Contextarr API", () => {
       url: "/api/rescan",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedSkillHealth = await app.inject({ method: "GET", url: "/api/skills/support-ticket-writing-skill/health" });
+    const allowedSkillHealth = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/health",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(blockedSkills.statusCode).toBe(401);
     expect(allowedSkills.statusCode).toBe(200);
@@ -686,6 +971,8 @@ describe("Contextarr API", () => {
     expect(allowedSearch.statusCode).toBe(200);
     expect(blockedRescan.statusCode).toBe(401);
     expect(allowedRescan.statusCode).toBe(200);
+    expect(blockedSkillHealth.statusCode).toBe(401);
+    expect(allowedSkillHealth.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

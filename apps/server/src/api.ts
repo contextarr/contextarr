@@ -15,6 +15,7 @@ import {
   getSkill,
   getSkillExamples,
   getSkillExportProfiles,
+  getSkillHealth,
   getSkillInstructions,
   getSkills,
   rebuildIndex,
@@ -22,7 +23,15 @@ import {
   searchIndex,
   updateReviewItemStatus
 } from "./indexer";
-import type { ReviewItemFilters, ReviewItemSeverity, ReviewItemStatus, ReviewItemType, ServerConfig } from "./types";
+import type {
+  ReviewItemFilters,
+  ReviewItemSeverity,
+  ReviewItemStatus,
+  ReviewItemType,
+  ReviewObjectType,
+  RebuildIndexResult,
+  ServerConfig
+} from "./types";
 
 export interface CreateAppOptions {
   config: ServerConfig;
@@ -118,6 +127,15 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       exportProfiles: getSkillExportProfiles(db, request.params.id)
     };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/skills/:id/health", async (request, reply) => {
+    const health = getSkillHealth(db, request.params.id);
+    if (!health) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    return health;
   });
 
   app.get("/api/packs", async () => {
@@ -242,14 +260,20 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       status?: ReviewItemStatus;
       severity?: ReviewItemSeverity;
       type?: ReviewItemType;
+      objectType?: ReviewObjectType;
+      objectId?: string;
       packId?: string;
+      skillId?: string;
     };
   }>("/api/review-items", async (request) => {
     const filters: ReviewItemFilters = {
       status: request.query.status,
       severity: request.query.severity,
       type: request.query.type,
-      packId: request.query.packId
+      objectType: request.query.objectType,
+      objectId: request.query.objectId,
+      packId: request.query.packId,
+      skillId: request.query.skillId
     };
     const items = getReviewItems(db, filters);
     const allItems = getReviewItems(db);
@@ -286,7 +310,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
 
     return {
       ok: true,
-      ...result
+      ...sanitizeRebuildResultForApi(result)
     };
   });
 
@@ -343,6 +367,99 @@ function getHeaderValue(value: string | string[] | undefined): string | undefine
 
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
   return typeof value === "string" && reviewItemStatuses.includes(value as ReviewItemStatus);
+}
+
+function sanitizeRebuildResultForApi(result: RebuildIndexResult): Omit<RebuildIndexResult, "skipped" | "skippedSkills"> & {
+  skipped: Array<{ packId?: string; issues: RebuildIndexResult["skipped"][number]["issues"] }>;
+  skippedSkills: Array<{ skillId?: string; issues: RebuildIndexResult["skippedSkills"][number]["issues"] }>;
+} {
+  return {
+    ...result,
+    skipped: result.skipped.map((skipped) => ({
+      packId: skipped.packId,
+      issues: skipped.issues.map((issue) => sanitizeSkippedIssue(issue, skipped.packPath))
+    })),
+    skippedSkills: result.skippedSkills.map((skipped) => ({
+      skillId: skipped.skillId,
+      issues: skipped.issues.map((issue) => sanitizeSkippedIssue(issue, skipped.skillPath))
+    }))
+  };
+}
+
+function sanitizeSkippedIssue<TIssue extends { message: string; file?: string; path?: string }>(
+  issue: TIssue,
+  rootPath: string
+): TIssue {
+  return {
+    ...issue,
+    message: sanitizeLocalPathText(issue.message, rootPath),
+    file: sanitizeIssueFile(issue.file, rootPath),
+    path: sanitizeIssuePath(issue.path)
+  };
+}
+
+function sanitizeIssueFile(value: string | undefined, rootPath: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const localPath = value.replace(/\//g, "\\");
+  if (isAbsoluteLikePath(localPath)) {
+    const relative = pathRelative(rootPath, localPath);
+    if (relative) {
+      return relative;
+    }
+
+    return localPath.split(/[\\/]/).filter(Boolean).at(-1);
+  }
+
+  const normalized = normalizeSlashes(value);
+  if (normalized.startsWith("../") || normalized === "..") {
+    return normalized.split("/").filter(Boolean).at(-1);
+  }
+
+  return normalized;
+}
+
+function sanitizeIssuePath(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.replace(/[^\w.[\]-]/g, "_").slice(0, 160);
+}
+
+function sanitizeLocalPathText(value: string, rootPath: string): string {
+  const normalizedRoot = normalizeSlashes(pathResolve(rootPath));
+  const normalizedMessage = normalizeSlashes(value).replaceAll(normalizedRoot, "[local path]");
+
+  return normalizedMessage
+    .replace(/\b[A-Za-z]:\/[^\s"'`<>|]+/g, "[local path]")
+    .replace(/(?<!:)\/\/[^/\s"'`<>|]+\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g, "[local path]")
+    .replace(/\\\\[^\s"'`<>|]+/g, "[local path]");
+}
+
+function pathResolve(value: string): string {
+  return value.replace(/\//g, "\\");
+}
+
+function pathRelative(rootPath: string, value: string): string | undefined {
+  const root = pathResolve(rootPath);
+  const rootWithSeparator = root.endsWith("\\") ? root : `${root}\\`;
+
+  if (!value.toLowerCase().startsWith(rootWithSeparator.toLowerCase())) {
+    return undefined;
+  }
+
+  return normalizeSlashes(value.slice(rootWithSeparator.length));
+}
+
+function isAbsoluteLikePath(value: string): boolean {
+  return /^[A-Za-z]:\\/.test(value) || value.startsWith("\\\\");
+}
+
+function normalizeSlashes(value: string): string {
+  return value.replace(/\\/g, "/");
 }
 
 interface ComposePreviewBody {

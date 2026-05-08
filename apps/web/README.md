@@ -2,13 +2,16 @@
 
 React and Vite local dashboard for Contextarr.
 
-Implemented through Phase 11:
+Implemented through Phase 17:
 
 - dark-first app shell
 - local API-backed Pack Library
+- local API-backed Skill Library
 - Cover Grid, Compact Cards, and Dense Table library views
 - pack detail and record detail views
+- Skill detail views with sanitized instruction and example rendering
 - Pack Health and Review Queue pages
+- Skill Health and shared Skill review queue filters
 - sanitized Markdown record rendering
 - read-only search, sort, and filter controls
 - SQLite-only review item status actions

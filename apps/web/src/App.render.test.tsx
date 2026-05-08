@@ -2,7 +2,15 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { HealthResponse, PackSummary, SkillDetail, SkillDocument, SkillSummary } from "./types";
+import type {
+  HealthResponse,
+  PackSummary,
+  ReviewItem,
+  SkillDetail,
+  SkillDocument,
+  SkillHealthResponse,
+  SkillSummary
+} from "./types";
 
 const mocks = vi.hoisted(() => {
   class MockApiError extends Error {
@@ -24,7 +32,10 @@ const mocks = vi.hoisted(() => {
       getSkill: vi.fn(),
       getSkillInstructions: vi.fn(),
       getSkillExamples: vi.fn(),
-      getSkillExports: vi.fn()
+      getSkillExports: vi.fn(),
+      getSkillHealth: vi.fn(),
+      getReviewItems: vi.fn(),
+      updateReviewItemStatus: vi.fn()
     }
   };
 });
@@ -53,6 +64,9 @@ describe("App Skill UI routes", () => {
       skillDocumentFixture("support-ticket-writing-skill.ticket-example", "Ticket Example", "example")
     ]);
     mocks.apiClient.getSkillExports.mockResolvedValue([]);
+    mocks.apiClient.getSkillHealth.mockResolvedValue(skillHealthFixture());
+    mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
+    mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -128,6 +142,73 @@ describe("App Skill UI routes", () => {
     clickButton("Instructions");
     await waitForText("Instructions unavailable");
   });
+
+  it("renders Skill review items in the shared Review Queue", async () => {
+    mocks.apiClient.getReviewItems.mockResolvedValue({
+      items: [reviewItemFixture()],
+      counts: { total: 1, open: 1, filtered: 1 }
+    });
+
+    mountApp("#/review-queue");
+
+    await waitForText("Review Skill Document");
+    expect(document.body.textContent).toContain("Support Ticket Writing Skill");
+    expect(document.body.textContent).toContain("support-ticket-writing-skill.response-style");
+  });
+
+  it("requests Skill-scoped review items from the shared Review Queue filters", async () => {
+    mocks.apiClient.getReviewItems.mockResolvedValue({
+      items: [reviewItemFixture()],
+      counts: { total: 1, open: 1, filtered: 1 }
+    });
+
+    mountApp("#/review-queue");
+
+    await waitForText("Review Skill Document");
+    selectOption("All objects", "skill");
+    await flushPendingUpdates();
+    selectOption("All skills", "support-ticket-writing-skill");
+    await flushPendingUpdates();
+
+    expect(mocks.apiClient.getReviewItems).toHaveBeenLastCalledWith(
+      expect.objectContaining({ objectType: "skill", objectId: "support-ticket-writing-skill" })
+    );
+  });
+
+  it("renders Skill rows on the Health page", async () => {
+    mountApp("#/health");
+    await flushPendingUpdates();
+
+    await waitForText("System Health");
+    expect(document.body.textContent).toContain("Skill Health");
+    await waitForText("Support Ticket Writing Skill");
+    expect(document.body.textContent).toContain("Support Ticket Writing Skill");
+  });
+
+  it("renders Skill Health tab score, status, and review cards", async () => {
+    mocks.apiClient.getSkillHealth.mockResolvedValue({
+      ...skillHealthFixture(),
+      score: 75,
+      status: "degraded",
+      reviewQueueCount: 2,
+      items: [reviewItemFixture()],
+      checks: [
+        { id: "safety_rules", label: "Safety Rules", status: "warning", count: 1 },
+        { id: "validation", label: "Validation", status: "pass", count: 0 }
+      ]
+    });
+
+    mountApp("#/skills/support-ticket-writing-skill");
+
+    await waitForText("Support Ticket Writing Skill");
+    clickButton("Health");
+
+    await waitForText("75%");
+    expect(document.body.textContent).toContain("Degraded");
+    expect(document.body.textContent).toContain("2");
+    expect(document.body.textContent).toContain("Safety Rules");
+    expect(document.body.textContent).toContain("Review Skill Document");
+  });
 });
 
 function mountApp(hash: string): void {
@@ -160,6 +241,25 @@ function clickButton(label: string): void {
   expect(button).toBeTruthy();
   act(() => {
     button?.click();
+  });
+}
+
+function selectOption(currentLabel: string, value: string): void {
+  const select = Array.from(document.querySelectorAll("select")).find((item) => {
+    const selectedOption = item.options[item.selectedIndex];
+    return selectedOption?.textContent?.trim() === currentLabel;
+  });
+  expect(select).toBeTruthy();
+  act(() => {
+    select!.value = value;
+    select!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
+async function flushPendingUpdates(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -280,6 +380,46 @@ function skillDetailFixture(): SkillDetail {
         tokenBudget: 1200
       }
     ]
+  };
+}
+
+function skillHealthFixture(): SkillHealthResponse {
+  return {
+    skillId: "support-ticket-writing-skill",
+    score: 100,
+    status: "healthy",
+    reviewQueueCount: 0,
+    checks: [
+      {
+        id: "validation",
+        label: "Validation",
+        status: "pass",
+        count: 0
+      }
+    ],
+    items: []
+  };
+}
+
+function reviewItemFixture(): ReviewItem {
+  return {
+    id: "skill-review-item",
+    fingerprint: "skill|support-ticket-writing-skill|review_status",
+    objectType: "skill",
+    objectId: "support-ticket-writing-skill",
+    type: "review_status",
+    severity: "warning",
+    packId: "support-ticket-writing-skill",
+    skillId: "support-ticket-writing-skill",
+    recordId: "support-ticket-writing-skill.response-style",
+    sourceId: null,
+    message: "Review Skill Document",
+    suggestedAction: "Review and approve the Skill document.",
+    status: "open",
+    firstSeenAt: "2026-05-07T00:00:00.000Z",
+    lastSeenAt: "2026-05-07T00:00:00.000Z",
+    updatedAt: "2026-05-07T00:00:00.000Z",
+    metadata: {}
   };
 }
 

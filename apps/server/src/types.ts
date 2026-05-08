@@ -93,10 +93,17 @@ export interface RebuildIndexResult {
 
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
+export type ReviewObjectType = "pack" | "skill";
 export type ReviewItemType =
   | "validation"
   | "freshness"
   | "export_safety"
+  | "export_readiness"
+  | "example_coverage"
+  | "safety_rules"
+  | "target_compatibility"
+  | "disallowed_pattern"
+  | "ai_draft"
   | "review_status"
   | "trust"
   | "source_coverage";
@@ -104,9 +111,12 @@ export type ReviewItemType =
 export interface ReviewItem {
   id: string;
   fingerprint: string;
+  objectType: ReviewObjectType;
+  objectId: string;
   type: ReviewItemType;
   severity: ReviewItemSeverity;
   packId: string;
+  skillId: string | null;
   recordId: string | null;
   sourceId: string | null;
   message: string;
@@ -119,10 +129,13 @@ export interface ReviewItem {
 }
 
 export interface ReviewItemFilters {
+  objectType?: ReviewObjectType;
+  objectId?: string;
   status?: ReviewItemStatus;
   severity?: ReviewItemSeverity;
   type?: ReviewItemType;
   packId?: string;
+  skillId?: string;
 }
 
 export interface HealthCheck {
@@ -134,6 +147,15 @@ export interface HealthCheck {
 
 export interface PackHealthDetail {
   packId: string;
+  score: number;
+  status: string;
+  reviewQueueCount: number;
+  checks: HealthCheck[];
+  items: ReviewItem[];
+}
+
+export interface SkillHealthDetail {
+  skillId: string;
   score: number;
   status: string;
   reviewQueueCount: number;
