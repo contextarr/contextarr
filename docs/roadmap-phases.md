@@ -137,10 +137,12 @@
 
 - Define Agent Kit manifest and references.
 - Validate referenced Context Packs and Skills.
+- Include self-description fields and validation from the first Agent Kit phase: task goal, agent role, usage instructions path, output contract, and execution boundary.
 
 ## Phase 20: Demo Agent Kits
 
 - Add fake public-safe Agent Kits that pair demo Context Packs and demo Skills.
+- Include `instructions/usage.md` and self-description metadata in every demo Agent Kit.
 
 ## Phase 21: Agent Kit Index and API
 
@@ -159,6 +161,7 @@
 ## Phase 24: Agent Kit Export Engine
 
 - Generate Agent Kit Export Briefs for supported targets.
+- Begin every Agent Kit export with an Agent Kit Instructions section before included Skills or Context Pack content.
 
 ## Phase 25: Read-Only MCP for Skills and Agent Kits
 

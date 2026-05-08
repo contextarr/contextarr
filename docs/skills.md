@@ -30,6 +30,12 @@ A future Skill folder may include:
 
 The exact schema begins in Phase 13.
 
+## Relationship To Agent Kits
+
+Skills are reusable task capability modules. They tell agents how to work across many possible bundles.
+
+Agent Kit usage instructions are kit-specific operating instructions. An Agent Kit must not require a separate Skill whose only purpose is explaining how to use that Agent Kit.
+
 ## Safety Rules
 
 Skills must remain data-only. A Skill must not include scripts, shell commands, browser automation, hidden network calls, API keys, credential prompts, runtime plugins, background tasks, or tool execution logic.

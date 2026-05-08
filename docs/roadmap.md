@@ -20,10 +20,12 @@ Contextarr currently supports:
 The second PRD keeps Context Packs as the core source-backed knowledge object and adds future data-only objects:
 
 - Skills: non-executable instruction artifacts that tell agents how to work.
-- Agent Kits: task-ready pairings of Context Packs and Skills.
+- Agent Kits: self-describing, task-ready pairings of Context Packs and Skills that tell agents how a specific bundle should be used for a specific task.
 - Export Briefs: generated output artifacts for AI tools or humans.
 
 Contextarr prepares Agent Kits. It does not run them.
+
+When Agent Kits are implemented later, self-description fields and validation must be part of the Agent Kit schema and validator from the first Agent Kit phase. Do not defer self-description to later polish, and do not move Agent Kits earlier in the roadmap.
 
 ## Near-Term
 
