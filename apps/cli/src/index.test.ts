@@ -20,6 +20,7 @@ const agentKitFixturesDir = path.resolve(
 );
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
+const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const tempDirs: string[] = [];
 
@@ -371,9 +372,57 @@ describe("contextarr CLI", () => {
     expect(fs.existsSync(path.join(allOutDir, "support-ticket-writing-skill", "support-ticket-writing-skill-json.json"))).toBe(true);
   });
 
+  it("exports Agent Kit profiles to generated files", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const singleCode = await runCli(
+      [
+        "export",
+        path.join(demoAgentKitsDir, "support-ticket-writing-kit"),
+        "--profile",
+        "support-ticket-writing-kit-codex",
+        "--out",
+        outDir,
+        "--context-packs-dir",
+        demoPacksDir,
+        "--skills-dir",
+        demoSkillsDir
+      ],
+      output.io
+    );
+
+    expect(singleCode).toBe(0);
+    expect(output.stdout).toContain("Exported 1 file(s)");
+    expect(fs.readFileSync(path.join(outDir, "support-ticket-writing-kit", "support-ticket-writing-kit-codex.md"), "utf8")).toContain(
+      "Codex Agent Kit Export"
+    );
+
+    const allOutput = createIo();
+    const allOutDir = tempDir();
+    const allCode = await runCli(
+      [
+        "export",
+        demoAgentKitsDir,
+        "--all",
+        "--out",
+        allOutDir,
+        "--context-packs-dir",
+        demoPacksDir,
+        "--skills-dir",
+        demoSkillsDir
+      ],
+      allOutput.io
+    );
+
+    expect(allCode).toBe(0);
+    expect(allOutput.stdout).toContain("Exported 24 file(s)");
+    expect(fs.existsSync(path.join(allOutDir, "support-ticket-writing-kit", "support-ticket-writing-kit-chatgpt.md"))).toBe(true);
+  });
+
   it("returns non-zero for invalid export usage and missing profiles", async () => {
     const usageOutput = createIo();
     const missingProfileOutput = createIo();
+    const missingAgentKitRootOutput = createIo();
     const outDir = tempDir();
 
     expect(await runCli(["export", path.join(demoPacksDir, "ai-workstation-pack"), "--out", outDir], usageOutput.io)).toBe(2);
@@ -386,5 +435,25 @@ describe("contextarr CLI", () => {
       )
     ).toBe(1);
     expect(missingProfileOutput.stderr).toContain("Export profile not found");
+
+    expect(
+      await runCli(
+        [
+          "export",
+          path.join(demoAgentKitsDir, "support-ticket-writing-kit"),
+          "--profile",
+          "support-ticket-writing-kit-codex",
+          "--out",
+          outDir,
+          "--context-packs-dir",
+          path.join(os.tmpdir(), "contextarr-missing-pack-root"),
+          "--skills-dir",
+          demoSkillsDir
+        ],
+        missingAgentKitRootOutput.io
+      )
+    ).toBe(1);
+    expect(missingAgentKitRootOutput.stderr).toContain("Expected a readable directory");
+    expect(missingAgentKitRootOutput.stderr).not.toContain("ENOENT");
   });
 });

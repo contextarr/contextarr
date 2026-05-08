@@ -410,11 +410,29 @@ describe("App Skill UI routes", () => {
     clickButton("Exports");
     await waitForText("Implementation Support Kit Codex Export");
     clickButton("Preview");
-    await waitForText("Agent Kit export content generation is scheduled for Phase 24.");
+    await waitForText("Codex Agent Kit Export");
+    expect(document.body.textContent).toContain("Copy");
+    expect(document.body.textContent).toContain("Download");
     expect(mocks.apiClient.getAgentKitExportPreview).toHaveBeenCalledWith(
       "implementation-support-kit",
       "implementation-support-kit-codex"
     );
+  });
+
+  it("copies and downloads Agent Kit export previews", async () => {
+    mountApp("#/agent-kits/implementation-support-kit");
+
+    await waitForText("Implementation Support Kit");
+    clickButton("Exports");
+    await waitForText("Implementation Support Kit Codex Export");
+    clickButton("Preview");
+    await waitForText("Codex Agent Kit Export");
+    clickButton("Copy");
+    await flushPendingUpdates();
+    clickButton("Download");
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("# Codex Agent Kit Export\n\nLocal generated preview.");
+    expect(downloadedFileName).toBe("implementation-support-kit-codex.md");
   });
 
   it("renders the Agent Kit detail error state", async () => {
@@ -811,16 +829,27 @@ function agentKitPreviewFixture() {
     privacyMode: "redacted",
     tokenBudget: 12000,
     filename: "implementation-support-kit-codex.md",
-    content: null,
-    contentStatus: "scheduled_for_phase_24",
+    mimeType: "text/markdown",
+    content: "# Codex Agent Kit Export\n\nLocal generated preview.",
+    contentStatus: "ready",
+    includedRecords: [
+      {
+        id: "context-record",
+        title: "Context Record",
+        type: "note",
+        privacy: "public_safe",
+        tags: [],
+        sources: []
+      }
+    ],
+    excludedRecords: [],
+    sources: [],
     includedContextPacks: [packFixture()],
     includedSkills: [skillFixture()],
-    warnings: [
-      {
-        code: "agent_kit_export_engine_later",
-        message: "Agent Kit export content generation is scheduled for Phase 24."
-      }
-    ]
+    warnings: [],
+    generatedAt: "2026-05-08T00:00:00.000Z",
+    byteLength: 45,
+    estimatedTokens: 12
   };
 }
 

@@ -126,8 +126,9 @@ describe("Contextarr API client", () => {
             target: "codex",
             format: "markdown",
             filename: "profile-1.md",
-            content: null,
-            contentStatus: "scheduled_for_phase_24",
+            mimeType: "text/markdown",
+            content: "# Agent Kit Export",
+            contentStatus: "ready",
             includedContextPacks: [],
             includedSkills: [],
             warnings: []
@@ -149,7 +150,8 @@ describe("Contextarr API client", () => {
     await expect(client.getAgentKitSkills("kit-1")).resolves.toEqual([{ id: "skill-1" }]);
     await expect(client.getAgentKitHealth("kit-1")).resolves.toMatchObject({ agentKitId: "kit-1" });
     await expect(client.getAgentKitExportPreview("kit-1", "profile-1")).resolves.toMatchObject({
-      contentStatus: "scheduled_for_phase_24"
+      contentStatus: "ready",
+      content: "# Agent Kit Export"
     });
     await expect(
       client.saveAgentKit({

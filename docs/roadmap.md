@@ -15,7 +15,7 @@ Contextarr currently supports:
 - Docker Compose local preview.
 - Phase 12 terminology planning for Skills and Agent Kits.
 - Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, deterministic Skill Health/Review Queue support, and profile-driven Skill exports.
-- Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, and Agent Kit Composer save flow.
+- Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, Agent Kit Composer save flow, Agent Kit Library/detail/health, and profile-driven Agent Kit exports.
 
 ## Second PRD Direction
 
@@ -40,6 +40,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 21: Agent Kit index and API. Complete.
 - Phase 22: Agent Kit Composer UI. Complete.
 - Phase 23: Agent Kit Library, detail, and health. Complete.
+- Phase 24: Agent Kit export engine. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -47,7 +48,6 @@ Contextarr prepares Agent Kits. It does not run them.
 
 ## Deferred
 
-- Agent Kit export engine.
 - Read-only MCP for Skills and Agent Kits.
 - Web importer UI.
 - API import endpoints.

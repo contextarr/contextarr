@@ -4,10 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  buildAgentKitExport,
   buildComposedExport,
   buildPackExport,
   buildSkillExport,
   ExportError,
+  listAgentKitExportProfiles,
   listPackExportProfiles,
   listSkillExportProfiles
 } from "./index";
@@ -15,6 +17,7 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
+const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const fixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 const tempDirs: string[] = [];
 
@@ -24,6 +27,10 @@ function demoPack(name: string): string {
 
 function demoSkill(name: string): string {
   return path.join(demoSkillsDir, name);
+}
+
+function demoAgentKit(name: string): string {
+  return path.join(demoAgentKitsDir, name);
 }
 
 function copyFixture(name = "valid-minimal-pack"): string {
@@ -40,6 +47,29 @@ function copyDemoSkill(name = "support-ticket-writing-skill"): string {
   fs.cpSync(demoSkill(name), skillPath, { recursive: true });
   tempDirs.push(tempRoot);
   return skillPath;
+}
+
+function copyDemoObjectSet(): { root: string; packsDir: string; skillsDir: string; agentKitPath: string } {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-export-"));
+  const packsDir = path.join(tempRoot, "demo-packs");
+  const skillsDir = path.join(tempRoot, "demo-skills");
+  const agentKitsDir = path.join(tempRoot, "demo-agent-kits");
+  fs.mkdirSync(packsDir, { recursive: true });
+  fs.mkdirSync(skillsDir, { recursive: true });
+  fs.mkdirSync(agentKitsDir, { recursive: true });
+
+  for (const packId of ["internal-support-kb-pack", "fake-product-line-pack"]) {
+    fs.cpSync(demoPack(packId), path.join(packsDir, packId), { recursive: true });
+  }
+
+  for (const skillId of ["support-ticket-writing-skill", "bug-report-structuring-skill"]) {
+    fs.cpSync(demoSkill(skillId), path.join(skillsDir, skillId), { recursive: true });
+  }
+
+  const agentKitPath = path.join(agentKitsDir, "support-ticket-writing-kit");
+  fs.cpSync(demoAgentKit("support-ticket-writing-kit"), agentKitPath, { recursive: true });
+  tempDirs.push(tempRoot);
+  return { root: tempRoot, packsDir, skillsDir, agentKitPath };
 }
 
 afterEach(() => {
@@ -168,6 +198,228 @@ describe("export profile engine", () => {
     expect(jsonArtifact.content).toContain("hidden_prompts");
   });
 
+  it("lists and builds Agent Kit exports from selected Context Packs and Skills", () => {
+    const profiles = listAgentKitExportProfiles({
+      agentKitPath: demoAgentKit("support-ticket-writing-kit"),
+      contextPacksDir: demoPacksDir,
+      skillsDir: demoSkillsDir
+    }).map(({ profile }) => ({
+      id: profile.id,
+      target: profile.target,
+      format: profile.format
+    }));
+
+    expect(profiles).toEqual(
+      expect.arrayContaining([
+        { id: "support-ticket-writing-kit-chatgpt", target: "chatgpt", format: "markdown" },
+        { id: "support-ticket-writing-kit-claude", target: "claude", format: "markdown" },
+        { id: "support-ticket-writing-kit-codex", target: "codex", format: "markdown" }
+      ])
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath: demoAgentKit("support-ticket-writing-kit"),
+      contextPacksDir: demoPacksDir,
+      skillsDir: demoSkillsDir,
+      profileId: "support-ticket-writing-kit-codex",
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+
+    expect(artifact.packId).toBe("support-ticket-writing-kit");
+    expect(artifact.content).toContain("Agent Kit Export: Support Ticket Writing Kit");
+    expect(artifact.content).toContain("Support Ticket Writing Skill");
+    expect(artifact.content).toContain("Internal Support KB Pack");
+    expect(artifact.content.indexOf("## Included Skills")).toBeLessThan(artifact.content.indexOf("## Relevant Context"));
+    expect(artifact.includedRecords).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "support-ticket-writing-skill.triage-response" }),
+        expect.objectContaining({ id: "internal-support.ticket-intake" })
+      ])
+    );
+    expect(artifact.sources.every((source) => !("path" in source))).toBe(true);
+    expect(JSON.stringify(artifact)).not.toContain(repoRoot);
+  });
+
+  it("builds Agent Kit JSON exports without local source paths", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    fs.writeFileSync(
+      path.join(agentKitPath, "exports", "json.yaml"),
+      [
+        "id: support-ticket-writing-kit-json",
+        "name: Support Ticket Writing Kit JSON Export",
+        "target: json_records",
+        "format: json",
+        "privacy_mode: redacted",
+        "include:",
+        "  context_packs:",
+        "    - internal-support-kb-pack",
+        "    - fake-product-line-pack",
+        "  skills:",
+        "    - support-ticket-writing-skill",
+        "    - bug-report-structuring-skill",
+        "exclude_tags:",
+        "  - secret",
+        "  - never_export",
+        "  - imported_draft",
+        "sections:",
+        "  - included_skills",
+        "  - relevant_context"
+      ].join("\n"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(agentKitPath, "rules", "compatibility.yaml"),
+      fs
+        .readFileSync(path.join(agentKitPath, "rules", "compatibility.yaml"), "utf8")
+        .replace(/supported_targets:\r?\n(?:  - .+\r?\n)+/, "supported_targets:\n  - chatgpt\n  - claude\n  - codex\n  - json_records\n"),
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-json",
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+    const parsed = JSON.parse(artifact.content);
+
+    expect(artifact.mimeType).toBe("application/json");
+    expect(parsed.exportKind).toBe("agent_kit");
+    expect(parsed.records.length).toBeGreaterThan(0);
+    expect(parsed.skillDocuments.length).toBeGreaterThan(0);
+    expect(JSON.stringify(parsed.sources)).not.toContain("path");
+    expect(artifact.content).not.toContain(repoRoot);
+  });
+
+  it("never includes secret or never-export Context Pack records in Agent Kit output", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    const secretRecord = path.join(packsDir, "internal-support-kb-pack", "records", "ticket-intake.md");
+    fs.writeFileSync(
+      secretRecord,
+      `${fs
+        .readFileSync(secretRecord, "utf8")
+        .replace("privacy: public_safe", "privacy: secret")
+        .replace("tags:\n  - support", "tags:\n  - support\n  - never_export")
+        .trim()}\n\nSECRET AGENT KIT EXPORT SHOULD NOT INCLUDE THIS.\n`,
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(agentKitPath, "exports", "full.yaml"),
+      [
+        "id: support-ticket-writing-kit-full",
+        "name: Support Ticket Writing Kit Full Export",
+        "target: codex",
+        "format: markdown",
+        "privacy_mode: full",
+        "include:",
+        "  context_packs:",
+        "    - internal-support-kb-pack",
+        "    - fake-product-line-pack",
+        "  skills:",
+        "    - support-ticket-writing-skill",
+        "    - bug-report-structuring-skill",
+        "exclude_tags:",
+        "  - never_export",
+        "  - imported_draft",
+        "sections:",
+        "  - relevant_context"
+      ].join("\n"),
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-full"
+    });
+
+    expect(artifact.content).not.toContain("SECRET AGENT KIT EXPORT SHOULD NOT INCLUDE THIS");
+    expect(artifact.includedRecords.map((record) => record.id)).not.toContain("internal-support.ticket-intake");
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "internal-support.ticket-intake" })])
+    );
+  });
+
+  it("keeps private Context Pack records in redacted Agent Kit exports unless blocked by tags or rules", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    const privateRecord = path.join(packsDir, "internal-support-kb-pack", "records", "ticket-intake.md");
+    fs.writeFileSync(
+      privateRecord,
+      `${fs
+        .readFileSync(privateRecord, "utf8")
+        .replace("privacy: public_safe", "privacy: private")
+        .trim()}\n\nPRIVATE CONTEXT SHOULD REMAIN IN REDACTED AGENT KIT EXPORTS.\n`,
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-codex"
+    });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toContain("internal-support.ticket-intake");
+    expect(artifact.content).toContain("PRIVATE CONTEXT SHOULD REMAIN IN REDACTED AGENT KIT EXPORTS.");
+    expect(artifact.excludedRecords.map((record) => record.id)).not.toContain("internal-support.ticket-intake");
+  });
+
+  it("honors Agent Kit export sections when reporting included records and sources", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    fs.writeFileSync(
+      path.join(agentKitPath, "exports", "context-only.yaml"),
+      [
+        "id: support-ticket-writing-kit-context-only",
+        "name: Support Ticket Writing Kit Context Only Export",
+        "target: codex",
+        "format: markdown",
+        "privacy_mode: redacted",
+        "include:",
+        "  context_packs:",
+        "    - internal-support-kb-pack",
+        "    - fake-product-line-pack",
+        "  skills:",
+        "    - support-ticket-writing-skill",
+        "    - bug-report-structuring-skill",
+        "exclude_tags:",
+        "  - secret",
+        "  - never_export",
+        "  - imported_draft",
+        "sections:",
+        "  - relevant_context"
+      ].join("\n"),
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-context-only"
+    });
+
+    expect(artifact.content).not.toContain("## Agent Kit Summary");
+    expect(artifact.content).not.toContain("## Included Skills");
+    expect(artifact.includedRecords.map((record) => record.id)).not.toContain("support-ticket-writing-skill.triage-response");
+    expect(artifact.sources.some((source) => source.id.startsWith("support-ticket-writing-skill:"))).toBe(false);
+    expect(artifact.includedRecords).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "internal-support.ticket-intake" })])
+    );
+  });
+
+  it("reports missing Agent Kit export dependency roots as sanitized ExportErrors", () => {
+    expect(() =>
+      buildAgentKitExport({
+        agentKitPath: demoAgentKit("support-ticket-writing-kit"),
+        contextPacksDir: path.join(os.tmpdir(), "missing-contextarr-packs-dir"),
+        skillsDir: demoSkillsDir,
+        profileId: "support-ticket-writing-kit-codex"
+      })
+    ).toThrow(ExportError);
+  });
+
   it("excludes private, secret-tagged, and unapproved Skill documents", () => {
     const skillPath = copyDemoSkill();
     const corePath = path.join(skillPath, "instructions", "triage-response.md");
@@ -286,6 +538,18 @@ describe("export profile engine", () => {
     );
 
     expect(() => buildPackExport({ packPath, profileId: "codex-context" })).toThrow(/missing record/);
+  });
+
+  it("rejects pack export manifest paths that resolve outside the pack root before validation reads content", () => {
+    const packPath = copyFixture();
+    const outsideRecords = path.join(path.dirname(packPath), "outside-records");
+    fs.cpSync(path.join(packPath, "records"), outsideRecords, { recursive: true });
+    const manifestPath = path.join(packPath, "contextarr-pack.json");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+    manifest.recordsPath = "../outside-records";
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+    expect(() => buildPackExport({ packPath, profileId: "codex-context" })).toThrow(/outside the object root/);
   });
 
   it("builds composed markdown and JSON exports in selected record order", () => {

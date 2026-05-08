@@ -195,6 +195,35 @@ if (!failed) {
     fail("Root package scripts must include phase23:verify.");
   }
 
+  const exportProfiles = read("docs/export-profiles.md");
+  const requiredPhase24Text = [
+    "Phase 24",
+    "phase24:verify",
+    "Agent Kit Export Engine",
+    "GET /api/agent-kits/:id/exports/:profileId/preview",
+    "contextarr export demo-agent-kits",
+  ];
+  for (const text of requiredPhase24Text) {
+    if (!readme.includes(text)) {
+      fail(`README is missing Phase 24 text: ${text}`);
+    }
+  }
+  if (!agentKits.includes("Phase 24") || !agentKits.includes("profile-driven export generation")) {
+    fail("Agent Kits docs must describe Phase 24 profile-driven export generation.");
+  }
+  if (!exportProfiles.includes("Agent Kit exports") || !exportProfiles.includes("contextarr export demo-agent-kits")) {
+    fail("Export profile docs must describe Agent Kit export CLI usage.");
+  }
+  if (!roadmap.includes("Phase 24: Agent Kit export engine. Complete.")) {
+    fail("Roadmap must mark Phase 24 complete.");
+  }
+  if (!securityModel.includes("Phase 24") || !securityModel.includes("never_export")) {
+    fail("Security model docs must include Phase 24 Agent Kit export boundaries.");
+  }
+  if (!packageJson.scripts["phase24:verify"]) {
+    fail("Root package scripts must include phase24:verify.");
+  }
+
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
     fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");
   }

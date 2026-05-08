@@ -2882,6 +2882,27 @@ function ExportPreview({
   );
 }
 
+function agentKitPreviewToArtifact(preview: AgentKitExportPreview, fallbackName: string): ExportArtifact {
+  return {
+    packId: preview.packId ?? preview.agentKitId,
+    packName: preview.packName ?? fallbackName,
+    profileId: preview.profileId,
+    profileName: preview.profileName ?? preview.profileId,
+    target: preview.target,
+    format: preview.format,
+    filename: preview.filename,
+    mimeType: preview.mimeType ?? (preview.format === "json" ? "application/json" : "text/markdown"),
+    content: preview.content,
+    includedRecords: preview.includedRecords ?? [],
+    excludedRecords: preview.excludedRecords ?? [],
+    sources: preview.sources ?? [],
+    warnings: preview.warnings,
+    generatedAt: preview.generatedAt ?? "",
+    byteLength: preview.byteLength ?? preview.content.length,
+    estimatedTokens: preview.estimatedTokens ?? Math.max(1, Math.ceil(preview.content.length / 4))
+  };
+}
+
 function HealthTab({ pack }: { pack: PackDetail }) {
   const [health, setHealth] = useState<PackHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -3223,6 +3244,7 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
   const [preview, setPreview] = useState<AgentKitExportPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewingProfileId, setPreviewingProfileId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -3264,11 +3286,20 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
     setPreviewError(null);
     try {
       setPreview(await apiClient.getAgentKitExportPreview(agentKitId, profileId));
+      setCopied(false);
     } catch (loadError) {
       setPreviewError(loadError instanceof Error ? loadError.message : "Unable to preview Agent Kit export.");
     } finally {
       setPreviewingProfileId(null);
     }
+  }
+
+  async function copyAgentKitExport() {
+    if (!preview?.content) {
+      return;
+    }
+
+    setCopied(await copyTextToClipboard(preview.content));
   }
 
   if (loading) {
@@ -3435,6 +3466,14 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
                     </li>
                   ))}
                 </ul>
+              ) : null}
+              {preview.content ? (
+                <ExportPreview
+                  artifact={agentKitPreviewToArtifact(preview, agentKit.name)}
+                  copied={copied}
+                  onCopy={() => void copyAgentKitExport()}
+                  onDownload={() => downloadExportArtifact(agentKitPreviewToArtifact(preview, agentKit.name))}
+                />
               ) : null}
             </div>
           ) : null}

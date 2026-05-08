@@ -177,17 +177,27 @@ export interface AgentKitDetail extends AgentKitSummary {
 
 export interface AgentKitExportPreview {
   agentKitId: string;
+  packId?: string;
+  packName?: string;
   profileId: string;
+  profileName?: string;
   target: string;
   format: string;
   privacyMode?: string | null;
   tokenBudget?: number | null;
   filename: string;
-  content: string | null;
+  mimeType?: string;
+  content: string;
   contentStatus: string;
+  includedRecords?: ExportRecordSummary[];
+  excludedRecords?: ExcludedExportRecord[];
+  sources?: ExportSourceSummary[];
   includedContextPacks: AgentKitContextPackSummary[];
   includedSkills: AgentKitSkillSummary[];
   warnings: ExportWarning[];
+  generatedAt?: string;
+  byteLength?: number;
+  estimatedTokens?: number;
 }
 
 export interface CreateAgentKitRequest {

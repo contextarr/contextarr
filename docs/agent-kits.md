@@ -1,6 +1,6 @@
 # Contextarr Agent Kits
 
-Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 22 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing/search, and a local Composer save flow.
+Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 24 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing/search, a local Composer save flow, Library/detail/health surfaces, and profile-driven export generation.
 
 ## Definition
 
@@ -47,7 +47,7 @@ Phase 21 and Phase 22 add local API endpoints:
 
 `POST /api/agent-kits` accepts metadata plus selected Context Pack IDs and Skill IDs. It does not accept a filesystem path. The server writes a data-only Agent Kit inside the configured local Agent Kit directory, validates it before indexing, and then refreshes the derived SQLite index.
 
-The preview route returns metadata and selected relationship summaries only until the full Agent Kit export engine lands in Phase 24.
+The preview route returns a generated local export artifact plus selected relationship summaries. It is read-only and does not execute Skills, run Agent Kits, fetch URLs, call AI APIs, or write generated files.
 
 ## Phase 23: Library, Detail, and Health
 
@@ -64,4 +64,8 @@ Agent Kit source files are local, inspectable, and versionable. Generated Export
 
 ## Boundaries
 
-Phase 22 implements the Composer save surface and a simple detail view. It does not implement full Agent Kit export content generation, MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, arbitrary path writes, or execution behavior.
+## Phase 24: Export Engine
+
+Phase 24 builds deterministic Agent Kit export previews by merging profile-selected Context Pack records and Skill documents. Export generation strips local source paths, excludes secret and `never_export` content, preserves profile order, and exposes copy/download in the browser without server-side generated-file writes.
+
+Phase 24 does not implement MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, arbitrary path writes, or execution behavior.

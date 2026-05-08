@@ -162,6 +162,9 @@ importers:
 
   packages/export-profiles:
     dependencies:
+      '@contextarr/agent-kit-validator':
+        specifier: workspace:*
+        version: link:../agent-kit-validator
       '@contextarr/pack-validator':
         specifier: workspace:*
         version: link:../pack-validator

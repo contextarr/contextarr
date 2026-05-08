@@ -9,6 +9,8 @@ import {
   type AgentKitValidationResult
 } from "@contextarr/agent-kit-validator";
 import {
+  buildAgentKitExport,
+  buildAgentKitExports,
   buildPackExport,
   buildPackExports,
   buildSkillExport,
@@ -271,13 +273,17 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
   program
     .command("export")
-    .argument("<path>", "pack, Skill, or directory of child objects to export")
+    .argument("<path>", "pack, Skill, Agent Kit, or directory of child objects to export")
     .option("--profile <profileId>", "export profile id to generate")
     .option("--all", "export all profiles")
     .requiredOption("--out <path>", "output directory for generated exports")
-    .action((targetPath: string, options: { profile?: string; all?: boolean; out: string }) => {
+    .option("--context-packs-dir <path>", "Context Pack directory for Agent Kit exports", "demo-packs")
+    .option("--skills-dir <path>", "Skill directory for Agent Kit exports", "demo-skills")
+    .action((targetPath: string, options: { profile?: string; all?: boolean; out: string; contextPacksDir: string; skillsDir: string }) => {
       const resolvedTargetPath = resolveUserPath(targetPath);
       const resolvedOutputPath = resolveUserPath(options.out);
+      const resolvedContextPacksDir = resolveUserPath(options.contextPacksDir);
+      const resolvedSkillsDir = resolveUserPath(options.skillsDir);
 
       if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
         io.stderr.write(`Export path is not a readable directory: ${targetPath}\n`);
@@ -298,7 +304,22 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
             ? options.all
               ? buildSkillExports({ skillPath: target.path })
               : [buildSkillExport({ skillPath: target.path, profileId: options.profile! })]
-            : options.all
+            : target.kind === "agent-kit"
+              ? options.all
+                ? buildAgentKitExports({
+                    agentKitPath: target.path,
+                    contextPacksDir: resolvedContextPacksDir,
+                    skillsDir: resolvedSkillsDir
+                  })
+                : [
+                    buildAgentKitExport({
+                      agentKitPath: target.path,
+                      profileId: options.profile!,
+                      contextPacksDir: resolvedContextPacksDir,
+                      skillsDir: resolvedSkillsDir
+                    })
+                  ]
+              : options.all
               ? buildPackExports({ packPath: target.path })
               : [buildPackExport({ packPath: target.path, profileId: options.profile! })]
         );
@@ -346,7 +367,7 @@ function resolveUserPath(value: string): string {
 }
 
 type ValidationTarget = { kind: "pack" | "skill" | "agent-kit"; path: string };
-type ExportTarget = { kind: "pack" | "skill"; path: string };
+type ExportTarget = ValidationTarget;
 type AnyValidationResult = ValidationResult | SkillValidationResult | AgentKitValidationResult;
 
 function getValidationTargets(targetPath: string): ValidationTarget[] {
@@ -429,7 +450,7 @@ function getAgentKitTargets(targetPath: string): string[] {
 }
 
 function getExportTargets(targetPath: string): ExportTarget[] {
-  const targets = getValidationTargets(targetPath).filter((target): target is ExportTarget => target.kind !== "agent-kit");
+  const targets = getValidationTargets(targetPath);
   if (targets.length === 0) {
     return [{ kind: "pack", path: targetPath }];
   }

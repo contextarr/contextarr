@@ -172,7 +172,11 @@ async function verify() {
   }
 
   const agentKitPreview = await getJson("/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview");
-  if (agentKitPreview.agentKitId !== "support-ticket-writing-kit" || agentKitPreview.contentStatus !== "scheduled_for_phase_24") {
+  if (
+    agentKitPreview.agentKitId !== "support-ticket-writing-kit" ||
+    agentKitPreview.contentStatus !== "ready" ||
+    !agentKitPreview.content?.includes("Agent Kit Export: Support Ticket Writing Kit")
+  ) {
     throw new Error(`Unexpected Agent Kit preview response: ${JSON.stringify(agentKitPreview)}`);
   }
 

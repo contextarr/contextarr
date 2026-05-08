@@ -2,6 +2,7 @@ import fs from "node:fs";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import staticPlugin from "@fastify/static";
 import {
+  buildAgentKitExport,
   buildComposedExport,
   buildPackExport,
   buildSkillExport,
@@ -22,6 +23,7 @@ import {
   getAgentKitExportProfilePreview,
   getAgentKitExportProfiles,
   getAgentKitHealth,
+  getAgentKitPath,
   getAgentKitSkills,
   getAgentKits,
   getIndexStats,
@@ -238,15 +240,46 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   app.get<{ Params: { id: string; profileId: string } }>(
     "/api/agent-kits/:id/exports/:profileId/preview",
     async (request, reply) => {
-      const preview = getAgentKitExportProfilePreview(db, request.params.id, request.params.profileId);
-      if (!preview) {
+      const agentKitPath = getAgentKitPath(db, request.params.id);
+      if (!agentKitPath) {
+        return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+      }
+
+      const metadata = getAgentKitExportProfilePreview(db, request.params.id, request.params.profileId);
+      if (!metadata) {
         return reply.code(404).send({
           error: "not_found",
           message: `Agent Kit export profile not found: ${request.params.id}/${request.params.profileId}`
         });
       }
 
-      return preview;
+      try {
+        const artifact = buildAgentKitExport({
+          agentKitPath,
+          profileId: request.params.profileId,
+          contextPacksDir: config.packsDir,
+          skillsDir: config.skillsDir
+        });
+
+        return {
+          ...metadata,
+          ...artifact,
+          agentKitId: artifact.packId,
+          contentStatus: "ready",
+          includedContextPacks: (metadata as { includedContextPacks?: unknown[] }).includedContextPacks ?? [],
+          includedSkills: (metadata as { includedSkills?: unknown[] }).includedSkills ?? []
+        };
+      } catch (error) {
+        if (error instanceof ExportError && error.code === "profile_not_found") {
+          return reply.code(404).send({ error: "not_found", message: error.message });
+        }
+
+        if (error instanceof ExportError) {
+          return reply.code(400).send({ error: error.code, message: error.message });
+        }
+
+        throw error;
+      }
     }
   );
 

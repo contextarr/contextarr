@@ -3,6 +3,8 @@ import path from "node:path";
 import matter from "gray-matter";
 import YAML from "yaml";
 import {
+  agentKitExportProfileSchema,
+  agentKitManifestSchema,
   contextPackManifestSchema,
   exportProfileSchema,
   recordFrontmatterSchema,
@@ -12,6 +14,8 @@ import {
   skillManifestSchema,
   skillSafetyRulesSchema,
   sourceMapSchema,
+  type AgentKitExportProfile,
+  type AgentKitManifest,
   type ContextPackManifest,
   type ExportProfile,
   type RecordFrontmatter,
@@ -22,6 +26,7 @@ import {
   type SkillSafetyRules,
   type Source
 } from "@contextarr/schema";
+import { validateAgentKit } from "@contextarr/agent-kit-validator";
 import { validatePack } from "@contextarr/pack-validator";
 import { validateSkill } from "@contextarr/skill-validator";
 
@@ -91,6 +96,11 @@ export interface SkillExportProfileListing {
   profile: SkillExportProfile;
 }
 
+export interface AgentKitExportProfileListing {
+  agentKitId: string;
+  profile: AgentKitExportProfile;
+}
+
 export interface BuildPackExportOptions {
   packPath: string;
   profileId: string;
@@ -131,12 +141,34 @@ export interface BuildSkillExportsOptions {
   generatedAt?: string;
 }
 
+export interface BuildAgentKitExportOptions {
+  agentKitPath: string;
+  profileId: string;
+  contextPacksDir: string;
+  skillsDir: string;
+  generatedAt?: string;
+}
+
+export interface BuildAgentKitExportsOptions {
+  agentKitPath: string;
+  contextPacksDir: string;
+  skillsDir: string;
+  profileIds?: string[];
+  generatedAt?: string;
+}
+
 export interface ListPackExportProfilesOptions {
   packPath: string;
 }
 
 export interface ListSkillExportProfilesOptions {
   skillPath: string;
+}
+
+export interface ListAgentKitExportProfilesOptions {
+  agentKitPath: string;
+  contextPacksDir: string;
+  skillsDir: string;
 }
 
 interface LoadedRecord {
@@ -171,6 +203,14 @@ interface LoadedSkillForExport {
   safetyRules: SkillSafetyRules;
 }
 
+interface LoadedAgentKitForExport {
+  agentKitPath: string;
+  manifest: AgentKitManifest;
+  exportProfiles: AgentKitExportProfile[];
+  contextPacks: LoadedPackForExport[];
+  skills: LoadedSkillForExport[];
+}
+
 interface PreparedRecord {
   record: LoadedRecord;
   body: string;
@@ -183,6 +223,14 @@ interface PreparedComposedRecord extends PreparedRecord {
 interface PreparedSkillDocument {
   document: LoadedSkillDocument;
   body: string;
+}
+
+interface PreparedAgentKitRecord extends PreparedRecord {
+  pack: LoadedPackForExport;
+}
+
+interface PreparedAgentKitSkillDocument extends PreparedSkillDocument {
+  skill: LoadedSkillForExport;
 }
 
 const supportedTargets = new Set([
@@ -224,6 +272,14 @@ export function listSkillExportProfiles(options: ListSkillExportProfilesOptions)
   }));
 }
 
+export function listAgentKitExportProfiles(options: ListAgentKitExportProfilesOptions): AgentKitExportProfileListing[] {
+  const agentKit = loadAgentKitForExport(options.agentKitPath, options.contextPacksDir, options.skillsDir);
+  return agentKit.exportProfiles.map((profile) => ({
+    agentKitId: agentKit.manifest.id,
+    profile
+  }));
+}
+
 export function buildPackExports(options: BuildPackExportsOptions): ExportArtifact[] {
   const pack = loadPackForExport(options.packPath);
   const profileIds = options.profileIds ?? pack.exportProfiles.map((profile) => profile.id);
@@ -238,6 +294,13 @@ export function buildSkillExports(options: BuildSkillExportsOptions): ExportArti
   return profileIds.map((profileId) => buildExportFromLoadedSkill(skill, profileId, options.generatedAt));
 }
 
+export function buildAgentKitExports(options: BuildAgentKitExportsOptions): ExportArtifact[] {
+  const agentKit = loadAgentKitForExport(options.agentKitPath, options.contextPacksDir, options.skillsDir);
+  const profileIds = options.profileIds ?? agentKit.exportProfiles.map((profile) => profile.id);
+
+  return profileIds.map((profileId) => buildExportFromLoadedAgentKit(agentKit, profileId, options.generatedAt));
+}
+
 export function buildPackExport(options: BuildPackExportOptions): ExportArtifact {
   const pack = loadPackForExport(options.packPath);
   return buildExportFromLoadedPack(pack, options.profileId, options.generatedAt);
@@ -246,6 +309,11 @@ export function buildPackExport(options: BuildPackExportOptions): ExportArtifact
 export function buildSkillExport(options: BuildSkillExportOptions): ExportArtifact {
   const skill = loadSkillForExport(options.skillPath);
   return buildExportFromLoadedSkill(skill, options.profileId, options.generatedAt);
+}
+
+export function buildAgentKitExport(options: BuildAgentKitExportOptions): ExportArtifact {
+  const agentKit = loadAgentKitForExport(options.agentKitPath, options.contextPacksDir, options.skillsDir);
+  return buildExportFromLoadedAgentKit(agentKit, options.profileId, options.generatedAt);
 }
 
 export function buildComposedExport(options: BuildComposedExportOptions): ExportArtifact {
@@ -388,6 +456,70 @@ function buildExportFromLoadedSkill(skill: LoadedSkillForExport, profileId: stri
     mimeType: mimeTypeForFormat(profile.format),
     content,
     includedRecords: included.map(({ document }) => summarizeSkillDocument(document)),
+    excludedRecords: excluded,
+    sources,
+    warnings,
+    generatedAt,
+    byteLength: Buffer.byteLength(content, "utf8"),
+    estimatedTokens
+  };
+}
+
+function buildExportFromLoadedAgentKit(
+  agentKit: LoadedAgentKitForExport,
+  profileId: string,
+  generatedAt = new Date().toISOString()
+): ExportArtifact {
+  const profile = agentKit.exportProfiles.find((candidate) => candidate.id === profileId);
+  if (!profile) {
+    throw new ExportError("profile_not_found", `Agent Kit export profile not found: ${profileId}`);
+  }
+
+  if (!supportedTargets.has(profile.target)) {
+    throw new ExportError("unsupported_target", `Agent Kit export target is not supported in Phase 24: ${profile.target}`);
+  }
+
+  const selectedPacks = selectAgentKitPacks(agentKit, profile);
+  const selectedSkills = selectAgentKitSkills(agentKit, profile);
+  const sections = agentKitExportSections(profile);
+  const includeContext = sections.has("relevant_context");
+  const includeSkills = sections.has("included_skills");
+  const warnings: ExportWarning[] = [];
+  const { included: includedRecords, excluded: excludedRecords } = includeContext
+    ? selectAgentKitRecords(selectedPacks, profile, warnings)
+    : { included: [], excluded: [] };
+  const { included: includedSkillDocuments, excluded: excludedSkillDocuments } = includeSkills
+    ? selectAgentKitSkillDocuments(selectedSkills, profile, warnings)
+    : { included: [], excluded: [] };
+  const excluded = [...excludedRecords, ...excludedSkillDocuments];
+  const sources = summarizeAgentKitSources(includedRecords, includedSkillDocuments);
+  const content =
+    profile.format === "json"
+      ? renderAgentKitJsonExport(agentKit, profile, selectedPacks, selectedSkills, includedRecords, includedSkillDocuments, excluded, sources, warnings, generatedAt)
+      : renderAgentKitMarkdownExport(agentKit, profile, selectedPacks, selectedSkills, includedRecords, includedSkillDocuments, excluded, sources, warnings, generatedAt);
+  const estimatedTokens = estimateTokens(content);
+
+  if (profile.token_budget && estimatedTokens > profile.token_budget) {
+    warnings.push({
+      code: "token_budget.exceeded",
+      message: `Estimated export size (${estimatedTokens} tokens) exceeds profile budget (${profile.token_budget}).`
+    });
+  }
+
+  return {
+    packId: agentKit.manifest.id,
+    packName: agentKit.manifest.name,
+    profileId: profile.id,
+    profileName: profile.name,
+    target: profile.target,
+    format: profile.format,
+    filename: filenameForProfile(profile),
+    mimeType: mimeTypeForFormat(profile.format),
+    content,
+    includedRecords: [
+      ...includedRecords.map(({ record }) => summarizeRecord(record)),
+      ...includedSkillDocuments.map(({ document }) => summarizeSkillDocument(document))
+    ],
     excludedRecords: excluded,
     sources,
     warnings,
@@ -553,6 +685,92 @@ function selectComposedRecords(
   return { included, excluded };
 }
 
+function selectAgentKitPacks(agentKit: LoadedAgentKitForExport, profile: AgentKitExportProfile): LoadedPackForExport[] {
+  const selectedIds = profile.include?.context_packs ?? agentKit.manifest.contextPacks;
+  const byId = new Map(agentKit.contextPacks.map((pack) => [pack.manifest.id, pack]));
+  const missingIds = selectedIds.filter((id) => !byId.has(id));
+
+  if (missingIds.length > 0) {
+    throw new ExportError("context_pack_not_found", `Agent Kit export profile references missing Context Pack(s): ${missingIds.join(", ")}`);
+  }
+
+  return selectedIds.map((id) => byId.get(id)!);
+}
+
+function selectAgentKitSkills(agentKit: LoadedAgentKitForExport, profile: AgentKitExportProfile): LoadedSkillForExport[] {
+  const selectedIds = profile.include?.skills ?? agentKit.manifest.skills;
+  const byId = new Map(agentKit.skills.map((skill) => [skill.manifest.id, skill]));
+  const missingIds = selectedIds.filter((id) => !byId.has(id));
+
+  if (missingIds.length > 0) {
+    throw new ExportError("skill_not_found", `Agent Kit export profile references missing Skill(s): ${missingIds.join(", ")}`);
+  }
+
+  return selectedIds.map((id) => byId.get(id)!);
+}
+
+function selectAgentKitRecords(
+  packs: LoadedPackForExport[],
+  profile: AgentKitExportProfile,
+  warnings: ExportWarning[]
+): { included: PreparedAgentKitRecord[]; excluded: ExcludedExportRecord[] } {
+  const included: PreparedAgentKitRecord[] = [];
+  const excluded: ExcludedExportRecord[] = [];
+
+  for (const pack of packs) {
+    for (const record of pack.records) {
+      const reason = agentKitRecordExclusionReason(record.metadata, profile, pack.redactionRules);
+      if (reason) {
+        excluded.push({ ...summarizeRecord(record), reason });
+        continue;
+      }
+
+      included.push({
+        pack,
+        record,
+        body: applyRedaction(record.body, pack.redactionRules, record.metadata.id, warnings)
+      });
+    }
+  }
+
+  return { included, excluded };
+}
+
+function selectAgentKitSkillDocuments(
+  skills: LoadedSkillForExport[],
+  profile: AgentKitExportProfile,
+  warnings: ExportWarning[]
+): { included: PreparedAgentKitSkillDocument[]; excluded: ExcludedExportRecord[] } {
+  const included: PreparedAgentKitSkillDocument[] = [];
+  const excluded: ExcludedExportRecord[] = [];
+
+  for (const skill of skills) {
+    const skillProfile = agentKitProfileToSkillProfile(profile, skill);
+    const selected = selectSkillDocuments(skill, skillProfile, warnings);
+    included.push(...selected.included.map((document) => ({ ...document, skill })));
+    excluded.push(...selected.excluded);
+  }
+
+  return { included, excluded };
+}
+
+function agentKitProfileToSkillProfile(profile: AgentKitExportProfile, skill: LoadedSkillForExport): SkillExportProfile {
+  return {
+    id: `${profile.id}-${skill.manifest.id}`,
+    name: `${profile.name} / ${skill.manifest.name}`,
+    target: profile.target,
+    format: profile.format,
+    privacy_mode: profile.privacy_mode,
+    include: {
+      instructions: skill.instructions.map((document) => document.metadata.id),
+      examples: skill.examples.map((document) => document.metadata.id)
+    },
+    exclude_tags: profile.exclude_tags,
+    token_budget: profile.token_budget,
+    sections: ["instructions", "examples", "safety"]
+  };
+}
+
 function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, rules: RedactionRules): string | undefined {
   const profileExcludedTag = metadata.tags.find((tag) => profile.exclude_tags.includes(tag));
   if (profileExcludedTag) {
@@ -568,6 +786,35 @@ function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, ru
       return "Excluded by redacted privacy mode: secret";
     }
 
+    const redactionTag = metadata.tags.find((tag) => rules.redact_tags.includes(tag));
+    if (redactionTag) {
+      return `Excluded by redaction tag: ${redactionTag}`;
+    }
+  }
+
+  return undefined;
+}
+
+function agentKitRecordExclusionReason(
+  metadata: RecordFrontmatter,
+  profile: AgentKitExportProfile,
+  rules: RedactionRules
+): string | undefined {
+  const hardBlockedTags = new Set([...profile.exclude_tags, "secret", "never_export", "imported_draft"]);
+  const hardBlockedTag = metadata.tags.find((tag) => hardBlockedTags.has(tag));
+  if (hardBlockedTag) {
+    return `Excluded by Agent Kit export tag: ${hardBlockedTag}`;
+  }
+
+  if (metadata.privacy === "secret") {
+    return "Excluded by Agent Kit export safety: secret";
+  }
+
+  if (profile.privacy_mode === "public_safe" && metadata.privacy !== "public_safe") {
+    return `Excluded by public-safe privacy mode: ${metadata.privacy}`;
+  }
+
+  if ((profile.privacy_mode ?? "redacted") === "redacted") {
     const redactionTag = metadata.tags.find((tag) => rules.redact_tags.includes(tag));
     if (redactionTag) {
       return `Excluded by redaction tag: ${redactionTag}`;
@@ -1103,12 +1350,249 @@ function renderComposedJsonExport(
   )}\n`;
 }
 
+function renderAgentKitMarkdownExport(
+  agentKit: LoadedAgentKitForExport,
+  profile: AgentKitExportProfile,
+  selectedPacks: LoadedPackForExport[],
+  selectedSkills: LoadedSkillForExport[],
+  includedRecords: PreparedAgentKitRecord[],
+  includedSkillDocuments: PreparedAgentKitSkillDocument[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  generatedAt: string
+): string {
+  const sections = agentKitExportSections(profile);
+  const lines = [
+    `# ${targetLabel(profile.target)} Agent Kit Export: ${agentKit.manifest.name}`,
+    "",
+    `Generated: ${generatedAt}`,
+    `Profile: ${profile.name} (${profile.id})`,
+    `Privacy mode: ${profile.privacy_mode ?? "redacted"}`,
+    `Format: ${profile.format}`,
+    ""
+  ];
+
+  if (sections.has("kit_summary")) {
+    lines.push(
+      "## Agent Kit Summary",
+      "",
+      agentKit.manifest.description,
+      "",
+      `Type: ${agentKit.manifest.type}`,
+      `Target: ${agentKit.manifest.target}`,
+      `Context Packs: ${selectedPacks.map((pack) => pack.manifest.name).join(", ") || "none"}`,
+      `Skills: ${selectedSkills.map((skill) => skill.manifest.name).join(", ") || "none"}`,
+      ""
+    );
+  }
+
+  if (sections.has("task_goal")) {
+    lines.push("## Task Goal", "", agentKit.manifest.description, "");
+  }
+
+  if (sections.has("included_skills")) {
+    lines.push("## Included Skills", "");
+    for (const skill of selectedSkills) {
+      lines.push(`### ${skill.manifest.name}`, "", skill.manifest.description, "");
+      for (const { document, body } of includedSkillDocuments.filter((entry) => entry.skill.manifest.id === skill.manifest.id)) {
+        lines.push(
+          `#### ${document.metadata.title}`,
+          "",
+          `Document ID: ${document.metadata.id}`,
+          `Kind: ${document.kind}`,
+          `Type: ${document.metadata.type}`,
+          `Privacy: ${document.metadata.privacy}`,
+          `Tags: ${document.metadata.tags.join(", ") || "none"}`,
+          "",
+          body,
+          ""
+        );
+      }
+    }
+  }
+
+  if (sections.has("relevant_context")) {
+    lines.push("## Relevant Context", "");
+    for (const pack of selectedPacks) {
+      lines.push(`### ${pack.manifest.name}`, "", pack.manifest.description, "");
+      for (const { record, body } of includedRecords.filter((entry) => entry.pack.manifest.id === pack.manifest.id)) {
+        lines.push(
+          `#### ${record.metadata.title}`,
+          "",
+          `Record ID: ${record.metadata.id}`,
+          `Type: ${record.metadata.type}`,
+          `Privacy: ${record.metadata.privacy}`,
+          `Tags: ${record.metadata.tags.join(", ") || "none"}`,
+          `Sources: ${record.metadata.sources.join(", ") || "none"}`,
+          "",
+          body,
+          ""
+        );
+      }
+    }
+  }
+
+  if (sections.has("output_format")) {
+    lines.push("## Output Format", "", `Target: ${targetLabel(profile.target)}`, `Artifact format: ${profile.format}`, "");
+  }
+
+  if (sections.has("constraints")) {
+    lines.push(
+      "## Constraints",
+      "",
+      "- Contextarr prepares this Agent Kit export only; it does not run Agent Kits.",
+      "- Skills are data-only instructions and are not executable.",
+      "- Export generation is local, read-only, and does not fetch URLs or call external APIs.",
+      ""
+    );
+  }
+
+  if (sections.has("redaction_notice")) {
+    lines.push(
+      "## Redaction Notice",
+      "",
+      "Secret, never-export, imported draft, and profile-excluded content is omitted before rendering.",
+      ""
+    );
+  }
+
+  if (sources.length > 0) {
+    lines.push("## Sources", "");
+    for (const source of sources) {
+      lines.push(`- ${source.id}: ${source.title} (${source.type}${source.trust ? `, ${source.trust}` : ""})`);
+    }
+    lines.push("");
+  }
+
+  if (excluded.length > 0) {
+    lines.push("## Excluded Records And Documents", "");
+    for (const record of excluded) {
+      lines.push(`- ${record.id}: ${record.reason}`);
+    }
+    lines.push("");
+  }
+
+  if (warnings.length > 0) {
+    lines.push("## Export Warnings", "");
+    for (const warning of warnings) {
+      lines.push(`- ${warning.code}: ${warning.message}`);
+    }
+    lines.push("");
+  }
+
+  return `${lines.join("\n").trim()}\n`;
+}
+
+function renderAgentKitJsonExport(
+  agentKit: LoadedAgentKitForExport,
+  profile: AgentKitExportProfile,
+  selectedPacks: LoadedPackForExport[],
+  selectedSkills: LoadedSkillForExport[],
+  includedRecords: PreparedAgentKitRecord[],
+  includedSkillDocuments: PreparedAgentKitSkillDocument[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  generatedAt: string
+): string {
+  return `${JSON.stringify(
+    {
+      contextarrExportVersion: "0.1",
+      exportKind: "agent_kit",
+      generatedAt,
+      agentKit: {
+        id: agentKit.manifest.id,
+        name: agentKit.manifest.name,
+        version: agentKit.manifest.version,
+        description: agentKit.manifest.description,
+        type: agentKit.manifest.type,
+        target: agentKit.manifest.target
+      },
+      profile: {
+        id: profile.id,
+        name: profile.name,
+        target: profile.target,
+        format: profile.format,
+        privacyMode: profile.privacy_mode ?? "redacted",
+        sections: profile.sections
+      },
+      contextPacks: selectedPacks.map((pack) => ({
+        id: pack.manifest.id,
+        name: pack.manifest.name,
+        version: pack.manifest.version,
+        description: pack.manifest.description,
+        type: pack.manifest.type
+      })),
+      skills: selectedSkills.map((skill) => ({
+        id: skill.manifest.id,
+        name: skill.manifest.name,
+        version: skill.manifest.version,
+        description: skill.manifest.description,
+        type: skill.manifest.type,
+        targets: skill.manifest.targets
+      })),
+      records: includedRecords.map(({ pack, record, body }) => ({
+        packId: pack.manifest.id,
+        packName: pack.manifest.name,
+        metadata: record.metadata,
+        body
+      })),
+      skillDocuments: includedSkillDocuments.map(({ skill, document, body }) => ({
+        skillId: skill.manifest.id,
+        skillName: skill.manifest.name,
+        kind: document.kind,
+        metadata: document.metadata,
+        body
+      })),
+      excludedRecords: excluded,
+      sources,
+      warnings,
+      boundaries: {
+        executableSkills: false,
+        agentKitExecution: false,
+        networkFetches: false,
+        externalApiCalls: false
+      }
+    },
+    null,
+    2
+  )}\n`;
+}
+
 function summarizeComposedSources(included: PreparedComposedRecord[]): ExportSourceSummary[] {
   const byKey = new Map<string, ExportSourceSummary>();
 
   for (const { pack, record } of included) {
     for (const source of summarizeSources(pack.sources, record.metadata.sources)) {
       byKey.set(`${pack.manifest.id}:${source.id}`, source);
+    }
+  }
+
+  return Array.from(byKey.values()).sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function summarizeAgentKitSources(
+  records: PreparedAgentKitRecord[],
+  skillDocuments: PreparedAgentKitSkillDocument[]
+): ExportSourceSummary[] {
+  const byKey = new Map<string, ExportSourceSummary>();
+
+  for (const { pack, record } of records) {
+    for (const source of summarizeSourcesWithoutPath(pack.sources, record.metadata.sources)) {
+      byKey.set(`pack:${pack.manifest.id}:${source.id}`, {
+        ...source,
+        id: `${pack.manifest.id}:${source.id}`
+      });
+    }
+  }
+
+  for (const { skill, document } of skillDocuments) {
+    for (const source of summarizeSourcesWithoutPath(skill.sources, document.metadata.sources)) {
+      byKey.set(`skill:${skill.manifest.id}:${source.id}`, {
+        ...source,
+        id: `${skill.manifest.id}:${source.id}`
+      });
     }
   }
 
@@ -1126,6 +1610,21 @@ function summarizeSources(sources: Source[], sourceIds: string[]): ExportSourceS
       type: source.type,
       url: source.url,
       path: source.path,
+      trust: source.trust,
+      status: source.status
+    }));
+}
+
+function summarizeSourcesWithoutPath(sources: Source[], sourceIds: string[]): ExportSourceSummary[] {
+  const wanted = new Set(sourceIds);
+  return sources
+    .filter((source) => wanted.has(source.id))
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((source) => ({
+      id: source.id,
+      title: source.title,
+      type: source.type,
+      url: source.url,
       trust: source.trust,
       status: source.status
     }));
@@ -1177,6 +1676,13 @@ function summarizeExcludedSkillDocument(index: number, reason: string): Excluded
     sources: [],
     reason: safeSkillExclusionReason(reason)
   };
+}
+
+function agentKitExportSections(profile: AgentKitExportProfile): Set<string> {
+  const sections = profile.sections.length > 0
+    ? profile.sections
+    : ["kit_summary", "included_skills", "relevant_context", "constraints", "redaction_notice"];
+  return new Set(sections);
 }
 
 function safeSkillExclusionReason(reason: string): string {
@@ -1245,17 +1751,16 @@ function estimateTokens(content: string): number {
 }
 
 function loadPackForExport(packPath: string): LoadedPackForExport {
-  const resolvedPackPath = path.resolve(packPath);
+  const resolvedPackPath = requireExistingDirectory(path.resolve(packPath), "pack_path_invalid");
+  const manifest = preflightPackExportPaths(resolvedPackPath);
   const validation = validatePack(resolvedPackPath);
   if (!validation.valid) {
-    throw new ExportError("validation_failed", `Validation failed for export pack: ${resolvedPackPath}`);
+    throw new ExportError("validation_failed", "Validation failed for export Context Pack.");
   }
 
-  const manifest = contextPackManifestSchema.parse(
-    JSON.parse(fs.readFileSync(path.join(resolvedPackPath, "contextarr-pack.json"), "utf8"))
-  );
-  const sources = sourceMapSchema.parse(YAML.parse(fs.readFileSync(path.join(resolvedPackPath, manifest.sourcesPath), "utf8"))).sources;
-  const redactionRulesPath = path.join(resolvedPackPath, manifest.rulesPath, "redaction.yaml");
+  const sourcesPath = resolveExistingManifestPath(resolvedPackPath, manifest.sourcesPath);
+  const rulesDir = resolveExistingManifestPath(resolvedPackPath, manifest.rulesPath);
+  const redactionRulesPath = path.join(rulesDir, "redaction.yaml");
   const redactionRules = fs.existsSync(redactionRulesPath)
     ? redactionRulesSchema.parse(YAML.parse(fs.readFileSync(redactionRulesPath, "utf8")))
     : redactionRulesSchema.parse({});
@@ -1264,27 +1769,25 @@ function loadPackForExport(packPath: string): LoadedPackForExport {
     packPath: resolvedPackPath,
     manifest,
     records: readRecords(resolvedPackPath, manifest),
-    sources,
+    sources: sourceMapSchema.parse(YAML.parse(fs.readFileSync(sourcesPath, "utf8"))).sources,
     exportProfiles: readExportProfiles(resolvedPackPath, manifest),
     redactionRules
   };
 }
 
 function loadSkillForExport(skillPath: string): LoadedSkillForExport {
-  const resolvedSkillPath = path.resolve(skillPath);
+  const resolvedSkillPath = requireExistingDirectory(path.resolve(skillPath), "skill_path_invalid");
+  const manifest = preflightSkillExportPaths(resolvedSkillPath);
   const validation = validateSkill(resolvedSkillPath);
   if (!validation.valid) {
     throw new ExportError("validation_failed", "Validation failed for export Skill.");
   }
 
-  const manifest = skillManifestSchema.parse(
-    JSON.parse(fs.readFileSync(path.join(resolvedSkillPath, "contextarr-skill.json"), "utf8"))
-  );
-  const sourcesPath = resolveManifestPath(resolvedSkillPath, manifest.sourcesPath);
+  const sourcesPath = resolveOptionalExistingManifestPath(resolvedSkillPath, manifest.sourcesPath);
   const sources = sourcesPath && fs.existsSync(sourcesPath)
     ? sourceMapSchema.parse(YAML.parse(fs.readFileSync(sourcesPath, "utf8"))).sources
     : [];
-  const rulesDir = resolveManifestPath(resolvedSkillPath, manifest.rulesPath);
+  const rulesDir = resolveOptionalExistingManifestPath(resolvedSkillPath, manifest.rulesPath);
   const safetyRulesPath = rulesDir ? path.join(rulesDir, "safety.yaml") : undefined;
   const safetyRules = safetyRulesPath && fs.existsSync(safetyRulesPath)
     ? skillSafetyRulesSchema.parse(YAML.parse(fs.readFileSync(safetyRulesPath, "utf8")))
@@ -1301,8 +1804,68 @@ function loadSkillForExport(skillPath: string): LoadedSkillForExport {
   };
 }
 
+function loadAgentKitForExport(
+  agentKitPath: string,
+  contextPacksDir: string,
+  skillsDir: string
+): LoadedAgentKitForExport {
+  const resolvedAgentKitPath = requireExistingDirectory(path.resolve(agentKitPath), "agent_kit_path_invalid");
+  const resolvedContextPacksDir = requireExistingDirectory(path.resolve(contextPacksDir), "context_packs_dir_invalid");
+  const resolvedSkillsDir = requireExistingDirectory(path.resolve(skillsDir), "skills_dir_invalid");
+  const manifest = agentKitManifestSchema.parse(
+    JSON.parse(fs.readFileSync(resolveExistingChildPath(resolvedAgentKitPath, "contextarr-agent-kit.json"), "utf8"))
+  );
+  const contextPackPaths = resolveReferencedObjectPaths(
+    resolvedContextPacksDir,
+    "contextarr-pack.json",
+    manifest.contextPacks
+  );
+  const skillPaths = resolveReferencedObjectPaths(resolvedSkillsDir, "contextarr-skill.json", manifest.skills);
+  for (const packPath of contextPackPaths.values()) {
+    preflightPackExportPaths(packPath);
+  }
+  for (const skillPath of skillPaths.values()) {
+    preflightSkillExportPaths(skillPath);
+  }
+
+  const validation = validateAgentKit(resolvedAgentKitPath, {
+    contextPacksDir: resolvedContextPacksDir,
+    skillsDir: resolvedSkillsDir
+  });
+  if (!validation.valid) {
+    throw new ExportError("validation_failed", "Validation failed for export Agent Kit.");
+  }
+
+  return {
+    agentKitPath: resolvedAgentKitPath,
+    manifest,
+    exportProfiles: readAgentKitExportProfiles(resolvedAgentKitPath, manifest),
+    contextPacks: manifest.contextPacks.map((id) => loadPackForExport(contextPackPaths.get(id)!)),
+    skills: manifest.skills.map((id) => loadSkillForExport(skillPaths.get(id)!))
+  };
+}
+
+function preflightPackExportPaths(packPath: string): ContextPackManifest {
+  const manifest = contextPackManifestSchema.parse(JSON.parse(fs.readFileSync(resolveExistingChildPath(packPath, "contextarr-pack.json"), "utf8")));
+  resolveExistingManifestPath(packPath, manifest.recordsPath);
+  resolveExistingManifestPath(packPath, manifest.sourcesPath);
+  resolveExistingManifestPath(packPath, manifest.exportsPath);
+  resolveExistingManifestPath(packPath, manifest.rulesPath);
+  return manifest;
+}
+
+function preflightSkillExportPaths(skillPath: string): SkillManifest {
+  const manifest = skillManifestSchema.parse(JSON.parse(fs.readFileSync(resolveExistingChildPath(skillPath, "contextarr-skill.json"), "utf8")));
+  resolveExistingManifestPath(skillPath, manifest.instructionsPath);
+  resolveExistingManifestPath(skillPath, manifest.examplesPath);
+  resolveExistingManifestPath(skillPath, manifest.sourcesPath);
+  resolveExistingManifestPath(skillPath, manifest.exportsPath);
+  resolveExistingManifestPath(skillPath, manifest.rulesPath);
+  return manifest;
+}
+
 function readRecords(packPath: string, manifest: ContextPackManifest): LoadedRecord[] {
-  const recordsDir = path.join(packPath, manifest.recordsPath);
+  const recordsDir = resolveExistingManifestPath(packPath, manifest.recordsPath);
   return listFiles(recordsDir)
     .filter((file) => file.toLowerCase().endsWith(".md"))
     .map((file) => {
@@ -1321,8 +1884,8 @@ function readSkillDocuments(
   documentPath: string,
   kind: "instruction" | "example"
 ): LoadedSkillDocument[] {
-  const documentsDir = resolveManifestPath(skillPath, documentPath);
-  if (!documentsDir || !fs.existsSync(documentsDir)) {
+  const documentsDir = resolveOptionalExistingManifestPath(skillPath, documentPath);
+  if (!documentsDir) {
     return [];
   }
 
@@ -1340,15 +1903,15 @@ function readSkillDocuments(
 }
 
 function readExportProfiles(packPath: string, manifest: ContextPackManifest): ExportProfile[] {
-  return listFiles(path.join(packPath, manifest.exportsPath))
+  return listFiles(resolveExistingManifestPath(packPath, manifest.exportsPath))
     .filter((file) => [".yaml", ".yml"].includes(path.extname(file).toLowerCase()))
     .map((file) => exportProfileSchema.parse(YAML.parse(fs.readFileSync(file, "utf8"))))
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function readSkillExportProfiles(skillPath: string, manifest: SkillManifest): SkillExportProfile[] {
-  const exportsDir = resolveManifestPath(skillPath, manifest.exportsPath);
-  if (!exportsDir || !fs.existsSync(exportsDir)) {
+  const exportsDir = resolveOptionalExistingManifestPath(skillPath, manifest.exportsPath);
+  if (!exportsDir) {
     return [];
   }
 
@@ -1356,6 +1919,108 @@ function readSkillExportProfiles(skillPath: string, manifest: SkillManifest): Sk
     .filter((file) => [".yaml", ".yml"].includes(path.extname(file).toLowerCase()))
     .map((file) => skillExportProfileSchema.parse(YAML.parse(fs.readFileSync(file, "utf8"))))
     .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function readAgentKitExportProfiles(agentKitPath: string, manifest: AgentKitManifest): AgentKitExportProfile[] {
+  return listFiles(resolveExistingManifestPath(agentKitPath, manifest.exportsPath))
+    .filter((file) => [".yaml", ".yml"].includes(path.extname(file).toLowerCase()))
+    .map((file) => agentKitExportProfileSchema.parse(YAML.parse(fs.readFileSync(file, "utf8"))))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function resolveReferencedObjectPaths(rootDir: string, manifestFileName: string, ids: string[]): Map<string, string> {
+  const wanted = new Set(ids);
+  const byId = new Map<string, string>();
+
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const candidateDir = resolveExistingChildPath(rootDir, entry.name);
+    const manifestPath = path.join(candidateDir, manifestFileName);
+    if (!fs.existsSync(manifestPath) || !fs.statSync(manifestPath).isFile()) {
+      continue;
+    }
+
+    const manifest = JSON.parse(fs.readFileSync(resolveExistingChildPath(candidateDir, manifestFileName), "utf8")) as { id?: unknown };
+    if (typeof manifest.id === "string" && wanted.has(manifest.id)) {
+      byId.set(manifest.id, candidateDir);
+    }
+  }
+
+  const missingIds = ids.filter((id) => !byId.has(id));
+  if (missingIds.length > 0) {
+    throw new ExportError("reference_not_found", `Agent Kit export references missing object(s): ${missingIds.join(", ")}`);
+  }
+
+  return byId;
+}
+
+function requireExistingDirectory(candidatePath: string, code: string): string {
+  try {
+    const resolved = fs.realpathSync.native(candidatePath);
+    if (!fs.statSync(resolved).isDirectory()) {
+      throw new ExportError(code, "Expected a readable directory for export.");
+    }
+
+    return resolved;
+  } catch (error) {
+    if (error instanceof ExportError) {
+      throw error;
+    }
+
+    throw new ExportError(code, "Expected a readable directory for export.");
+  }
+}
+
+function resolveExistingManifestPath(rootPath: string, manifestPath: string): string {
+  if (path.isAbsolute(manifestPath)) {
+    throw new ExportError("manifest_path_outside_root", "Export manifest paths must be relative to the object root.");
+  }
+
+  return resolveExistingChildPath(rootPath, manifestPath);
+}
+
+function resolveOptionalExistingManifestPath(rootPath: string, manifestPath: string | undefined): string | undefined {
+  if (!manifestPath) {
+    return undefined;
+  }
+
+  if (path.isAbsolute(manifestPath)) {
+    throw new ExportError("manifest_path_outside_root", "Export manifest paths must be relative to the object root.");
+  }
+
+  const candidate = path.resolve(rootPath, manifestPath);
+  if (!fs.existsSync(candidate)) {
+    return undefined;
+  }
+
+  return resolveExistingChildPath(rootPath, manifestPath);
+}
+
+function resolveExistingChildPath(rootPath: string, relativePath: string): string {
+  try {
+    const root = fs.realpathSync.native(rootPath);
+    const candidate = path.resolve(root, relativePath);
+    if (!fs.existsSync(candidate)) {
+      throw new ExportError("manifest_path_missing", "Export manifest path does not exist.");
+    }
+
+    const resolved = fs.realpathSync.native(candidate);
+    const relative = path.relative(root, resolved);
+    if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
+      return resolved;
+    }
+
+    throw new ExportError("manifest_path_outside_root", "Export manifest path resolves outside the object root.");
+  } catch (error) {
+    if (error instanceof ExportError) {
+      throw error;
+    }
+
+    throw new ExportError("manifest_path_missing", "Export manifest path does not exist.");
+  }
 }
 
 function resolveManifestPath(rootPath: string, manifestPath: string): string | undefined {

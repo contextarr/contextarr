@@ -1293,7 +1293,7 @@ describe("Contextarr API", () => {
     db.close();
   });
 
-  it("GET /api/agent-kits/:id/exports/:profileId/preview returns Phase 21 metadata only", async () => {
+  it("GET /api/agent-kits/:id/exports/:profileId/preview returns generated Agent Kit export content", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({
       method: "GET",
@@ -1310,9 +1310,13 @@ describe("Contextarr API", () => {
       profileId: "support-ticket-writing-kit-codex",
       target: "codex",
       format: "markdown",
-      content: null,
-      contentStatus: "scheduled_for_phase_24"
+      contentStatus: "ready"
     });
+    expect(response.json().content).toContain("Agent Kit Export: Support Ticket Writing Kit");
+    expect(response.json().content).toContain("Support Ticket Writing Skill");
+    expect(response.json().content).toContain("Internal Support KB Pack");
+    expect(response.json().includedRecords.length).toBeGreaterThan(0);
+    expect(response.json().sources.every((source: { path?: string }) => !source.path)).toBe(true);
     expect(response.json().includedContextPacks.map((pack: { id: string }) => pack.id)).toEqual([
       "internal-support-kb-pack",
       "fake-product-line-pack"
@@ -1321,7 +1325,7 @@ describe("Contextarr API", () => {
       "support-ticket-writing-skill",
       "bug-report-structuring-skill"
     ]);
-    expect(response.json().warnings).toEqual(
+    expect(response.json().warnings).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "agent_kit_export_engine_later" })])
     );
     expect(missing.statusCode).toBe(404);
@@ -1356,6 +1360,24 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().includedContextPacks.map((pack: { id: string }) => pack.id)).toEqual(["fake-product-line-pack"]);
     expect(response.json().includedSkills.map((skill: { id: string }) => skill.id)).toEqual(["bug-report-structuring-skill"]);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id/exports/:profileId/preview sanitizes missing export roots", async () => {
+    const missingPacksDir = path.join(os.tmpdir(), "contextarr-missing-api-packs");
+    const app = createApp({ config: { ...config, packsDir: missingPacksDir }, db });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview"
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: "context_packs_dir_invalid",
+      message: "Expected a readable directory for export."
+    });
+    expect(JSON.stringify(response.json())).not.toContain(missingPacksDir);
     await app.close();
     db.close();
   });

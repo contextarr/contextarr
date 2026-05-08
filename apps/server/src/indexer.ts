@@ -753,16 +753,8 @@ export function getAgentKitExportProfilePreview(
     privacyMode: profile.privacy_mode,
     tokenBudget: profile.token_budget,
     filename: `${profileId}.${profile.format === "json" ? "json" : profile.format === "text" ? "txt" : "md"}`,
-    content: null,
-    contentStatus: "scheduled_for_phase_24",
     includedContextPacks: orderByIds(getAgentKitContextPacks(db, agentKitId), selectedPackIds),
-    includedSkills: orderByIds(getAgentKitSkills(db, agentKitId), selectedSkillIds),
-    warnings: [
-      {
-        code: "agent_kit_export_engine_later",
-        message: "Agent Kit export content generation is scheduled for Phase 24."
-      }
-    ]
+    includedSkills: orderByIds(getAgentKitSkills(db, agentKitId), selectedSkillIds)
   };
 }
 

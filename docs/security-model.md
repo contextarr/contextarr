@@ -92,13 +92,15 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 ## Skills and Agent Kits
 
-Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Skill health checks reuse the same local, deterministic review queue model as Context Packs. They do not fetch source URLs, probe local source paths, run commands, execute Skill content, or rewrite Skill files. Review item status changes are stored in SQLite only.
 
 Contextarr prepares Agent Kits. It does not run them.
 
 Phase 23 health/detail output remains read-only and local-only. It may surface relationship summaries, status states, and review flags, but it must not write to source files or trigger execution.
+
+Phase 24 Agent Kit export output remains read-only and local-only. It may merge Context Pack records and Skill documents into generated previews, but it must not execute Skills, run Agent Kits, fetch URLs, call AI APIs, leak local source paths, or include secret or `never_export` content.
 
 Skill and Agent Kit manifest paths must stay inside their source folders. Skill and Agent Kit API responses must not expose local filesystem paths. Skill instructions and examples rendered in the web app must pass through the shared sanitized Markdown renderer. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
 
