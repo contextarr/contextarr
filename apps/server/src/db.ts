@@ -16,6 +16,8 @@ export function openDatabase(databasePath: string): ContextarrDatabase {
 }
 
 export function createSchema(db: ContextarrDatabase): void {
+  dropLegacySkillIndexTables(db);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS packs (
       id TEXT PRIMARY KEY,
@@ -94,6 +96,108 @@ export function createSchema(db: ContextarrDatabase): void {
       PRIMARY KEY (pack_id, id)
     );
 
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      description TEXT NOT NULL,
+      type TEXT NOT NULL,
+      visibility TEXT NOT NULL,
+      trust_level TEXT NOT NULL,
+      author TEXT NOT NULL,
+      license TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_reviewed_at TEXT,
+      contains_personal_data INTEGER NOT NULL,
+      contains_executable_code INTEGER NOT NULL,
+      requires_network INTEGER NOT NULL,
+      accent_color TEXT,
+      cover_image TEXT,
+      skill_path TEXT NOT NULL,
+      manifest_json TEXT NOT NULL,
+      validation_errors INTEGER NOT NULL,
+      validation_warnings INTEGER NOT NULL,
+      health_score INTEGER NOT NULL,
+      health_status TEXT NOT NULL,
+      instruction_count INTEGER NOT NULL,
+      example_count INTEGER NOT NULL,
+      source_count INTEGER NOT NULL,
+      export_profile_count INTEGER NOT NULL,
+      review_queue_count INTEGER NOT NULL DEFAULT 0,
+      targets_json TEXT NOT NULL,
+      inputs_json TEXT NOT NULL,
+      outputs_json TEXT NOT NULL,
+      indexed_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS skill_instructions (
+      id TEXT NOT NULL,
+      skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      tags_json TEXT NOT NULL,
+      tags_text TEXT NOT NULL,
+      confidence TEXT NOT NULL,
+      source_status TEXT NOT NULL,
+      freshness TEXT NOT NULL,
+      privacy TEXT NOT NULL,
+      last_reviewed TEXT,
+      review_status TEXT NOT NULL,
+      sources_json TEXT NOT NULL,
+      body TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      metadata_json TEXT NOT NULL,
+      PRIMARY KEY (skill_id, id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skill_examples (
+      id TEXT NOT NULL,
+      skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      type TEXT NOT NULL,
+      tags_json TEXT NOT NULL,
+      tags_text TEXT NOT NULL,
+      confidence TEXT NOT NULL,
+      source_status TEXT NOT NULL,
+      freshness TEXT NOT NULL,
+      privacy TEXT NOT NULL,
+      last_reviewed TEXT,
+      review_status TEXT NOT NULL,
+      sources_json TEXT NOT NULL,
+      body TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      metadata_json TEXT NOT NULL,
+      PRIMARY KEY (skill_id, id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skill_sources (
+      id TEXT NOT NULL,
+      skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      url TEXT,
+      path TEXT,
+      retrieved_at TEXT,
+      license TEXT,
+      trust TEXT,
+      status TEXT,
+      source_json TEXT NOT NULL,
+      PRIMARY KEY (skill_id, id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skill_export_profiles (
+      id TEXT NOT NULL,
+      skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      target TEXT NOT NULL,
+      format TEXT NOT NULL,
+      privacy_mode TEXT,
+      token_budget INTEGER,
+      profile_json TEXT NOT NULL,
+      PRIMARY KEY (skill_id, id)
+    );
+
     CREATE TABLE IF NOT EXISTS pack_health (
       pack_id TEXT PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
       score INTEGER NOT NULL,
@@ -166,6 +270,15 @@ export function createSchema(db: ContextarrDatabase): void {
       body,
       tags
     );
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS skills_fts USING fts5(
+      item_id UNINDEXED,
+      skill_id UNINDEXED,
+      kind UNINDEXED,
+      title,
+      body,
+      tags
+    );
   `);
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
@@ -173,9 +286,44 @@ export function createSchema(db: ContextarrDatabase): void {
   ensureReviewItemsTable(db);
 }
 
+function dropLegacySkillIndexTables(db: ContextarrDatabase): void {
+  if (!hasLegacySkillDocumentPrimaryKey(db, "skill_instructions") && !hasLegacySkillDocumentPrimaryKey(db, "skill_examples")) {
+    return;
+  }
+
+  db.exec(`
+    DROP TABLE IF EXISTS skills_fts;
+    DROP TABLE IF EXISTS skill_export_profiles;
+    DROP TABLE IF EXISTS skill_sources;
+    DROP TABLE IF EXISTS skill_examples;
+    DROP TABLE IF EXISTS skill_instructions;
+    DROP TABLE IF EXISTS skills;
+  `);
+}
+
+function hasLegacySkillDocumentPrimaryKey(db: ContextarrDatabase, table: string): boolean {
+  const exists = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(table);
+  if (!exists) {
+    return false;
+  }
+
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string; pk: number }>;
+  const idColumn = columns.find((column) => column.name === "id");
+  const skillIdColumn = columns.find((column) => column.name === "skill_id");
+  return Boolean(idColumn?.pk) && !skillIdColumn?.pk;
+}
+
 export function clearDerivedIndex(db: ContextarrDatabase): void {
   db.exec(`
     DELETE FROM records_fts;
+    DELETE FROM skills_fts;
+    DELETE FROM skill_export_profiles;
+    DELETE FROM skill_sources;
+    DELETE FROM skill_examples;
+    DELETE FROM skill_instructions;
+    DELETE FROM skills;
     DELETE FROM export_profiles;
     DELETE FROM sources;
     DELETE FROM records;

@@ -55,6 +55,37 @@ describe("validateSkill", () => {
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "instruction.source_missing" }));
   });
 
+  it("rejects manifest paths that escape the Skill folder", () => {
+    const result = validateMutatedFixture("valid-skill", (skillPath) => {
+      const manifestPath = path.join(skillPath, "contextarr-skill.json");
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { instructionsPath: string };
+      manifest.instructionsPath = "../outside";
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "skill_manifest.path_outside_root" }));
+  });
+
+  it("validates example frontmatter and referenced example export IDs", () => {
+    const badExample = validateMutatedFixture("valid-skill", (skillPath) => {
+      fs.writeFileSync(path.join(skillPath, "examples", "bad.md"), "---\nid: bad-example\n---\n\nBad example.", "utf8");
+    });
+    const badExport = validateMutatedFixture("valid-skill", (skillPath) => {
+      const profilePath = path.join(skillPath, "exports", "chatgpt.yaml");
+      const profile = fs.readFileSync(profilePath, "utf8").replace(
+        "include:\n  instructions:\n    - valid-skill.core",
+        "include:\n  instructions:\n    - valid-skill.core\n  examples:\n    - missing-example"
+      );
+      fs.writeFileSync(profilePath, profile, "utf8");
+    });
+
+    expect(badExample.valid).toBe(false);
+    expect(badExample.issues).toContainEqual(expect.objectContaining({ code: "example.schema" }));
+    expect(badExport.valid).toBe(false);
+    expect(badExport.issues).toContainEqual(expect.objectContaining({ code: "skill_export_profile.example_missing" }));
+  });
+
   it("rejects script files inside Skills", () => {
     const result = validateSkill(fixture("script-file-skill"));
 

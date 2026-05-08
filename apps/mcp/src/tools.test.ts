@@ -15,6 +15,7 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const demoSkillsDir = path.join(repoRoot, "demo-skills");
 
 describe("Contextarr MCP tools", () => {
   let context: ContextarrMcpContext | undefined;
@@ -156,6 +157,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     host: "127.0.0.1",
     port: 0,
     packsDir: demoPacksDir,
+    skillsDir: demoSkillsDir,
     databasePath: ":memory:",
     rescanOnStart: true,
     maxResults: 8,
@@ -164,7 +166,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     ...overrides
   };
 
-  rebuildIndex(db, demoPacksDir);
+  rebuildIndex(db, demoPacksDir, demoSkillsDir);
   return { config, db };
 }
 

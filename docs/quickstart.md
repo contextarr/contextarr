@@ -28,7 +28,7 @@ docker compose up
 
 Open `http://127.0.0.1:3210`.
 
-Docker serves the built web app and the API from the same local Fastify server. Demo packs are mounted read-only and SQLite state is stored in a local Docker volume.
+Docker serves the built web app and the API from the same local Fastify server. Demo packs and demo Skills are mounted read-only, and SQLite state is stored in a local Docker volume.
 
 ## Verify
 

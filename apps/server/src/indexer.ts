@@ -10,21 +10,26 @@ import {
   type ReviewItemCandidate
 } from "./health";
 import { loadPacks } from "./pack-loader";
+import { loadSkills } from "./skill-loader";
 import type {
   LoadedPack,
+  LoadedSkill,
+  LoadedSkillDocument,
   PackHealthDetail,
   PackSummary,
   RebuildIndexResult,
   ReviewItem,
   ReviewItemFilters,
-  ReviewItemStatus
+  ReviewItemStatus,
+  SkillSummary
 } from "./types";
 
 export const reviewItemStatuses: ReviewItemStatus[] = ["open", "ignored", "accepted", "reviewed", "resolved"];
 
-export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildIndexResult {
+export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir?: string): RebuildIndexResult {
   const indexedAt = new Date().toISOString();
   const loaded = loadPacks(packsDir);
+  const loadedSkills = skillsDir ? loadSkills(skillsDir) : { skills: [], skipped: [] };
   const reviewCandidates = [
     ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, new Date(indexedAt))),
     ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped))
@@ -46,6 +51,14 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildI
       insertPackHealth(db, pack, indexedAt, health);
     }
 
+    for (const skill of loadedSkills.skills) {
+      insertSkill(db, skill, indexedAt);
+      insertSkillDocuments(db, "skill_instructions", skill, skill.instructions);
+      insertSkillDocuments(db, "skill_examples", skill, skill.examples);
+      insertSkillSources(db, skill);
+      insertSkillExportProfiles(db, skill);
+    }
+
     db.prepare(
       `INSERT INTO events (type, message, created_at, metadata_json)
        VALUES (?, ?, ?, ?)`
@@ -55,8 +68,11 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildI
       indexedAt,
       JSON.stringify({
         packsDir,
+        skillsDir,
         packsIndexed: loaded.packs.length,
-        packsSkipped: loaded.skipped.length
+        packsSkipped: loaded.skipped.length,
+        skillsIndexed: loadedSkills.skills.length,
+        skillsSkipped: loadedSkills.skipped.length
       })
     );
   });
@@ -70,8 +86,15 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string): RebuildI
     recordsIndexed: loaded.packs.reduce((count, pack) => count + pack.records.length, 0),
     sourcesIndexed: loaded.packs.reduce((count, pack) => count + pack.sources.length, 0),
     exportProfilesIndexed: loaded.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0),
+    skillsIndexed: loadedSkills.skills.length,
+    skillsSkipped: loadedSkills.skipped.length,
+    skillInstructionsIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.instructions.length, 0),
+    skillExamplesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.examples.length, 0),
+    skillSourcesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.sources.length, 0),
+    skillExportProfilesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.exportProfiles.length, 0),
     reviewItemsGenerated: reviewCandidates.length,
-    skipped: loaded.skipped
+    skipped: loaded.skipped,
+    skippedSkills: loadedSkills.skipped
   };
 }
 
@@ -80,6 +103,11 @@ export function getIndexStats(db: ContextarrDatabase): {
   records: number;
   sources: number;
   exportProfiles: number;
+  skills: number;
+  skillInstructions: number;
+  skillExamples: number;
+  skillSources: number;
+  skillExportProfiles: number;
   reviewItems: number;
   openReviewItems: number;
   lastIndexedAt: string | null;
@@ -89,6 +117,11 @@ export function getIndexStats(db: ContextarrDatabase): {
     records: getCount(db, "records"),
     sources: getCount(db, "sources"),
     exportProfiles: getCount(db, "export_profiles"),
+    skills: getCount(db, "skills"),
+    skillInstructions: getCount(db, "skill_instructions"),
+    skillExamples: getCount(db, "skill_examples"),
+    skillSources: getCount(db, "skill_sources"),
+    skillExportProfiles: getCount(db, "skill_export_profiles"),
     reviewItems: getCount(db, "review_items"),
     openReviewItems: getReviewItems(db, { status: "open" }).length,
     lastIndexedAt:
@@ -165,6 +198,112 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
 
 export function getPackPath(db: ContextarrDatabase, packId: string): string | undefined {
   return db.prepare("SELECT pack_path FROM packs WHERE id = ?").pluck().get(packId) as string | undefined;
+}
+
+export function getSkills(db: ContextarrDatabase): SkillSummary[] {
+  return db
+    .prepare(
+      `SELECT
+        id, name, version, description, type, visibility, trust_level AS trustLevel,
+        health_score AS healthScore, health_status AS healthStatus,
+        validation_errors AS validationErrors, validation_warnings AS validationWarnings,
+        instruction_count AS instructionCount, example_count AS exampleCount,
+        source_count AS sourceCount, export_profile_count AS exportProfileCount,
+        accent_color AS accentColor, cover_image AS coverImage,
+        review_queue_count AS reviewQueueCount, last_reviewed_at AS lastReviewedAt,
+        updated_at AS updatedAt, targets_json AS targetsJson, inputs_json AS inputsJson,
+        outputs_json AS outputsJson
+      FROM skills
+      ORDER BY name`
+    )
+    .all()
+    .map((skill) => normalizeSkillSummary(skill as Row));
+}
+
+export function getSkill(db: ContextarrDatabase, skillId: string): unknown | undefined {
+  const skill = db.prepare("SELECT * FROM skills WHERE id = ?").get(skillId) as Row | undefined;
+  if (!skill) {
+    return undefined;
+  }
+
+  const sources = getSkillSources(db, skillId);
+  const exportProfiles = getSkillExportProfiles(db, skillId);
+
+  return {
+    id: skill.id,
+    name: skill.name,
+    version: skill.version,
+    description: skill.description,
+    type: skill.type,
+    visibility: skill.visibility,
+    trustLevel: skill.trust_level,
+    author: skill.author,
+    license: skill.license,
+    createdAt: skill.created_at,
+    updatedAt: skill.updated_at,
+    lastReviewedAt: skill.last_reviewed_at,
+    accentColor: skill.accent_color,
+    coverImage: skill.cover_image,
+    reviewQueueCount: skill.review_queue_count,
+    manifest: sanitizeSkillManifestForApi(JSON.parse(String(skill.manifest_json)) as Record<string, unknown>),
+    targets: JSON.parse(String(skill.targets_json)),
+    inputs: JSON.parse(String(skill.inputs_json)),
+    outputs: JSON.parse(String(skill.outputs_json)),
+    counts: {
+      instructions: skill.instruction_count,
+      examples: skill.example_count,
+      sources: skill.source_count,
+      exportProfiles: skill.export_profile_count
+    },
+    validation: {
+      errors: skill.validation_errors,
+      warnings: skill.validation_warnings
+    },
+    health: {
+      score: skill.health_score,
+      status: skill.health_status
+    },
+    sources,
+    exportProfiles
+  };
+}
+
+export function getSkillInstructions(
+  db: ContextarrDatabase,
+  skillId: string,
+  filters: { q?: string; tag?: string; type?: string } = {}
+): unknown[] {
+  return getSkillDocuments(db, "skill_instructions", skillId, filters);
+}
+
+export function getSkillExamples(
+  db: ContextarrDatabase,
+  skillId: string,
+  filters: { q?: string; tag?: string; type?: string } = {}
+): unknown[] {
+  return getSkillDocuments(db, "skill_examples", skillId, filters);
+}
+
+export function getSkillExportProfiles(db: ContextarrDatabase, skillId: string): unknown[] {
+  return db
+    .prepare(
+      `SELECT id, name, target, format, privacy_mode AS privacyMode, token_budget AS tokenBudget
+       FROM skill_export_profiles
+       WHERE skill_id = ?
+       ORDER BY id`
+    )
+    .all(skillId);
+}
+
+export function getSkillSources(db: ContextarrDatabase, skillId: string): unknown[] {
+  return db
+    .prepare(
+      `SELECT id, type, title, url, retrieved_at AS retrievedAt, license, trust, status
+       FROM skill_sources
+       WHERE skill_id = ?
+       ORDER BY id`
+    )
+    .all(skillId);
 }
 
 export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilters = {}): ReviewItem[] {
@@ -323,7 +462,7 @@ export function getRecord(db: ContextarrDatabase, recordId: string): unknown | u
   };
 }
 
-export function searchIndex(db: ContextarrDatabase, query: string): unknown[] {
+export function searchIndex(db: ContextarrDatabase, query: string, type: "all" | "pack" | "record" | "skill" = "all"): unknown[] {
   const trimmed = query.trim();
   if (!trimmed) {
     return [];
@@ -331,19 +470,23 @@ export function searchIndex(db: ContextarrDatabase, query: string): unknown[] {
 
   const likeQuery = `%${trimmed}%`;
   const ftsQuery = toFtsQuery(trimmed);
-  const packMatches = db
-    .prepare(
-      `SELECT id, 'pack' AS kind, name AS title, description AS snippet
-       FROM packs
-       WHERE name LIKE ? OR description LIKE ? OR type LIKE ?
-       ORDER BY name
-       LIMIT 20`
-    )
-    .all(likeQuery, likeQuery, likeQuery);
+  const packMatches =
+    type === "all" || type === "pack"
+      ? db
+          .prepare(
+            `SELECT id, 'pack' AS kind, name AS title, description AS snippet
+             FROM packs
+             WHERE name LIKE ? OR description LIKE ? OR type LIKE ?
+             ORDER BY name
+             LIMIT 20`
+          )
+          .all(likeQuery, likeQuery, likeQuery)
+      : [];
 
-  const recordMatches = searchRecords(db, trimmed, ftsQuery);
+  const recordMatches = type === "all" || type === "record" ? searchRecords(db, trimmed, ftsQuery) : [];
+  const skillMatches = type === "all" || type === "skill" ? searchSkills(db, trimmed, ftsQuery) : [];
 
-  return [...packMatches, ...recordMatches];
+  return [...packMatches, ...recordMatches, ...skillMatches];
 }
 
 function insertPack(
@@ -396,6 +539,56 @@ function insertPack(
     sourceCount: pack.sources.length,
     exportProfileCount: pack.exportProfiles.length,
     reviewQueueCount: health.reviewQueueCount,
+    indexedAt
+  });
+}
+
+function insertSkill(db: ContextarrDatabase, skill: LoadedSkill, indexedAt: string): void {
+  db.prepare(
+    `INSERT INTO skills (
+      id, name, version, description, type, visibility, trust_level, author, license,
+      created_at, updated_at, last_reviewed_at, contains_personal_data,
+      contains_executable_code, requires_network, accent_color, cover_image, skill_path,
+      manifest_json, validation_errors, validation_warnings, health_score,
+      health_status, instruction_count, example_count, source_count, export_profile_count,
+      review_queue_count, targets_json, inputs_json, outputs_json, indexed_at
+    ) VALUES (
+      @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
+      @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
+      @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @skillPath,
+      @manifestJson, @validationErrors, @validationWarnings, 100,
+      'healthy', @instructionCount, @exampleCount, @sourceCount, @exportProfileCount,
+      0, @targetsJson, @inputsJson, @outputsJson, @indexedAt
+    )`
+  ).run({
+    id: skill.manifest.id,
+    name: skill.manifest.name,
+    version: skill.manifest.version,
+    description: skill.manifest.description,
+    type: skill.manifest.type,
+    visibility: skill.manifest.visibility,
+    trustLevel: skill.manifest.trustLevel,
+    author: skill.manifest.author,
+    license: skill.manifest.license,
+    createdAt: skill.manifest.createdAt,
+    updatedAt: skill.manifest.updatedAt,
+    lastReviewedAt: skill.manifest.lastReviewedAt,
+    containsPersonalData: skill.manifest.containsPersonalData ? 1 : 0,
+    containsExecutableCode: skill.manifest.containsExecutableCode ? 1 : 0,
+    requiresNetwork: skill.manifest.requiresNetwork ? 1 : 0,
+    accentColor: skill.manifest.assets.accentColor ?? null,
+    coverImage: skill.manifest.assets.coverImage ?? null,
+    skillPath: path.resolve(skill.skillPath),
+    manifestJson: JSON.stringify(skill.manifest),
+    validationErrors: skill.validation.summary.errors,
+    validationWarnings: skill.validation.summary.warnings,
+    instructionCount: skill.instructions.length,
+    exampleCount: skill.examples.length,
+    sourceCount: skill.sources.length,
+    exportProfileCount: skill.exportProfiles.length,
+    targetsJson: JSON.stringify(skill.manifest.targets),
+    inputsJson: JSON.stringify(skill.manifest.inputs),
+    outputsJson: JSON.stringify(skill.manifest.outputs),
     indexedAt
   });
 }
@@ -485,6 +678,108 @@ function insertExportProfiles(db: ContextarrDatabase, pack: LoadedPack): void {
     insert.run({
       id: profile.id,
       packId: pack.manifest.id,
+      name: profile.name,
+      target: profile.target,
+      format: profile.format,
+      privacyMode: profile.privacy_mode ?? null,
+      tokenBudget: profile.token_budget ?? null,
+      profileJson: JSON.stringify(profile)
+    });
+  }
+}
+
+function insertSkillDocuments(
+  db: ContextarrDatabase,
+  table: "skill_instructions" | "skill_examples",
+  skill: LoadedSkill,
+  documents: LoadedSkillDocument[]
+): void {
+  const insertDocument = db.prepare(
+    `INSERT INTO ${table} (
+      id, skill_id, title, type, tags_json, tags_text, confidence, source_status,
+      freshness, privacy, last_reviewed, review_status, sources_json, body,
+      file_path, metadata_json
+    ) VALUES (
+      @id, @skillId, @title, @type, @tagsJson, @tagsText, @confidence, @sourceStatus,
+      @freshness, @privacy, @lastReviewed, @reviewStatus, @sourcesJson, @body,
+      @filePath, @metadataJson
+    )`
+  );
+  const insertFts = db.prepare(
+    `INSERT INTO skills_fts (item_id, skill_id, kind, title, body, tags)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const kind = table === "skill_instructions" ? "skill_instruction" : "skill_example";
+
+  for (const document of documents) {
+    insertDocument.run({
+      id: document.metadata.id,
+      skillId: skill.manifest.id,
+      title: document.metadata.title,
+      type: document.metadata.type,
+      tagsJson: JSON.stringify(document.metadata.tags),
+      tagsText: document.metadata.tags.join(" "),
+      confidence: document.metadata.confidence,
+      sourceStatus: document.metadata.source_status,
+      freshness: document.metadata.freshness,
+      privacy: document.metadata.privacy,
+      lastReviewed: document.metadata.last_reviewed ?? null,
+      reviewStatus: document.metadata.review_status,
+      sourcesJson: JSON.stringify(document.metadata.sources),
+      body: document.body,
+      filePath: document.file,
+      metadataJson: JSON.stringify(document.metadata)
+    });
+    insertFts.run(
+      document.metadata.id,
+      skill.manifest.id,
+      kind,
+      document.metadata.title,
+      document.body,
+      document.metadata.tags.join(" ")
+    );
+  }
+}
+
+function insertSkillSources(db: ContextarrDatabase, skill: LoadedSkill): void {
+  const insert = db.prepare(
+    `INSERT INTO skill_sources (
+      id, skill_id, type, title, url, path, retrieved_at, license, trust, status, source_json
+    ) VALUES (
+      @id, @skillId, @type, @title, @url, @path, @retrievedAt, @license, @trust, @status, @sourceJson
+    )`
+  );
+
+  for (const source of skill.sources) {
+    insert.run({
+      id: source.id,
+      skillId: skill.manifest.id,
+      type: source.type,
+      title: source.title,
+      url: source.url ?? null,
+      path: source.path ?? null,
+      retrievedAt: source.retrieved_at ?? null,
+      license: source.license ?? null,
+      trust: source.trust ?? null,
+      status: source.status ?? null,
+      sourceJson: JSON.stringify(source)
+    });
+  }
+}
+
+function insertSkillExportProfiles(db: ContextarrDatabase, skill: LoadedSkill): void {
+  const insert = db.prepare(
+    `INSERT INTO skill_export_profiles (
+      id, skill_id, name, target, format, privacy_mode, token_budget, profile_json
+    ) VALUES (
+      @id, @skillId, @name, @target, @format, @privacyMode, @tokenBudget, @profileJson
+    )`
+  );
+
+  for (const profile of skill.exportProfiles) {
+    insert.run({
+      id: profile.id,
+      skillId: skill.manifest.id,
       name: profile.name,
       target: profile.target,
       format: profile.format,
@@ -623,6 +918,73 @@ function groupReviewItemsByPack(items: ReviewItem[]): Map<string, ReviewItem[]> 
   return grouped;
 }
 
+function getSkillDocuments(
+  db: ContextarrDatabase,
+  table: "skill_instructions" | "skill_examples",
+  skillId: string,
+  filters: { q?: string; tag?: string; type?: string } = {}
+): unknown[] {
+  const where = ["skill_id = ?"];
+  const values: unknown[] = [skillId];
+
+  if (filters.type) {
+    where.push("type = ?");
+    values.push(filters.type);
+  }
+
+  if (filters.tag) {
+    where.push("tags_text LIKE ?");
+    values.push(`%${filters.tag}%`);
+  }
+
+  if (filters.q) {
+    where.push("(title LIKE ? OR body LIKE ? OR tags_text LIKE ?)");
+    values.push(`%${filters.q}%`, `%${filters.q}%`, `%${filters.q}%`);
+  }
+
+  return db
+    .prepare(
+      `SELECT
+        id, skill_id AS skillId, title, type, confidence, source_status AS sourceStatus,
+        freshness, privacy, last_reviewed AS lastReviewed, review_status AS reviewStatus,
+        tags_json AS tagsJson, sources_json AS sourcesJson,
+        body, metadata_json AS metadataJson
+      FROM ${table}
+      WHERE ${where.join(" AND ")}
+      ORDER BY title`
+    )
+    .all(...values)
+    .map((document) => normalizeSkillDocument(document as Row));
+}
+
+function normalizeSkillSummary(skill: Row): SkillSummary {
+  return {
+    id: String(skill.id),
+    name: String(skill.name),
+    version: String(skill.version),
+    description: String(skill.description),
+    type: String(skill.type),
+    visibility: String(skill.visibility),
+    trustLevel: String(skill.trustLevel),
+    healthScore: Number(skill.healthScore),
+    healthStatus: String(skill.healthStatus),
+    validationErrors: Number(skill.validationErrors),
+    validationWarnings: Number(skill.validationWarnings),
+    instructionCount: Number(skill.instructionCount),
+    exampleCount: Number(skill.exampleCount),
+    sourceCount: Number(skill.sourceCount),
+    exportProfileCount: Number(skill.exportProfileCount),
+    accentColor: skill.accentColor ? String(skill.accentColor) : undefined,
+    coverImage: skill.coverImage ? String(skill.coverImage) : null,
+    reviewQueueCount: Number(skill.reviewQueueCount),
+    lastReviewedAt: skill.lastReviewedAt ? String(skill.lastReviewedAt) : null,
+    updatedAt: String(skill.updatedAt),
+    targets: JSON.parse(String(skill.targetsJson)),
+    inputs: JSON.parse(String(skill.inputsJson)),
+    outputs: JSON.parse(String(skill.outputsJson))
+  };
+}
+
 function normalizeRecordSummary(record: Row): unknown {
   return {
     id: record.id,
@@ -639,6 +1001,44 @@ function normalizeRecordSummary(record: Row): unknown {
     sources: JSON.parse(String(record.sourcesJson)),
     filePath: record.filePath
   };
+}
+
+function normalizeSkillDocument(document: Row): unknown {
+  return {
+    id: document.id,
+    skillId: document.skillId,
+    title: document.title,
+    type: document.type,
+    confidence: document.confidence,
+    sourceStatus: document.sourceStatus,
+    freshness: document.freshness,
+    privacy: document.privacy,
+    lastReviewed: document.lastReviewed,
+    reviewStatus: document.reviewStatus,
+    tags: JSON.parse(String(document.tagsJson)),
+    sources: JSON.parse(String(document.sourcesJson)),
+    body: document.body,
+    metadata: JSON.parse(String(document.metadataJson))
+  };
+}
+
+function sanitizeSkillManifestForApi(manifest: Record<string, unknown>): Record<string, unknown> {
+  const {
+    instructionsPath: _instructionsPath,
+    examplesPath: _examplesPath,
+    sourcesPath: _sourcesPath,
+    exportsPath: _exportsPath,
+    rulesPath: _rulesPath,
+    assets,
+    ...safeManifest
+  } = manifest;
+
+  if (assets && typeof assets === "object" && !Array.isArray(assets)) {
+    const { accentColor } = assets as { accentColor?: unknown };
+    safeManifest.assets = accentColor ? { accentColor } : {};
+  }
+
+  return safeManifest;
 }
 
 function normalizeReviewItem(row: Row): ReviewItem {
@@ -700,6 +1100,57 @@ function searchRecordsLike(db: ContextarrDatabase, query: string): unknown[] {
        LIMIT 30`
     )
     .all(likeQuery, likeQuery, likeQuery);
+}
+
+function searchSkills(db: ContextarrDatabase, query: string, ftsQuery: string): unknown[] {
+  const likeQuery = `%${query}%`;
+  const skillMatches = db
+    .prepare(
+      `SELECT id, 'skill' AS kind, name AS title, description AS snippet
+       FROM skills
+       WHERE name LIKE ? OR description LIKE ? OR type LIKE ?
+       ORDER BY name
+       LIMIT 20`
+    )
+    .all(likeQuery, likeQuery, likeQuery);
+
+  const documentMatches = ftsQuery ? searchSkillDocumentsFts(db, query, ftsQuery) : searchSkillDocumentsLike(db, query);
+  return [...skillMatches, ...documentMatches];
+}
+
+function searchSkillDocumentsFts(db: ContextarrDatabase, query: string, ftsQuery: string): unknown[] {
+  try {
+    return db
+      .prepare(
+        `SELECT item_id AS id, kind, title, skill_id AS skillId,
+          snippet(skills_fts, 4, '[', ']', '...', 12) AS snippet
+         FROM skills_fts
+         WHERE skills_fts MATCH ?
+         ORDER BY rank
+         LIMIT 30`
+      )
+      .all(ftsQuery);
+  } catch {
+    return searchSkillDocumentsLike(db, query);
+  }
+}
+
+function searchSkillDocumentsLike(db: ContextarrDatabase, query: string): unknown[] {
+  const likeQuery = `%${query}%`;
+
+  return db
+    .prepare(
+      `SELECT id, 'skill_instruction' AS kind, title, skill_id AS skillId, substr(body, 1, 240) AS snippet
+       FROM skill_instructions
+       WHERE title LIKE ? OR body LIKE ? OR tags_text LIKE ?
+       UNION ALL
+       SELECT id, 'skill_example' AS kind, title, skill_id AS skillId, substr(body, 1, 240) AS snippet
+       FROM skill_examples
+       WHERE title LIKE ? OR body LIKE ? OR tags_text LIKE ?
+       ORDER BY title
+       LIMIT 30`
+    )
+    .all(likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery);
 }
 
 type Row = Record<string, unknown>;

@@ -51,7 +51,7 @@ Packs must not run code in v0 or v1.
 
 The local API binds to `127.0.0.1` by default. LAN mode must be explicit and warning-gated later.
 
-Local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only whether auth is required; it must never return the configured token.
+Local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only status, auth requirement, aggregate counts, and last indexed time; it must never return the configured token or local filesystem paths.
 
 ## Rendering Security
 
@@ -91,11 +91,11 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 ## Skills and Agent Kits
 
-Phase 12 defines future Skills and Agent Kits without implementation. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 15 implements non-executable Skill schemas, validation, fake demo Skills, and read-only Skill API indexing. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
+Skill manifest paths must stay inside the Skill folder. Skill API responses must not expose local Skill filesystem paths. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
 
 ## Telemetry
 

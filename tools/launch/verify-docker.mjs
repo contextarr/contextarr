@@ -105,7 +105,13 @@ async function verify() {
   run(["up", "-d"]);
 
   const health = await waitForHealth();
-  if (health.status !== "ok" || health.counts?.packs !== 5 || health.counts?.records !== 25) {
+  if (
+    health.status !== "ok" ||
+    health.counts?.packs !== 5 ||
+    health.counts?.records !== 25 ||
+    health.counts?.skills !== 8 ||
+    health.counts?.skillInstructions !== 24
+  ) {
     throw new Error(`Unexpected Docker health response: ${JSON.stringify(health)}`);
   }
 
@@ -117,6 +123,16 @@ async function verify() {
   const exportPreview = await getJson("/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview");
   if (exportPreview.packId !== "ai-workstation-pack" || exportPreview.target !== "codex") {
     throw new Error(`Unexpected export preview response: ${JSON.stringify(exportPreview)}`);
+  }
+
+  const skills = await getJson("/api/skills");
+  if (!skills.skills?.some((skill) => skill.id === "support-ticket-writing-skill")) {
+    throw new Error(`Unexpected skills response: ${JSON.stringify(skills)}`);
+  }
+
+  const skillSearch = await getJson("/api/search?type=skill&q=support");
+  if (!skillSearch.results?.some((result) => result.kind === "skill" && result.id === "support-ticket-writing-skill")) {
+    throw new Error(`Unexpected skill search response: ${JSON.stringify(skillSearch)}`);
   }
 
   const composed = await postJson("/api/compose/preview", {

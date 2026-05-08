@@ -45,6 +45,7 @@ if (!failed) {
   const mcp = read("docs/mcp.md");
   const docker = read("docs/docker.md");
   const security = read("docs/security.md");
+  const architecture = read("docs/architecture.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
   const combinedDocs = [readme, mcp, docker].join("\n");
@@ -81,13 +82,32 @@ if (!failed) {
   if (
     !docker.includes("http://127.0.0.1:3210") ||
     !docker.includes("CONTEXTARR_WEB_DIST_DIR") ||
-    !docker.includes("CONTEXTARR_DOCKER_PORT")
+    !docker.includes("CONTEXTARR_DOCKER_PORT") ||
+    !docker.includes("CONTEXTARR_SKILLS_DIR")
   ) {
-    fail("Docker docs must include the local URL, web dist env var, and host port override.");
+    fail("Docker docs must include the local URL, web dist env var, Skills dir, and host port override.");
   }
 
   if (!security.includes("No telemetry") || !security.includes("No marketplace") || !security.includes("No executable packs")) {
     fail("Launch security docs must keep v0 non-goals visible.");
+  }
+
+  const requiredPhase15Text = [
+    "Phase 15",
+    "CONTEXTARR_SKILLS_DIR",
+    "/api/skills",
+    "/api/search?type=skill&q=",
+  ];
+  for (const text of requiredPhase15Text) {
+    if (!readme.includes(text)) {
+      fail(`README is missing Phase 15 text: ${text}`);
+    }
+  }
+  if (!architecture.includes("/api/skills") || !architecture.includes("Skill-scoped search")) {
+    fail("Architecture docs must describe Phase 15 Skill API and search.");
+  }
+  if (!security.includes("Skills") || !security.includes("non-executable")) {
+    fail("Security docs must describe non-executable Skill boundaries.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

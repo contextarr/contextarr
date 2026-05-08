@@ -1,16 +1,17 @@
 export interface HealthResponse {
   status: string;
   authRequired: boolean;
-  host: string;
-  port: number;
-  packsDir: string;
-  databasePath: string;
   lastIndexedAt: string | null;
   counts: {
     packs: number;
     records: number;
     sources: number;
     exportProfiles: number;
+    skills: number;
+    skillInstructions: number;
+    skillExamples: number;
+    skillSources: number;
+    skillExportProfiles: number;
     reviewItems: number;
     openReviewItems: number;
   };
@@ -228,14 +229,16 @@ export interface RecordDetail extends RecordSummary {
 
 export interface SearchResult {
   id: string;
-  kind: "pack" | "record";
+  kind: "pack" | "record" | "skill" | "skill_instruction" | "skill_example";
   title: string;
   snippet?: string;
   packId?: string;
+  skillId?: string;
 }
 
 export interface SearchResponse {
   query: string;
+  type?: string;
   results: SearchResult[];
 }
 

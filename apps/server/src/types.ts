@@ -1,11 +1,20 @@
-import type { ExportProfile, Source } from "@contextarr/schema";
-import type { ContextPackManifest, RecordFrontmatter } from "@contextarr/schema";
+import type {
+  ContextPackManifest,
+  ExportProfile,
+  RecordFrontmatter,
+  SkillExportProfile,
+  SkillInstructionFrontmatter,
+  SkillManifest,
+  Source
+} from "@contextarr/schema";
 import type { ValidationIssue, ValidationResult } from "@contextarr/pack-validator";
+import type { SkillValidationIssue, SkillValidationResult } from "@contextarr/skill-validator";
 
 export interface ServerConfig {
   host: string;
   port: number;
   packsDir: string;
+  skillsDir: string;
   databasePath: string;
   webDistDir?: string;
   apiToken?: string;
@@ -37,6 +46,33 @@ export interface LoadPacksResult {
   skipped: SkippedPack[];
 }
 
+export interface LoadedSkillDocument {
+  file: string;
+  metadata: SkillInstructionFrontmatter;
+  body: string;
+}
+
+export interface LoadedSkill {
+  skillPath: string;
+  manifest: SkillManifest;
+  validation: SkillValidationResult;
+  instructions: LoadedSkillDocument[];
+  examples: LoadedSkillDocument[];
+  sources: Source[];
+  exportProfiles: SkillExportProfile[];
+}
+
+export interface SkippedSkill {
+  skillPath: string;
+  skillId?: string;
+  issues: SkillValidationIssue[];
+}
+
+export interface LoadSkillsResult {
+  skills: LoadedSkill[];
+  skipped: SkippedSkill[];
+}
+
 export interface RebuildIndexResult {
   indexedAt: string;
   packsIndexed: number;
@@ -44,8 +80,15 @@ export interface RebuildIndexResult {
   recordsIndexed: number;
   sourcesIndexed: number;
   exportProfilesIndexed: number;
+  skillsIndexed: number;
+  skillsSkipped: number;
+  skillInstructionsIndexed: number;
+  skillExamplesIndexed: number;
+  skillSourcesIndexed: number;
+  skillExportProfilesIndexed: number;
   reviewItemsGenerated: number;
   skipped: SkippedPack[];
+  skippedSkills: SkippedSkill[];
 }
 
 export type ReviewItemSeverity = "error" | "warning" | "info";
@@ -118,4 +161,30 @@ export interface PackSummary {
   reviewQueueCount: number;
   lastReviewedAt: string | null;
   updatedAt: string;
+}
+
+export interface SkillSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  validationErrors: number;
+  validationWarnings: number;
+  instructionCount: number;
+  exampleCount: number;
+  sourceCount: number;
+  exportProfileCount: number;
+  accentColor?: string;
+  coverImage: string | null;
+  reviewQueueCount: number;
+  lastReviewedAt: string | null;
+  updatedAt: string;
+  targets: string[];
+  inputs: string[];
+  outputs: string[];
 }

@@ -12,6 +12,11 @@ import {
   getPacks,
   getRecord,
   getReviewItems,
+  getSkill,
+  getSkillExamples,
+  getSkillExportProfiles,
+  getSkillInstructions,
+  getSkills,
   rebuildIndex,
   reviewItemStatuses,
   searchIndex,
@@ -47,19 +52,71 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       status: "ok",
       authRequired: Boolean(config.apiToken),
-      host: config.host,
-      port: config.port,
-      packsDir: config.packsDir,
-      databasePath: config.databasePath,
       lastIndexedAt: stats.lastIndexedAt,
       counts: {
         packs: stats.packs,
         records: stats.records,
         sources: stats.sources,
         exportProfiles: stats.exportProfiles,
+        skills: stats.skills,
+        skillInstructions: stats.skillInstructions,
+        skillExamples: stats.skillExamples,
+        skillSources: stats.skillSources,
+        skillExportProfiles: stats.skillExportProfiles,
         reviewItems: stats.reviewItems,
         openReviewItems: stats.openReviewItems
       }
+    };
+  });
+
+  app.get("/api/skills", async () => {
+    return {
+      skills: getSkills(db)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/skills/:id", async (request, reply) => {
+    const skill = getSkill(db, request.params.id);
+    if (!skill) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    return skill;
+  });
+
+  app.get<{
+    Params: { id: string };
+    Querystring: { q?: string; tag?: string; type?: string };
+  }>("/api/skills/:id/instructions", async (request, reply) => {
+    if (!getSkill(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    return {
+      instructions: getSkillInstructions(db, request.params.id, request.query)
+    };
+  });
+
+  app.get<{
+    Params: { id: string };
+    Querystring: { q?: string; tag?: string; type?: string };
+  }>("/api/skills/:id/examples", async (request, reply) => {
+    if (!getSkill(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    return {
+      examples: getSkillExamples(db, request.params.id, request.query)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/skills/:id/exports", async (request, reply) => {
+    if (!getSkill(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    return {
+      exportProfiles: getSkillExportProfiles(db, request.params.id)
     };
   });
 
@@ -167,10 +224,16 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return record;
   });
 
-  app.get<{ Querystring: { q?: string } }>("/api/search", async (request) => {
+  app.get<{ Querystring: { q?: string; type?: "all" | "pack" | "record" | "skill" } }>("/api/search", async (request, reply) => {
+    const type = request.query.type ?? "all";
+    if (!["all", "pack", "record", "skill"].includes(type)) {
+      return reply.code(400).send({ error: "invalid_search_type", message: "Search type is invalid." });
+    }
+
     return {
       query: request.query.q ?? "",
-      results: searchIndex(db, request.query.q ?? "")
+      type,
+      results: searchIndex(db, request.query.q ?? "", type)
     };
   });
 
@@ -219,7 +282,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   });
 
   app.post("/api/rescan", async () => {
-    const result = rebuildIndex(db, config.packsDir);
+    const result = rebuildIndex(db, config.packsDir, config.skillsDir);
 
     return {
       ok: true,

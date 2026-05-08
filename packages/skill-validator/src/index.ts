@@ -123,9 +123,9 @@ export function validateSkill(skillPath: string, options: ValidateSkillOptions =
 
   validateManifestSafety(manifest, issues);
   const instructions = validateInstructions(resolvedSkillPath, manifest, issues);
-  validateExamples(resolvedSkillPath, manifest, issues);
-  validateSourceMap(resolvedSkillPath, manifest, instructions, issues);
-  validateExportProfiles(resolvedSkillPath, manifest, instructions, issues);
+  const examples = validateExamples(resolvedSkillPath, manifest, issues);
+  validateSourceMap(resolvedSkillPath, manifest, [...instructions, ...examples], issues);
+  validateExportProfiles(resolvedSkillPath, manifest, instructions, examples, issues);
   const safetyPatterns = validateRules(resolvedSkillPath, manifest, issues);
   scanTextFiles(resolvedSkillPath, allFiles, issues, options.scanText ?? true, safetyPatterns);
 
@@ -199,7 +199,10 @@ function validateInstructions(
   manifest: SkillManifest,
   issues: SkillValidationIssue[]
 ): SkillInstructionFrontmatter[] {
-  const instructionsDir = path.join(skillPath, manifest.instructionsPath);
+  const instructionsDir = resolveManifestPath(skillPath, manifest.instructionsPath, "instructionsPath", issues);
+  if (!instructionsDir) {
+    return [];
+  }
 
   if (!fs.existsSync(instructionsDir) || !fs.statSync(instructionsDir).isDirectory()) {
     addIssue(
@@ -280,8 +283,15 @@ function validateInstructions(
   return instructions;
 }
 
-function validateExamples(skillPath: string, manifest: SkillManifest, issues: SkillValidationIssue[]): void {
-  const examplesDir = path.join(skillPath, manifest.examplesPath);
+function validateExamples(
+  skillPath: string,
+  manifest: SkillManifest,
+  issues: SkillValidationIssue[]
+): SkillInstructionFrontmatter[] {
+  const examplesDir = resolveManifestPath(skillPath, manifest.examplesPath, "examplesPath", issues);
+  if (!examplesDir) {
+    return [];
+  }
 
   if (!fs.existsSync(examplesDir) || !fs.statSync(examplesDir).isDirectory()) {
     addIssue(
@@ -291,22 +301,82 @@ function validateExamples(skillPath: string, manifest: SkillManifest, issues: Sk
       `Examples folder does not exist: ${manifest.examplesPath}.`,
       manifest.examplesPath
     );
-    return;
+    return [];
   }
 
   const exampleFiles = listFiles(examplesDir, issues).filter((file) => file.toLowerCase().endsWith(".md"));
   if (exampleFiles.length === 0) {
     addIssue(issues, "warning", "examples.empty", "Examples folder contains no Markdown examples.", manifest.examplesPath);
   }
+
+  const examples: SkillInstructionFrontmatter[] = [];
+  const seenIds = new Map<string, string>();
+
+  for (const file of exampleFiles) {
+    const relativeFile = relativePath(skillPath, file);
+    let parsed: matter.GrayMatterFile<string>;
+
+    try {
+      parsed = matter(fs.readFileSync(file, "utf8"));
+    } catch (error) {
+      addIssue(issues, "error", "example.read_failed", errorMessage(error), relativeFile);
+      continue;
+    }
+
+    const example = parseSchemaData(
+      skillInstructionFrontmatterSchema,
+      parsed.data,
+      issues,
+      "example.schema",
+      relativeFile
+    );
+
+    if (!example) {
+      continue;
+    }
+
+    if (example.skill !== manifest.id) {
+      addIssue(
+        issues,
+        "error",
+        "example.skill_mismatch",
+        `Example skill "${example.skill}" does not match manifest id "${manifest.id}".`,
+        relativeFile,
+        "skill"
+      );
+    }
+
+    const existingFile = seenIds.get(example.id);
+    if (existingFile) {
+      addIssue(
+        issues,
+        "error",
+        "example.duplicate_id",
+        `Example id "${example.id}" is already used by ${existingFile}.`,
+        relativeFile,
+        "id"
+      );
+    } else {
+      seenIds.set(example.id, relativeFile);
+    }
+
+    examples.push(example);
+  }
+
+  return examples;
 }
 
 function validateSourceMap(
   skillPath: string,
   manifest: SkillManifest,
-  instructions: SkillInstructionFrontmatter[],
+  documents: SkillInstructionFrontmatter[],
   issues: SkillValidationIssue[]
 ): SourceMap | undefined {
-  const sourcesFile = path.join(skillPath, manifest.sourcesPath);
+  const sourcesFile = resolveManifestPath(skillPath, manifest.sourcesPath, "sourcesPath", issues);
+  if (!sourcesFile) {
+    return undefined;
+  }
+
   const sourceMap = readYamlSchemaFile(skillPath, sourcesFile, sourceMapSchema, issues, "sources");
 
   if (!sourceMap) {
@@ -317,14 +387,14 @@ function validateSourceMap(
   }
 
   const sourceIds = new Set(sourceMap.sources.map((source) => source.id));
-  for (const instruction of instructions) {
-    for (const sourceId of instruction.sources) {
+  for (const document of documents) {
+    for (const sourceId of document.sources) {
       if (!sourceIds.has(sourceId)) {
         addIssue(
           issues,
           "error",
           "instruction.source_missing",
-          `Instruction "${instruction.id}" references missing source "${sourceId}".`,
+          `Skill document "${document.id}" references missing source "${sourceId}".`,
           manifest.instructionsPath,
           "sources"
         );
@@ -339,9 +409,13 @@ function validateExportProfiles(
   skillPath: string,
   manifest: SkillManifest,
   instructions: SkillInstructionFrontmatter[],
+  examples: SkillInstructionFrontmatter[],
   issues: SkillValidationIssue[]
 ): void {
-  const exportsDir = path.join(skillPath, manifest.exportsPath);
+  const exportsDir = resolveManifestPath(skillPath, manifest.exportsPath, "exportsPath", issues);
+  if (!exportsDir) {
+    return;
+  }
 
   if (!fs.existsSync(exportsDir) || !fs.statSync(exportsDir).isDirectory()) {
     addIssue(
@@ -360,13 +434,14 @@ function validateExportProfiles(
   }
 
   const instructionIds = new Set(instructions.map((instruction) => instruction.id));
+  const exampleIds = new Set(examples.map((example) => example.id));
   for (const file of exportFiles) {
     const profile = readYamlSchemaFile(skillPath, file, skillExportProfileSchema, issues, "skill_export_profile");
-    if (!profile?.include?.instructions) {
+    if (!profile?.include) {
       continue;
     }
 
-    for (const instructionId of profile.include.instructions) {
+    for (const instructionId of profile.include.instructions ?? []) {
       if (!instructionIds.has(instructionId)) {
         addIssue(
           issues,
@@ -375,6 +450,19 @@ function validateExportProfiles(
           `Export profile "${profile.id}" references missing instruction "${instructionId}".`,
           relativePath(skillPath, file),
           "include.instructions"
+        );
+      }
+    }
+
+    for (const exampleId of profile.include.examples ?? []) {
+      if (!exampleIds.has(exampleId)) {
+        addIssue(
+          issues,
+          "error",
+          "skill_export_profile.example_missing",
+          `Export profile "${profile.id}" references missing example "${exampleId}".`,
+          relativePath(skillPath, file),
+          "include.examples"
         );
       }
     }
@@ -393,8 +481,11 @@ function validateRules(
   manifest: SkillManifest,
   issues: SkillValidationIssue[]
 ): CompiledSafetyPattern[] {
-  const rulesDir = path.join(skillPath, manifest.rulesPath);
+  const rulesDir = resolveManifestPath(skillPath, manifest.rulesPath, "rulesPath", issues);
   const compiledPatterns: CompiledSafetyPattern[] = [];
+  if (!rulesDir) {
+    return compiledPatterns;
+  }
 
   if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
     addIssue(
@@ -665,6 +756,31 @@ function listFiles(root: string, issues: SkillValidationIssue[]): string[] {
 
   walk(root);
   return files;
+}
+
+function resolveManifestPath(
+  skillPath: string,
+  manifestPath: string,
+  manifestField: string,
+  issues: SkillValidationIssue[]
+): string | undefined {
+  const root = path.resolve(skillPath);
+  const resolved = path.resolve(root, manifestPath);
+  const relative = path.relative(root, resolved);
+
+  if (path.isAbsolute(manifestPath) || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    addIssue(
+      issues,
+      "error",
+      "skill_manifest.path_outside_root",
+      `Manifest path ${manifestField} must be relative and stay inside the Skill folder.`,
+      "contextarr-skill.json",
+      manifestField
+    );
+    return undefined;
+  }
+
+  return resolved;
 }
 
 function isYamlFile(file: string): boolean {

@@ -16,9 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 12: Skills and Agent Kits terminology planning.
+This repository is in Phase 15: Skill index and API.
 
-The original PRD through Phase 11 is implemented locally. Phase 12 begins the second PRD track with documentation only: no schema code, app functionality, runtime behavior, or execution capability is added.
+The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, and read-only local API indexing.
 
 Current scope:
 
@@ -60,6 +60,11 @@ Current scope:
 - Public-preview docs, release checklist, and screenshot placeholders.
 - Second PRD appendix for future Skills and Agent Kits.
 - Phase 12 terminology docs for Context Packs, Skills, Agent Kits, Export Briefs, and non-executable Skill boundaries.
+- Zod schemas and validator for non-executable Skills.
+- `contextarr validate-skill <path>` and unified Skill detection in `contextarr validate <path>`.
+- Eight public-safe demo Skills under `demo-skills/`.
+- Rebuildable SQLite index and read-only API endpoints for Skills, instructions, examples, sources, and export profiles.
+- `GET /api/search?type=skill&q=` for Skill-scoped local search.
 
 Not included yet:
 
@@ -67,9 +72,9 @@ Not included yet:
 - API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
-- Skill schema and Skill validator.
-- Demo Skills or demo Agent Kits.
-- Skill Library or Agent Kit UI/API/MCP extensions.
+- Demo Agent Kits.
+- Skill Library UI.
+- Agent Kit UI/API/MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
 
 ## Product Positioning
@@ -108,10 +113,12 @@ packages/
   schema/              Zod schemas
   renderer/            Sanitized Markdown and static HTML renderer
   pack-validator/      Pack validation engine
+  skill-validator/     Skill validation engine
   export-profiles/     Profile-driven export engine
   importers/           Local draft pack importers
 
 demo-packs/            Fake public-safe demo packs
+demo-skills/           Fake public-safe non-executable demo Skills
 docs/                  Product, architecture, security, and roadmap docs
 assets/brand/          Deterministic SVG brand kit
 tools/brand-kit/       Private pnpm brand asset generator
@@ -249,6 +256,7 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_HOST=127.0.0.1`
 - `CONTEXTARR_PORT=3210`
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
+- `CONTEXTARR_SKILLS_DIR=./demo-skills`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
 - `CONTEXTARR_WEB_DIST_DIR=` optional built web app directory for same-origin serving
 - `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
@@ -273,4 +281,10 @@ Available local API endpoints:
 - `GET /api/review-items`
 - `POST /api/review-items/:id/status`
 - `GET /api/search?q=`
+- `GET /api/skills`
+- `GET /api/skills/:id`
+- `GET /api/skills/:id/instructions`
+- `GET /api/skills/:id/examples`
+- `GET /api/skills/:id/exports`
+- `GET /api/search?type=skill&q=`
 - `POST /api/rescan`

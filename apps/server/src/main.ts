@@ -5,7 +5,7 @@ import { rebuildIndex } from "./indexer";
 
 const config = loadConfig();
 const db = openDatabase(config.databasePath);
-rebuildIndex(db, config.packsDir);
+rebuildIndex(db, config.packsDir, config.skillsDir);
 
 const app = createApp({ config, db });
 

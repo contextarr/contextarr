@@ -8,6 +8,7 @@ import { getIndexStats, getPackHealth, getReviewItems, rebuildIndex, searchIndex
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 describe("SQLite indexer", () => {
@@ -15,7 +16,7 @@ describe("SQLite indexer", () => {
     const db = openDatabase(":memory:");
 
     try {
-      const result = rebuildIndex(db, demoPacksDir);
+      const result = rebuildIndex(db, demoPacksDir, demoSkillsDir);
       const stats = getIndexStats(db);
 
       expect(result).toMatchObject({
@@ -23,13 +24,24 @@ describe("SQLite indexer", () => {
         packsSkipped: 0,
         recordsIndexed: 25,
         sourcesIndexed: 25,
-        exportProfilesIndexed: 25
+        exportProfilesIndexed: 25,
+        skillsIndexed: 8,
+        skillsSkipped: 0,
+        skillInstructionsIndexed: 24,
+        skillExamplesIndexed: 16,
+        skillSourcesIndexed: 24,
+        skillExportProfilesIndexed: 32
       });
       expect(stats).toMatchObject({
         packs: 5,
         records: 25,
         sources: 25,
         exportProfiles: 25,
+        skills: 8,
+        skillInstructions: 24,
+        skillExamples: 16,
+        skillSources: 24,
+        skillExportProfiles: 32,
         reviewItems: 0,
         openReviewItems: 0
       });
@@ -42,19 +54,60 @@ describe("SQLite indexer", () => {
     const db = openDatabase(":memory:");
 
     try {
-      rebuildIndex(db, demoPacksDir);
-      rebuildIndex(db, demoPacksDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir);
 
       expect(getIndexStats(db)).toMatchObject({
         packs: 5,
         records: 25,
         sources: 25,
         exportProfiles: 25,
+        skills: 8,
+        skillInstructions: 24,
+        skillExamples: 16,
+        skillSources: 24,
+        skillExportProfiles: 32,
         reviewItems: 0,
         openReviewItems: 0
       });
     } finally {
       db.close();
+    }
+  });
+
+  it("allows instruction and example IDs to repeat across different Skills", () => {
+    const db = openDatabase(":memory:");
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-skill-collision-"));
+    const fixtureRoot = path.join(repoRoot, "packages/skill-validator/test/fixtures/valid-skill");
+    const firstSkill = path.join(tempRoot, "valid-skill");
+    const secondSkill = path.join(tempRoot, "valid-skill-copy");
+
+    try {
+      fs.cpSync(fixtureRoot, firstSkill, { recursive: true });
+      fs.cpSync(fixtureRoot, secondSkill, { recursive: true });
+      const manifestPath = path.join(secondSkill, "contextarr-skill.json");
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { id: string; name: string };
+      manifest.id = "valid-skill-copy";
+      manifest.name = "Valid Demo Skill Copy";
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+
+      for (const file of [path.join(secondSkill, "instructions", "core.md"), path.join(secondSkill, "examples", "good.md")]) {
+        fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace("skill: valid-skill", "skill: valid-skill-copy"), "utf8");
+      }
+
+      const result = rebuildIndex(db, demoPacksDir, tempRoot);
+
+      expect(result.skillsIndexed).toBe(2);
+      expect(result.skillInstructionsIndexed).toBe(2);
+      expect(result.skillExamplesIndexed).toBe(2);
+      expect(getIndexStats(db)).toMatchObject({
+        skills: 2,
+        skillInstructions: 2,
+        skillExamples: 2
+      });
+    } finally {
+      db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
@@ -130,7 +183,7 @@ describe("SQLite indexer", () => {
     const db = openDatabase(":memory:");
 
     try {
-      rebuildIndex(db, demoPacksDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir);
       const results = searchIndex(db, "workstation");
 
       expect(results).toEqual(
@@ -146,11 +199,36 @@ describe("SQLite indexer", () => {
     }
   });
 
+  it("searches Skill names and instruction bodies with Skill search scope", () => {
+    const db = openDatabase(":memory:");
+
+    try {
+      rebuildIndex(db, demoPacksDir, demoSkillsDir);
+      const results = searchIndex(db, "support", "skill");
+
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "skill",
+            id: "support-ticket-writing-skill"
+          }),
+          expect.objectContaining({
+            kind: "skill_instruction",
+            skillId: "support-ticket-writing-skill"
+          })
+        ])
+      );
+      expect(results.every((result) => String((result as { kind: string }).kind).startsWith("skill"))).toBe(true);
+    } finally {
+      db.close();
+    }
+  });
+
   it("returns array results without throwing for punctuation-heavy searches", () => {
     const db = openDatabase(":memory:");
 
     try {
-      rebuildIndex(db, demoPacksDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir);
 
       for (const query of ["workstation", "C++", "tag:ai", "local-ai", "ai/workstation", "?", "\"quoted\""]) {
         expect(() => searchIndex(db, query)).not.toThrow();

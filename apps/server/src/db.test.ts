@@ -49,4 +49,39 @@ describe("SQLite schema migrations", () => {
       db.close();
     }
   });
+
+  it("recreates legacy Skill document tables with per-Skill composite keys", () => {
+    const db = new Database(":memory:");
+
+    try {
+      db.exec(`
+        CREATE TABLE skill_instructions (
+          id TEXT PRIMARY KEY,
+          skill_id TEXT NOT NULL
+        );
+
+        CREATE TABLE skill_examples (
+          id TEXT PRIMARY KEY,
+          skill_id TEXT NOT NULL
+        );
+      `);
+
+      createSchema(db);
+      createSchema(db);
+
+      const instructionColumns = db.prepare("PRAGMA table_info(skill_instructions)").all() as Array<{
+        name: string;
+        pk: number;
+      }>;
+      const exampleColumns = db.prepare("PRAGMA table_info(skill_examples)").all() as Array<{ name: string; pk: number }>;
+
+      expect(instructionColumns.find((column) => column.name === "skill_id")?.pk).toBeGreaterThan(0);
+      expect(instructionColumns.find((column) => column.name === "id")?.pk).toBeGreaterThan(0);
+      expect(exampleColumns.find((column) => column.name === "skill_id")?.pk).toBeGreaterThan(0);
+      expect(exampleColumns.find((column) => column.name === "id")?.pk).toBeGreaterThan(0);
+      expect(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'skills_fts'").get()).toBeTruthy();
+    } finally {
+      db.close();
+    }
+  });
 });

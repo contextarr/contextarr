@@ -10,7 +10,7 @@ export function createMcpContext(config = loadMcpConfig()): ContextarrMcpContext
   const db = openDatabase(config.databasePath);
 
   if (config.rescanOnStart) {
-    rebuildIndex(db, config.packsDir);
+    rebuildIndex(db, config.packsDir, config.skillsDir);
   }
 
   return { config, db };

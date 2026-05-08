@@ -37,7 +37,8 @@
     "phase11:verify": "pnpm phase10:verify && pnpm docs:verify && pnpm docker:verify",
     "phase12:verify": "pnpm phase11:verify && node tools/launch/verify-phase12-docs.mjs",
     "phase13:verify": "pnpm phase12:verify && pnpm --filter @contextarr/skill-validator test && pnpm --filter @contextarr/cli contextarr validate-skill packages/skill-validator/test/fixtures/valid-skill && pnpm --filter @contextarr/cli contextarr validate packages/skill-validator/test/fixtures/valid-skill --format json",
-    "phase14:verify": "pnpm phase13:verify && pnpm skills:validate && pnpm --filter @contextarr/skill-validator test"
+    "phase14:verify": "pnpm phase13:verify && pnpm skills:validate && pnpm --filter @contextarr/skill-validator test",
+    "phase15:verify": "pnpm phase14:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/server rescan"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

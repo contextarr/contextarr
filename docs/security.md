@@ -34,4 +34,8 @@ The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP end
 
 ## Skills And Agent Kits
 
-Phase 12 defines future Skills and Agent Kits as docs only. Skills are non-executable instruction artifacts. Agent Kits pair Skills with Context Packs. Contextarr prepares Agent Kits. It does not run them.
+Skills are non-executable instruction artifacts. Phase 15 stores them as local files, validates them with Zod and safety scans, and indexes them into read-only SQLite/API views. Agent Kits pair Skills with Context Packs later. Contextarr prepares Agent Kits. It does not run them.
+
+Skill validation rejects executable files, script files, shell-command patterns, hidden instruction patterns, network-directed wording, credential requests, unsafe manifest permissions, and relaxed safety rules. Demo Skills are fake, public-safe, and mounted read-only in Docker.
+
+Skill manifest paths must remain relative to the Skill folder. Read-only Skill API responses expose metadata and content needed by the UI, but not local Skill filesystem paths.

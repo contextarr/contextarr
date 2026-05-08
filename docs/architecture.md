@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 12 begins the second PRD track as documentation only. It keeps Context Packs as the core source-backed knowledge object and defines future Skills, Agent Kits, and Export Briefs before any schema or runtime work begins.
+Phase 15 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, and read-only Skill indexing/API. Context Packs remain the core source-backed knowledge object; Agent Kits remain future work.
 
 ## Core Decisions
 
@@ -17,7 +17,7 @@ Phase 12 begins the second PRD track as documentation only. It keeps Context Pac
 - Use sanitized Markdown rendering for human-readable records and static output.
 - Use Docker Compose for local operation.
 - Use read-only stdio MCP as a local context access layer.
-- Keep future Skills and Agent Kits data-only and non-executable.
+- Keep Skills and future Agent Kits data-only and non-executable.
 
 ## Monorepo Shape
 
@@ -29,11 +29,13 @@ apps/mcp
 packages/schema
 packages/renderer
 packages/pack-validator
+packages/skill-validator
 packages/export-profiles
 packages/importers
 tools/brand-kit
 assets/brand
 demo-packs
+demo-skills
 docs
 ```
 
@@ -41,7 +43,7 @@ docs
 
 1. Pack files live in local folders.
 2. The validator reads pack manifests, records, sources, exports, and rules.
-3. The server indexes approved local pack files into SQLite with FTS5 search.
+3. The server indexes approved local pack and Skill files into SQLite with FTS5 search.
 4. The web UI reads from the local API.
 5. The renderer produces sanitized human-readable output.
 6. Export profiles produce target-specific context files.
@@ -52,7 +54,7 @@ docs
 
 ## Source of Truth
 
-Pack folders are authoritative. SQLite tables, search indexes, generated exports, static render output, and MCP responses are derived and must be safe to rebuild from local files.
+Pack and Skill folders are authoritative. SQLite tables, search indexes, generated exports, static render output, and MCP responses are derived and must be safe to rebuild from local files.
 
 ## Backend Direction
 
@@ -68,7 +70,7 @@ The shared renderer converts Markdown to sanitized HTML for both the web UI and 
 
 ## Database Direction
 
-SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record search, with safe fallback behavior for punctuation-heavy UI queries.
+SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record and Skill search, with safe fallback behavior for punctuation-heavy UI queries.
 
 Review item statuses are local SQLite app state. Rescans preserve statuses by deterministic fingerprints and mark missing generated issues as resolved, but review actions do not edit pack files.
 
@@ -82,13 +84,13 @@ Composed exports are temporary derived artifacts. The web UI can preview, copy, 
 
 ## Local API Direction
 
-The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 adds read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`.
 
 When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
 
 ## Docker Direction
 
-Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs` read-only, and stores derived SQLite state in a Docker volume.
+Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs` and `demo-skills` read-only, and stores derived SQLite state in a Docker volume.
 
 ## MCP Direction
 
@@ -104,7 +106,7 @@ Phase 10 Composer v0 selects indexed packs and records, filters by local metadat
 
 ## Skills and Agent Kits Direction
 
-The second PRD adds future terminology for Skills and Agent Kits:
+The second PRD adds Skills and future Agent Kits:
 
 - Context Packs tell agents what to know.
 - Skills tell agents how to work.
@@ -113,4 +115,4 @@ The second PRD adds future terminology for Skills and Agent Kits:
 
 Contextarr prepares Agent Kits. It does not run them.
 
-No schema code is added in Phase 12. Future Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Future indexes, previews, exports, and MCP responses must remain derived artifacts.
+Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, and Phase 15 indexes Skills into read-only SQLite/API surfaces. Agent Kit files remain future work. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, and MCP responses must remain derived artifacts.

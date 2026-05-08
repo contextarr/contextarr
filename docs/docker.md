@@ -41,6 +41,7 @@ Container defaults:
 CONTEXTARR_HOST=0.0.0.0
 CONTEXTARR_PORT=3210
 CONTEXTARR_PACKS_DIR=/app/demo-packs
+CONTEXTARR_SKILLS_DIR=/app/demo-skills
 CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
 CONTEXTARR_API_TOKEN=

@@ -10,6 +10,7 @@ import type { ServerConfig } from "./types";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 function createTestContext(
@@ -22,11 +23,12 @@ function createTestContext(
     host: "127.0.0.1",
     port: 0,
     packsDir,
+    skillsDir: demoSkillsDir,
     databasePath: ":memory:",
     apiToken,
     ...overrides
   };
-  rebuildIndex(db, packsDir);
+  rebuildIndex(db, packsDir, config.skillsDir);
   return { db, config };
 }
 
@@ -61,10 +63,18 @@ describe("Contextarr API", () => {
         records: 25,
         sources: 25,
         exportProfiles: 25,
+        skills: 8,
+        skillInstructions: 24,
+        skillExamples: 16,
+        skillSources: 24,
+        skillExportProfiles: 32,
         reviewItems: 0,
         openReviewItems: 0
       }
     });
+    expect(response.json()).not.toHaveProperty("packsDir");
+    expect(response.json()).not.toHaveProperty("skillsDir");
+    expect(response.json()).not.toHaveProperty("databasePath");
     await app.close();
     db.close();
   });
@@ -127,6 +137,111 @@ describe("Contextarr API", () => {
         })
       ])
     );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/skills returns demo Skill summaries", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/skills" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().skills).toHaveLength(8);
+    expect(response.json().skills).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "support-ticket-writing-skill",
+          instructionCount: 3,
+          exampleCount: 2,
+          sourceCount: 3,
+          exportProfileCount: 4,
+          healthStatus: "healthy",
+          reviewQueueCount: 0
+        })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/skills/:id returns Skill detail and related summaries", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/skills/support-ticket-writing-skill" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      id: "support-ticket-writing-skill",
+      counts: {
+        instructions: 3,
+        examples: 2,
+        sources: 3,
+        exportProfiles: 4
+      },
+      validation: {
+        errors: 0,
+        warnings: 0
+      },
+      health: {
+        score: 100,
+        status: "healthy"
+      }
+    });
+    expect(response.json().sources).toHaveLength(3);
+    expect(response.json().sources[0]).not.toHaveProperty("path");
+    expect(response.json().exportProfiles).toHaveLength(4);
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(response.json().manifest).not.toHaveProperty("instructionsPath");
+    expect(response.json().manifest).not.toHaveProperty("examplesPath");
+    expect(response.json().manifest).not.toHaveProperty("sourcesPath");
+    expect(response.json().manifest).not.toHaveProperty("exportsPath");
+    expect(response.json().manifest).not.toHaveProperty("rulesPath");
+    expect(response.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/skills/:id/instructions and examples return sanitized metadata-ready documents", async () => {
+    const app = createApp({ config, db });
+    const instructions = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/instructions?tag=support"
+    });
+    const examples = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/examples"
+    });
+    const exportsResponse = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/exports"
+    });
+
+    expect(instructions.statusCode).toBe(200);
+    expect(instructions.json().instructions).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "support-ticket-writing-skill.customer-safe-wording" })])
+    );
+    expect(instructions.json().instructions[0]).not.toHaveProperty("filePath");
+    expect(examples.statusCode).toBe(200);
+    expect(examples.json().examples).toHaveLength(2);
+    expect(examples.json().examples[0]).not.toHaveProperty("filePath");
+    expect(exportsResponse.statusCode).toBe(200);
+    expect(exportsResponse.json().exportProfiles).toHaveLength(4);
+    await app.close();
+    db.close();
+  });
+
+  it("returns controlled errors for missing Skill resources and invalid search type", async () => {
+    const app = createApp({ config, db });
+    const missingSkill = await app.inject({ method: "GET", url: "/api/skills/missing-skill" });
+    const missingInstructions = await app.inject({ method: "GET", url: "/api/skills/missing-skill/instructions" });
+    const missingExamples = await app.inject({ method: "GET", url: "/api/skills/missing-skill/examples" });
+    const missingExports = await app.inject({ method: "GET", url: "/api/skills/missing-skill/exports" });
+    const invalidSearch = await app.inject({ method: "GET", url: "/api/search?type=not-real&q=support" });
+
+    expect(missingSkill.statusCode).toBe(404);
+    expect(missingInstructions.statusCode).toBe(404);
+    expect(missingExamples.statusCode).toBe(404);
+    expect(missingExports.statusCode).toBe(404);
+    expect(invalidSearch.statusCode).toBe(400);
     await app.close();
     db.close();
   });
@@ -338,6 +453,36 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/search?type=skill&q= returns Skill results only", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/search?type=skill&q=support" });
+    const emptyResponse = await app.inject({ method: "GET", url: "/api/search?type=skill&q=zzzzzzzzqqqqqq" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().type).toBe("skill");
+    expect(response.json().results.length).toBeGreaterThan(0);
+    expect(response.json().results.every((result: { kind: string }) => result.kind.startsWith("skill"))).toBe(true);
+    expect(emptyResponse.statusCode).toBe(200);
+    expect(emptyResponse.json()).toMatchObject({ type: "skill", results: [] });
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/search honors pack and record scopes", async () => {
+    const app = createApp({ config, db });
+    const packResponse = await app.inject({ method: "GET", url: "/api/search?type=pack&q=workstation" });
+    const recordResponse = await app.inject({ method: "GET", url: "/api/search?type=record&q=workstation" });
+
+    expect(packResponse.statusCode).toBe(200);
+    expect(packResponse.json().results.length).toBeGreaterThan(0);
+    expect(packResponse.json().results.every((result: { kind: string }) => result.kind === "pack")).toBe(true);
+    expect(recordResponse.statusCode).toBe(200);
+    expect(recordResponse.json().results.length).toBeGreaterThan(0);
+    expect(recordResponse.json().results.every((result: { kind: string }) => result.kind === "record")).toBe(true);
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/search?q= handles punctuation-heavy input", async () => {
     const app = createApp({ config, db });
     const queries = ["C++", "tag:ai", "local-ai", "ai/workstation", "?", "\"quoted\""];
@@ -364,7 +509,9 @@ describe("Contextarr API", () => {
     expect(response.json()).toMatchObject({
       ok: true,
       packsIndexed: 5,
-      recordsIndexed: 25
+      recordsIndexed: 25,
+      skillsIndexed: 8,
+      skillInstructionsIndexed: 24
     });
     await app.close();
     db.close();
@@ -452,6 +599,39 @@ describe("Contextarr API", () => {
 
     expect(blocked.statusCode).toBe(401);
     expect(allowed.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on Skill API, typed search, and rescan routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const blockedSkills = await app.inject({ method: "GET", url: "/api/skills" });
+    const allowedSkills = await app.inject({
+      method: "GET",
+      url: "/api/skills",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedSearch = await app.inject({ method: "GET", url: "/api/search?type=skill&q=support" });
+    const allowedSearch = await app.inject({
+      method: "GET",
+      url: "/api/search?type=skill&q=support",
+      headers: { "x-contextarr-token": "test-token" }
+    });
+    const blockedRescan = await app.inject({ method: "POST", url: "/api/rescan" });
+    const allowedRescan = await app.inject({
+      method: "POST",
+      url: "/api/rescan",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(blockedSkills.statusCode).toBe(401);
+    expect(allowedSkills.statusCode).toBe(200);
+    expect(blockedSearch.statusCode).toBe(401);
+    expect(allowedSearch.statusCode).toBe(200);
+    expect(blockedRescan.statusCode).toBe(401);
+    expect(allowedRescan.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

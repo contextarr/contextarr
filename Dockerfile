@@ -14,6 +14,7 @@ COPY packages ./packages
 COPY tools ./tools
 COPY assets ./assets
 COPY demo-packs ./demo-packs
+COPY demo-skills ./demo-skills
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @contextarr/web build
@@ -22,6 +23,7 @@ ENV NODE_ENV=production
 ENV CONTEXTARR_HOST=0.0.0.0
 ENV CONTEXTARR_PORT=3210
 ENV CONTEXTARR_PACKS_DIR=/app/demo-packs
+ENV CONTEXTARR_SKILLS_DIR=/app/demo-skills
 ENV CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 ENV CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
 
