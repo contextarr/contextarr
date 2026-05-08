@@ -340,6 +340,68 @@ export const agentKitCompatibilityRulesSchema = z
   })
   .strict();
 
+const agentKitTemplateTargetSchema = z.enum(["chatgpt", "claude", "codex", "claude_code", "markdown", "json_records"]);
+
+const agentKitTemplatePermissionsSchema = z
+  .object({
+    readVault: z.literal(false).default(false),
+    writeDrafts: z.literal(false).default(false),
+    runCommands: z.literal(false).default(false),
+    networkAccess: z.literal(false).default(false),
+    browserAutomation: z.literal(false).default(false),
+    toolExecution: z.literal(false).default(false)
+  })
+  .strict()
+  .default({});
+
+export const agentKitTemplateSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    version: z.string().min(1),
+    description: z.string().min(1),
+    category: z.string().min(1),
+    visibility: z.literal("local").default("local"),
+    trustLevel: trustLevelSchema.default("official"),
+    author: z.string().min(1),
+    license: z.string().min(1),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+    lastReviewedAt: isoDateTimeSchema.nullable(),
+    containsPersonalData: z.literal(false).default(false),
+    containsExecutableCode: z.literal(false).default(false),
+    requiresNetwork: z.literal(false).default(false),
+    permissions: agentKitTemplatePermissionsSchema,
+    suggestedAgentKit: z
+      .object({
+        id: idSchema,
+        name: z.string().min(1),
+        goal: z.string().min(1),
+        description: z.string().min(1),
+        contextPacks: z.array(idSchema).min(1),
+        skills: z.array(idSchema).min(1),
+        target: agentKitTemplateTargetSchema,
+        format: z.enum(["markdown", "json", "text"]),
+        privacyMode: z.enum(["redacted", "public_safe"]).default("redacted"),
+        excludeTags: z.array(z.string().min(1)).default(["secret", "never_export", "imported_draft"]),
+        tokenBudget: z.number().int().positive().optional()
+      })
+      .strict(),
+    safetyNotes: z.array(z.string().min(1)).default([]),
+    assets: z
+      .object({
+        accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional()
+      })
+      .strict()
+      .default({}),
+    compatibility: z
+      .object({
+        contextarr: z.string().min(1)
+      })
+      .strict()
+  })
+  .strict();
+
 export const validationRulesSchema = z
   .object({
     required_fields: z
@@ -391,3 +453,4 @@ export type SkillSafetyRules = z.infer<typeof skillSafetyRulesSchema>;
 export type AgentKitManifest = z.infer<typeof agentKitManifestSchema>;
 export type AgentKitExportProfile = z.infer<typeof agentKitExportProfileSchema>;
 export type AgentKitCompatibilityRules = z.infer<typeof agentKitCompatibilityRulesSchema>;
+export type AgentKitTemplate = z.infer<typeof agentKitTemplateSchema>;

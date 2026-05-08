@@ -1,6 +1,7 @@
 import type {
   AgentKitExportFormat,
   AgentKitPrivacyMode,
+  AgentKitTemplateSummary,
   CreateAgentKitRequest,
   PackSummary,
   SkillSummary
@@ -148,6 +149,22 @@ export function toggleSelectedId(selectedIds: string[], id: string): string[] {
 export function parseAgentKitTokenBudget(value: string): number | undefined {
   const parsed = Number(value.trim());
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function applyAgentKitTemplateToDraft(template: AgentKitTemplateSummary): AgentKitComposerDraft {
+  const suggested = template.suggestedAgentKit;
+
+  return {
+    name: suggested.name,
+    goal: suggested.goal,
+    description: suggested.description,
+    selectedPackIds: [...suggested.contextPacks],
+    selectedSkillIds: [...suggested.skills],
+    target: suggested.target,
+    format: suggested.format,
+    redactionMode: suggested.privacyMode,
+    tokenBudget: suggested.tokenBudget ?? undefined
+  };
 }
 
 export function validateAgentKitDraft(

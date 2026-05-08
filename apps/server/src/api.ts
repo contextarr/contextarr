@@ -11,12 +11,14 @@ import {
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
+import type { AgentKitTemplate } from "@contextarr/schema";
 import {
   assertAgentKitDirectorySeparation,
   assertImportedSkillsDirectory,
   getAgentKitIndexDirs,
   getSkillIndexDirs
 } from "./config";
+import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
 import type { ContextarrDatabase } from "./db";
 import {
   AgentKitWriteError,
@@ -118,6 +120,119 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       agentKits: getAgentKits(db)
     };
   });
+
+  app.get("/api/agent-kit-templates", async () => {
+    const loaded = loadAgentKitTemplates({
+      templatesDir: config.agentKitTemplatesDir,
+      contextPacksDir: config.packsDir,
+      skillsDir: config.skillsDir
+    });
+
+    return {
+      templates: loaded.templates.map((template) => summarizeAgentKitTemplate(template)),
+      skipped: loaded.skipped.map((skipped) => ({
+        templateId: skipped.templateId,
+        issueCount: skipped.issues.length,
+        errors: skipped.issues.filter((issue) => issue.severity === "error").length,
+        warnings: skipped.issues.filter((issue) => issue.severity === "warning").length
+      }))
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kit-templates/:id", async (request, reply) => {
+    const loaded = loadAgentKitTemplates({
+      templatesDir: config.agentKitTemplatesDir,
+      contextPacksDir: config.packsDir,
+      skillsDir: config.skillsDir
+    });
+    const template = getAgentKitTemplate(loaded.templates, request.params.id);
+    if (!template) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit template not found: ${request.params.id}` });
+    }
+
+    return summarizeAgentKitTemplate(template, true);
+  });
+
+  app.post<{ Params: { id: string }; Body: AgentKitTemplateCreateBody }>(
+    "/api/agent-kit-templates/:id/create",
+    async (request, reply) => {
+      const loaded = loadAgentKitTemplates({
+        templatesDir: config.agentKitTemplatesDir,
+        contextPacksDir: config.packsDir,
+        skillsDir: config.skillsDir
+      });
+      const template = getAgentKitTemplate(loaded.templates, request.params.id);
+      if (!template) {
+        return reply.code(404).send({ error: "not_found", message: `Agent Kit template not found: ${request.params.id}` });
+      }
+
+      const parsed = parseAgentKitTemplateCreateBody(request.body ?? {});
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_agent_kit_template_request", message: parsed.message });
+      }
+
+      const createRequest = buildAgentKitTemplateCreateRequest(template.template, parsed.value);
+      const resolvedId = normalizeAgentKitId(createRequest.id ?? createRequest.name);
+      if (!resolvedId) {
+        return reply.code(400).send({ error: "invalid_agent_kit_id", message: "Agent Kit name or ID must include letters or numbers." });
+      }
+
+      if (getAgentKit(db, resolvedId)) {
+        return reply.code(409).send({ error: "agent_kit_exists", message: `Agent Kit already exists: ${resolvedId}`, id: resolvedId });
+      }
+
+      const missingContextPackIds = createRequest.contextPacks.filter((packId) => !getPack(db, packId));
+      const missingSkillIds = createRequest.skills.filter((skillId) => !getSkill(db, skillId));
+      if (missingContextPackIds.length > 0 || missingSkillIds.length > 0) {
+        return reply.code(404).send({
+          error: "missing_references",
+          message: "Agent Kit template references must already exist in the local index.",
+          missingContextPackIds,
+          missingSkillIds
+        });
+      }
+
+      try {
+        assertAgentKitDirectorySeparation(config);
+        const saved = createAgentKitDraft({
+          agentKitsDir: config.agentKitsDir,
+          contextPacksDir: config.packsDir,
+          skillsDir: config.skillsDir,
+          request: createRequest
+        });
+        const result = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
+        const agentKit = getAgentKit(db, saved.id);
+
+        return reply.code(201).send({
+          ok: true,
+          template: summarizeAgentKitTemplate(template),
+          id: saved.id,
+          agentKit,
+          validation: {
+            errors: saved.validation.summary.errors,
+            warnings: saved.validation.summary.warnings
+          },
+          index: sanitizeRebuildResultForApi(result)
+        });
+      } catch (error) {
+        if (error instanceof AgentKitWriteError) {
+          return reply.code(error.statusCode).send({
+            error: error.code,
+            message: error.message,
+            validation: error.validation
+              ? {
+                  errors: error.validation.summary.errors,
+                  warnings: error.validation.summary.warnings
+                }
+              : undefined,
+            ...error.details
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
 
   app.post<{ Body: SaveAgentKitBody }>("/api/agent-kits", async (request, reply) => {
     const parsed = parseSaveAgentKitBody(request.body ?? {});
@@ -906,6 +1021,32 @@ interface SaveAgentKitBody {
   accentColor?: unknown;
 }
 
+interface AgentKitTemplateCreateBody {
+  id?: unknown;
+  name?: unknown;
+  goal?: unknown;
+  description?: unknown;
+  contextPacks?: unknown;
+  skills?: unknown;
+  target?: unknown;
+  format?: unknown;
+  privacyMode?: unknown;
+  tokenBudget?: unknown;
+}
+
+interface ParsedAgentKitTemplateCreateBody {
+  id?: string;
+  name?: string;
+  goal?: string;
+  description?: string;
+  contextPacks?: string[];
+  skills?: string[];
+  target?: CreateAgentKitDraftRequest["target"];
+  format?: CreateAgentKitDraftRequest["format"];
+  privacyMode?: CreateAgentKitDraftRequest["privacyMode"];
+  tokenBudget?: number;
+}
+
 function assertLocalSkillImportsEnabled(config: ServerConfig): { ok: true } | { ok: false; message: string } {
   if (config.localImportsEnabled) {
     return { ok: true };
@@ -1064,6 +1205,165 @@ function parseSaveAgentKitBody(
       tokenBudget: body.tokenBudget === undefined ? undefined : Number(body.tokenBudget)
     }
   };
+}
+
+function parseAgentKitTemplateCreateBody(
+  body: AgentKitTemplateCreateBody
+): { ok: true; value: ParsedAgentKitTemplateCreateBody } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Agent Kit template create body must be an object." };
+  }
+
+  const allowedKeys = new Set([
+    "id",
+    "name",
+    "goal",
+    "description",
+    "contextPacks",
+    "skills",
+    "target",
+    "format",
+    "privacyMode",
+    "tokenBudget"
+  ]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Agent Kit template create field is not allowed: ${unknownKey}.` };
+  }
+
+  for (const key of ["id", "name", "goal", "description", "target", "format", "privacyMode"] as const) {
+    if (body[key] !== undefined && (typeof body[key] !== "string" || !body[key].trim())) {
+      return { ok: false, message: `Agent Kit template create ${key} is invalid.` };
+    }
+  }
+
+  let contextPacks: string[] | undefined;
+  if (body.contextPacks !== undefined) {
+    contextPacks = parseIdArray(body.contextPacks);
+    if (!contextPacks || contextPacks.length === 0) {
+      return { ok: false, message: "Agent Kit template create contextPacks are invalid." };
+    }
+  }
+
+  let skills: string[] | undefined;
+  if (body.skills !== undefined) {
+    skills = parseIdArray(body.skills);
+    if (!skills || skills.length === 0) {
+      return { ok: false, message: "Agent Kit template create skills are invalid." };
+    }
+  }
+
+  const target = trimOptional(body.target);
+  if (target && !["chatgpt", "claude", "codex", "claude_code", "markdown", "json_records"].includes(target)) {
+    return { ok: false, message: "Agent Kit template create target is invalid." };
+  }
+
+  const format = trimOptional(body.format);
+  if (format && format !== "markdown" && format !== "json" && format !== "text") {
+    return { ok: false, message: "Agent Kit template create format is invalid." };
+  }
+
+  const privacyMode = trimOptional(body.privacyMode);
+  if (privacyMode && privacyMode !== "redacted" && privacyMode !== "public_safe") {
+    return { ok: false, message: "Agent Kit template create privacyMode is invalid." };
+  }
+
+  if (body.tokenBudget !== undefined && (!Number.isInteger(body.tokenBudget) || Number(body.tokenBudget) <= 0)) {
+    return { ok: false, message: "Agent Kit template create tokenBudget must be a positive integer." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      id: trimOptional(body.id),
+      name: trimOptional(body.name),
+      goal: trimOptional(body.goal),
+      description: trimOptional(body.description),
+      contextPacks,
+      skills,
+      target: target as CreateAgentKitDraftRequest["target"] | undefined,
+      format: format as CreateAgentKitDraftRequest["format"] | undefined,
+      privacyMode: privacyMode as CreateAgentKitDraftRequest["privacyMode"] | undefined,
+      tokenBudget: body.tokenBudget === undefined ? undefined : Number(body.tokenBudget)
+    }
+  };
+}
+
+function buildAgentKitTemplateCreateRequest(
+  template: AgentKitTemplate,
+  overrides: ParsedAgentKitTemplateCreateBody
+): CreateAgentKitDraftRequest {
+  const suggested = template.suggestedAgentKit;
+
+  return {
+    id: overrides.id ?? suggested.id,
+    name: overrides.name ?? suggested.name,
+    goal: overrides.goal ?? suggested.goal,
+    description: overrides.description ?? suggested.description,
+    contextPacks: overrides.contextPacks ?? suggested.contextPacks,
+    skills: overrides.skills ?? suggested.skills,
+    target: overrides.target ?? suggested.target,
+    format: overrides.format ?? suggested.format,
+    privacyMode: overrides.privacyMode ?? suggested.privacyMode,
+    exportProfile: `${normalizeAgentKitId(overrides.id ?? suggested.id)}-${overrides.target ?? suggested.target}`,
+    exportProfileName: `${overrides.name ?? suggested.name} ${formatTemplateTargetLabel(overrides.target ?? suggested.target)} Export`,
+    excludeTags: [...suggested.excludeTags],
+    tokenBudget: overrides.tokenBudget ?? suggested.tokenBudget,
+    trustLevel: "unreviewed",
+    lastReviewedAt: null,
+    author: "Contextarr Template"
+  };
+}
+
+function summarizeAgentKitTemplate(template: LoadedAgentKitTemplate, includeDetail = false): Record<string, unknown> {
+  const suggested = template.template.suggestedAgentKit;
+
+  return {
+    id: template.template.id,
+    name: template.template.name,
+    version: template.template.version,
+    description: template.template.description,
+    category: template.template.category,
+    trustLevel: template.template.trustLevel,
+    accentColor: template.template.assets.accentColor ?? null,
+    suggestedAgentKit: {
+      id: suggested.id,
+      name: suggested.name,
+      goal: suggested.goal,
+      description: suggested.description,
+      contextPacks: suggested.contextPacks,
+      skills: suggested.skills,
+      target: suggested.target,
+      format: suggested.format,
+      privacyMode: suggested.privacyMode,
+      excludeTags: suggested.excludeTags,
+      tokenBudget: suggested.tokenBudget ?? null
+    },
+    safetyNotes: includeDetail ? template.template.safetyNotes : undefined,
+    validation: {
+      errors: template.validation.summary.errors,
+      warnings: template.validation.summary.warnings
+    }
+  };
+}
+
+function formatTemplateTargetLabel(value: string): string {
+  switch (value) {
+    case "chatgpt":
+      return "ChatGPT";
+    case "claude":
+      return "Claude";
+    case "claude_code":
+      return "Claude Code";
+    case "json_records":
+      return "JSON Records";
+    case "markdown":
+      return "Markdown";
+    case "codex":
+      return "Codex";
+    default:
+      return value;
+  }
 }
 
 function parseIdArray(value: unknown): string[] | undefined {

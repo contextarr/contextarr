@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets.
+Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only.
 
 ## Core Decisions
 
@@ -17,7 +17,7 @@ Phase 22 continues the second PRD track with non-executable Skill schemas, publi
 - Use sanitized Markdown rendering for human-readable records and static output.
 - Use Docker Compose for local operation.
 - Use read-only stdio MCP as a local context access layer.
-- Keep Skills and future Agent Kits data-only and non-executable.
+- Keep Skills, Agent Kits, and Agent Kit templates data-only and non-executable.
 
 ## Monorepo Shape
 
@@ -99,7 +99,7 @@ MCP is implemented as a local stdio process in `apps/mcp`. It uses the official 
 
 ## Importer Direction
 
-Phase 9 importers read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. Phase 26 extends importer support to local draft Skills through CLI plus gated local API/dashboard flows. Skill importers support folder, Markdown, prompt-template, Claude Skill, and ChatGPT prompt inputs. They must not add MCP mutation, live connectors, cloud sync, external API calls, execution, or approval behavior.
+Phase 9 importers read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. Phase 26 extends importer support to local draft Skills through CLI plus gated local API/dashboard flows. Skill importers support folder, Markdown, prompt-template, Claude Skill, and ChatGPT prompt inputs. Phase 27 adds Agent Kit template loading from `CONTEXTARR_AGENT_KIT_TEMPLATES_DIR`, defaulting to committed `agent-kit-templates/`, and writes generated kits only under `CONTEXTARR_AGENT_KITS_DIR`. They must not add MCP mutation, live connectors, cloud sync, external API calls, execution, or approval behavior.
 
 ## Composer Direction
 
@@ -116,4 +116,4 @@ The second PRD adds Skills and future Agent Kits:
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, Phase 18 adds profile-driven Skill exports, Phase 19 adds Agent Kit schemas/validation, Phase 20 adds fake public-safe demo Agent Kits, Phase 21 indexes Agent Kits into SQLite/API/search surfaces, Phase 22 adds validated local Agent Kit creation from selected existing objects, Phase 23 adds local Agent Kit Library/detail/health views, and Phase 24 adds profile-driven Agent Kit exports. Phase 24R strengthens the Context Pack foundation before extending MCP/import/template/registry work. Phase 25 extends the local read-only MCP server to Skills and Agent Kits. Phase 26 adds local draft Skill importers and review-queue integration. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.
+Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, Phase 18 adds profile-driven Skill exports, Phase 19 adds Agent Kit schemas/validation, Phase 20 adds fake public-safe demo Agent Kits, Phase 21 indexes Agent Kits into SQLite/API/search surfaces, Phase 22 adds validated local Agent Kit creation from selected existing objects, Phase 23 adds local Agent Kit Library/detail/health views, and Phase 24 adds profile-driven Agent Kit exports. Phase 24R strengthens the Context Pack foundation before extending MCP/import/template/registry work. Phase 25 extends the local read-only MCP server to Skills and Agent Kits. Phase 26 adds local draft Skill importers and review-queue integration. Phase 27 adds public-safe Agent Kit templates and Composer prefill. Skill, Agent Kit, and template files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.

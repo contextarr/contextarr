@@ -3,6 +3,7 @@ import {
   agentKitCompatibilityRulesSchema,
   agentKitExportProfileSchema,
   agentKitManifestSchema,
+  agentKitTemplateSchema,
   contextPackManifestSchema,
   exportProfileSchema,
   recordFrontmatterSchema,
@@ -349,5 +350,55 @@ describe("Contextarr schemas", () => {
         }
       }).success
     ).toBe(false);
+  });
+
+  it("accepts data-only Agent Kit templates", () => {
+    const result = agentKitTemplateSchema.safeParse({
+      id: "support-ticket-kit-template",
+      name: "Support Ticket Kit Template",
+      version: "1.0.0",
+      description: "Public-safe template for creating a draft support ticket Agent Kit.",
+      category: "support",
+      visibility: "local",
+      trustLevel: "official",
+      author: "Contextarr Demo",
+      license: "MIT",
+      createdAt: "2026-05-08T00:00:00Z",
+      updatedAt: "2026-05-08T00:00:00Z",
+      lastReviewedAt: "2026-05-08T00:00:00Z",
+      containsPersonalData: false,
+      containsExecutableCode: false,
+      requiresNetwork: false,
+      permissions: {
+        readVault: false,
+        writeDrafts: false,
+        runCommands: false,
+        networkAccess: false,
+        browserAutomation: false,
+        toolExecution: false
+      },
+      suggestedAgentKit: {
+        id: "support-ticket-kit-draft",
+        name: "Support Ticket Kit Draft",
+        goal: "Draft a clear support ticket from public-safe sample support context.",
+        description: "Combines fake support context and non-executable support-writing Skills.",
+        contextPacks: ["internal-support-kb-pack", "fake-product-line-pack"],
+        skills: ["support-ticket-writing-skill", "bug-report-structuring-skill"],
+        target: "chatgpt",
+        format: "markdown",
+        privacyMode: "redacted",
+        excludeTags: ["secret", "never_export", "imported_draft"],
+        tokenBudget: 12000
+      },
+      safetyNotes: ["Review the generated draft before export."],
+      assets: {
+        accentColor: "#f97316"
+      },
+      compatibility: {
+        contextarr: ">=0.3.0"
+      }
+    });
+
+    expect(result.success).toBe(true);
   });
 });

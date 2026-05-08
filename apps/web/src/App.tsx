@@ -54,6 +54,7 @@ import {
   agentKitFormatOptions,
   agentKitRedactionModeOptions,
   agentKitTargetOptions,
+  applyAgentKitTemplateToDraft,
   buildAgentKitPreviewMetadata,
   buildAgentKitSaveRequest,
   defaultAgentKitExcludeTags,
@@ -136,6 +137,7 @@ import type {
   AgentKitHealthResponse,
   AgentKitExportPreview,
   AgentKitSummary,
+  AgentKitTemplateSummary,
   AgentKitDetail,
   SortKey,
   SourceSummary
@@ -2063,6 +2065,36 @@ function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills:
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAgentKit, setSavedAgentKit] = useState<{ id: string; detailHref: string; message: string } | null>(null);
+  const [templates, setTemplates] = useState<AgentKitTemplateSummary[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    apiClient
+      .getAgentKitTemplates()
+      .then((loadedTemplates) => {
+        if (cancelled) {
+          return;
+        }
+        setTemplates(loadedTemplates);
+        setTemplatesLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        setTemplateError(toErrorMessage(error, "Unable to load Agent Kit templates."));
+        setTemplates([]);
+        setTemplatesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const draft = {
     name,
@@ -2096,6 +2128,27 @@ function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills:
     setSaveError(null);
   }
 
+  function applyTemplate(templateId: string) {
+    setSelectedTemplateId(templateId);
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) {
+      return;
+    }
+
+    const applied = applyAgentKitTemplateToDraft(template);
+    setName(applied.name);
+    setGoal(applied.goal);
+    setDescription(applied.description);
+    setSelectedPackIds(applied.selectedPackIds);
+    setSelectedSkillIds(applied.selectedSkillIds);
+    setTarget(applied.target);
+    setFormat(applied.format);
+    setRedactionMode(applied.redactionMode);
+    setTokenBudget(applied.tokenBudget ? String(applied.tokenBudget) : "");
+    setSavedAgentKit(null);
+    setSaveError(null);
+  }
+
   async function saveAgentKit() {
     if (saveDisabled) {
       return;
@@ -2105,7 +2158,20 @@ function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills:
     setSaveError(null);
     setSavedAgentKit(null);
     try {
-      const response = await apiClient.saveAgentKit(buildAgentKitSaveRequest(draft, packs, skills));
+      const response = selectedTemplateId
+        ? await apiClient.createAgentKitFromTemplate(selectedTemplateId, {
+            id: preview.id,
+            name: draft.name.trim(),
+            goal: draft.goal.trim(),
+            description: draft.description.trim(),
+            contextPacks: [...draft.selectedPackIds],
+            skills: [...draft.selectedSkillIds],
+            target: draft.target,
+            format: draft.format,
+            privacyMode: draft.redactionMode,
+            tokenBudget: draft.tokenBudget
+          })
+        : await apiClient.saveAgentKit(buildAgentKitSaveRequest(draft, packs, skills));
       const savedId = response.agentKit?.id ?? response.id ?? preview.id;
       setSavedAgentKit({
         id: savedId,
@@ -2153,6 +2219,29 @@ function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills:
               <p>Name the job and choose the export contract.</p>
             </div>
           </div>
+          <label className="field-label">
+            Template
+            <select value={selectedTemplateId} onChange={(event) => applyTemplate(event.target.value)}>
+              <option value="">Start from scratch</option>
+              {templates.map((template) => (
+                <option value={template.id} key={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {templatesLoading ? <p className="muted-note">Loading local templates...</p> : null}
+          {templateError ? (
+            <p className="composer-error">
+              <ShieldAlert size={15} aria-hidden="true" />
+              <span>{templateError}</span>
+            </p>
+          ) : null}
+          {selectedTemplateId ? (
+            <p className="muted-note">
+              Template applied as an unreviewed local draft. Review selections and wording before saving.
+            </p>
+          ) : null}
           <label className="field-label">
             Name
             <input value={name} onChange={(event) => setName(event.target.value)} />

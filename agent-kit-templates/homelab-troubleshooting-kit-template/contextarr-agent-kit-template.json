@@ -1,0 +1,58 @@
+{
+  "id": "homelab-troubleshooting-kit-template",
+  "name": "Homelab Troubleshooting Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit that organizes fictional homelab troubleshooting context.",
+  "category": "operations",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "homelab-troubleshooting-kit-draft",
+    "name": "Homelab Troubleshooting Kit Draft",
+    "goal": "Prepare a troubleshooting brief from fake Jellyfin and workstation context.",
+    "description": "Combines fake homelab server and workstation context with troubleshooting and support-writing Skills.",
+    "contextPacks": [
+      "jellyfin-server-pack",
+      "ai-workstation-pack"
+    ],
+    "skills": [
+      "homelab-troubleshooting-skill",
+      "support-ticket-writing-skill"
+    ],
+    "target": "claude",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Use the output as an organizing brief, not an operations runner."
+  ],
+  "assets": {
+    "accentColor": "#22c55e"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

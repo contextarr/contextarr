@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 26: Local Skill Importers. Phase 25: Read-Only MCP for Skills and Agent Kits remains complete.
+This repository is in Phase 27: Agent Kit Templates. Phase 26: Local Skill Importers remains complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -82,6 +82,9 @@ Current scope:
 - Phase 26 local Skill importers for folder, Markdown, prompt template, Claude Skill, and ChatGPT prompt inputs.
 - `contextarr import-skill <path> --kind <kind> --out <path>` draft Skill command.
 - Gated local API and dashboard importer flow enabled only by `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
+- Phase 27 public-safe Agent Kit templates under `agent-kit-templates/`.
+- Read-only Agent Kit template API endpoints and Composer template prefill flow.
+- Template-generated Agent Kits write only as unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`.
 
 Not included yet:
 
@@ -133,6 +136,7 @@ packages/
 demo-packs/            Fake public-safe demo packs
 demo-skills/           Fake public-safe non-executable demo Skills
 demo-agent-kits/       Fake public-safe non-executable Agent Kits
+agent-kit-templates/   Fake public-safe data-only Agent Kit templates
 docs/                  Product, architecture, security, and roadmap docs
 assets/brand/          Deterministic SVG brand kit
 tools/brand-kit/       Private pnpm brand asset generator
@@ -218,6 +222,7 @@ pnpm phase24:verify
 pnpm research-delta:verify
 pnpm phase25:verify
 pnpm phase26:verify
+pnpm phase27:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill

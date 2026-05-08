@@ -14,6 +14,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
     agentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KITS_DIR ?? "./agent-kits"),
     demoAgentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_DEMO_AGENT_KITS_DIR ?? "./demo-agent-kits"),
+    agentKitTemplatesDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KIT_TEMPLATES_DIR ?? "./agent-kit-templates"),
     databasePath: resolveFrom(invocationRoot, env.CONTEXTARR_DATABASE_PATH ?? "./data/contextarr.db"),
     webDistDir: env.CONTEXTARR_WEB_DIST_DIR?.trim() ? resolveFrom(invocationRoot, env.CONTEXTARR_WEB_DIST_DIR) : undefined,
     apiToken: apiToken ? apiToken : undefined,

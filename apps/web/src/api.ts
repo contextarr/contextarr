@@ -5,6 +5,8 @@ import type {
   AgentKitHealthResponse,
   AgentKitSkillSummary,
   AgentKitSummary,
+  AgentKitTemplateCreateRequest,
+  AgentKitTemplateSummary,
   CreateAgentKitRequest,
   HealthResponse,
   ComposePreviewRequest,
@@ -65,6 +67,9 @@ export interface ApiClient {
   getAgentKitHealth(id: string): Promise<AgentKitHealthResponse>;
   getAgentKitExportPreview(agentKitId: string, profileId: string): Promise<AgentKitExportPreview>;
   saveAgentKit(request: CreateAgentKitRequest): Promise<SaveAgentKitResponse>;
+  getAgentKitTemplates(): Promise<AgentKitTemplateSummary[]>;
+  getAgentKitTemplate(id: string): Promise<AgentKitTemplateSummary>;
+  createAgentKitFromTemplate(id: string, request: AgentKitTemplateCreateRequest): Promise<SaveAgentKitResponse>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
@@ -174,6 +179,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       ),
     saveAgentKit: (body: CreateAgentKitRequest) =>
       requestJson<SaveAgentKitResponse>("/api/agent-kits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    getAgentKitTemplates: async () => {
+      const response = await requestJson<{ templates: AgentKitTemplateSummary[] }>("/api/agent-kit-templates");
+      return response.templates;
+    },
+    getAgentKitTemplate: (id: string) =>
+      requestJson<AgentKitTemplateSummary>(`/api/agent-kit-templates/${encodeURIComponent(id)}`),
+    createAgentKitFromTemplate: (id: string, body: AgentKitTemplateCreateRequest) =>
+      requestJson<SaveAgentKitResponse>(`/api/agent-kit-templates/${encodeURIComponent(id)}/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

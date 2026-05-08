@@ -22,6 +22,9 @@ export interface CreateAgentKitDraftRequest {
   exportProfileName?: string;
   excludeTags?: string[];
   tokenBudget?: number;
+  trustLevel?: Extract<AgentKitManifest["trustLevel"], "local" | "unreviewed">;
+  lastReviewedAt?: string | null;
+  author?: string;
 }
 
 export interface CreateAgentKitDraftOptions {
@@ -51,6 +54,9 @@ interface NormalizedCreateAgentKitDraftRequest {
   exportProfileName: string;
   excludeTags: string[];
   tokenBudget?: number;
+  trustLevel: Extract<AgentKitManifest["trustLevel"], "local" | "unreviewed">;
+  lastReviewedAt?: string | null;
+  author: string;
 }
 
 export class AgentKitWriteError extends Error {
@@ -177,7 +183,10 @@ function normalizeCreateAgentKitRequest(request: CreateAgentKitDraftRequest): No
     exportProfile,
     exportProfileName: request.exportProfileName?.trim() || `${name} ${formatTargetLabel(request.target)} Export`,
     excludeTags: uniqueStrings(request.excludeTags?.length ? request.excludeTags : defaultExcludeTags),
-    tokenBudget: Number.isFinite(request.tokenBudget) && request.tokenBudget && request.tokenBudget > 0 ? Math.trunc(request.tokenBudget) : undefined
+    tokenBudget: Number.isFinite(request.tokenBudget) && request.tokenBudget && request.tokenBudget > 0 ? Math.trunc(request.tokenBudget) : undefined,
+    trustLevel: request.trustLevel === "unreviewed" ? "unreviewed" : "local",
+    lastReviewedAt: request.lastReviewedAt === null ? null : undefined,
+    author: request.author?.trim() || "Contextarr Composer"
   };
 }
 
@@ -190,12 +199,12 @@ function writeAgentKitFiles(agentKitPath: string, request: NormalizedCreateAgent
     description: request.description,
     type: "composed_agent_kit",
     visibility: "local",
-    trustLevel: "local",
-    author: "Contextarr Composer",
+    trustLevel: request.trustLevel,
+    author: request.author,
     license: "MIT",
     createdAt: now,
     updatedAt: now,
-    lastReviewedAt: now,
+    lastReviewedAt: request.lastReviewedAt === null ? null : request.lastReviewedAt ?? now,
     containsPersonalData: false,
     containsExecutableCode: false,
     requiresNetwork: false,

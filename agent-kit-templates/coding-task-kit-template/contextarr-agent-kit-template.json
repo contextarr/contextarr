@@ -1,0 +1,58 @@
+{
+  "id": "coding-task-kit-template",
+  "name": "Coding Task Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit for implementation planning and code review handoff.",
+  "category": "coding",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "coding-task-kit-draft",
+    "name": "Coding Task Kit Draft",
+    "goal": "Prepare a structured implementation brief from fake project context and non-executable planning Skills.",
+    "description": "Combines public-safe project context with implementation planning, bug structuring, and security review Skills.",
+    "contextPacks": [
+      "claude-code-project-pack"
+    ],
+    "skills": [
+      "implementation-planning-skill",
+      "bug-report-structuring-skill",
+      "security-review-skill"
+    ],
+    "target": "codex",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Keep all project details public-safe until the draft is approved."
+  ],
+  "assets": {
+    "accentColor": "#38bdf8"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

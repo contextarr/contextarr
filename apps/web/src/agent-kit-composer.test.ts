@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyAgentKitTemplateToDraft,
   buildAgentKitPreviewMetadata,
   buildAgentKitSaveRequest,
   filterAgentKitPacks,
@@ -11,7 +12,7 @@ import {
   toggleSelectedId,
   validateAgentKitDraft
 } from "./agent-kit-composer";
-import type { PackSummary, SkillSummary } from "./types";
+import type { AgentKitTemplateSummary, PackSummary, SkillSummary } from "./types";
 
 describe("Agent Kit composer utilities", () => {
   it("filters selectable context packs and skills", () => {
@@ -115,6 +116,20 @@ describe("Agent Kit composer utilities", () => {
     expect(isAgentKitSaveDisabled(validDraft({ selectedSkillIds: [] }), packs, skills)).toBe(true);
     expect(isAgentKitSaveDisabled(validDraft({ selectedPackIds: ["missing-pack"] }), packs, skills)).toBe(true);
   });
+
+  it("applies Agent Kit templates as reviewed draft state", () => {
+    expect(applyAgentKitTemplateToDraft(template)).toEqual({
+      name: "Support Ticket Kit Draft",
+      goal: "Answer support tickets.",
+      description: "Use local source context.",
+      selectedPackIds: ["support-pack"],
+      selectedSkillIds: ["support-skill"],
+      target: "chatgpt",
+      format: "markdown",
+      redactionMode: "redacted",
+      tokenBudget: 12000
+    });
+  });
 });
 
 function validDraft(overrides: Partial<Parameters<typeof validateAgentKitDraft>[0]> = {}): Parameters<typeof validateAgentKitDraft>[0] {
@@ -142,6 +157,33 @@ const skills: SkillSummary[] = [
   skill({ id: "claude-skill", name: "Claude Skill", targets: ["chatgpt"] }),
   skill({ id: "deprecated-skill", name: "Deprecated Skill", trustLevel: "deprecated", targets: ["chatgpt"] })
 ];
+
+const template: AgentKitTemplateSummary = {
+  id: "support-ticket-kit-template",
+  name: "Support Ticket Kit Template",
+  version: "1.0.0",
+  description: "Demo template.",
+  category: "support",
+  trustLevel: "official",
+  accentColor: "#f97316",
+  suggestedAgentKit: {
+    id: "support-ticket-kit-draft",
+    name: "Support Ticket Kit Draft",
+    goal: "Answer support tickets.",
+    description: "Use local source context.",
+    contextPacks: ["support-pack"],
+    skills: ["support-skill"],
+    target: "chatgpt",
+    format: "markdown",
+    privacyMode: "redacted",
+    excludeTags: ["secret", "never_export", "imported_draft"],
+    tokenBudget: 12000
+  },
+  validation: {
+    errors: 0,
+    warnings: 0
+  }
+};
 
 function pack(overrides: Partial<PackSummary>): PackSummary {
   return {

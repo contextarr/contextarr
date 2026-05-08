@@ -364,6 +364,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     skillsDir: demoSkillsDir,
     importedSkillsDir: path.join(repoRoot, "imported-skills"),
     agentKitsDir: demoAgentKitsDir,
+    agentKitTemplatesDir: path.join(repoRoot, "agent-kit-templates"),
     databasePath: ":memory:",
     localImportsEnabled: false,
     rescanOnStart: true,

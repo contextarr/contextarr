@@ -192,8 +192,16 @@
 - Block scripts, executable files, unsafe filenames, shell-command patterns, and credential-like content.
 - Status: complete.
 
+## Phase 27: Agent Kit Templates
+
+- Add public-safe data-only Agent Kit templates under `agent-kit-templates/`.
+- Validate template schemas, references, safety flags, and text scans.
+- Expose read-only template list/detail API endpoints.
+- Allow template create requests to write unreviewed local draft Agent Kits under `CONTEXTARR_AGENT_KITS_DIR`.
+- Prefill the Agent Kit Composer from templates while requiring user review before save.
+- Status: complete.
+
 ## Later Only
 
-- Agent Kit templates.
 - Signing and trust model research.
 - Private team registry prototype.

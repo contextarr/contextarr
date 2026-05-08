@@ -1,0 +1,58 @@
+{
+  "id": "support-ticket-kit-template",
+  "name": "Support Ticket Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit that turns fake support notes into clear ticket drafts.",
+  "category": "support",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "support-ticket-kit-draft",
+    "name": "Support Ticket Kit Draft",
+    "goal": "Create support-ticket drafts from fake internal knowledge and product context.",
+    "description": "Combines fake support and product context with support writing and bug structuring Skills.",
+    "contextPacks": [
+      "internal-support-kb-pack",
+      "fake-product-line-pack"
+    ],
+    "skills": [
+      "support-ticket-writing-skill",
+      "bug-report-structuring-skill"
+    ],
+    "target": "chatgpt",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Use fake support context only."
+  ],
+  "assets": {
+    "accentColor": "#f97316"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

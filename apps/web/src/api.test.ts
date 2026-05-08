@@ -256,6 +256,50 @@ describe("Contextarr API client", () => {
     expect(serialized).not.toContain("..\\\\");
   });
 
+  it("reads Agent Kit templates and posts template create requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/create")) {
+          return jsonResponse({ id: "kit-from-template", message: "saved" });
+        }
+        if (String(url).endsWith("/coding-task-kit-template")) {
+          return jsonResponse({ id: "coding-task-kit-template", name: "Coding Task Kit Template" });
+        }
+        return jsonResponse({ templates: [{ id: "coding-task-kit-template" }] });
+      }
+    });
+
+    await expect(client.getAgentKitTemplates()).resolves.toEqual([{ id: "coding-task-kit-template" }]);
+    await expect(client.getAgentKitTemplate("coding-task-kit-template")).resolves.toMatchObject({
+      name: "Coding Task Kit Template"
+    });
+    await expect(
+      client.createAgentKitFromTemplate("coding-task-kit-template", {
+        id: "kit-from-template",
+        name: "Kit From Template",
+        contextPacks: ["pack-1"],
+        skills: ["skill-1"],
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted"
+      })
+    ).resolves.toMatchObject({ id: "kit-from-template" });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/agent-kit-templates",
+      "/api/agent-kit-templates/coding-task-kit-template",
+      "/api/agent-kit-templates/coding-task-kit-template/create"
+    ]);
+    expect(requests[2].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    expect(JSON.parse(String(requests[2].init?.body))).toMatchObject({
+      id: "kit-from-template",
+      contextPacks: ["pack-1"],
+      skills: ["skill-1"]
+    });
+  });
+
   it("reads pack health and review item routes", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

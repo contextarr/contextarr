@@ -38,6 +38,7 @@ export {
 } from "./indexer";
 export { loadPacks } from "./pack-loader";
 export { loadAgentKits } from "./agent-kit-loader";
+export { getAgentKitTemplate, loadAgentKitTemplates } from "./agent-kit-template-loader";
 export { loadSkills } from "./skill-loader";
 export type {
   AgentKitSummary,

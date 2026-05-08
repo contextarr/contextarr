@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentKitHealthResponse,
+  AgentKitTemplateSummary,
   HealthResponse,
   PackSummary,
   ReviewItem,
@@ -47,6 +48,9 @@ const mocks = vi.hoisted(() => {
       getAgentKitHealth: vi.fn(),
       getAgentKitExportPreview: vi.fn(),
       saveAgentKit: vi.fn(),
+      getAgentKitTemplates: vi.fn(),
+      getAgentKitTemplate: vi.fn(),
+      createAgentKitFromTemplate: vi.fn(),
       getExportPreview: vi.fn(),
       getSkillExportPreview: vi.fn(),
       composePreview: vi.fn(),
@@ -136,6 +140,12 @@ describe("App Skill UI routes", () => {
     mocks.apiClient.getAgentKitSkills.mockResolvedValue([skillFixture()]);
     mocks.apiClient.getAgentKitHealth.mockResolvedValue(agentKitHealthFixture());
     mocks.apiClient.getAgentKitExportPreview.mockResolvedValue(agentKitPreviewFixture());
+    mocks.apiClient.getAgentKitTemplates.mockResolvedValue([agentKitTemplateFixture()]);
+    mocks.apiClient.getAgentKitTemplate.mockResolvedValue(agentKitTemplateFixture());
+    mocks.apiClient.createAgentKitFromTemplate.mockResolvedValue({
+      id: "coding-task-kit-draft",
+      message: "Agent Kit saved locally."
+    });
     mocks.apiClient.saveAgentKit.mockResolvedValue({
       id: "implementation-support-kit",
       message: "Agent Kit saved locally."
@@ -369,10 +379,12 @@ describe("App Skill UI routes", () => {
   });
 
   it("renders the Agent Kit Composer and saves selected packs and skills", async () => {
+    mocks.apiClient.getAgentKitTemplates.mockImplementation(() => new Promise(() => {}));
     mountApp("#/composer/agent-kit");
 
     await waitForText("Agent Kit Composer");
     await waitForText("Kit Setup");
+    await flushPendingUpdates();
     const saveButton = getButton("Save Agent Kit");
     expect(saveButton.disabled).toBe(true);
 
@@ -381,8 +393,9 @@ describe("App Skill UI routes", () => {
     await flushPendingUpdates();
     expect(getButton("Save Agent Kit").disabled).toBe(false);
 
-    clickButton("Save Agent Kit");
+    await clickButtonAndFlush("Save Agent Kit");
     await waitForText("Agent Kit saved locally.");
+    await flushPendingUpdates();
 
     expect(mocks.apiClient.saveAgentKit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -405,6 +418,35 @@ describe("App Skill UI routes", () => {
     expect(serialized).not.toContain("..\\\\");
     const openLink = Array.from(document.querySelectorAll("a")).find((link) => link.textContent?.includes("Open implementation-support-kit"));
     expect(openLink?.getAttribute("href")).toBe("#/agent-kits/implementation-support-kit");
+  });
+
+  it("prefills the Agent Kit Composer from templates before save", async () => {
+    mountApp("#/composer/agent-kit");
+
+    await waitForText("Coding Task Kit Template");
+    await flushPendingUpdates();
+    selectOption("Start from scratch", "coding-task-kit-template");
+    await flushPendingUpdates();
+
+    expect(document.body.textContent).toContain("Template applied as an unreviewed local draft.");
+    expect(getButton("Save Agent Kit").disabled).toBe(false);
+    await clickButtonAndFlush("Save Agent Kit");
+    await waitForText("Agent Kit saved locally.");
+    await flushPendingUpdates();
+
+    expect(mocks.apiClient.createAgentKitFromTemplate).toHaveBeenCalledWith(
+      "coding-task-kit-template",
+      expect.objectContaining({
+        id: "coding-task-kit-draft",
+        name: "Coding Task Kit Draft",
+        goal: "Prepare a coding task brief.",
+        contextPacks: ["ai-workstation-pack"],
+        skills: ["support-ticket-writing-skill"],
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted"
+      })
+    );
   });
 
   it("renders the Agent Kit detail route", async () => {
@@ -579,6 +621,18 @@ function clickButton(label: string): void {
   expect(button).toBeTruthy();
   act(() => {
     button?.click();
+  });
+}
+
+async function clickButtonAndFlush(label: string): Promise<void> {
+  const button = Array.from(document.querySelectorAll("button")).find(
+    (item) => !item.disabled && item.textContent?.trim() === label
+  );
+  expect(button).toBeTruthy();
+  await act(async () => {
+    button?.click();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -848,6 +902,36 @@ function agentKitSummaryFixture() {
     updatedAt: detail.updatedAt,
     target: detail.target,
     privacyMode: detail.privacyMode
+  };
+}
+
+function agentKitTemplateFixture(): AgentKitTemplateSummary {
+  return {
+    id: "coding-task-kit-template",
+    name: "Coding Task Kit Template",
+    version: "1.0.0",
+    description: "Public-safe template for coding tasks.",
+    category: "coding",
+    trustLevel: "official",
+    accentColor: "#38bdf8",
+    suggestedAgentKit: {
+      id: "coding-task-kit-draft",
+      name: "Coding Task Kit Draft",
+      goal: "Prepare a coding task brief.",
+      description: "Use local source context.",
+      contextPacks: ["ai-workstation-pack"],
+      skills: ["support-ticket-writing-skill"],
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      excludeTags: ["secret", "never_export", "imported_draft"],
+      tokenBudget: 12000
+    },
+    safetyNotes: ["Review the draft before export."],
+    validation: {
+      errors: 0,
+      warnings: 0
+    }
   };
 }
 

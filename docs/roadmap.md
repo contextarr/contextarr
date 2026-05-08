@@ -19,6 +19,7 @@ Contextarr currently supports:
 - Research Delta foundation for Context Packs: source license/hash/freshness metadata, deterministic validation reports, export readiness, redaction warning counts, and assistant handoff profile targets.
 - Read-only MCP tools for Skills and Agent Kits, including scoped Agent Kit context search and Agent Kit export previews.
 - Local Skill importers for draft Skill folders, gated local API writes, and a dashboard Collector flow.
+- Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
 
 ## Second PRD Direction
 
@@ -47,6 +48,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 24R: Research Delta foundation catch-up. Complete.
 - Phase 25: Read-only MCP for Skills and Agent Kits. Complete.
 - Phase 26: Local Skill importers. Complete.
+- Phase 27: Agent Kit templates. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -54,7 +56,6 @@ Contextarr prepares Agent Kits. It does not run them.
 
 ## Deferred
 
-- Phase 27: Agent Kit templates.
 - Phase 28: Signing and trust model research.
 - Phase 29: Private team registry prototype.
 - Web importer UI.

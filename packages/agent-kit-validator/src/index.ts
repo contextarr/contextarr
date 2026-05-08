@@ -8,6 +8,7 @@ import {
   agentKitCompatibilityRulesSchema,
   agentKitExportProfileSchema,
   agentKitManifestSchema,
+  agentKitTemplateSchema,
   contextPackManifestSchema,
   recordFrontmatterSchema,
   redactionRulesSchema,
@@ -17,6 +18,7 @@ import {
   type AgentKitCompatibilityRules,
   type AgentKitExportProfile,
   type AgentKitManifest,
+  type AgentKitTemplate,
   type ContextPackManifest,
   type RecordFrontmatter,
   type SkillInstructionFrontmatter,
@@ -46,7 +48,26 @@ export interface AgentKitValidationResult {
   };
 }
 
+export interface AgentKitTemplateValidationResult {
+  templatePath: string;
+  templateId?: string;
+  valid: boolean;
+  template?: AgentKitTemplate;
+  issues: AgentKitValidationIssue[];
+  summary: {
+    errors: number;
+    warnings: number;
+    infos: number;
+  };
+}
+
 export interface ValidateAgentKitOptions {
+  contextPacksDir?: string;
+  skillsDir?: string;
+  scanText?: boolean;
+}
+
+export interface ValidateAgentKitTemplateOptions {
   contextPacksDir?: string;
   skillsDir?: string;
   scanText?: boolean;
@@ -194,6 +215,67 @@ export function validateAgentKit(
   return finish(resolvedAgentKitPath, manifest.id, issues);
 }
 
+export function validateAgentKitTemplate(
+  templatePath: string,
+  options: ValidateAgentKitTemplateOptions = {}
+): AgentKitTemplateValidationResult {
+  const resolvedTemplatePath = path.resolve(templatePath);
+  const issues: AgentKitValidationIssue[] = [];
+
+  if (!fs.existsSync(resolvedTemplatePath)) {
+    throw new AgentKitReadError(`Agent Kit template path does not exist: ${displayPath(resolvedTemplatePath)}`);
+  }
+
+  const stat = fs.statSync(resolvedTemplatePath);
+  const templateRoot = stat.isDirectory() ? resolvedTemplatePath : path.dirname(resolvedTemplatePath);
+  const templateFile = stat.isDirectory()
+    ? path.join(resolvedTemplatePath, "contextarr-agent-kit-template.json")
+    : resolvedTemplatePath;
+
+  if (!stat.isDirectory() && path.basename(templateFile) !== "contextarr-agent-kit-template.json") {
+    addIssue(
+      issues,
+      "error",
+      "agent_kit_template.invalid_file",
+      "Agent Kit templates must use contextarr-agent-kit-template.json.",
+      path.basename(templateFile)
+    );
+  }
+
+  const allFiles = stat.isDirectory() ? listFiles(templateRoot, templateRoot, issues) : [templateFile];
+  scanFileTypes(templateRoot, allFiles, issues);
+
+  const rawTemplate = readJsonFile(templateRoot, templateFile, issues, "agent_kit_template");
+  if (rawTemplate) {
+    scanReservedKeys(rawTemplate, issues, "contextarr-agent-kit-template.json");
+    validateExecutionClaims(rawTemplate, issues, "contextarr-agent-kit-template.json");
+  }
+
+  const template = rawTemplate
+    ? parseSchemaData(agentKitTemplateSchema, rawTemplate, issues, "agent_kit_template.schema", "contextarr-agent-kit-template.json")
+    : undefined;
+
+  if (!template) {
+    if (!fs.existsSync(templateFile)) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_template.missing",
+        "Missing contextarr-agent-kit-template.json.",
+        "contextarr-agent-kit-template.json"
+      );
+    }
+    scanTextFiles(templateRoot, allFiles, issues, options.scanText ?? true);
+    return finishTemplate(templateRoot, undefined, undefined, issues);
+  }
+
+  validateTemplateSafety(template, issues);
+  validateTemplateReferences(templateRoot, template, options, issues);
+  scanTextFiles(templateRoot, allFiles, issues, options.scanText ?? true);
+
+  return finishTemplate(templateRoot, template.id, template, issues);
+}
+
 export function formatAgentKitValidationResult(result: AgentKitValidationResult): string {
   const lines: string[] = [];
   const status = result.valid ? "Agent Kit validation passed" : "Agent Kit validation failed";
@@ -210,6 +292,146 @@ export function formatAgentKitValidationResult(result: AgentKitValidationResult)
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+export function formatAgentKitTemplateValidationResult(result: AgentKitTemplateValidationResult): string {
+  const lines: string[] = [];
+  const status = result.valid ? "Agent Kit template validation passed" : "Agent Kit template validation failed";
+
+  lines.push(`${status}: ${result.templateId ?? result.templatePath}`);
+  lines.push(
+    `Summary: ${result.summary.errors} error(s), ${result.summary.warnings} warning(s), ${result.summary.infos} info(s)`
+  );
+
+  for (const issue of result.issues) {
+    const location = issue.file ? ` ${issue.file}` : "";
+    const fieldPath = issue.path ? ` (${issue.path})` : "";
+    lines.push(`[${issue.severity.toUpperCase()}] ${issue.code}${location}${fieldPath}: ${issue.message}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function validateTemplateSafety(template: AgentKitTemplate, issues: AgentKitValidationIssue[]): void {
+  if (template.containsPersonalData !== false) {
+    addIssue(
+      issues,
+      "error",
+      "agent_kit_template.personal_data",
+      "Agent Kit templates must not contain personal data.",
+      "contextarr-agent-kit-template.json",
+      "containsPersonalData"
+    );
+  }
+
+  if (template.containsExecutableCode !== false || template.requiresNetwork !== false) {
+    addIssue(
+      issues,
+      "error",
+      "agent_kit_template.unsafe_capability",
+      "Agent Kit templates must be non-executable and must not require network access.",
+      "contextarr-agent-kit-template.json"
+    );
+  }
+
+  const requiredExcludeTags = ["secret", "never_export", "imported_draft"];
+  const missingExcludeTags = requiredExcludeTags.filter((tag) => !template.suggestedAgentKit.excludeTags.includes(tag));
+  if (missingExcludeTags.length > 0) {
+    addIssue(
+      issues,
+      "error",
+      "agent_kit_template.exclude_tags_missing",
+      `Agent Kit templates must exclude ${missingExcludeTags.join(", ")} by default.`,
+      "contextarr-agent-kit-template.json",
+      "suggestedAgentKit.excludeTags"
+    );
+  }
+}
+
+function validateTemplateReferences(
+  templateRoot: string,
+  template: AgentKitTemplate,
+  options: ValidateAgentKitTemplateOptions,
+  issues: AgentKitValidationIssue[]
+): void {
+  addDuplicateTemplateReferenceIssues(template.suggestedAgentKit.contextPacks, "contextPacks", issues);
+  addDuplicateTemplateReferenceIssues(template.suggestedAgentKit.skills, "skills", issues);
+
+  for (const packId of template.suggestedAgentKit.contextPacks) {
+    const packPath = findReferencePath(templateRoot, packId, options.contextPacksDir, ["demo-packs"], "contextarr-pack.json");
+    if (!packPath) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_template.context_pack_missing",
+        `Referenced Context Pack "${packId}" was not found.`,
+        "contextarr-agent-kit-template.json",
+        "suggestedAgentKit.contextPacks"
+      );
+      continue;
+    }
+
+    try {
+      const result = validatePack(packPath, { scanText: false });
+      if (!result.valid) {
+        addIssue(
+          issues,
+          "error",
+          "agent_kit_template.context_pack_invalid",
+          `Referenced Context Pack "${packId}" has ${result.summary.errors} validation error(s).`,
+          "contextarr-agent-kit-template.json",
+          "suggestedAgentKit.contextPacks"
+        );
+      }
+    } catch (error) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_template.context_pack_read_failed",
+        errorMessage(error),
+        "contextarr-agent-kit-template.json",
+        "suggestedAgentKit.contextPacks"
+      );
+    }
+  }
+
+  for (const skillId of template.suggestedAgentKit.skills) {
+    const skillPath = findReferencePath(templateRoot, skillId, options.skillsDir, ["demo-skills"], "contextarr-skill.json");
+    if (!skillPath) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_template.skill_missing",
+        `Referenced Skill "${skillId}" was not found.`,
+        "contextarr-agent-kit-template.json",
+        "suggestedAgentKit.skills"
+      );
+      continue;
+    }
+
+    try {
+      const result = validateSkill(skillPath, { scanText: false });
+      if (!result.valid) {
+        addIssue(
+          issues,
+          "error",
+          "agent_kit_template.skill_invalid",
+          `Referenced Skill "${skillId}" has ${result.summary.errors} validation error(s).`,
+          "contextarr-agent-kit-template.json",
+          "suggestedAgentKit.skills"
+        );
+      }
+    } catch (error) {
+      addIssue(
+        issues,
+        "error",
+        "agent_kit_template.skill_read_failed",
+        errorMessage(error),
+        "contextarr-agent-kit-template.json",
+        "suggestedAgentKit.skills"
+      );
+    }
+  }
 }
 
 function validateRawManifestSafety(rawManifest: unknown, issues: AgentKitValidationIssue[]): void {
@@ -1269,6 +1491,27 @@ function addDuplicateReferenceIssues(
   }
 }
 
+function addDuplicateTemplateReferenceIssues(
+  ids: string[],
+  field: "contextPacks" | "skills",
+  issues: AgentKitValidationIssue[]
+): void {
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) {
+      addIssue(
+        issues,
+        "error",
+        `agent_kit_template.duplicate_${field}`,
+        `Duplicate ${field} reference "${id}".`,
+        "contextarr-agent-kit-template.json",
+        `suggestedAgentKit.${field}`
+      );
+    }
+    seen.add(id);
+  }
+}
+
 function isSensitiveObject(item: RecordFrontmatter | SkillInstructionFrontmatter): boolean {
   return item.privacy !== "public_safe" || item.tags.some((tag) => sensitiveTags.has(tag));
 }
@@ -1295,6 +1538,28 @@ function finish(
   return {
     agentKitPath: displayPath(agentKitPath),
     agentKitId,
+    valid: summary.errors === 0,
+    issues,
+    summary
+  };
+}
+
+function finishTemplate(
+  templatePath: string,
+  templateId: string | undefined,
+  template: AgentKitTemplate | undefined,
+  issues: AgentKitValidationIssue[]
+): AgentKitTemplateValidationResult {
+  const summary = {
+    errors: issues.filter((issue) => issue.severity === "error").length,
+    warnings: issues.filter((issue) => issue.severity === "warning").length,
+    infos: issues.filter((issue) => issue.severity === "info").length
+  };
+
+  return {
+    templatePath: displayPath(templatePath),
+    templateId,
+    template,
     valid: summary.errors === 0,
     issues,
     summary

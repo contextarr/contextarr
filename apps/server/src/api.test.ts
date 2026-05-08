@@ -14,6 +14,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
+const agentKitTemplatesDir = path.join(repoRoot, "agent-kit-templates");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 function createTestContext(
@@ -35,6 +36,7 @@ function createTestContext(
     importedSkillsDir,
     agentKitsDir,
     demoAgentKitsDir: resolvedDemoAgentKitsDir,
+    agentKitTemplatesDir,
     databasePath: ":memory:",
     apiToken,
     localImportsEnabled: false,
@@ -1155,6 +1157,154 @@ describe("Contextarr API", () => {
     );
     await app.close();
     db.close();
+  });
+
+  it("GET /api/agent-kit-templates returns public-safe template summaries and detail", async () => {
+    const app = createApp({ config, db });
+    const list = await app.inject({ method: "GET", url: "/api/agent-kit-templates" });
+    const detail = await app.inject({ method: "GET", url: "/api/agent-kit-templates/coding-task-kit-template" });
+
+    expect(list.statusCode).toBe(200);
+    expect(list.json().templates).toHaveLength(8);
+    expect(list.json().skipped).toEqual([]);
+    expect(list.json().templates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "coding-task-kit-template",
+          category: "coding",
+          suggestedAgentKit: expect.objectContaining({
+            id: "coding-task-kit-draft",
+            contextPacks: ["claude-code-project-pack"],
+            skills: ["implementation-planning-skill", "bug-report-structuring-skill", "security-review-skill"],
+            target: "codex",
+            format: "markdown",
+            privacyMode: "redacted",
+            excludeTags: ["secret", "never_export", "imported_draft"]
+          })
+        })
+      ])
+    );
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json()).toMatchObject({
+      id: "coding-task-kit-template",
+      safetyNotes: expect.arrayContaining(["Review the draft before export."])
+    });
+    expect(JSON.stringify(detail.json())).not.toContain(agentKitTemplatesDir);
+    await app.close();
+    db.close();
+  });
+
+  it("POST /api/agent-kit-templates/:id/create writes an unreviewed local draft Agent Kit", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: {
+        id: "phase27-coding-template-kit",
+        name: "Phase 27 Coding Template Kit"
+      }
+    });
+    const savedPath = fixtureContext.db
+      .prepare("SELECT agent_kit_path FROM agent_kits WHERE id = ?")
+      .pluck()
+      .get("phase27-coding-template-kit") as string;
+    const manifest = JSON.parse(fs.readFileSync(path.join(savedPath, "contextarr-agent-kit.json"), "utf8"));
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      ok: true,
+      id: "phase27-coding-template-kit",
+      template: {
+        id: "coding-task-kit-template"
+      },
+      agentKit: {
+        id: "phase27-coding-template-kit",
+        trustLevel: "unreviewed"
+      },
+      validation: {
+        errors: 0
+      }
+    });
+    expectPathInside(agentKitsDir, savedPath);
+    expect(manifest).toMatchObject({
+      id: "phase27-coding-template-kit",
+      name: "Phase 27 Coding Template Kit",
+      trustLevel: "unreviewed",
+      lastReviewedAt: null,
+      author: "Contextarr Template",
+      contextPacks: ["claude-code-project-pack"],
+      skills: ["implementation-planning-skill", "bug-report-structuring-skill", "security-review-skill"],
+      containsExecutableCode: false,
+      requiresNetwork: false
+    });
+    expect(fs.existsSync(path.join(demoAgentKitsDir, "phase27-coding-template-kit"))).toBe(false);
+    expect(JSON.stringify(response.json())).not.toContain(agentKitsDir);
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/agent-kit-templates/:id/create rejects invalid, missing, duplicate, and protected requests", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const invalidField = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: { telemetry: true }
+    });
+    const missingTemplate = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/missing-template/create",
+      payload: {}
+    });
+    const missingReference = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: { id: "missing-template-ref-kit", contextPacks: ["missing-pack"] }
+    });
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: { id: "duplicate-template-kit" }
+    });
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: { id: "duplicate-template-kit" }
+    });
+
+    expect(invalidField.statusCode).toBe(400);
+    expect(invalidField.json()).toMatchObject({ error: "invalid_agent_kit_template_request" });
+    expect(missingTemplate.statusCode).toBe(404);
+    expect(missingReference.statusCode).toBe(404);
+    expect(missingReference.json()).toMatchObject({ error: "missing_references", missingContextPackIds: ["missing-pack"] });
+    expect(first.statusCode).toBe(201);
+    expect(duplicate.statusCode).toBe(409);
+    await app.close();
+    fixtureContext.db.close();
+
+    const authedContext = createTestContext("test-token", demoPacksDir, { agentKitsDir: createTempAgentKitsDir() });
+    const authedApp = createApp(authedContext);
+    const blocked = await authedApp.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      payload: { id: "blocked-template-kit" }
+    });
+    const allowed = await authedApp.inject({
+      method: "POST",
+      url: "/api/agent-kit-templates/coding-task-kit-template/create",
+      headers: { authorization: "Bearer test-token" },
+      payload: { id: "allowed-template-kit" }
+    });
+
+    expect(blocked.statusCode).toBe(401);
+    expect(allowed.statusCode).toBe(201);
+    await authedApp.close();
+    authedContext.db.close();
   });
 
   it("POST /api/agent-kits saves a validated local Agent Kit and refreshes the listing", async () => {

@@ -1,0 +1,58 @@
+{
+  "id": "security-review-kit-template",
+  "name": "Security Review Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit for read-only review of fictional project and operations notes.",
+  "category": "security",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "security-review-kit-draft",
+    "name": "Security Review Kit Draft",
+    "goal": "Prepare a source-backed safety review brief from fake project and homelab context.",
+    "description": "Combines fake project and media-server context with security review and troubleshooting Skills.",
+    "contextPacks": [
+      "claude-code-project-pack",
+      "jellyfin-server-pack"
+    ],
+    "skills": [
+      "security-review-skill",
+      "homelab-troubleshooting-skill"
+    ],
+    "target": "codex",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Keep the review read-only and evidence-based."
+  ],
+  "assets": {
+    "accentColor": "#ef4444"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

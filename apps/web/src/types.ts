@@ -102,6 +102,47 @@ export interface AgentKitSummary {
   privacyMode: string;
 }
 
+export interface AgentKitTemplateSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  category: string;
+  trustLevel: string;
+  accentColor?: string | null;
+  suggestedAgentKit: {
+    id: string;
+    name: string;
+    goal: string;
+    description: string;
+    contextPacks: string[];
+    skills: string[];
+    target: string;
+    format: AgentKitExportFormat;
+    privacyMode: AgentKitPrivacyMode;
+    excludeTags: string[];
+    tokenBudget?: number | null;
+  };
+  safetyNotes?: string[];
+  validation: {
+    errors: number;
+    warnings: number;
+  };
+}
+
+export interface AgentKitTemplateCreateRequest {
+  id?: string;
+  name?: string;
+  goal?: string;
+  description?: string;
+  contextPacks?: string[];
+  skills?: string[];
+  target?: string;
+  format?: AgentKitExportFormat;
+  privacyMode?: AgentKitPrivacyMode;
+  tokenBudget?: number;
+}
+
 export interface AgentKitContextPackSummary {
   id: string;
   name: string;

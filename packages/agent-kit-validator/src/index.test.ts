@@ -3,10 +3,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatAgentKitValidationResult, validateAgentKit } from "./index";
+import {
+  formatAgentKitTemplateValidationResult,
+  formatAgentKitValidationResult,
+  validateAgentKit,
+  validateAgentKitTemplate
+} from "./index";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const fixturesDir = path.join(repoRoot, "packages/agent-kit-validator/test/fixtures");
+const templatesDir = path.join(repoRoot, "agent-kit-templates");
 const tempDirs: string[] = [];
 
 function fixture(name: string): string {
@@ -27,6 +33,67 @@ function copyFixtureToTemp(fixtureName: string, tempName: string): string {
 
 function replaceInFile(file: string, searchValue: string | RegExp, replaceValue: string): void {
   fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(searchValue, replaceValue), "utf8");
+}
+
+function writeTemplateFixture(data: Record<string, unknown>, extraFiles: Record<string, string> = {}): string {
+  const dir = path.join(tempDir(), String(data.id ?? "template-fixture"));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "contextarr-agent-kit-template.json"), `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  for (const [relativeFile, content] of Object.entries(extraFiles)) {
+    const file = path.join(dir, relativeFile);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, content, "utf8");
+  }
+  return dir;
+}
+
+function validTemplateFixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "valid-template",
+    name: "Valid Agent Kit Template",
+    version: "1.0.0",
+    description: "Public-safe test template.",
+    category: "testing",
+    visibility: "local",
+    trustLevel: "official",
+    author: "Contextarr Tests",
+    license: "MIT",
+    createdAt: "2026-05-08T00:00:00Z",
+    updatedAt: "2026-05-08T00:00:00Z",
+    lastReviewedAt: "2026-05-08T00:00:00Z",
+    containsPersonalData: false,
+    containsExecutableCode: false,
+    requiresNetwork: false,
+    permissions: {
+      readVault: false,
+      writeDrafts: false,
+      runCommands: false,
+      networkAccess: false,
+      browserAutomation: false,
+      toolExecution: false
+    },
+    suggestedAgentKit: {
+      id: "valid-template-kit",
+      name: "Valid Template Kit",
+      goal: "Create a public-safe draft Agent Kit for testing.",
+      description: "Combines fake Context Pack and Skill references.",
+      contextPacks: ["valid-minimal-pack"],
+      skills: ["valid-skill"],
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      excludeTags: ["secret", "never_export", "imported_draft"],
+      tokenBudget: 12000
+    },
+    safetyNotes: ["Review the draft before export."],
+    assets: {
+      accentColor: "#38bdf8"
+    },
+    compatibility: {
+      contextarr: ">=0.3.0"
+    },
+    ...overrides
+  };
 }
 
 afterEach(() => {
@@ -395,5 +462,104 @@ sections:
 
     expect(result.valid).toBe(false);
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit.reserved_capability" }));
+  });
+
+  it("validates the committed public-safe Agent Kit templates", () => {
+    const templateDirs = fs.readdirSync(templatesDir, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+
+    expect(templateDirs.map((entry) => entry.name).sort()).toEqual([
+      "coding-task-kit-template",
+      "contractor-handoff-kit-template",
+      "homelab-troubleshooting-kit-template",
+      "internal-kb-assistant-kit-template",
+      "product-comparison-kit-template",
+      "research-brief-kit-template",
+      "security-review-kit-template",
+      "support-ticket-kit-template"
+    ]);
+
+    for (const templateDir of templateDirs) {
+      const result = validateAgentKitTemplate(path.join(templatesDir, templateDir.name), {
+        contextPacksDir: path.join(repoRoot, "demo-packs"),
+        skillsDir: path.join(repoRoot, "demo-skills")
+      });
+
+      expect(result.valid, formatAgentKitTemplateValidationResult(result)).toBe(true);
+      expect(result.summary).toMatchObject({ errors: 0, warnings: 0, infos: 0 });
+    }
+  });
+
+  it("fails Agent Kit templates with missing references", () => {
+    const dir = writeTemplateFixture(validTemplateFixture());
+    replaceInFile(path.join(dir, "contextarr-agent-kit-template.json"), /valid-minimal-pack/g, "missing-pack");
+    replaceInFile(path.join(dir, "contextarr-agent-kit-template.json"), /valid-skill/g, "missing-skill");
+
+    const result = validateAgentKitTemplate(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_template.context_pack_missing" }));
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_template.skill_missing" }));
+  });
+
+  it("fails unsafe Agent Kit template permissions and executable claims", () => {
+    const dir = writeTemplateFixture(
+      validTemplateFixture({
+        containsExecutableCode: true,
+        requiresNetwork: true,
+        permissions: {
+          readVault: false,
+          writeDrafts: false,
+          runCommands: true,
+          networkAccess: false,
+          browserAutomation: false,
+          toolExecution: false
+        }
+      })
+    );
+
+    const result = validateAgentKitTemplate(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_template.schema" }));
+  });
+
+  it("fails Agent Kit templates with invalid target or format", () => {
+    const template = validTemplateFixture();
+    template.suggestedAgentKit = {
+      ...(template.suggestedAgentKit as Record<string, unknown>),
+      target: "shell",
+      format: "binary"
+    };
+    const dir = writeTemplateFixture(template);
+
+    const result = validateAgentKitTemplate(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_template.schema" }));
+  });
+
+  it("fails Agent Kit templates with script files and private-data-like content", () => {
+    const dir = writeTemplateFixture(validTemplateFixture(), {
+      "tools/setup.js": "console.log('not allowed');\n",
+      "notes.md": "api_key = abcdefghijklmnop\n"
+    });
+
+    const result = validateAgentKitTemplate(dir, {
+      contextPacksDir: path.join(fixturesDir, "context-packs"),
+      skillsDir: path.join(fixturesDir, "skills")
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit.script_file" }));
+    expect(result.issues).toContainEqual(expect.objectContaining({ code: "agent_kit_scan.credential_pattern" }));
   });
 });

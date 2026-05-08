@@ -1,0 +1,58 @@
+{
+  "id": "product-comparison-kit-template",
+  "name": "Product Comparison Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit for fictional product comparison briefs.",
+  "category": "product",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "product-comparison-kit-draft",
+    "name": "Product Comparison Kit Draft",
+    "goal": "Compare fictional product options with public-safe support and product context.",
+    "description": "Combines fake product and support context with research synthesis and KB answering Skills.",
+    "contextPacks": [
+      "fake-product-line-pack",
+      "internal-support-kb-pack"
+    ],
+    "skills": [
+      "research-synthesis-skill",
+      "internal-kb-answering-skill"
+    ],
+    "target": "markdown",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Keep comparison claims tied to fake source material."
+  ],
+  "assets": {
+    "accentColor": "#fb7185"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

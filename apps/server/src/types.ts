@@ -21,6 +21,7 @@ export interface ServerConfig {
   importedSkillsDir: string;
   agentKitsDir: string;
   demoAgentKitsDir?: string;
+  agentKitTemplatesDir: string;
   databasePath: string;
   webDistDir?: string;
   apiToken?: string;

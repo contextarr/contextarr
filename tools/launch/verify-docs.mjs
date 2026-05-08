@@ -284,6 +284,29 @@ if (!failed) {
     fail("Root package scripts must include phase26:verify.");
   }
 
+  const requiredPhase27Text = [
+    "Phase 27",
+    "phase27:verify",
+    "CONTEXTARR_AGENT_KIT_TEMPLATES_DIR",
+    "agent-kit-templates/",
+    "GET /api/agent-kit-templates",
+    "POST /api/agent-kit-templates/:id/create",
+  ];
+  for (const text of requiredPhase27Text) {
+    if (!readme.includes(text) && !agentKits.includes(text) && !architecture.includes(text) && !securityModel.includes(text)) {
+      fail(`README or docs are missing Phase 27 text: ${text}`);
+    }
+  }
+  if (!roadmap.includes("Phase 27: Agent Kit templates. Complete.")) {
+    fail("Roadmap must mark Phase 27 complete.");
+  }
+  if (!agentKits.includes("Phase 27") || !agentKits.includes("Templates")) {
+    fail("Agent Kits docs must describe Phase 27 templates.");
+  }
+  if (!packageJson.scripts["phase27:verify"]) {
+    fail("Root package scripts must include phase27:verify.");
+  }
+
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
     fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");
   }

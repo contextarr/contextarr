@@ -1,0 +1,58 @@
+{
+  "id": "research-brief-kit-template",
+  "name": "Research Brief Kit Template",
+  "version": "1.0.0",
+  "description": "Public-safe template for creating a draft Agent Kit that summarizes fictional product and knowledge-base context.",
+  "category": "research",
+  "visibility": "local",
+  "trustLevel": "official",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-08T00:00:00Z",
+  "updatedAt": "2026-05-08T00:00:00Z",
+  "lastReviewedAt": "2026-05-08T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "suggestedAgentKit": {
+    "id": "research-brief-kit-draft",
+    "name": "Research Brief Kit Draft",
+    "goal": "Produce a concise research brief from fake product-line and support context.",
+    "description": "Combines fictional product and knowledge-base context with research synthesis and KB answering Skills.",
+    "contextPacks": [
+      "fake-product-line-pack",
+      "internal-support-kb-pack"
+    ],
+    "skills": [
+      "research-synthesis-skill",
+      "internal-kb-answering-skill"
+    ],
+    "target": "claude",
+    "format": "markdown",
+    "privacyMode": "redacted",
+    "excludeTags": [
+      "secret",
+      "never_export",
+      "imported_draft"
+    ],
+    "tokenBudget": 12000
+  },
+  "safetyNotes": [
+    "Review the draft before export.",
+    "Keep summaries grounded in listed sources."
+  ],
+  "assets": {
+    "accentColor": "#facc15"
+  },
+  "compatibility": {
+    "contextarr": ">=0.3.0"
+  }
+}

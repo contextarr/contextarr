@@ -17,6 +17,7 @@ describe("server config", () => {
 
     expect(config.agentKitsDir).toBe(path.join(root, "agent-kits"));
     expect(config.demoAgentKitsDir).toBe(path.join(root, "demo-agent-kits"));
+    expect(config.agentKitTemplatesDir).toBe(path.join(root, "agent-kit-templates"));
     expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
     expect(config.localImportsEnabled).toBe(false);
   });
