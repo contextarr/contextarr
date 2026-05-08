@@ -1,12 +1,18 @@
 import { spawnSync } from "node:child_process";
 
 const projectName = "contextarr-phase11-smoke";
-const baseUrl = "http://127.0.0.1:3210";
+const hostPort = process.env.CONTEXTARR_DOCKER_VERIFY_PORT ?? "33210";
+const baseUrl = `http://127.0.0.1:${hostPort}`;
+const composeEnv = {
+  ...process.env,
+  CONTEXTARR_DOCKER_PORT: hostPort,
+};
 
 function run(args) {
   const result = spawnSync("docker", ["compose", "-p", projectName, ...args], {
     stdio: "inherit",
     shell: process.platform === "win32",
+    env: composeEnv,
   });
 
   if (result.status !== 0) {
@@ -49,6 +55,7 @@ async function waitForHealth() {
 }
 
 async function verify() {
+  run(["down"]);
   run(["build"]);
   run(["up", "-d"]);
 

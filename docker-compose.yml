@@ -6,7 +6,7 @@ services:
       context: .
     image: contextarr:local-preview
     ports:
-      - "127.0.0.1:3210:3210"
+      - "127.0.0.1:${CONTEXTARR_DOCKER_PORT:-3210}:3210"
     environment:
       CONTEXTARR_HOST: 0.0.0.0
       CONTEXTARR_PORT: 3210

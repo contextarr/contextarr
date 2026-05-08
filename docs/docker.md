@@ -11,6 +11,20 @@ docker compose up
 
 Open `http://127.0.0.1:3210`.
 
+If `3210` is already in use, override only the host port:
+
+```bash
+CONTEXTARR_DOCKER_PORT=33210 docker compose up
+```
+
+PowerShell:
+
+```powershell
+$env:CONTEXTARR_DOCKER_PORT="33210"; docker compose up
+```
+
+Then open `http://127.0.0.1:33210`. The container still runs Contextarr on internal port `3210`.
+
 ## Service Defaults
 
 The Compose service runs one container:
@@ -19,6 +33,7 @@ The Compose service runs one container:
 - Built Vite web app served by the same Fastify process.
 - `./demo-packs` mounted read-only at `/app/demo-packs`.
 - SQLite stored in the `contextarr-data` Docker volume at `/app/data/contextarr.db`.
+- Optional host port override through `CONTEXTARR_DOCKER_PORT`.
 
 Container defaults:
 

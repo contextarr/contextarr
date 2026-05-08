@@ -47,6 +47,7 @@ if (!failed) {
   const security = read("docs/security.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
+  const combinedDocs = [readme, mcp, docker].join("\n");
 
   const requiredReadmeText = [
     "Phase 11",
@@ -68,15 +69,21 @@ if (!failed) {
   if (!mcp.includes("pnpm contextarr-mcp")) {
     fail("MCP docs must document pnpm contextarr-mcp.");
   }
-  if (mcp.includes("pnpm exec contextarr-mcp")) {
-    fail("MCP docs must not document pnpm exec contextarr-mcp.");
+  for (const forbidden of ["pnpm exec contextarr-mcp", "pnpm --filter @contextarr/mcp exec contextarr-mcp"]) {
+    if (combinedDocs.includes(forbidden)) {
+      fail(`Docs must not document the unsupported MCP command: ${forbidden}`);
+    }
   }
   if (Object.prototype.hasOwnProperty.call(mcpPackageJson, "bin")) {
     fail("apps/mcp/package.json must not reintroduce a private package bin.");
   }
 
-  if (!docker.includes("http://127.0.0.1:3210") || !docker.includes("CONTEXTARR_WEB_DIST_DIR")) {
-    fail("Docker docs must include the local URL and web dist env var.");
+  if (
+    !docker.includes("http://127.0.0.1:3210") ||
+    !docker.includes("CONTEXTARR_WEB_DIST_DIR") ||
+    !docker.includes("CONTEXTARR_DOCKER_PORT")
+  ) {
+    fail("Docker docs must include the local URL, web dist env var, and host port override.");
   }
 
   if (!security.includes("No telemetry") || !security.includes("No marketplace") || !security.includes("No executable packs")) {
