@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 17 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API, read-only Skill Library/detail UI, and deterministic Skill health/review items. Context Packs remain the core source-backed knowledge object; Agent Kits remain future work.
+Phase 18 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API, read-only Skill Library/detail UI, deterministic Skill health/review items, and profile-driven Skill export previews. Context Packs remain the core source-backed knowledge object; Agent Kits remain future work.
 
 ## Core Decisions
 
@@ -62,7 +62,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports. Phase 11 added same-origin serving of built web assets for the Docker preview. Phase 16 added read-only Skill Library and Skill detail screens with sanitized instruction and example rendering. Phase 17 extends the same health/review model to Skills with object-aware queue filtering and Skill health detail.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports. Phase 11 added same-origin serving of built web assets for the Docker preview. Phase 16 added read-only Skill Library and Skill detail screens with sanitized instruction and example rendering. Phase 17 extends the same health/review model to Skills with object-aware queue filtering and Skill health detail. Phase 18 adds Skill export previews, copy, and browser download through the same read-only export workbench.
 
 ## Renderer Direction
 
@@ -115,4 +115,4 @@ The second PRD adds Skills and future Agent Kits:
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, and Phase 17 adds deterministic Skill Health and object-aware review items. Agent Kit files remain future work. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.
+Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, and Phase 18 adds profile-driven Skill exports. Agent Kit files remain future work. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.

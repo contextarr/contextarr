@@ -1,0 +1,22 @@
+id: homelab-troubleshooting-skill-json
+name: Homelab Troubleshooting Skill JSON Export
+target: json
+format: json
+privacy_mode: redacted
+include:
+  instructions:
+    - homelab-troubleshooting-skill.symptom-map
+    - homelab-troubleshooting-skill.safe-checks
+    - homelab-troubleshooting-skill.recovery-note
+  examples:
+    - homelab-troubleshooting-skill.example-media-service-delay
+    - homelab-troubleshooting-skill.example-storage-warning
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

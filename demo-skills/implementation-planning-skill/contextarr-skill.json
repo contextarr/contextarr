@@ -31,7 +31,9 @@
     "chatgpt",
     "claude",
     "codex",
-    "generic_markdown"
+    "generic_markdown",
+    "claude_code",
+    "json"
   ],
   "inputs": [
     "prd_excerpt",

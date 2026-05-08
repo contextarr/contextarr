@@ -1,0 +1,22 @@
+id: security-review-skill-json
+name: Security Review Skill JSON Export
+target: json
+format: json
+privacy_mode: redacted
+include:
+  instructions:
+    - security-review-skill.review-surface
+    - security-review-skill.finding-format
+    - security-review-skill.boundary-checks
+  examples:
+    - security-review-skill.example-validator-review
+    - security-review-skill.example-docs-review
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

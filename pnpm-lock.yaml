@@ -141,6 +141,9 @@ importers:
       '@contextarr/schema':
         specifier: workspace:*
         version: link:../schema
+      '@contextarr/skill-validator':
+        specifier: workspace:*
+        version: link:../skill-validator
       gray-matter:
         specifier: ^4.0.3
         version: 4.0.3

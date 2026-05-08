@@ -16,9 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 17: Skill Health and Review Queue.
+This repository is in Phase 18: Skill Export Engine.
 
-The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, and deterministic Skill health/review items.
+The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, and read-only Skill export previews.
 
 Current scope:
 
@@ -67,6 +67,8 @@ Current scope:
 - `GET /api/search?type=skill&q=` for Skill-scoped local search.
 - Skill Library and Skill detail screens with sanitized instruction/example rendering.
 - Deterministic Skill Health v0, object-aware Review Queue items, and SQLite-only Skill review status actions.
+- Profile-driven Skill export generation for ChatGPT, Claude, Codex, Claude Code, Markdown, and JSON.
+- Skill export previews through CLI, local API, Skill detail, and the Export Center.
 
 Not included yet:
 
@@ -75,7 +77,6 @@ Not included yet:
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
 - Demo Agent Kits.
-- Skill export preview/generation.
 - Agent Kit UI/API/MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
 
@@ -199,7 +200,7 @@ Useful launch docs:
 pnpm install
 pnpm phase11:verify
 pnpm phase12:verify
-pnpm phase17:verify
+pnpm phase18:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
@@ -212,6 +213,13 @@ Render static HTML locally:
 ```bash
 pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/ai-workstation
 pnpm --filter @contextarr/cli contextarr render demo-packs --out rendered/demo-packs
+```
+
+Generate local exports:
+
+```bash
+pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated-exports/demo-packs
+pnpm --filter @contextarr/cli contextarr export demo-skills --all --out generated-exports/demo-skills
 ```
 
 Static HTML output is generated under ignored local folders such as `rendered/`.

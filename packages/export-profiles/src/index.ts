@@ -7,18 +7,29 @@ import {
   exportProfileSchema,
   recordFrontmatterSchema,
   redactionRulesSchema,
+  skillExportProfileSchema,
+  skillInstructionFrontmatterSchema,
+  skillManifestSchema,
+  skillSafetyRulesSchema,
   sourceMapSchema,
   type ContextPackManifest,
   type ExportProfile,
   type RecordFrontmatter,
   type RedactionRules,
+  type SkillExportProfile,
+  type SkillInstructionFrontmatter,
+  type SkillManifest,
+  type SkillSafetyRules,
   type Source
 } from "@contextarr/schema";
 import { validatePack } from "@contextarr/pack-validator";
+import { validateSkill } from "@contextarr/skill-validator";
 
 export type ExportWarningCode =
   | "redaction.pattern_invalid"
   | "redaction.warn"
+  | "skill_document.excluded"
+  | "skill_safety.pattern_matched"
   | "token_budget.exceeded";
 
 export interface ExportWarning {
@@ -75,6 +86,11 @@ export interface ExportProfileListing {
   profile: ExportProfile;
 }
 
+export interface SkillExportProfileListing {
+  skillId: string;
+  profile: SkillExportProfile;
+}
+
 export interface BuildPackExportOptions {
   packPath: string;
   profileId: string;
@@ -103,13 +119,36 @@ export interface BuildPackExportsOptions {
   generatedAt?: string;
 }
 
+export interface BuildSkillExportOptions {
+  skillPath: string;
+  profileId: string;
+  generatedAt?: string;
+}
+
+export interface BuildSkillExportsOptions {
+  skillPath: string;
+  profileIds?: string[];
+  generatedAt?: string;
+}
+
 export interface ListPackExportProfilesOptions {
   packPath: string;
+}
+
+export interface ListSkillExportProfilesOptions {
+  skillPath: string;
 }
 
 interface LoadedRecord {
   file: string;
   metadata: RecordFrontmatter;
+  body: string;
+}
+
+interface LoadedSkillDocument {
+  kind: "instruction" | "example";
+  file: string;
+  metadata: SkillInstructionFrontmatter;
   body: string;
 }
 
@@ -122,6 +161,16 @@ interface LoadedPackForExport {
   redactionRules: RedactionRules;
 }
 
+interface LoadedSkillForExport {
+  skillPath: string;
+  manifest: SkillManifest;
+  instructions: LoadedSkillDocument[];
+  examples: LoadedSkillDocument[];
+  sources: Source[];
+  exportProfiles: SkillExportProfile[];
+  safetyRules: SkillSafetyRules;
+}
+
 interface PreparedRecord {
   record: LoadedRecord;
   body: string;
@@ -131,8 +180,23 @@ interface PreparedComposedRecord extends PreparedRecord {
   pack: LoadedPackForExport;
 }
 
-const supportedTargets = new Set(["chatgpt", "claude", "codex", "markdown", "generic_markdown", "json", "json_records"]);
+interface PreparedSkillDocument {
+  document: LoadedSkillDocument;
+  body: string;
+}
+
+const supportedTargets = new Set([
+  "chatgpt",
+  "claude",
+  "claude_code",
+  "codex",
+  "markdown",
+  "generic_markdown",
+  "json",
+  "json_records"
+]);
 const defaultComposedExcludeTags = ["secret", "never_export", "imported_draft"];
+const defaultSkillRedactionTags = ["secret", "never_export", "imported_draft", "ai_draft"];
 
 export class ExportError extends Error {
   constructor(
@@ -152,6 +216,14 @@ export function listPackExportProfiles(options: ListPackExportProfilesOptions): 
   }));
 }
 
+export function listSkillExportProfiles(options: ListSkillExportProfilesOptions): SkillExportProfileListing[] {
+  const skill = loadSkillForExport(options.skillPath);
+  return skill.exportProfiles.map((profile) => ({
+    skillId: skill.manifest.id,
+    profile
+  }));
+}
+
 export function buildPackExports(options: BuildPackExportsOptions): ExportArtifact[] {
   const pack = loadPackForExport(options.packPath);
   const profileIds = options.profileIds ?? pack.exportProfiles.map((profile) => profile.id);
@@ -159,9 +231,21 @@ export function buildPackExports(options: BuildPackExportsOptions): ExportArtifa
   return profileIds.map((profileId) => buildExportFromLoadedPack(pack, profileId, options.generatedAt));
 }
 
+export function buildSkillExports(options: BuildSkillExportsOptions): ExportArtifact[] {
+  const skill = loadSkillForExport(options.skillPath);
+  const profileIds = options.profileIds ?? skill.exportProfiles.map((profile) => profile.id);
+
+  return profileIds.map((profileId) => buildExportFromLoadedSkill(skill, profileId, options.generatedAt));
+}
+
 export function buildPackExport(options: BuildPackExportOptions): ExportArtifact {
   const pack = loadPackForExport(options.packPath);
   return buildExportFromLoadedPack(pack, options.profileId, options.generatedAt);
+}
+
+export function buildSkillExport(options: BuildSkillExportOptions): ExportArtifact {
+  const skill = loadSkillForExport(options.skillPath);
+  return buildExportFromLoadedSkill(skill, options.profileId, options.generatedAt);
 }
 
 export function buildComposedExport(options: BuildComposedExportOptions): ExportArtifact {
@@ -267,6 +351,52 @@ function buildExportFromLoadedPack(pack: LoadedPackForExport, profileId: string,
   };
 }
 
+function buildExportFromLoadedSkill(skill: LoadedSkillForExport, profileId: string, generatedAt = new Date().toISOString()): ExportArtifact {
+  const profile = skill.exportProfiles.find((candidate) => candidate.id === profileId);
+  if (!profile) {
+    throw new ExportError("profile_not_found", `Skill export profile not found: ${profileId}`);
+  }
+
+  if (!supportedTargets.has(profile.target)) {
+    throw new ExportError("unsupported_target", `Skill export target is not supported in Phase 18: ${profile.target}`);
+  }
+
+  const warnings: ExportWarning[] = [];
+  const { included, excluded } = selectSkillDocuments(skill, profile, warnings);
+  const sources = summarizeSkillSources(skill.sources, included.flatMap(({ document }) => document.metadata.sources));
+  const content =
+    profile.format === "json"
+      ? renderSkillJsonExport(skill, profile, included, excluded, sources, warnings, generatedAt)
+      : renderSkillMarkdownExport(skill, profile, included, excluded, sources, warnings, generatedAt);
+  const estimatedTokens = estimateTokens(content);
+
+  if (profile.token_budget && estimatedTokens > profile.token_budget) {
+    warnings.push({
+      code: "token_budget.exceeded",
+      message: `Estimated export size (${estimatedTokens} tokens) exceeds profile budget (${profile.token_budget}).`
+    });
+  }
+
+  return {
+    packId: skill.manifest.id,
+    packName: skill.manifest.name,
+    profileId: profile.id,
+    profileName: profile.name,
+    target: profile.target,
+    format: profile.format,
+    filename: filenameForProfile(profile),
+    mimeType: mimeTypeForFormat(profile.format),
+    content,
+    includedRecords: included.map(({ document }) => summarizeSkillDocument(document)),
+    excludedRecords: excluded,
+    sources,
+    warnings,
+    generatedAt,
+    byteLength: Buffer.byteLength(content, "utf8"),
+    estimatedTokens
+  };
+}
+
 function selectRecords(
   pack: LoadedPackForExport,
   profile: ExportProfile,
@@ -299,6 +429,92 @@ function selectRecords(
   }
 
   return { included, excluded };
+}
+
+function selectSkillDocuments(
+  skill: LoadedSkillForExport,
+  profile: SkillExportProfile,
+  warnings: ExportWarning[]
+): { included: PreparedSkillDocument[]; excluded: ExcludedExportRecord[] } {
+  const instructionById = new Map(skill.instructions.map((document) => [document.metadata.id, document]));
+  const exampleById = new Map(skill.examples.map((document) => [document.metadata.id, document]));
+  const requestedInstructionIds = profile.include?.instructions ?? skill.instructions.map((document) => document.metadata.id);
+  const requestedExampleIds = profile.include?.examples ?? skill.examples.map((document) => document.metadata.id);
+  const missingInstructionIds = requestedInstructionIds.filter((id) => !instructionById.has(id));
+  const missingExampleIds = requestedExampleIds.filter((id) => !exampleById.has(id));
+
+  if (missingInstructionIds.length > 0 || missingExampleIds.length > 0) {
+    throw new ExportError(
+      "document_not_found",
+      `Skill export profile references missing document(s): ${[...missingInstructionIds, ...missingExampleIds].join(", ")}`
+    );
+  }
+
+  const included: PreparedSkillDocument[] = [];
+  const excluded: ExcludedExportRecord[] = [];
+  const seen = new Set<string>();
+  const sectionOrder = skillExportSections(profile);
+
+  for (const section of sectionOrder) {
+    if (section === "instructions") {
+      addSkillDocuments(requestedInstructionIds.map((id) => instructionById.get(id)!), skill, profile, warnings, included, excluded, seen);
+    }
+
+    if (section === "examples") {
+      addSkillDocuments(requestedExampleIds.map((id) => exampleById.get(id)!), skill, profile, warnings, included, excluded, seen);
+    }
+  }
+
+  return { included, excluded };
+}
+
+function addSkillDocuments(
+  documents: LoadedSkillDocument[],
+  skill: LoadedSkillForExport,
+  profile: SkillExportProfile,
+  warnings: ExportWarning[],
+  included: PreparedSkillDocument[],
+  excluded: ExcludedExportRecord[],
+  seen: Set<string>
+): void {
+  for (const document of documents) {
+    if (seen.has(document.metadata.id)) {
+      continue;
+    }
+    seen.add(document.metadata.id);
+
+    const reason = skillDocumentExclusionReason(document.metadata, profile);
+    if (reason) {
+      maybeWarnForSkillDocumentExclusion(document.metadata, warnings);
+      excluded.push(summarizeExcludedSkillDocument(excluded.length + 1, reason));
+      continue;
+    }
+
+    included.push({
+      document,
+      body: applySkillSafetyRedaction(document.body, skill.safetyRules, document.metadata.id, warnings)
+    });
+  }
+}
+
+function skillExportSections(profile: SkillExportProfile): string[] {
+  return profile.sections.length > 0 ? profile.sections : ["instructions", "examples", "safety"];
+}
+
+function skillProfileIncludesSection(profile: SkillExportProfile, section: string): boolean {
+  return skillExportSections(profile).includes(section);
+}
+
+function maybeWarnForSkillDocumentExclusion(metadata: SkillInstructionFrontmatter, warnings: ExportWarning[]): void {
+  if (metadata.review_status === "approved") {
+    return;
+  }
+
+  warnings.push({
+    code: "skill_document.excluded",
+    message: "A Skill document was excluded because it is not approved.",
+    recordId: "excluded-skill-document"
+  });
 }
 
 function selectComposedRecords(
@@ -361,6 +577,37 @@ function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, ru
   return undefined;
 }
 
+function skillDocumentExclusionReason(
+  metadata: SkillInstructionFrontmatter,
+  profile: SkillExportProfile
+): string | undefined {
+  const blockedTags = new Set([...profile.exclude_tags, ...defaultSkillRedactionTags]);
+  const blockedTag = metadata.tags.find((tag) => blockedTags.has(tag));
+  if (blockedTag) {
+    return `Excluded by Skill export tag: ${blockedTag}`;
+  }
+
+  if (metadata.review_status !== "approved") {
+    return `Excluded because review status is ${metadata.review_status}`;
+  }
+
+  if (profile.privacy_mode === "public_safe" && metadata.privacy !== "public_safe") {
+    return `Excluded by public-safe privacy mode: ${metadata.privacy}`;
+  }
+
+  if ((profile.privacy_mode ?? "redacted") === "redacted") {
+    if (["secret", "sensitive", "private"].includes(metadata.privacy)) {
+      return `Excluded by redacted privacy mode: ${metadata.privacy}`;
+    }
+  }
+
+  if (metadata.privacy === "secret") {
+    return "Excluded by Skill export safety: secret";
+  }
+
+  return undefined;
+}
+
 function composedExclusionReason(
   metadata: RecordFrontmatter,
   privacyMode: "redacted" | "public_safe",
@@ -412,6 +659,40 @@ function applyRedaction(body: string, rules: RedactionRules, recordId: string, w
   return redacted;
 }
 
+function applySkillSafetyRedaction(
+  body: string,
+  rules: SkillSafetyRules,
+  documentId: string,
+  warnings: ExportWarning[]
+): string {
+  let redacted = body;
+
+  for (const pattern of rules.patterns) {
+    const regex = compileSkillSafetyPattern(pattern, warnings);
+    if (!regex) {
+      continue;
+    }
+
+    regex.lastIndex = 0;
+    if (!regex.test(redacted)) {
+      continue;
+    }
+
+    warnings.push({
+      code: "skill_safety.pattern_matched",
+      message: `Skill safety pattern matched in document ${documentId}: ${pattern.name}.`,
+      recordId: documentId,
+      pattern: pattern.name
+    });
+
+    if (pattern.action === "block" || pattern.action === "review") {
+      redacted = redacted.replace(regex, "[redacted]");
+    }
+  }
+
+  return redacted;
+}
+
 function compileRedactionPattern(pattern: RedactionRules["patterns"][number], warnings: ExportWarning[]): RegExp | undefined {
   let source = pattern.regex;
   let flags = pattern.flags ?? "";
@@ -429,6 +710,32 @@ function compileRedactionPattern(pattern: RedactionRules["patterns"][number], wa
     warnings.push({
       code: "redaction.pattern_invalid",
       message: `Redaction pattern is not valid JavaScript RegExp and was skipped: ${pattern.name}.`,
+      pattern: pattern.name
+    });
+    return undefined;
+  }
+}
+
+function compileSkillSafetyPattern(
+  pattern: SkillSafetyRules["patterns"][number],
+  warnings: ExportWarning[]
+): RegExp | undefined {
+  let source = pattern.regex;
+  let flags = "";
+
+  if (source.startsWith("(?i)")) {
+    source = source.slice(4);
+    flags = "i";
+  }
+
+  flags = Array.from(new Set(`${flags}g`.split(""))).join("");
+
+  try {
+    return new RegExp(source, flags);
+  } catch {
+    warnings.push({
+      code: "redaction.pattern_invalid",
+      message: `Skill safety pattern is not valid JavaScript RegExp and was skipped: ${pattern.name}.`,
       pattern: pattern.name
     });
     return undefined;
@@ -536,6 +843,156 @@ function renderJsonExport(
       })),
       excludedRecords: excluded,
       sources,
+      warnings
+    },
+    null,
+    2
+  )}\n`;
+}
+
+function renderSkillMarkdownExport(
+  skill: LoadedSkillForExport,
+  profile: SkillExportProfile,
+  included: PreparedSkillDocument[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  generatedAt: string
+): string {
+  const lines = [
+    `# ${targetLabel(profile.target)} Skill Export: ${skill.manifest.name}`,
+    "",
+    `Generated: ${generatedAt}`,
+    `Profile: ${profile.name} (${profile.id})`,
+    `Privacy mode: ${profile.privacy_mode ?? "redacted"}`,
+    `Format: ${profile.format}`,
+    "",
+    "## Skill Summary",
+    "",
+    skill.manifest.description,
+    "",
+    `Type: ${skill.manifest.type}`,
+    `Targets: ${skill.manifest.targets.join(", ") || "none"}`,
+    `Inputs: ${skill.manifest.inputs.join(", ") || "none"}`,
+    `Outputs: ${skill.manifest.outputs.join(", ") || "none"}`,
+    "",
+    "## Included Skill Documents",
+    ""
+  ];
+
+  for (const { document, body } of included) {
+    lines.push(
+      `### ${document.metadata.title}`,
+      "",
+      `Document ID: ${document.metadata.id}`,
+      `Kind: ${document.kind}`,
+      `Type: ${document.metadata.type}`,
+      `Privacy: ${document.metadata.privacy}`,
+      `Review status: ${document.metadata.review_status}`,
+      `Tags: ${document.metadata.tags.join(", ") || "none"}`,
+      `Sources: ${document.metadata.sources.join(", ") || "none"}`,
+      "",
+      body,
+      ""
+    );
+  }
+
+  if (skillProfileIncludesSection(profile, "safety")) {
+    lines.push("## Safety Rules", "");
+    lines.push(
+      `Executable files blocked: ${String(skill.safetyRules.disallowed.executable_files)}`,
+      `Shell commands blocked: ${String(skill.safetyRules.disallowed.shell_commands)}`,
+      `Network calls blocked: ${String(skill.safetyRules.disallowed.network_calls)}`,
+      `Credential requests blocked: ${String(skill.safetyRules.disallowed.credential_requests)}`,
+      `Browser automation blocked: ${String(skill.safetyRules.disallowed.browser_automation)}`,
+      `Hidden prompts blocked: ${String(skill.safetyRules.disallowed.hidden_prompts)}`,
+      `Tool execution blocked: ${String(skill.safetyRules.disallowed.tool_execution)}`,
+      ""
+    );
+
+    if (skill.safetyRules.patterns.length > 0) {
+      for (const pattern of skill.safetyRules.patterns) {
+        lines.push(`- ${pattern.name}: ${pattern.severity} / ${pattern.action}`);
+      }
+      lines.push("");
+    }
+  }
+
+  if (excluded.length > 0) {
+    lines.push("## Excluded Skill Documents", "");
+    for (const document of excluded) {
+      lines.push(`- ${document.id}: ${document.reason}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("## Sources", "");
+  if (sources.length === 0) {
+    lines.push("No source references were included.", "");
+  } else {
+    for (const source of sources) {
+      lines.push(`- ${source.id}: ${source.title} (${source.type}${source.trust ? `, ${source.trust}` : ""})`);
+    }
+    lines.push("");
+  }
+
+  if (warnings.length > 0) {
+    lines.push("## Export Warnings", "");
+    for (const warning of warnings) {
+      lines.push(`- ${warning.code}: ${warning.message}`);
+    }
+    lines.push("");
+  }
+
+  return `${lines.join("\n").trim()}\n`;
+}
+
+function renderSkillJsonExport(
+  skill: LoadedSkillForExport,
+  profile: SkillExportProfile,
+  included: PreparedSkillDocument[],
+  excluded: ExcludedExportRecord[],
+  sources: ExportSourceSummary[],
+  warnings: ExportWarning[],
+  generatedAt: string
+): string {
+  return `${JSON.stringify(
+    {
+      contextarrExportVersion: "0.1",
+      exportKind: "skill",
+      generatedAt,
+      skill: {
+        id: skill.manifest.id,
+        name: skill.manifest.name,
+        version: skill.manifest.version,
+        description: skill.manifest.description,
+        type: skill.manifest.type,
+        targets: skill.manifest.targets,
+        inputs: skill.manifest.inputs,
+        outputs: skill.manifest.outputs
+      },
+      profile: {
+        id: profile.id,
+        name: profile.name,
+        target: profile.target,
+        format: profile.format,
+        privacyMode: profile.privacy_mode ?? "redacted"
+      },
+      documents: included.map(({ document, body }) => ({
+        kind: document.kind,
+        metadata: document.metadata,
+        body
+      })),
+      excludedRecords: excluded,
+      sources,
+      safety: {
+        disallowed: skill.safetyRules.disallowed,
+        patterns: skill.safetyRules.patterns.map((pattern) => ({
+          name: pattern.name,
+          severity: pattern.severity,
+          action: pattern.action
+        }))
+      },
       warnings
     },
     null,
@@ -674,6 +1131,20 @@ function summarizeSources(sources: Source[], sourceIds: string[]): ExportSourceS
     }));
 }
 
+function summarizeSkillSources(sources: Source[], sourceIds: string[]): ExportSourceSummary[] {
+  const wanted = new Set(sourceIds);
+  return sources
+    .filter((source) => wanted.has(source.id))
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((source) => ({
+      id: source.id,
+      title: source.title,
+      type: source.type,
+      trust: source.trust,
+      status: source.status
+    }));
+}
+
 function summarizeRecord(record: LoadedRecord): ExportRecordSummary {
   return {
     id: record.metadata.id,
@@ -685,7 +1156,42 @@ function summarizeRecord(record: LoadedRecord): ExportRecordSummary {
   };
 }
 
-function filenameForProfile(profile: ExportProfile): string {
+function summarizeSkillDocument(document: LoadedSkillDocument): ExportRecordSummary {
+  return {
+    id: document.metadata.id,
+    title: document.metadata.title,
+    type: document.metadata.type,
+    privacy: document.metadata.privacy,
+    tags: document.metadata.tags,
+    sources: document.metadata.sources
+  };
+}
+
+function summarizeExcludedSkillDocument(index: number, reason: string): ExcludedExportRecord {
+  return {
+    id: `excluded-skill-document-${index}`,
+    title: "Excluded Skill Document",
+    type: "skill_document",
+    privacy: "redacted",
+    tags: [],
+    sources: [],
+    reason: safeSkillExclusionReason(reason)
+  };
+}
+
+function safeSkillExclusionReason(reason: string): string {
+  if (reason.includes("review status")) {
+    return "Excluded because the Skill document is not approved.";
+  }
+
+  if (reason.includes("privacy mode") || reason.includes("secret") || reason.includes("tag")) {
+    return "Excluded by Skill export safety policy.";
+  }
+
+  return "Excluded by Skill export policy.";
+}
+
+function filenameForProfile(profile: ExportProfile | SkillExportProfile): string {
   const extension = profile.format === "json" ? "json" : profile.format === "text" ? "txt" : "md";
   return `${profile.id}.${extension}`;
 }
@@ -717,13 +1223,14 @@ function mimeTypeForFormat(format: ExportProfile["format"]): string {
     return "text/markdown";
   }
 
-  throw new ExportError("unsupported_format", `Export format is not supported in Phase 7: ${format}`);
+  throw new ExportError("unsupported_format", `Export format is not supported: ${format}`);
 }
 
 function targetLabel(target: string): string {
   const labels: Record<string, string> = {
     chatgpt: "ChatGPT",
     claude: "Claude",
+    claude_code: "Claude Code",
     codex: "Codex",
     markdown: "Generic Markdown",
     generic_markdown: "Generic Markdown",
@@ -763,6 +1270,37 @@ function loadPackForExport(packPath: string): LoadedPackForExport {
   };
 }
 
+function loadSkillForExport(skillPath: string): LoadedSkillForExport {
+  const resolvedSkillPath = path.resolve(skillPath);
+  const validation = validateSkill(resolvedSkillPath);
+  if (!validation.valid) {
+    throw new ExportError("validation_failed", "Validation failed for export Skill.");
+  }
+
+  const manifest = skillManifestSchema.parse(
+    JSON.parse(fs.readFileSync(path.join(resolvedSkillPath, "contextarr-skill.json"), "utf8"))
+  );
+  const sourcesPath = resolveManifestPath(resolvedSkillPath, manifest.sourcesPath);
+  const sources = sourcesPath && fs.existsSync(sourcesPath)
+    ? sourceMapSchema.parse(YAML.parse(fs.readFileSync(sourcesPath, "utf8"))).sources
+    : [];
+  const rulesDir = resolveManifestPath(resolvedSkillPath, manifest.rulesPath);
+  const safetyRulesPath = rulesDir ? path.join(rulesDir, "safety.yaml") : undefined;
+  const safetyRules = safetyRulesPath && fs.existsSync(safetyRulesPath)
+    ? skillSafetyRulesSchema.parse(YAML.parse(fs.readFileSync(safetyRulesPath, "utf8")))
+    : skillSafetyRulesSchema.parse({});
+
+  return {
+    skillPath: resolvedSkillPath,
+    manifest,
+    instructions: readSkillDocuments(resolvedSkillPath, manifest, manifest.instructionsPath, "instruction"),
+    examples: readSkillDocuments(resolvedSkillPath, manifest, manifest.examplesPath, "example"),
+    sources,
+    exportProfiles: readSkillExportProfiles(resolvedSkillPath, manifest),
+    safetyRules
+  };
+}
+
 function readRecords(packPath: string, manifest: ContextPackManifest): LoadedRecord[] {
   const recordsDir = path.join(packPath, manifest.recordsPath);
   return listFiles(recordsDir)
@@ -777,11 +1315,59 @@ function readRecords(packPath: string, manifest: ContextPackManifest): LoadedRec
     });
 }
 
+function readSkillDocuments(
+  skillPath: string,
+  manifest: SkillManifest,
+  documentPath: string,
+  kind: "instruction" | "example"
+): LoadedSkillDocument[] {
+  const documentsDir = resolveManifestPath(skillPath, documentPath);
+  if (!documentsDir || !fs.existsSync(documentsDir)) {
+    return [];
+  }
+
+  return listFiles(documentsDir)
+    .filter((file) => file.toLowerCase().endsWith(".md"))
+    .map((file) => {
+      const parsed = matter(fs.readFileSync(file, "utf8"));
+      return {
+        kind,
+        file: normalizePath(path.relative(skillPath, file)),
+        metadata: skillInstructionFrontmatterSchema.parse(parsed.data),
+        body: parsed.content.trim()
+      };
+    });
+}
+
 function readExportProfiles(packPath: string, manifest: ContextPackManifest): ExportProfile[] {
   return listFiles(path.join(packPath, manifest.exportsPath))
     .filter((file) => [".yaml", ".yml"].includes(path.extname(file).toLowerCase()))
     .map((file) => exportProfileSchema.parse(YAML.parse(fs.readFileSync(file, "utf8"))))
     .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function readSkillExportProfiles(skillPath: string, manifest: SkillManifest): SkillExportProfile[] {
+  const exportsDir = resolveManifestPath(skillPath, manifest.exportsPath);
+  if (!exportsDir || !fs.existsSync(exportsDir)) {
+    return [];
+  }
+
+  return listFiles(exportsDir)
+    .filter((file) => [".yaml", ".yml"].includes(path.extname(file).toLowerCase()))
+    .map((file) => skillExportProfileSchema.parse(YAML.parse(fs.readFileSync(file, "utf8"))))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function resolveManifestPath(rootPath: string, manifestPath: string): string | undefined {
+  const root = path.resolve(rootPath);
+  const resolved = path.resolve(root, manifestPath);
+  const relative = path.relative(root, resolved);
+
+  if (path.isAbsolute(manifestPath) || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return undefined;
+  }
+
+  return resolved;
 }
 
 function listFiles(root: string): string[] {

@@ -75,7 +75,7 @@ describe("Contextarr API", () => {
         skillInstructions: 24,
         skillExamples: 16,
         skillSources: 24,
-        skillExportProfiles: 32,
+        skillExportProfiles: 48,
         reviewItems: 0,
         openReviewItems: 0
       }
@@ -162,7 +162,7 @@ describe("Contextarr API", () => {
           instructionCount: 3,
           exampleCount: 2,
           sourceCount: 3,
-          exportProfileCount: 4,
+          exportProfileCount: 6,
           healthStatus: "healthy",
           reviewQueueCount: 0
         })
@@ -186,13 +186,13 @@ describe("Contextarr API", () => {
       instructionCount: 3,
       exampleCount: 2,
       sourceCount: 3,
-      exportProfileCount: 4,
+      exportProfileCount: 6,
       coverImage: null,
       counts: {
         instructions: 3,
         examples: 2,
         sources: 3,
-        exportProfiles: 4
+        exportProfiles: 6
       },
       validation: {
         errors: 0,
@@ -205,7 +205,7 @@ describe("Contextarr API", () => {
     });
     expect(response.json().sources).toHaveLength(3);
     expect(response.json().sources[0]).not.toHaveProperty("path");
-    expect(response.json().exportProfiles).toHaveLength(4);
+    expect(response.json().exportProfiles).toHaveLength(6);
     expect(JSON.stringify(response.json())).not.toContain(repoRoot);
     expect(response.json().manifest).not.toHaveProperty("instructionsPath");
     expect(response.json().manifest).not.toHaveProperty("examplesPath");
@@ -324,7 +324,7 @@ describe("Contextarr API", () => {
     expect(examples.json().examples[0]).not.toHaveProperty("filePath");
     expect(examples.json().examples[0].metadata).toEqual({});
     expect(exportsResponse.statusCode).toBe(200);
-    expect(exportsResponse.json().exportProfiles).toHaveLength(4);
+    expect(exportsResponse.json().exportProfiles).toHaveLength(6);
     await app.close();
     db.close();
   });
@@ -674,6 +674,46 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/skills/:id/exports/:profileId/preview returns a Skill export artifact without local paths", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/exports/support-ticket-writing-skill-claude-code/preview"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "support-ticket-writing-skill",
+      profileId: "support-ticket-writing-skill-claude-code",
+      target: "claude_code",
+      format: "markdown",
+      filename: "support-ticket-writing-skill-claude-code.md"
+    });
+    expect(response.json().content).toContain("Claude Code Skill Export");
+    expect(response.json().includedRecords).toHaveLength(5);
+    expect(response.json().sources[0]).not.toHaveProperty("path");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/skills/:id/exports/:profileId/preview reports missing Skills and profiles", async () => {
+    const app = createApp({ config, db });
+    const missingSkill = await app.inject({
+      method: "GET",
+      url: "/api/skills/missing-skill/exports/support-ticket-writing-skill-codex/preview"
+    });
+    const missingProfile = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/exports/missing-profile/preview"
+    });
+
+    expect(missingSkill.statusCode).toBe(404);
+    expect(missingProfile.statusCode).toBe(404);
+    await app.close();
+    db.close();
+  });
+
   it("POST /api/compose/preview returns a composed export artifact", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({
@@ -900,6 +940,26 @@ describe("Contextarr API", () => {
     const allowed = await app.inject({
       method: "GET",
       url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(blocked.statusCode).toBe(401);
+    expect(allowed.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on Skill export preview routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const blocked = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/exports/support-ticket-writing-skill-codex/preview"
+    });
+    const allowed = await app.inject({
+      method: "GET",
+      url: "/api/skills/support-ticket-writing-skill/exports/support-ticket-writing-skill-codex/preview",
       headers: { authorization: "Bearer test-token" }
     });
 

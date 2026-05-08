@@ -101,7 +101,7 @@ function skill(overrides: Partial<SkillSummary>): SkillSummary {
     instructionCount: 3,
     exampleCount: 2,
     sourceCount: 3,
-    exportProfileCount: 4,
+    exportProfileCount: 6,
     accentColor: null,
     coverImage: null,
     reviewQueueCount: 0,

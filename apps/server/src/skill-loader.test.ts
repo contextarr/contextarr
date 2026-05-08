@@ -43,7 +43,7 @@ describe("loadSkills", () => {
     expect(result.skills.reduce((count, skill) => count + skill.instructions.length, 0)).toBe(24);
     expect(result.skills.reduce((count, skill) => count + skill.examples.length, 0)).toBe(16);
     expect(result.skills.reduce((count, skill) => count + skill.sources.length, 0)).toBe(24);
-    expect(result.skills.reduce((count, skill) => count + skill.exportProfiles.length, 0)).toBe(32);
+    expect(result.skills.reduce((count, skill) => count + skill.exportProfiles.length, 0)).toBe(48);
   });
 
   it("skips invalid Skills without failing the whole load", () => {

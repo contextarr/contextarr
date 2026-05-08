@@ -15,6 +15,7 @@ const skillFixturesDir = path.resolve(
   "../../../packages/skill-validator/test/fixtures"
 );
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const tempDirs: string[] = [];
 
@@ -289,6 +290,39 @@ describe("contextarr CLI", () => {
     expect(output.stdout).toContain("Exported 25 file(s)");
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);
+  });
+
+  it("exports Skill profiles to generated files", async () => {
+    const output = createIo();
+    const outDir = tempDir();
+    const singleCode = await runCli(
+      [
+        "export",
+        path.join(demoSkillsDir, "support-ticket-writing-skill"),
+        "--profile",
+        "support-ticket-writing-skill-claude-code",
+        "--out",
+        outDir
+      ],
+      output.io
+    );
+
+    expect(singleCode).toBe(0);
+    expect(output.stdout).toContain("Exported 1 file(s)");
+    expect(
+      fs.readFileSync(
+        path.join(outDir, "support-ticket-writing-skill", "support-ticket-writing-skill-claude-code.md"),
+        "utf8"
+      )
+    ).toContain("Claude Code Skill Export");
+
+    const allOutput = createIo();
+    const allOutDir = tempDir();
+    const allCode = await runCli(["export", demoSkillsDir, "--all", "--out", allOutDir], allOutput.io);
+
+    expect(allCode).toBe(0);
+    expect(allOutput.stdout).toContain("Exported 48 file(s)");
+    expect(fs.existsSync(path.join(allOutDir, "support-ticket-writing-skill", "support-ticket-writing-skill-json.json"))).toBe(true);
   });
 
   it("returns non-zero for invalid export usage and missing profiles", async () => {

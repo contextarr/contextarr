@@ -208,6 +208,10 @@ export function getPackPath(db: ContextarrDatabase, packId: string): string | un
   return db.prepare("SELECT pack_path FROM packs WHERE id = ?").pluck().get(packId) as string | undefined;
 }
 
+export function getSkillPath(db: ContextarrDatabase, skillId: string): string | undefined {
+  return db.prepare("SELECT skill_path FROM skills WHERE id = ?").pluck().get(skillId) as string | undefined;
+}
+
 export function getSkills(db: ContextarrDatabase): SkillSummary[] {
   return db
     .prepare(

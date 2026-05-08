@@ -149,7 +149,13 @@ describe("Contextarr API client", () => {
       profileId: "profile-1",
       content: "# Export"
     });
-    expect(requests).toEqual(["/api/packs/pack-1/exports/profile-1/preview"]);
+    await expect(client.getSkillExportPreview("skill-1", "skill-profile-1")).resolves.toMatchObject({
+      content: "# Export"
+    });
+    expect(requests).toEqual([
+      "/api/packs/pack-1/exports/profile-1/preview",
+      "/api/skills/skill-1/exports/skill-profile-1/preview"
+    ]);
   });
 
   it("posts compose preview requests", async () => {

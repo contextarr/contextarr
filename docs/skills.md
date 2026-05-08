@@ -1,6 +1,6 @@
 # Contextarr Skills
 
-Skills are Contextarr objects for reusable AI work instructions. Phase 12 introduced the terminology; Phases 13 through 17 now add non-executable Skill schemas, validation, demo Skills, indexing, read-only API surfaces, the Skill Library, and deterministic Skill Health and review items.
+Skills are Contextarr objects for reusable AI work instructions. Phase 12 introduced the terminology; Phases 13 through 18 now add non-executable Skill schemas, validation, demo Skills, indexing, read-only API surfaces, the Skill Library, deterministic Skill Health and review items, and profile-driven Skill exports.
 
 ## Definition
 
@@ -40,6 +40,10 @@ Contextarr can validate, review, index, preview, pair, and export Skills as data
 
 Skills have source metadata, author metadata, review status, and compatibility notes. Phase 17 adds deterministic Skill Health and object-aware review queue items stored in SQLite only. AI-drafted Skills must enter review before they are approved for exports or Agent Kits.
 
+## Export Model
+
+Phase 18 adds read-only Skill export previews for ChatGPT, Claude, Codex, Claude Code, Markdown, and JSON. Exports are generated artifacts, not source of truth. They include approved Skill instructions and examples selected by the profile, omit local filesystem paths from source summaries, and exclude secret, private, sensitive, draft, `never_export`, and `imported_draft` material by default.
+
 ## Boundary
 
-Current Skill support still does not implement Skill execution, Skill export generation, Agent Kit pairing, MCP Skill tools, marketplace behavior, telemetry, cloud services, or file mutation from review actions.
+Current Skill support still does not implement Skill execution, Agent Kit pairing, MCP Skill tools, marketplace behavior, telemetry, cloud services, or file mutation from review actions.

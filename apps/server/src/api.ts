@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import staticPlugin from "@fastify/static";
-import { buildComposedExport, buildPackExport, ExportError, type BuildComposedExportOptions } from "@contextarr/export-profiles";
+import {
+  buildComposedExport,
+  buildPackExport,
+  buildSkillExport,
+  ExportError,
+  type BuildComposedExportOptions
+} from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
 import {
   getIndexStats,
@@ -17,6 +23,7 @@ import {
   getSkillExportProfiles,
   getSkillHealth,
   getSkillInstructions,
+  getSkillPath,
   getSkills,
   rebuildIndex,
   reviewItemStatuses,
@@ -136,6 +143,30 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return health;
+  });
+
+  app.get<{ Params: { id: string; profileId: string } }>("/api/skills/:id/exports/:profileId/preview", async (request, reply) => {
+    const skillPath = getSkillPath(db, request.params.id);
+    if (!skillPath) {
+      return reply.code(404).send({ error: "not_found", message: `Skill not found: ${request.params.id}` });
+    }
+
+    try {
+      return buildSkillExport({
+        skillPath,
+        profileId: request.params.profileId
+      });
+    } catch (error) {
+      if (error instanceof ExportError && error.code === "profile_not_found") {
+        return reply.code(404).send({ error: "not_found", message: error.message });
+      }
+
+      if (error instanceof ExportError) {
+        return reply.code(400).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
   });
 
   app.get("/api/packs", async () => {

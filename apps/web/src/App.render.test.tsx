@@ -34,6 +34,9 @@ const mocks = vi.hoisted(() => {
       getSkillExamples: vi.fn(),
       getSkillExports: vi.fn(),
       getSkillHealth: vi.fn(),
+      getExportPreview: vi.fn(),
+      getSkillExportPreview: vi.fn(),
+      composePreview: vi.fn(),
       getReviewItems: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
@@ -50,10 +53,30 @@ import { App } from "./App";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let root: Root | null = null;
+let downloadedFileName = "";
 
 describe("App Skill UI routes", () => {
   beforeEach(() => {
     window.location.hash = "";
+    downloadedFileName = "";
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined)
+      }
+    });
+    URL.createObjectURL = vi.fn(() => "blob:contextarr-export");
+    URL.revokeObjectURL = vi.fn();
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName: string, options?: ElementCreationOptions) => {
+      const element = originalCreateElement(tagName, options);
+      if (tagName.toLowerCase() === "a") {
+        vi.spyOn(element as HTMLAnchorElement, "click").mockImplementation(function click(this: HTMLAnchorElement) {
+          downloadedFileName = this.download;
+        });
+      }
+      return element;
+    });
     mocks.apiClient.getHealth.mockResolvedValue(healthFixture());
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getSkills.mockResolvedValue([skillFixture()]);
@@ -65,6 +88,24 @@ describe("App Skill UI routes", () => {
     ]);
     mocks.apiClient.getSkillExports.mockResolvedValue([]);
     mocks.apiClient.getSkillHealth.mockResolvedValue(skillHealthFixture());
+    mocks.apiClient.getSkillExportPreview.mockResolvedValue({
+      packId: "support-ticket-writing-skill",
+      packName: "Support Ticket Writing Skill",
+      profileId: "support-ticket-writing-skill-codex",
+      profileName: "Codex Skill Export",
+      target: "codex",
+      format: "markdown",
+      filename: "support-ticket-writing-skill-codex.md",
+      mimeType: "text/markdown",
+      content: "# Skill Export Preview Body",
+      includedRecords: [],
+      excludedRecords: [],
+      sources: [],
+      warnings: [],
+      generatedAt: "2026-05-07T00:00:00.000Z",
+      byteLength: 27,
+      estimatedTokens: 7
+    });
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
@@ -76,6 +117,7 @@ describe("App Skill UI routes", () => {
     }
     document.body.innerHTML = "";
     window.location.hash = "";
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -129,6 +171,37 @@ describe("App Skill UI routes", () => {
     await waitForText("Codex Skill Export");
     clickButton("Health");
     await waitForText("Skill Health");
+  });
+
+  it("previews Skill exports from the Skill detail exports tab", async () => {
+    mountApp("#/skills/support-ticket-writing-skill");
+
+    await waitForText("Support Ticket Writing Skill");
+    clickButton("Exports");
+    await waitForText("Codex Skill Export");
+    clickButton("Preview");
+    await waitForText("Skill Export Preview Body");
+
+    expect(mocks.apiClient.getSkillExportPreview).toHaveBeenCalledWith(
+      "support-ticket-writing-skill",
+      "support-ticket-writing-skill-codex"
+    );
+  });
+
+  it("copies and downloads Skill export previews", async () => {
+    mountApp("#/skills/support-ticket-writing-skill");
+
+    await waitForText("Support Ticket Writing Skill");
+    clickButton("Exports");
+    await waitForText("Codex Skill Export");
+    clickButton("Preview");
+    await waitForText("Skill Export Preview Body");
+    clickButton("Copy");
+    await flushPendingUpdates();
+    clickButton("Download");
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("# Skill Export Preview Body");
+    expect(downloadedFileName).toBe("support-ticket-writing-skill-codex.md");
   });
 
   it("keeps Skill detail available when instruction/example documents fail", async () => {
@@ -277,7 +350,7 @@ function healthFixture(): HealthResponse {
       skillInstructions: 3,
       skillExamples: 2,
       skillSources: 3,
-      skillExportProfiles: 4,
+      skillExportProfiles: 6,
       reviewItems: 0,
       openReviewItems: 0
     }
@@ -324,7 +397,7 @@ function skillFixture(): SkillSummary {
     instructionCount: 3,
     exampleCount: 2,
     sourceCount: 3,
-    exportProfileCount: 4,
+    exportProfileCount: 6,
     accentColor: "#38bdf8",
     coverImage: null,
     reviewQueueCount: 0,
@@ -347,7 +420,7 @@ function skillDetailFixture(): SkillDetail {
       instructions: 3,
       examples: 2,
       sources: 3,
-      exportProfiles: 4
+      exportProfiles: 6
     },
     validation: {
       errors: 0,

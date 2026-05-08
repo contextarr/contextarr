@@ -14,7 +14,7 @@ Contextarr currently supports:
 - Read-only stdio MCP.
 - Docker Compose local preview.
 - Phase 12 terminology planning for Skills and Agent Kits.
-- Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, and deterministic Skill Health/Review Queue support.
+- Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, deterministic Skill Health/Review Queue support, and profile-driven Skill exports.
 
 ## Second PRD Direction
 
@@ -33,7 +33,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 15: Skill index and API. Complete.
 - Phase 16: Skill Library UI. Complete.
 - Phase 17: Skill Health and Review Queue. Complete.
-- Phase 18: Skill export engine.
+- Phase 18: Skill export engine. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.

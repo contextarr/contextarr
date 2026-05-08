@@ -134,6 +134,7 @@
 
 - Generate target-specific Skill exports.
 - Preserve redaction, review, and compatibility metadata.
+- Status: complete.
 
 ## Phase 19: Agent Kit Schema and Validator
 

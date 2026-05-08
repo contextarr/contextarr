@@ -1,0 +1,22 @@
+id: bug-report-structuring-skill-claude-code
+name: Bug Report Structuring Skill Claude Code Export
+target: claude_code
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - bug-report-structuring-skill.repro-steps
+    - bug-report-structuring-skill.impact-assessment
+    - bug-report-structuring-skill.engineering-handoff
+  examples:
+    - bug-report-structuring-skill.example-ui-regression
+    - bug-report-structuring-skill.example-data-mismatch
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 5000
+sections:
+  - instructions
+  - examples
+  - safety

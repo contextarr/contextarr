@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Command, CommanderError } from "commander";
-import { buildPackExport, buildPackExports, ExportError, type ExportArtifact } from "@contextarr/export-profiles";
+import {
+  buildPackExport,
+  buildPackExports,
+  buildSkillExport,
+  buildSkillExports,
+  ExportError,
+  type ExportArtifact
+} from "@contextarr/export-profiles";
 import {
   importToDraftPack,
   ImporterError,
@@ -217,7 +224,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
   program
     .command("export")
-    .argument("<path>", "pack directory or directory of pack directories to export")
+    .argument("<path>", "pack, Skill, or directory of child objects to export")
     .option("--profile <profileId>", "export profile id to generate")
     .option("--all", "export all profiles")
     .requiredOption("--out <path>", "output directory for generated exports")
@@ -238,11 +245,15 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
 
       try {
-        const packPaths = getPackTargets(resolvedTargetPath);
-        const artifacts = packPaths.flatMap((packPath) =>
-          options.all
-            ? buildPackExports({ packPath })
-            : [buildPackExport({ packPath, profileId: options.profile! })]
+        const targets = getExportTargets(resolvedTargetPath);
+        const artifacts = targets.flatMap((target) =>
+          target.kind === "skill"
+            ? options.all
+              ? buildSkillExports({ skillPath: target.path })
+              : [buildSkillExport({ skillPath: target.path, profileId: options.profile! })]
+            : options.all
+              ? buildPackExports({ packPath: target.path })
+              : [buildPackExport({ packPath: target.path, profileId: options.profile! })]
         );
         const writtenFiles = writeExportArtifacts(resolvedOutputPath, artifacts);
 
@@ -347,18 +358,57 @@ function getSkillTargets(targetPath: string): string[] {
   return childSkills.length > 0 ? childSkills : [targetPath];
 }
 
+function getExportTargets(targetPath: string): ValidationTarget[] {
+  const targets = getValidationTargets(targetPath);
+  if (targets.length === 0) {
+    return [{ kind: "pack", path: targetPath }];
+  }
+
+  return targets;
+}
+
 function writeExportArtifacts(outputPath: string, artifacts: ExportArtifact[]): string[] {
   const writtenFiles: string[] = [];
+  const outputRoot = path.resolve(outputPath);
 
   for (const artifact of artifacts) {
-    const packOutputDir = path.join(outputPath, artifact.packId);
+    const ownerDirName = safePathPart(artifact.packId, "artifact owner");
+    const fileName = safeFileName(artifact.filename);
+    const packOutputDir = path.resolve(outputRoot, ownerDirName);
+    assertInsidePath(outputRoot, packOutputDir);
     fs.mkdirSync(packOutputDir, { recursive: true });
-    const filePath = path.join(packOutputDir, artifact.filename);
+    const filePath = path.resolve(packOutputDir, fileName);
+    assertInsidePath(outputRoot, filePath);
     fs.writeFileSync(filePath, artifact.content, "utf8");
     writtenFiles.push(filePath);
   }
 
   return writtenFiles;
+}
+
+function safePathPart(value: string, label: string): string {
+  if (!/^[a-zA-Z0-9._-]+$/.test(value) || value.includes("..")) {
+    throw new ExportError("output_path_unsafe", `Export ${label} is not safe for local output: ${value}`);
+  }
+
+  return value;
+}
+
+function safeFileName(value: string): string {
+  if (value !== path.basename(value) || /[\x00-\x1f\x7f]/.test(value)) {
+    throw new ExportError("output_filename_unsafe", `Export filename is not safe for local output: ${value}`);
+  }
+
+  return safePathPart(value, "filename");
+}
+
+function assertInsidePath(root: string, candidate: string): void {
+  const relative = path.relative(root, candidate);
+  if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
+    return;
+  }
+
+  throw new ExportError("output_path_escape", "Export output path must stay inside the requested output directory.");
 }
 
 function formatValidationText(results: AnyValidationResult[]): string {

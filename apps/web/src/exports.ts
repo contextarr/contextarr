@@ -1,4 +1,4 @@
-import type { ExportArtifact, ExportProfileSummary, PackDetail } from "./types";
+import type { ExportArtifact, ExportProfileSummary } from "./types";
 
 export interface ExportOption {
   packId: string;
@@ -6,16 +6,22 @@ export interface ExportOption {
   profile: ExportProfileSummary;
 }
 
-export function buildExportOptions(pack: PackDetail | null, target = "all"): ExportOption[] {
-  if (!pack) {
+export interface ExportSubject {
+  id: string;
+  name: string;
+  exportProfiles: ExportProfileSummary[];
+}
+
+export function buildExportOptions(subject: ExportSubject | null, target = "all"): ExportOption[] {
+  if (!subject) {
     return [];
   }
 
-  return pack.exportProfiles
+  return subject.exportProfiles
     .filter((profile) => target === "all" || profile.target === target)
     .map((profile) => ({
-      packId: pack.id,
-      packName: pack.name,
+      packId: subject.id,
+      packName: subject.name,
       profile
     }));
 }
@@ -34,8 +40,14 @@ export async function copyTextToClipboard(
   documentRef?: Document
 ): Promise<boolean> {
   const fallbackDocument = documentRef ?? (typeof document === "undefined" ? undefined : document);
-  if (fallbackDocument && copyTextWithDocument(text, fallbackDocument)) {
-    return true;
+  if (fallbackDocument) {
+    try {
+      if (copyTextWithDocument(text, fallbackDocument)) {
+        return true;
+      }
+    } catch {
+      // Fall back to the async Clipboard API when document commands are unavailable.
+    }
   }
 
   if (navigatorRef?.clipboard?.writeText) {

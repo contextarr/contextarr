@@ -297,7 +297,7 @@ export function App() {
         ) : route.name === "composer" ? (
           <ComposerPage packs={packs} />
         ) : route.name === "exports" ? (
-          <ExportsPage packs={packs} />
+          <ExportsPage packs={packs} skills={skills} />
         ) : route.name === "health" ? (
           <HealthPage health={health} packs={packs} skills={skills} />
         ) : (
@@ -1116,11 +1116,7 @@ function SkillDocumentsTab({
 
 function SkillExportsTab({ skill }: { skill: SkillDetail }) {
   return (
-    <article className="detail-card">
-      <h2>Skill Export Profiles</h2>
-      <ProfileList profiles={skill.exportProfiles} />
-      <p className="muted-note">Skill export previews are enabled in Phase 18. Phase 17 keeps this surface read-only metadata.</p>
-    </article>
+    <ExportWorkbench subject={skill} subjectKind="skill" compact />
   );
 }
 
@@ -1475,7 +1471,7 @@ function SourcesTab({ sources }: { sources: SourceSummary[] }) {
 
 function ExportsTab({ pack }: { pack: PackDetail }) {
   return (
-    <ExportWorkbench pack={pack} compact />
+    <ExportWorkbench subject={pack} subjectKind="pack" compact />
   );
 }
 
@@ -1819,9 +1815,12 @@ function ComposerPage({ packs }: { packs: PackSummary[] }) {
   );
 }
 
-function ExportsPage({ packs }: { packs: PackSummary[] }) {
+function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSummary[] }) {
+  const [subjectKind, setSubjectKind] = useState<"pack" | "skill">("pack");
   const [selectedPackId, setSelectedPackId] = useState("");
+  const [selectedSkillId, setSelectedSkillId] = useState("");
   const [pack, setPack] = useState<PackDetail | null>(null);
+  const [skill, setSkill] = useState<SkillDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1832,8 +1831,14 @@ function ExportsPage({ packs }: { packs: PackSummary[] }) {
   }, [packs, selectedPackId]);
 
   useEffect(() => {
+    if (!selectedSkillId && skills[0]) {
+      setSelectedSkillId(skills[0].id);
+    }
+  }, [selectedSkillId, skills]);
+
+  useEffect(() => {
     let cancelled = false;
-    if (!selectedPackId) {
+    if (subjectKind !== "pack" || !selectedPackId) {
       setPack(null);
       return;
     }
@@ -1863,11 +1868,47 @@ function ExportsPage({ packs }: { packs: PackSummary[] }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedPackId]);
+  }, [selectedPackId, subjectKind]);
 
-  if (packs.length === 0) {
-    return <StateCard title="No packs indexed" detail="The local API returned an empty pack library." icon={CloudDownload} />;
+  useEffect(() => {
+    let cancelled = false;
+    if (subjectKind !== "skill" || !selectedSkillId) {
+      setSkill(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    async function loadSkill() {
+      try {
+        const response = await apiClient.getSkill(selectedSkillId);
+        if (!cancelled) {
+          setSkill(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load Skill export profiles.");
+          setSkill(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadSkill();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSkillId, subjectKind]);
+
+  if (packs.length === 0 && skills.length === 0) {
+    return <StateCard title="No exportable objects indexed" detail="The local API returned an empty pack and Skill library." icon={CloudDownload} />;
   }
+
+  const activeSubject = subjectKind === "skill" ? skill : pack;
 
   return (
     <section className="library-panel" aria-labelledby="exports-title">
@@ -1878,49 +1919,71 @@ function ExportsPage({ packs }: { packs: PackSummary[] }) {
             <span>Exports</span>
           </div>
           <h1 id="exports-title">Export Center</h1>
-          <p>Generate local, profile-driven context artifacts for assistant and agent targets.</p>
+          <p>Generate local, profile-driven pack and Skill artifacts for assistant and agent targets.</p>
         </div>
-        <label className="select-control export-pack-select">
-          <Package size={16} aria-hidden="true" />
-          <select value={selectedPackId} onChange={(event) => setSelectedPackId(event.target.value)}>
-            {packs.map((candidate) => (
-              <option value={candidate.id} key={candidate.id}>
-                {candidate.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="inline-actions">
+          <label className="select-control export-pack-select">
+            <Filter size={16} aria-hidden="true" />
+            <select value={subjectKind} onChange={(event) => setSubjectKind(event.target.value as "pack" | "skill")}>
+              <option value="pack">Context Packs</option>
+              <option value="skill">Skills</option>
+            </select>
+          </label>
+          <label className="select-control export-pack-select">
+            {subjectKind === "skill" ? <BookOpen size={16} aria-hidden="true" /> : <Package size={16} aria-hidden="true" />}
+            <select
+              value={subjectKind === "skill" ? selectedSkillId : selectedPackId}
+              onChange={(event) =>
+                subjectKind === "skill" ? setSelectedSkillId(event.target.value) : setSelectedPackId(event.target.value)
+              }
+            >
+              {(subjectKind === "skill" ? skills : packs).map((candidate) => (
+                <option value={candidate.id} key={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {error ? (
         <StateCard title="Exports unavailable" detail={error} icon={CloudDownload} />
-      ) : loading || !pack ? (
+      ) : loading || !activeSubject ? (
         <DetailLoading />
       ) : (
-        <ExportWorkbench pack={pack} />
+        <ExportWorkbench subject={activeSubject} subjectKind={subjectKind} />
       )}
     </section>
   );
 }
 
-function ExportWorkbench({ pack, compact = false }: { pack: PackDetail; compact?: boolean }) {
+function ExportWorkbench({
+  subject,
+  subjectKind,
+  compact = false
+}: {
+  subject: PackDetail | SkillDetail;
+  subjectKind: "pack" | "skill";
+  compact?: boolean;
+}) {
   const [target, setTarget] = useState("all");
-  const [profileId, setProfileId] = useState(pack.exportProfiles[0]?.id ?? "");
+  const [profileId, setProfileId] = useState(subject.exportProfiles[0]?.id ?? "");
   const [artifact, setArtifact] = useState<ExportArtifact | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const targets = getExportTargets(pack.exportProfiles);
-  const options = buildExportOptions(pack, target);
+  const targets = getExportTargets(subject.exportProfiles);
+  const options = buildExportOptions(subject, target);
   const selectedProfile = options.find((option) => option.profile.id === profileId)?.profile ?? options[0]?.profile;
 
   useEffect(() => {
     setTarget("all");
-    setProfileId(pack.exportProfiles[0]?.id ?? "");
+    setProfileId(subject.exportProfiles[0]?.id ?? "");
     setArtifact(null);
     setError(null);
     setCopied(false);
-  }, [pack.id, pack.exportProfiles]);
+  }, [subject.id, subject.exportProfiles]);
 
   useEffect(() => {
     if (!selectedProfile && options[0]) {
@@ -1940,7 +2003,11 @@ function ExportWorkbench({ pack, compact = false }: { pack: PackDetail; compact?
     setCopied(false);
 
     try {
-      setArtifact(await apiClient.getExportPreview(pack.id, selectedProfile.id));
+      setArtifact(
+        subjectKind === "skill"
+          ? await apiClient.getSkillExportPreview(subject.id, selectedProfile.id)
+          : await apiClient.getExportPreview(subject.id, selectedProfile.id)
+      );
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : "Unable to build export preview.");
       setArtifact(null);
@@ -1966,7 +2033,7 @@ function ExportWorkbench({ pack, compact = false }: { pack: PackDetail; compact?
       <div className="export-header">
         <div>
           <h2>Export Profiles</h2>
-          <p>{pack.exportProfiles.length} profile-driven targets for {pack.name}.</p>
+          <p>{subject.exportProfiles.length} profile-driven targets for {subject.name}.</p>
         </div>
         <div className="export-controls">
           <label className="select-control">

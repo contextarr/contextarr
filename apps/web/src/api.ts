@@ -46,6 +46,7 @@ export interface ApiClient {
   getSkillExports(id: string): Promise<SkillDetail["exportProfiles"]>;
   getSkillHealth(id: string): Promise<SkillHealthResponse>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
+  getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   getReviewItems(filters?: {
     status?: string;
@@ -119,6 +120,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     getExportPreview: (packId: string, profileId: string) =>
       requestJson<ExportArtifact>(
         `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`
+      ),
+    getSkillExportPreview: (skillId: string, profileId: string) =>
+      requestJson<ExportArtifact>(
+        `/api/skills/${encodeURIComponent(skillId)}/exports/${encodeURIComponent(profileId)}/preview`
       ),
     composePreview: (body: ComposePreviewRequest) =>
       requestJson<ExportArtifact>("/api/compose/preview", {

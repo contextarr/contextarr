@@ -38,7 +38,7 @@ describe("SQLite indexer", () => {
         skillInstructionsIndexed: 24,
         skillExamplesIndexed: 16,
         skillSourcesIndexed: 24,
-        skillExportProfilesIndexed: 32
+        skillExportProfilesIndexed: 48
       });
       expect(stats).toMatchObject({
         packs: 5,
@@ -49,7 +49,7 @@ describe("SQLite indexer", () => {
         skillInstructions: 24,
         skillExamples: 16,
         skillSources: 24,
-        skillExportProfiles: 32,
+        skillExportProfiles: 48,
         reviewItems: 0,
         openReviewItems: 0
       });
@@ -74,7 +74,7 @@ describe("SQLite indexer", () => {
         skillInstructions: 24,
         skillExamples: 16,
         skillSources: 24,
-        skillExportProfiles: 32,
+        skillExportProfiles: 48,
         reviewItems: 0,
         openReviewItems: 0
       });
