@@ -1,6 +1,6 @@
 # Contextarr Agent Kits
 
-Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 21 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing, and read-only local API/search.
+Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 22 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing/search, and a local Composer save flow.
 
 ## Definition
 
@@ -29,11 +29,11 @@ An Agent Kit references:
 - Redaction, validation, and compatibility rules.
 - Compatibility notes.
 
-The current source files live under `demo-agent-kits/` for fake public-safe examples. Generated previews, search indexes, and later exports remain derived artifacts.
+The public-safe examples live under `demo-agent-kits/` and remain read-only demo source material. Locally composed Agent Kits are saved under `CONTEXTARR_AGENT_KITS_DIR`, which defaults to ignored `agent-kits/`.
 
 ## Read-Only API
 
-Phase 21 adds local API endpoints:
+Phase 21 and Phase 22 add local API endpoints:
 
 - `GET /api/agent-kits`
 - `GET /api/agent-kits/:id`
@@ -42,13 +42,16 @@ Phase 21 adds local API endpoints:
 - `GET /api/agent-kits/:id/exports`
 - `GET /api/agent-kits/:id/exports/:profileId/preview`
 - `GET /api/search?type=agent-kit&q=`
+- `POST /api/agent-kits`
+
+`POST /api/agent-kits` accepts metadata plus selected Context Pack IDs and Skill IDs. It does not accept a filesystem path. The server writes a data-only Agent Kit inside the configured local Agent Kit directory, validates it before indexing, and then refreshes the derived SQLite index.
 
 The preview route returns metadata and selected relationship summaries only until the full Agent Kit export engine lands in Phase 24.
 
 ## Source Of Truth
 
-Agent Kit source files will be local, inspectable, and versionable. Generated Export Briefs, previews, search indexes, and MCP responses remain derived artifacts.
+Agent Kit source files are local, inspectable, and versionable. Generated Export Briefs, previews, search indexes, and MCP responses remain derived artifacts.
 
 ## Boundaries
 
-Phase 21 does not implement Agent Kit UI, full Agent Kit export content generation, MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, mutation, or execution behavior.
+Phase 22 implements the Composer save surface and a simple detail view. It does not implement full Agent Kit export content generation, MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, arbitrary path writes, or execution behavior.

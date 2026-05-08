@@ -1,9 +1,16 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const projectName = "contextarr-phase11-smoke";
 const hostPort = process.env.CONTEXTARR_DOCKER_VERIFY_PORT ?? "33210";
 const baseUrl = `http://127.0.0.1:${hostPort}`;
+const smokeAgentKitId = `docker-smoke-agent-kit-${process.pid}-${Date.now()}`;
+const smokeAgentKitsRoot = path.join(repoRoot, "agent-kits");
+const smokeAgentKitPath = path.join(smokeAgentKitsRoot, smokeAgentKitId);
 const composeEnv = {
   ...process.env,
   CONTEXTARR_DOCKER_PORT: hostPort,
@@ -14,6 +21,7 @@ function run(args) {
     stdio: "inherit",
     shell: process.platform === "win32",
     env: composeEnv,
+    cwd: repoRoot,
   });
 
   if (result.status !== 0) {
@@ -35,6 +43,7 @@ async function postJson(path, body) {
     method: "POST",
     headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload).toString() },
     body: payload,
+    timeoutMs: 60000,
   });
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(`${path} returned HTTP ${response.statusCode}: ${response.body}`);
@@ -53,6 +62,7 @@ async function getText(path) {
 function request(path, options = {}) {
   const url = new URL(path, baseUrl);
   const body = options.body ?? "";
+  const timeoutMs = options.timeoutMs ?? 30000;
 
   return new Promise((resolve, reject) => {
     const req = http.request(
@@ -60,7 +70,7 @@ function request(path, options = {}) {
       {
         method: options.method ?? "GET",
         headers: options.headers,
-        timeout: 5000,
+        timeout: timeoutMs,
       },
       (res) => {
         let responseBody = "";
@@ -101,6 +111,10 @@ async function waitForHealth() {
 
 async function verify() {
   run(["down"]);
+  if (fs.existsSync(smokeAgentKitPath)) {
+    throw new Error(`Refusing to remove existing local Agent Kit smoke path: ${smokeAgentKitPath}`);
+  }
+  fs.mkdirSync(smokeAgentKitsRoot, { recursive: true });
   run(["build"]);
   run(["up", "-d"]);
 
@@ -162,6 +176,30 @@ async function verify() {
     throw new Error(`Unexpected Agent Kit preview response: ${JSON.stringify(agentKitPreview)}`);
   }
 
+  const savedAgentKit = await postJson("/api/agent-kits", {
+    id: smokeAgentKitId,
+    name: "Docker Smoke Agent Kit",
+    goal: "Verify local Docker Agent Kit saves.",
+    description: "Local public-preview smoke kit for the Docker acceptance gate.",
+    contextPacks: ["ai-workstation-pack"],
+    skills: ["support-ticket-writing-skill"],
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+  });
+  if (savedAgentKit.id !== smokeAgentKitId || savedAgentKit.validation?.errors !== 0) {
+    throw new Error(`Unexpected Agent Kit save response: ${JSON.stringify(savedAgentKit)}`);
+  }
+
+  if (!fs.existsSync(path.join(smokeAgentKitPath, "contextarr-agent-kit.json"))) {
+    throw new Error("Docker Agent Kit save did not write to the local agent-kits mount.");
+  }
+
+  const savedAgentKitDetail = await getJson(`/api/agent-kits/${smokeAgentKitId}`);
+  if (savedAgentKitDetail.id !== smokeAgentKitId || savedAgentKitDetail.contextPacks?.length !== 1 || savedAgentKitDetail.skills?.length !== 1) {
+    throw new Error(`Unexpected saved Agent Kit detail response: ${JSON.stringify(savedAgentKitDetail)}`);
+  }
+
   const composed = await postJson("/api/compose/preview", {
     title: "Docker Smoke",
     target: "codex",
@@ -181,7 +219,10 @@ try {
   const down = spawnSync("docker", ["compose", "-p", projectName, "down"], {
     stdio: "inherit",
     shell: process.platform === "win32",
+    cwd: repoRoot,
+    env: composeEnv,
   });
+  fs.rmSync(smokeAgentKitPath, { recursive: true, force: true });
   if (down.status !== 0) {
     process.exitCode = down.status ?? 1;
   }

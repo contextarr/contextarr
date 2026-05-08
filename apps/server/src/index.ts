@@ -1,5 +1,5 @@
 export { createApp } from "./api";
-export { loadConfig } from "./config";
+export { assertAgentKitDirectorySeparation, getAgentKitIndexDirs, loadConfig } from "./config";
 export { createSchema, openDatabase, type ContextarrDatabase } from "./db";
 export {
   getAgentKit,

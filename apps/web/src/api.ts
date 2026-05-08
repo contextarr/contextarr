@@ -1,4 +1,9 @@
 import type {
+  AgentKitContextPackSummary,
+  AgentKitDetail,
+  AgentKitSkillSummary,
+  AgentKitSummary,
+  CreateAgentKitRequest,
   HealthResponse,
   ComposePreviewRequest,
   ExportArtifact,
@@ -9,6 +14,7 @@ import type {
   RecordSummary,
   ReviewItemsResponse,
   ReviewItemStatus,
+  SaveAgentKitResponse,
   SearchResponse,
   SkillDetail,
   SkillDocument,
@@ -45,6 +51,11 @@ export interface ApiClient {
   getSkillExamples(id: string): Promise<SkillDocument[]>;
   getSkillExports(id: string): Promise<SkillDetail["exportProfiles"]>;
   getSkillHealth(id: string): Promise<SkillHealthResponse>;
+  getAgentKits(): Promise<AgentKitSummary[]>;
+  getAgentKit(id: string): Promise<AgentKitDetail>;
+  getAgentKitContextPacks(id: string): Promise<AgentKitContextPackSummary[]>;
+  getAgentKitSkills(id: string): Promise<AgentKitSkillSummary[]>;
+  saveAgentKit(request: CreateAgentKitRequest): Promise<SaveAgentKitResponse>;
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
@@ -117,6 +128,29 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.exportProfiles;
     },
     getSkillHealth: (id: string) => requestJson<SkillHealthResponse>(`/api/skills/${encodeURIComponent(id)}/health`),
+    getAgentKits: async () => {
+      const response = await requestJson<{ agentKits: AgentKitSummary[] }>("/api/agent-kits");
+      return response.agentKits;
+    },
+    getAgentKit: (id: string) => requestJson<AgentKitDetail>(`/api/agent-kits/${encodeURIComponent(id)}`),
+    getAgentKitContextPacks: async (id: string) => {
+      const response = await requestJson<{ contextPacks: AgentKitContextPackSummary[] }>(
+        `/api/agent-kits/${encodeURIComponent(id)}/context-packs`
+      );
+      return response.contextPacks;
+    },
+    getAgentKitSkills: async (id: string) => {
+      const response = await requestJson<{ skills: AgentKitSkillSummary[] }>(
+        `/api/agent-kits/${encodeURIComponent(id)}/skills`
+      );
+      return response.skills;
+    },
+    saveAgentKit: (body: CreateAgentKitRequest) =>
+      requestJson<SaveAgentKitResponse>("/api/agent-kits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
     getExportPreview: (packId: string, profileId: string) =>
       requestJson<ExportArtifact>(
         `/api/packs/${encodeURIComponent(packId)}/exports/${encodeURIComponent(profileId)}/preview`

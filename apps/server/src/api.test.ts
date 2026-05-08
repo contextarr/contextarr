@@ -2,8 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./api";
+import { getAgentKitIndexDirs } from "./config";
 import { openDatabase, type ContextarrDatabase } from "./db";
 import { rebuildIndex } from "./indexer";
 import type { ServerConfig } from "./types";
@@ -21,19 +23,21 @@ function createTestContext(
 ): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
-  const agentKitsDir =
-    overrides.agentKitsDir ?? (packsDir === demoPacksDir && skillsDir === demoSkillsDir ? demoAgentKitsDir : path.join(os.tmpdir(), "contextarr-no-agent-kits"));
+  const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
+  const resolvedDemoAgentKitsDir =
+    overrides.demoAgentKitsDir ?? (packsDir === demoPacksDir && skillsDir === demoSkillsDir ? demoAgentKitsDir : path.join(os.tmpdir(), "contextarr-no-demo-agent-kits"));
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
     packsDir,
     skillsDir,
     agentKitsDir,
+    demoAgentKitsDir: resolvedDemoAgentKitsDir,
     databasePath: ":memory:",
     apiToken,
     ...overrides
   };
-  rebuildIndex(db, packsDir, config.skillsDir, config.agentKitsDir);
+  rebuildIndex(db, packsDir, config.skillsDir, getAgentKitIndexDirs(config));
   return { db, config };
 }
 
@@ -51,6 +55,49 @@ function expectedHealthStatus(score: number): string {
   }
 
   return score >= 70 ? "degraded" : "needs_review";
+}
+
+function createTempAgentKitsDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-save-"));
+}
+
+function saveAgentKitPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "phase22-local-kit",
+    name: "Phase 22 Local Kit",
+    description: "Local data-only Agent Kit saved from existing indexed objects.",
+    contextPackIds: ["internal-support-kb-pack"],
+    skillIds: ["support-ticket-writing-skill"],
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    ...overrides
+  };
+}
+
+function listFilesRecursive(root: string): string[] {
+  const files: string[] = [];
+  if (!fs.existsSync(root)) {
+    return files;
+  }
+
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    const fullPath = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listFilesRecursive(fullPath));
+    } else {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function expectPathInside(root: string, value: string): void {
+  const relative = path.relative(path.resolve(root), path.resolve(value));
+  expect(relative).not.toBe("..");
+  expect(relative.startsWith(`..${path.sep}`)).toBe(false);
+  expect(path.isAbsolute(relative)).toBe(false);
 }
 
 describe("Contextarr API", () => {
@@ -607,7 +654,7 @@ describe("Contextarr API", () => {
     const missingAgentKitsDir = path.join(os.tmpdir(), `contextarr-missing-agent-kits-${Date.now()}`);
     db.close();
 
-    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir: missingAgentKitsDir });
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { demoAgentKitsDir: missingAgentKitsDir });
     const app = createApp(fixtureContext);
     const response = await app.inject({ method: "POST", url: "/api/rescan" });
 
@@ -726,6 +773,241 @@ describe("Contextarr API", () => {
     );
     await app.close();
     db.close();
+  });
+
+  it("POST /api/agent-kits saves a validated local Agent Kit and refreshes the listing", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload()
+    });
+    const list = await app.inject({ method: "GET", url: "/api/agent-kits" });
+    const detail = await app.inject({ method: "GET", url: "/api/agent-kits/phase22-local-kit" });
+    const savedPath = fixtureContext.db
+      .prepare("SELECT agent_kit_path FROM agent_kits WHERE id = ?")
+      .pluck()
+      .get("phase22-local-kit") as string;
+    const savedFiles = listFilesRecursive(savedPath).map((file) => path.relative(savedPath, file).replace(/\\/g, "/")).sort();
+    const manifest = JSON.parse(fs.readFileSync(path.join(savedPath, "contextarr-agent-kit.json"), "utf8"));
+    const profile = YAML.parse(fs.readFileSync(path.join(savedPath, "exports", "codex.yaml"), "utf8"));
+    const redaction = YAML.parse(fs.readFileSync(path.join(savedPath, "rules", "redaction.yaml"), "utf8"));
+    const compatibility = YAML.parse(fs.readFileSync(path.join(savedPath, "rules", "compatibility.yaml"), "utf8"));
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({
+      ok: true,
+      id: "phase22-local-kit",
+      validation: { errors: 0 },
+      agentKit: {
+        id: "phase22-local-kit",
+        contextPackCount: 1,
+        skillCount: 1,
+        target: "codex"
+      }
+    });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().agentKits.map((kit: { id: string }) => kit.id)).toContain("phase22-local-kit");
+    expect(detail.statusCode).toBe(200);
+    expectPathInside(agentKitsDir, savedPath);
+    for (const file of listFilesRecursive(savedPath)) {
+      expectPathInside(agentKitsDir, file);
+    }
+    expect(savedFiles).toEqual([
+      "CHANGELOG.md",
+      "LICENSE",
+      "README.md",
+      "contextarr-agent-kit.json",
+      "exports/codex.yaml",
+      "rules/compatibility.yaml",
+      "rules/redaction.yaml",
+      "rules/validation.yaml"
+    ]);
+    expect(manifest).toMatchObject({
+      id: "phase22-local-kit",
+      contextPacks: ["internal-support-kb-pack"],
+      skills: ["support-ticket-writing-skill"],
+      containsExecutableCode: false,
+      requiresNetwork: false,
+      permissions: {
+        writeDrafts: false,
+        runCommands: false,
+        networkAccess: false,
+        browserAutomation: false,
+        toolExecution: false
+      },
+      target: "codex",
+      exportProfile: "phase22-local-kit-codex",
+      privacyMode: "redacted"
+    });
+    expect(profile).toMatchObject({
+      id: "phase22-local-kit-codex",
+      target: "codex",
+      format: "markdown",
+      privacy_mode: "redacted",
+      include: {
+        context_packs: ["internal-support-kb-pack"],
+        skills: ["support-ticket-writing-skill"]
+      }
+    });
+    expect(redaction.redact_tags).toEqual(expect.arrayContaining(["secret", "never_export", "imported_draft"]));
+    expect(compatibility).toMatchObject({
+      supported_targets: ["codex"],
+      required_context_packs: ["internal-support-kb-pack"],
+      required_skills: ["support-ticket-writing-skill"],
+      allow_unreviewed_drafts: false,
+      blocked_trust_levels: ["blocked", "deprecated"]
+    });
+    expect(fs.existsSync(path.join(demoAgentKitsDir, "phase22-local-kit"))).toBe(false);
+    expect(JSON.stringify(response.json())).not.toContain(agentKitsDir);
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/agent-kits rejects bad bodies and empty selections", async () => {
+    const app = createApp({ config, db });
+    const missingBody = await app.inject({ method: "POST", url: "/api/agent-kits", payload: {} });
+    const emptyPacks = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ contextPackIds: [] })
+    });
+    const emptySkills = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ skillIds: [] })
+    });
+    const punctuationName = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: undefined, name: "!!!" })
+    });
+
+    expect(missingBody.statusCode).toBe(400);
+    expect(emptyPacks.statusCode).toBe(400);
+    expect(emptySkills.statusCode).toBe(400);
+    expect(punctuationName.statusCode).toBe(400);
+    expect(punctuationName.json()).toMatchObject({ error: "invalid_agent_kit_id" });
+    await app.close();
+    db.close();
+  });
+
+  it("POST /api/agent-kits blocks missing referenced packs and skills", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const missingPack = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: "missing-pack-kit", contextPackIds: ["missing-pack"] })
+    });
+    const missingSkill = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: "missing-skill-kit", skillIds: ["missing-skill"] })
+    });
+
+    expect(missingPack.statusCode).toBe(404);
+    expect(missingPack.json()).toMatchObject({
+      error: "missing_references",
+      missingContextPackIds: ["missing-pack"],
+      missingSkillIds: []
+    });
+    expect(missingSkill.statusCode).toBe(404);
+    expect(missingSkill.json()).toMatchObject({
+      error: "missing_references",
+      missingContextPackIds: [],
+      missingSkillIds: ["missing-skill"]
+    });
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/agent-kits rejects duplicate IDs and existing output folders", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload()
+    });
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload()
+    });
+    fs.mkdirSync(path.join(agentKitsDir, "preexisting-kit"));
+    const existingOutput = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: "preexisting-kit" })
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json()).toMatchObject({ error: "agent_kit_exists", id: "phase22-local-kit" });
+    expect(existingOutput.statusCode).toBe(409);
+    expect(existingOutput.json()).toMatchObject({ error: "agent_kit_exists", id: "preexisting-kit" });
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/agent-kits keeps generated IDs path traversal-safe", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir });
+    const app = createApp(fixtureContext);
+    const badId = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: "../escape-kit" })
+    });
+    const fromName = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: undefined, name: "../Escape Kit" })
+    });
+    const savedPath = fixtureContext.db
+      .prepare("SELECT agent_kit_path FROM agent_kits WHERE id = ?")
+      .pluck()
+      .get("escape-kit") as string;
+
+    expect(badId.statusCode).toBe(400);
+    expect(fromName.statusCode).toBe(201);
+    expect(fromName.json()).toMatchObject({ id: "escape-kit" });
+    expectPathInside(agentKitsDir, savedPath);
+    expect(fs.existsSync(path.join(path.dirname(agentKitsDir), "escape-kit"))).toBe(false);
+    await app.close();
+    fixtureContext.db.close();
+  });
+
+  it("POST /api/agent-kits is protected by the optional API token", async () => {
+    db.close();
+    const agentKitsDir = createTempAgentKitsDir();
+    const authedContext = createTestContext("test-token", demoPacksDir, { agentKitsDir });
+    const app = createApp(authedContext);
+    const blocked = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      payload: saveAgentKitPayload({ id: "blocked-local-kit" })
+    });
+    const allowed = await app.inject({
+      method: "POST",
+      url: "/api/agent-kits",
+      headers: { authorization: "Bearer test-token" },
+      payload: saveAgentKitPayload({ id: "allowed-local-kit" })
+    });
+
+    expect(blocked.statusCode).toBe(401);
+    expect(allowed.statusCode).toBe(201);
+    await app.close();
+    authedContext.db.close();
   });
 
   it("GET /api/agent-kits/:id returns Agent Kit detail without local-only manifest paths", async () => {

@@ -11,7 +11,7 @@ import {
   generateSkippedSkillReviewItems,
   type ReviewItemCandidate
 } from "./health";
-import { loadAgentKits } from "./agent-kit-loader";
+import { loadAgentKits, type LoadAgentKitsOptions } from "./agent-kit-loader";
 import { loadPacks } from "./pack-loader";
 import { loadSkills } from "./skill-loader";
 import type {
@@ -38,14 +38,15 @@ export function rebuildIndex(
   db: ContextarrDatabase,
   packsDir: string,
   skillsDir?: string,
-  agentKitsDir?: string
+  agentKitsDir?: string | string[]
 ): RebuildIndexResult {
   const indexedAt = new Date().toISOString();
   const loaded = loadPacks(packsDir);
   const loadedSkills = skillsDir ? loadSkills(skillsDir) : { skills: [], skipped: [] };
-  const loadedAgentKits = agentKitsDir
+  const agentKitDirs = normalizeAgentKitDirs(agentKitsDir);
+  const loadedAgentKits = agentKitDirs.length > 0
     ? filterAgentKitsWithAvailableReferences(
-        loadAgentKits(agentKitsDir, { contextPacksDir: packsDir, skillsDir }),
+        loadAgentKitsForIndex(agentKitDirs, { contextPacksDir: packsDir, skillsDir }),
         new Set(loaded.packs.map((pack) => pack.manifest.id)),
         new Set(loadedSkills.skills.map((skill) => skill.manifest.id))
       )
@@ -145,6 +146,56 @@ export function rebuildIndex(
     skippedSkills: loadedSkills.skipped,
     skippedAgentKits: loadedAgentKits.skipped
   };
+}
+
+function normalizeAgentKitDirs(agentKitsDir: string | string[] | undefined): string[] {
+  const values = Array.isArray(agentKitsDir) ? agentKitsDir : agentKitsDir ? [agentKitsDir] : [];
+  const seen = new Set<string>();
+  return values.filter((dir) => {
+    const resolved = path.resolve(dir).toLowerCase();
+    if (seen.has(resolved)) {
+      return false;
+    }
+    seen.add(resolved);
+    return true;
+  });
+}
+
+function loadAgentKitsForIndex(
+  agentKitDirs: string[],
+  options: LoadAgentKitsOptions
+): { agentKits: LoadedAgentKit[]; skipped: SkippedAgentKit[] } {
+  const agentKits: LoadedAgentKit[] = [];
+  const skipped: SkippedAgentKit[] = [];
+  const seenAgentKitIds = new Set<string>();
+
+  for (const agentKitsDir of agentKitDirs) {
+    const result = loadAgentKits(agentKitsDir, options);
+    skipped.push(...result.skipped);
+
+    for (const agentKit of result.agentKits) {
+      if (seenAgentKitIds.has(agentKit.manifest.id)) {
+        skipped.push({
+          agentKitPath: agentKit.agentKitPath,
+          agentKitId: agentKit.manifest.id,
+          issues: [
+            {
+              severity: "error",
+              code: "agent_kit_manifest.duplicate_id",
+              message: `Agent Kit ID is duplicated across configured directories: ${agentKit.manifest.id}`,
+              path: "id"
+            }
+          ]
+        });
+        continue;
+      }
+
+      seenAgentKitIds.add(agentKit.manifest.id);
+      agentKits.push(agentKit);
+    }
+  }
+
+  return { agentKits, skipped };
 }
 
 export function getIndexStats(db: ContextarrDatabase): {

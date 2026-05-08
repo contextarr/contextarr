@@ -105,6 +105,93 @@ describe("Contextarr API client", () => {
     ]);
   });
 
+  it("reads Agent Kit library, detail, relationships, and posts save requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/context-packs")) {
+          return jsonResponse({ contextPacks: [{ id: "pack-1" }] });
+        }
+        if (String(url).endsWith("/skills")) {
+          return jsonResponse({ skills: [{ id: "skill-1" }] });
+        }
+        if (String(url).includes("/api/agent-kits/kit-1")) {
+          return jsonResponse({ id: "kit-1", name: "Kit One" });
+        }
+        if (init?.method === "POST") {
+          return jsonResponse({ id: "kit-1", message: "saved" });
+        }
+        return jsonResponse({ agentKits: [{ id: "kit-1" }] });
+      }
+    });
+
+    await expect(client.getAgentKits()).resolves.toEqual([{ id: "kit-1" }]);
+    await expect(client.getAgentKit("kit-1")).resolves.toMatchObject({ name: "Kit One" });
+    await expect(client.getAgentKitContextPacks("kit-1")).resolves.toEqual([{ id: "pack-1" }]);
+    await expect(client.getAgentKitSkills("kit-1")).resolves.toEqual([{ id: "skill-1" }]);
+    await expect(
+      client.saveAgentKit({
+        id: "kit-1",
+        name: "Kit One",
+        goal: "Prepare a brief.",
+        description: "Local-only kit.",
+        contextPacks: ["pack-1"],
+        skills: ["skill-1"],
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        exportProfile: "kit-1-codex-markdown",
+        exportProfileName: "Kit One Codex Export",
+        excludeTags: ["secret"],
+        boundaries: {
+          containsExecutableCode: false,
+          requiresNetwork: false,
+          cloudSync: false,
+          telemetry: false,
+          marketplacePublish: false,
+          permissions: {
+            readVault: false,
+            writeDrafts: false,
+            runCommands: false,
+            networkAccess: false,
+            browserAutomation: false,
+            toolExecution: false
+          }
+        },
+        compatibility: {
+          contextarr: ">=0.3.0",
+          supportedTargets: ["codex"],
+          requiredContextPacks: ["pack-1"],
+          requiredSkills: ["skill-1"]
+        }
+      })
+    ).resolves.toMatchObject({ id: "kit-1" });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/agent-kits",
+      "/api/agent-kits/kit-1",
+      "/api/agent-kits/kit-1/context-packs",
+      "/api/agent-kits/kit-1/skills",
+      "/api/agent-kits"
+    ]);
+    expect(requests[4].init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const body = JSON.parse(String(requests[4].init?.body));
+    expect(body).toMatchObject({
+      name: "Kit One",
+      contextPacks: ["pack-1"],
+      skills: ["skill-1"],
+      target: "codex"
+    });
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(":\\\\");
+    expect(serialized).not.toContain("../");
+    expect(serialized).not.toContain("..\\\\");
+  });
+
   it("reads pack health and review item routes", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

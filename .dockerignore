@@ -12,6 +12,7 @@ out/
 rendered/
 generated-exports/
 imported-packs/
+agent-kits/
 
 assets/brand/png/
 assets/brand/base64/

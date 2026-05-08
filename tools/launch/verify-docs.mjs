@@ -45,7 +45,10 @@ if (!failed) {
   const mcp = read("docs/mcp.md");
   const docker = read("docs/docker.md");
   const security = read("docs/security.md");
+  const securityModel = read("docs/security-model.md");
   const architecture = read("docs/architecture.md");
+  const agentKits = read("docs/agent-kits.md");
+  const roadmap = read("docs/roadmap.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
   const combinedDocs = [readme, mcp, docker].join("\n");
@@ -84,9 +87,10 @@ if (!failed) {
     !docker.includes("CONTEXTARR_WEB_DIST_DIR") ||
     !docker.includes("CONTEXTARR_DOCKER_PORT") ||
     !docker.includes("CONTEXTARR_SKILLS_DIR") ||
+    !docker.includes("CONTEXTARR_DEMO_AGENT_KITS_DIR") ||
     !docker.includes("CONTEXTARR_AGENT_KITS_DIR")
   ) {
-    fail("Docker docs must include the local URL, web dist env var, Skills dir, Agent Kits dir, and host port override.");
+    fail("Docker docs must include the local URL, web dist env var, Skills dir, demo/saved Agent Kits dirs, and host port override.");
   }
 
   if (!security.includes("No telemetry") || !security.includes("No marketplace") || !security.includes("No executable packs")) {
@@ -128,6 +132,38 @@ if (!failed) {
   }
   if (!packageJson.scripts["phase21:verify"]) {
     fail("Root package scripts must include phase21:verify.");
+  }
+
+  const requiredPhase22Text = [
+    "Phase 22",
+    "phase22:verify",
+    "POST /api/agent-kits",
+    "Agent Kit Composer",
+    "CONTEXTARR_DEMO_AGENT_KITS_DIR",
+  ];
+  for (const text of requiredPhase22Text) {
+    if (!readme.includes(text)) {
+      fail(`README is missing Phase 22 text: ${text}`);
+    }
+  }
+  if (!architecture.includes("POST /api/agent-kits") || !architecture.includes("validated local Agent Kit saves")) {
+    fail("Architecture docs must describe Phase 22 Agent Kit saves.");
+  }
+  if (
+    !agentKits.includes("Phase 22") ||
+    !agentKits.includes("POST /api/agent-kits") ||
+    !agentKits.includes("CONTEXTARR_AGENT_KITS_DIR")
+  ) {
+    fail("Agent Kits docs must describe Phase 22 Composer saves and the local Agent Kits directory.");
+  }
+  if (!roadmap.includes("Phase 22: Agent Kit Composer UI. Complete.")) {
+    fail("Roadmap must mark Phase 22 complete.");
+  }
+  if (!securityModel.includes("validated local Agent Kit Composer save flow")) {
+    fail("Security model must describe Phase 22 validated local Agent Kit saves.");
+  }
+  if (!packageJson.scripts["phase22:verify"]) {
+    fail("Root package scripts must include phase22:verify.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

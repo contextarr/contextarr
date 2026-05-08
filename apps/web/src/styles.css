@@ -50,7 +50,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -980,9 +981,39 @@ h1 {
   min-width: min(420px, 100%);
 }
 
+.composer-mode-shell {
+  padding-bottom: 0;
+}
+
+.composer-mode-strip {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(17, 25, 35, 0.88);
+}
+
+.composer-mode-strip a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  color: var(--muted);
+}
+
+.composer-mode-strip a.is-selected {
+  background: rgba(79, 124, 255, 0.24);
+  color: var(--text);
+}
+
 .composer-page {
   display: grid;
   gap: 18px;
+}
+
+.composer-mode-shell + .composer-page {
+  padding-top: 16px;
 }
 
 .composer-grid {
@@ -1089,13 +1120,20 @@ h1 {
 .composer-filters label,
 .composer-filters select,
 .field-label input,
-.field-label select {
+.field-label select,
+.field-label textarea {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(8, 13, 20, 0.72);
   color: var(--text);
   padding: 0 10px;
+}
+
+.field-label textarea {
+  min-height: 112px;
+  padding: 10px;
+  resize: vertical;
 }
 
 .composer-filters input {
@@ -1142,6 +1180,157 @@ h1 {
   color: #ffd5db;
   margin: 0;
   padding: 10px;
+}
+
+.composer-error.warning {
+  border-color: rgba(242, 162, 58, 0.36);
+  background: rgba(242, 162, 58, 0.1);
+  color: #ffe4bd;
+}
+
+.composer-error.info {
+  border-color: rgba(34, 211, 232, 0.32);
+  background: rgba(34, 211, 232, 0.08);
+  color: #c8f8ff;
+}
+
+.composer-success,
+.composer-success-card {
+  border: 1px solid rgba(85, 217, 135, 0.34);
+  border-radius: 8px;
+  background: rgba(85, 217, 135, 0.1);
+  color: #d8ffe5;
+}
+
+.composer-success {
+  margin: 0;
+  padding: 10px;
+}
+
+.composer-success-card {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  padding: 12px;
+}
+
+.composer-success-card a {
+  grid-column: 2;
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-kit-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.15fr) minmax(300px, 0.95fr);
+  align-items: start;
+}
+
+.agent-kit-setup,
+.agent-kit-preview {
+  grid-row: span 2;
+}
+
+.agent-kit-options,
+.agent-kit-preview,
+.agent-kit-setup {
+  display: grid;
+  gap: 12px;
+}
+
+.agent-kit-filters {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(170px, 1fr) repeat(3, minmax(110px, auto));
+  margin-bottom: 12px;
+}
+
+.agent-kit-filters label,
+.agent-kit-filters select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(8, 13, 20, 0.72);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.agent-kit-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-kit-filters input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.agent-kit-list {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.agent-kit-preview-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.agent-kit-meta {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.agent-kit-meta div {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(8, 13, 20, 0.42);
+  padding: 10px;
+}
+
+.agent-kit-meta dt {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.agent-kit-meta dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.boundary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.boundary-list span {
+  border: 1px solid rgba(34, 211, 232, 0.24);
+  border-radius: 999px;
+  background: rgba(34, 211, 232, 0.08);
+  color: #c8f8ff;
+  font-size: 12px;
+  padding: 5px 9px;
+}
+
+.agent-kit-notices {
+  display: grid;
+  gap: 8px;
 }
 
 .export-workbench {
@@ -1614,15 +1803,22 @@ h1 {
   .records-tab,
   .record-detail-layout,
   .page-heading,
+  .agent-kit-grid,
   .export-header,
   .composer-grid,
   .review-card {
     grid-template-columns: 1fr;
   }
 
+  .agent-kit-setup,
+  .agent-kit-preview {
+    grid-row: auto;
+  }
+
   .summary-strip,
   .export-stats,
   .review-filters,
+  .agent-kit-filters,
   .composer-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
@@ -1736,6 +1932,7 @@ h1 {
   .summary-strip,
   .export-stats,
   .review-filters,
+  .agent-kit-filters,
   .composer-filters,
   .composer-record {
     grid-template-columns: 1fr;

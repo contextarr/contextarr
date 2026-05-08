@@ -27,6 +27,9 @@ const mocks = vi.hoisted(() => {
     apiClient: {
       getHealth: vi.fn(),
       getPacks: vi.fn(),
+      getPack: vi.fn(),
+      getPackRecords: vi.fn(),
+      getRecord: vi.fn(),
       getSkills: vi.fn(),
       search: vi.fn(),
       getSkill: vi.fn(),
@@ -34,6 +37,11 @@ const mocks = vi.hoisted(() => {
       getSkillExamples: vi.fn(),
       getSkillExports: vi.fn(),
       getSkillHealth: vi.fn(),
+      getAgentKits: vi.fn(),
+      getAgentKit: vi.fn(),
+      getAgentKitContextPacks: vi.fn(),
+      getAgentKitSkills: vi.fn(),
+      saveAgentKit: vi.fn(),
       getExportPreview: vi.fn(),
       getSkillExportPreview: vi.fn(),
       composePreview: vi.fn(),
@@ -79,6 +87,9 @@ describe("App Skill UI routes", () => {
     });
     mocks.apiClient.getHealth.mockResolvedValue(healthFixture());
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
+    mocks.apiClient.getPack.mockResolvedValue(packDetailFixture());
+    mocks.apiClient.getPackRecords.mockResolvedValue([]);
+    mocks.apiClient.getRecord.mockResolvedValue({});
     mocks.apiClient.getSkills.mockResolvedValue([skillFixture()]);
     mocks.apiClient.search.mockResolvedValue({ query: "", results: [] });
     mocks.apiClient.getSkill.mockResolvedValue(skillDetailFixture());
@@ -88,6 +99,14 @@ describe("App Skill UI routes", () => {
     ]);
     mocks.apiClient.getSkillExports.mockResolvedValue([]);
     mocks.apiClient.getSkillHealth.mockResolvedValue(skillHealthFixture());
+    mocks.apiClient.getAgentKits.mockResolvedValue([]);
+    mocks.apiClient.getAgentKit.mockResolvedValue(agentKitDetailFixture());
+    mocks.apiClient.getAgentKitContextPacks.mockResolvedValue([packFixture()]);
+    mocks.apiClient.getAgentKitSkills.mockResolvedValue([skillFixture()]);
+    mocks.apiClient.saveAgentKit.mockResolvedValue({
+      id: "implementation-support-kit",
+      message: "Agent Kit saved locally."
+    });
     mocks.apiClient.getSkillExportPreview.mockResolvedValue({
       packId: "support-ticket-writing-skill",
       packName: "Support Ticket Writing Skill",
@@ -282,6 +301,91 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("Safety Rules");
     expect(document.body.textContent).toContain("Review Skill Document");
   });
+
+  it("renders the Agent Kit Composer and saves selected packs and skills", async () => {
+    mountApp("#/composer/agent-kit");
+
+    await waitForText("Agent Kit Composer");
+    await waitForText("Kit Setup");
+    const saveButton = getButton("Save Agent Kit");
+    expect(saveButton.disabled).toBe(true);
+
+    clickCheckbox("AI Workstation Pack");
+    clickCheckbox("Support Ticket Writing Skill");
+    await flushPendingUpdates();
+    expect(getButton("Save Agent Kit").disabled).toBe(false);
+
+    clickButton("Save Agent Kit");
+    await waitForText("Agent Kit saved locally.");
+
+    expect(mocks.apiClient.saveAgentKit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contextPacks: ["ai-workstation-pack"],
+        skills: ["support-ticket-writing-skill"],
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        boundaries: expect.objectContaining({
+          containsExecutableCode: false,
+          cloudSync: false,
+          telemetry: false,
+          marketplacePublish: false
+        })
+      })
+    );
+    const serialized = JSON.stringify(mocks.apiClient.saveAgentKit.mock.calls[0][0]);
+    expect(serialized).not.toContain(":\\\\");
+    expect(serialized).not.toContain("../");
+    expect(serialized).not.toContain("..\\\\");
+    const openLink = Array.from(document.querySelectorAll("a")).find((link) => link.textContent?.includes("Open implementation-support-kit"));
+    expect(openLink?.getAttribute("href")).toBe("#/agent-kits/implementation-support-kit");
+  });
+
+  it("renders the Agent Kit detail route", async () => {
+    mountApp("#/agent-kits/implementation-support-kit");
+
+    await waitForText("Implementation Support Kit");
+    expect(mocks.apiClient.getAgentKit).toHaveBeenCalledWith("implementation-support-kit");
+    expect(document.body.textContent).toContain("Kit Summary");
+    expect(document.body.textContent).toContain("AI Workstation Pack");
+    expect(document.body.textContent).toContain("Support Ticket Writing Skill");
+    expect(document.body.textContent).toContain("Implementation Support Kit Codex Export");
+  });
+
+  it("renders the Agent Kit detail error state", async () => {
+    mocks.apiClient.getAgentKit.mockRejectedValueOnce(new Error("Agent Kit endpoint unavailable"));
+
+    mountApp("#/agent-kits/missing-kit");
+
+    await waitForText("Agent Kit unavailable");
+    expect(document.body.textContent).toContain("Agent Kit endpoint unavailable");
+  });
+
+  it("keeps the record export Composer available as its own mode", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        type: "runbook",
+        confidence: "high",
+        sourceStatus: "verified",
+        freshness: "current",
+        privacy: "public_safe",
+        lastReviewed: "2026-05-07T00:00:00.000Z",
+        reviewStatus: "approved",
+        tags: ["local"],
+        sources: [],
+        filePath: "records/local-ai-stack.md"
+      }
+    ]);
+
+    mountApp("#/composer/record-export");
+
+    await waitForText("Build temporary, redacted context exports from selected local records.");
+    await waitForText("Local AI Stack");
+    expect(document.body.textContent).toContain("Save as pack later");
+  });
 });
 
 function mountApp(hash: string): void {
@@ -314,6 +418,22 @@ function clickButton(label: string): void {
   expect(button).toBeTruthy();
   act(() => {
     button?.click();
+  });
+}
+
+function getButton(label: string): HTMLButtonElement {
+  const button = Array.from(document.querySelectorAll("button")).find((item) => item.textContent?.trim() === label);
+  expect(button).toBeTruthy();
+  return button!;
+}
+
+function clickCheckbox(labelText: string): void {
+  const label = Array.from(document.querySelectorAll("label")).find((item) => item.textContent?.includes(labelText));
+  expect(label).toBeTruthy();
+  const input = label!.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+  expect(input).toBeTruthy();
+  act(() => {
+    input!.click();
   });
 }
 
@@ -378,6 +498,38 @@ function packFixture(): PackSummary {
     reviewQueueCount: 0,
     lastReviewedAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z"
+  };
+}
+
+function packDetailFixture() {
+  return {
+    ...packFixture(),
+    author: "Contextarr Demo",
+    license: "MIT",
+    createdAt: "2026-05-07T00:00:00.000Z",
+    packPath: "demo-packs/ai-workstation-pack",
+    manifest: {},
+    counts: {
+      records: 5,
+      sources: 5,
+      exportProfiles: 5
+    },
+    validation: {
+      errors: 0,
+      warnings: 0
+    },
+    health: {
+      score: 100,
+      status: "healthy",
+      validationErrors: 0,
+      validationWarnings: 0,
+      recordCount: 5,
+      sourceCount: 5,
+      exportProfileCount: 5,
+      updatedAt: "2026-05-07T00:00:00.000Z"
+    },
+    sources: [],
+    exportProfiles: []
   };
 }
 
@@ -471,6 +623,61 @@ function skillHealthFixture(): SkillHealthResponse {
       }
     ],
     items: []
+  };
+}
+
+function agentKitDetailFixture() {
+  return {
+    id: "implementation-support-kit",
+    name: "Implementation Support Kit",
+    version: "1.0.0",
+    description: "Compose context and skills.",
+    type: "implementation_planning",
+    visibility: "local",
+    trustLevel: "local",
+    healthScore: 100,
+    healthStatus: "healthy",
+    validationErrors: 0,
+    validationWarnings: 0,
+    contextPackCount: 1,
+    skillCount: 1,
+    exportProfileCount: 1,
+    accentColor: "#22d3e8",
+    coverImage: null,
+    reviewQueueCount: 0,
+    lastReviewedAt: "2026-05-08T00:00:00.000Z",
+    updatedAt: "2026-05-08T00:00:00.000Z",
+    target: "codex",
+    privacyMode: "redacted",
+    author: "Contextarr Demo",
+    license: "MIT",
+    createdAt: "2026-05-08T00:00:00.000Z",
+    manifest: {},
+    counts: {
+      contextPacks: 1,
+      skills: 1,
+      exportProfiles: 1
+    },
+    validation: {
+      errors: 0,
+      warnings: 0
+    },
+    health: {
+      score: 100,
+      status: "healthy"
+    },
+    contextPacks: [packFixture()],
+    skills: [skillFixture()],
+    exportProfiles: [
+      {
+        id: "implementation-support-kit-codex",
+        name: "Implementation Support Kit Codex Export",
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        tokenBudget: 12000
+      }
+    ]
   };
 }
 

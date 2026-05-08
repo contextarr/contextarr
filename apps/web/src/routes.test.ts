@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  agentKitHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -31,8 +32,17 @@ describe("hash routes", () => {
   it("parses review queue, composer, exports, and health routes", () => {
     expect(parseHashRoute("#/review-queue")).toEqual({ name: "reviewQueue" });
     expect(parseHashRoute("#/composer")).toEqual({ name: "composer" });
+    expect(parseHashRoute("#/composer/agent-kit")).toEqual({ name: "composer", mode: "agent-kit" });
+    expect(parseHashRoute("#/composer/record-export")).toEqual({ name: "composer", mode: "record-export" });
     expect(parseHashRoute("#/exports")).toEqual({ name: "exports" });
     expect(parseHashRoute("#/health")).toEqual({ name: "health" });
+  });
+
+  it("parses Agent Kit detail routes", () => {
+    expect(parseHashRoute("#/agent-kits/support-ticket-writing-kit")).toEqual({
+      name: "agentKit",
+      agentKitId: "support-ticket-writing-kit"
+    });
   });
 
   it("parses Skill routes", () => {
@@ -48,8 +58,11 @@ describe("hash routes", () => {
     expect(recordHref("record/id")).toBe("#/records/record%2Fid");
     expect(skillsHref()).toBe("#/skills");
     expect(skillHref("skill/id")).toBe("#/skills/skill%2Fid");
+    expect(agentKitHref("agent kit/id")).toBe("#/agent-kits/agent%20kit%2Fid");
     expect(reviewQueueHref()).toBe("#/review-queue");
     expect(composerHref()).toBe("#/composer");
+    expect(composerHref("agent-kit")).toBe("#/composer/agent-kit");
+    expect(composerHref("record-export")).toBe("#/composer/record-export");
     expect(exportsHref()).toBe("#/exports");
     expect(healthHref()).toBe("#/health");
   });

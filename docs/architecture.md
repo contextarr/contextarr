@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 21 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search. Context Packs remain the core source-backed knowledge object.
+Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object.
 
 ## Core Decisions
 
@@ -84,13 +84,13 @@ Composed exports are temporary derived artifacts. The web UI can preview, copy, 
 
 ## Local API Direction
 
-The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds read-only Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`.
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`. Phase 22 adds `POST /api/agent-kits` for validated local Agent Kit saves under `CONTEXTARR_AGENT_KITS_DIR`; the API never accepts an arbitrary output path.
 
 When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
 
 ## Docker Direction
 
-Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs`, `demo-skills`, and `demo-agent-kits` read-only, and stores derived SQLite state in a Docker volume.
+Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs`, `demo-skills`, and `demo-agent-kits` read-only, mounts ignored local `agent-kits` for Composer saves, and stores derived SQLite state in a Docker volume.
 
 ## MCP Direction
 
@@ -115,4 +115,4 @@ The second PRD adds Skills and future Agent Kits:
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, Phase 18 adds profile-driven Skill exports, Phase 19 adds Agent Kit schemas/validation, Phase 20 adds fake public-safe demo Agent Kits, and Phase 21 indexes Agent Kits into read-only SQLite/API/search surfaces. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.
+Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, Phase 18 adds profile-driven Skill exports, Phase 19 adds Agent Kit schemas/validation, Phase 20 adds fake public-safe demo Agent Kits, Phase 21 indexes Agent Kits into SQLite/API/search surfaces, and Phase 22 adds validated local Agent Kit creation from selected existing objects. Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.

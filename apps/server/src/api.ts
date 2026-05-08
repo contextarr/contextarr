@@ -8,7 +8,14 @@ import {
   ExportError,
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
+import { assertAgentKitDirectorySeparation, getAgentKitIndexDirs } from "./config";
 import type { ContextarrDatabase } from "./db";
+import {
+  AgentKitWriteError,
+  createAgentKitDraft,
+  normalizeAgentKitId,
+  type CreateAgentKitDraftRequest
+} from "./agent-kit-writer";
 import {
   getAgentKit,
   getAgentKitContextPacks,
@@ -99,6 +106,84 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       agentKits: getAgentKits(db)
     };
+  });
+
+  app.post<{ Body: SaveAgentKitBody }>("/api/agent-kits", async (request, reply) => {
+    const parsed = parseSaveAgentKitBody(request.body ?? {});
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: "invalid_agent_kit_request", message: parsed.message });
+    }
+
+    const resolvedId = normalizeAgentKitId(parsed.value.id ?? parsed.value.name);
+    if (!resolvedId) {
+      return reply.code(400).send({ error: "invalid_agent_kit_id", message: "Agent Kit name or ID must include letters or numbers." });
+    }
+
+    if (getAgentKit(db, resolvedId)) {
+      return reply.code(409).send({ error: "agent_kit_exists", message: `Agent Kit already exists: ${resolvedId}`, id: resolvedId });
+    }
+
+    const missingContextPackIds: string[] = [];
+    for (const packId of parsed.value.contextPacks) {
+      if (!getPack(db, packId)) {
+        missingContextPackIds.push(packId);
+      }
+    }
+
+    const missingSkillIds: string[] = [];
+    for (const skillId of parsed.value.skills) {
+      if (!getSkill(db, skillId)) {
+        missingSkillIds.push(skillId);
+      }
+    }
+
+    if (missingContextPackIds.length > 0 || missingSkillIds.length > 0) {
+      return reply.code(404).send({
+        error: "missing_references",
+        message: "Agent Kit references must already exist in the local index.",
+        missingContextPackIds,
+        missingSkillIds
+      });
+    }
+
+    try {
+      assertAgentKitDirectorySeparation(config);
+      const saved = createAgentKitDraft({
+        agentKitsDir: config.agentKitsDir,
+        contextPacksDir: config.packsDir,
+        skillsDir: config.skillsDir,
+        request: parsed.value
+      });
+      const result = rebuildIndex(db, config.packsDir, config.skillsDir, getAgentKitIndexDirs(config));
+      const agentKit = getAgentKit(db, saved.id);
+
+      return reply.code(201).send({
+        ok: true,
+        id: saved.id,
+        agentKit,
+        validation: {
+          errors: saved.validation.summary.errors,
+          warnings: saved.validation.summary.warnings
+        },
+        index: sanitizeRebuildResultForApi(result)
+      });
+    } catch (error) {
+      if (error instanceof AgentKitWriteError) {
+        return reply.code(error.statusCode).send({
+          error: error.code,
+          message: error.message,
+          validation: error.validation
+            ? {
+                errors: error.validation.summary.errors,
+                warnings: error.validation.summary.warnings
+              }
+            : undefined,
+          ...error.details
+        });
+      }
+
+      throw error;
+    }
   });
 
   app.get<{ Params: { id: string } }>("/api/agent-kits/:id", async (request, reply) => {
@@ -407,7 +492,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   });
 
   app.post("/api/rescan", async () => {
-    const result = rebuildIndex(db, config.packsDir, config.skillsDir, config.agentKitsDir);
+    const result = rebuildIndex(db, config.packsDir, config.skillsDir, getAgentKitIndexDirs(config));
 
     return {
       ok: true,
@@ -576,6 +661,124 @@ interface ComposePreviewBody {
   selections?: unknown;
   excludeTags?: unknown;
   tokenBudget?: unknown;
+}
+
+interface SaveAgentKitBody {
+  id?: unknown;
+  name?: unknown;
+  goal?: unknown;
+  description?: unknown;
+  type?: unknown;
+  version?: unknown;
+  author?: unknown;
+  license?: unknown;
+  contextPackIds?: unknown;
+  contextPacks?: unknown;
+  skillIds?: unknown;
+  skills?: unknown;
+  target?: unknown;
+  format?: unknown;
+  privacyMode?: unknown;
+  exportProfile?: unknown;
+  exportProfileName?: unknown;
+  excludeTags?: unknown;
+  tokenBudget?: unknown;
+  accentColor?: unknown;
+}
+
+function parseSaveAgentKitBody(
+  body: SaveAgentKitBody
+): { ok: true; value: CreateAgentKitDraftRequest } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Agent Kit request body is required." };
+  }
+
+  if (typeof body.name !== "string" || !body.name.trim()) {
+    return { ok: false, message: "Agent Kit name is required." };
+  }
+
+  const contextPackIds = parseIdArray(body.contextPackIds ?? body.contextPacks);
+  if (!contextPackIds || contextPackIds.length === 0) {
+    return { ok: false, message: "Agent Kit requires at least one Context Pack." };
+  }
+
+  const skillIds = parseIdArray(body.skillIds ?? body.skills);
+  if (!skillIds || skillIds.length === 0) {
+    return { ok: false, message: "Agent Kit requires at least one Skill." };
+  }
+
+  const optionalStringFields = [
+    body.id,
+    body.goal,
+    body.description,
+    body.type,
+    body.version,
+    body.author,
+    body.license,
+    body.target,
+    body.exportProfile,
+    body.exportProfileName,
+    body.accentColor
+  ];
+  if (optionalStringFields.some((value) => value !== undefined && typeof value !== "string")) {
+    return { ok: false, message: "Agent Kit string fields are invalid." };
+  }
+
+  const target = typeof body.target === "string" && body.target.trim() ? body.target.trim() : "codex";
+  if (!["chatgpt", "claude", "codex", "claude_code", "markdown", "json_records"].includes(target)) {
+    return { ok: false, message: "Agent Kit target is invalid." };
+  }
+
+  if (body.format !== undefined && body.format !== "markdown" && body.format !== "json" && body.format !== "text") {
+    return { ok: false, message: "Agent Kit format is invalid." };
+  }
+
+  if (body.privacyMode !== undefined && body.privacyMode !== "redacted" && body.privacyMode !== "public_safe") {
+    return { ok: false, message: "Agent Kit privacy mode is invalid." };
+  }
+
+  let excludeTags: string[] | undefined;
+  if (body.excludeTags !== undefined) {
+    excludeTags = parseIdArray(body.excludeTags);
+    if (!excludeTags) {
+      return { ok: false, message: "Agent Kit exclude tags are invalid." };
+    }
+  }
+
+  if (body.tokenBudget !== undefined && (!Number.isInteger(body.tokenBudget) || Number(body.tokenBudget) <= 0)) {
+    return { ok: false, message: "Agent Kit token budget must be a positive integer." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      id: trimOptional(body.id),
+      name: body.name.trim(),
+      goal: trimOptional(body.goal),
+      description: trimOptional(body.description),
+      contextPacks: contextPackIds,
+      skills: skillIds,
+      target: target as CreateAgentKitDraftRequest["target"],
+      format: (body.format ?? "markdown") as CreateAgentKitDraftRequest["format"],
+      privacyMode: (body.privacyMode ?? "redacted") as CreateAgentKitDraftRequest["privacyMode"],
+      exportProfile: trimOptional(body.exportProfile),
+      exportProfileName: trimOptional(body.exportProfileName),
+      excludeTags,
+      tokenBudget: body.tokenBudget === undefined ? undefined : Number(body.tokenBudget)
+    }
+  };
+}
+
+function parseIdArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item.trim())) {
+    return undefined;
+  }
+
+  return value.map((item) => item.trim());
+}
+
+function trimOptional(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 interface ParsedComposePreviewBody {

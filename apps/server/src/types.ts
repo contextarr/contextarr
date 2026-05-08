@@ -19,6 +19,7 @@ export interface ServerConfig {
   packsDir: string;
   skillsDir: string;
   agentKitsDir: string;
+  demoAgentKitsDir?: string;
   databasePath: string;
   webDistDir?: string;
   apiToken?: string;

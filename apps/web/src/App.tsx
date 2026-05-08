@@ -43,6 +43,24 @@ import {
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
+import {
+  agentKitFormatOptions,
+  agentKitRedactionModeOptions,
+  agentKitTargetOptions,
+  buildAgentKitPreviewMetadata,
+  buildAgentKitSaveRequest,
+  defaultAgentKitExcludeTags,
+  filterAgentKitPacks,
+  filterAgentKitSkills,
+  getAgentKitPackFilterOptions,
+  getAgentKitSkillFilterOptions,
+  isAgentKitSaveDisabled,
+  parseAgentKitTokenBudget,
+  toggleSelectedId,
+  validateAgentKitDraft,
+  type AgentKitPackFilters,
+  type AgentKitSkillFilters
+} from "./agent-kit-composer";
 import { brandMarkUrl } from "./brand";
 import {
   buildComposePreviewRequest,
@@ -66,6 +84,7 @@ import { renderRecordBodyHtml } from "./record-rendering";
 import { renderSkillDocumentHtml } from "./skill-rendering";
 import { filterReviewItems, reviewPackName, reviewSkillName, summarizeReviewItems, type ReviewFilters } from "./review";
 import {
+  agentKitHref,
   composerHref,
   exportsHref,
   healthHref,
@@ -95,6 +114,7 @@ import type {
   SkillDocument,
   SkillHealthResponse,
   SkillSummary,
+  AgentKitDetail,
   SortKey,
   SourceSummary
 } from "./types";
@@ -106,7 +126,7 @@ const navItems = [
   { label: "Collectors", icon: Layers3 },
   { label: "Sources", icon: Database },
   { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
-  { label: "Composer", icon: PenLine, href: composerHref(), route: "composer" },
+  { label: "Composer", icon: PenLine, href: composerHref("agent-kit"), route: "composer" },
   { label: "Exports", icon: CloudDownload, href: exportsHref(), route: "exports" },
   { label: "Registry", icon: Package },
   { label: "Health", icon: HeartPulse, href: healthHref(), route: "health" },
@@ -294,8 +314,10 @@ export function App() {
           <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
           <ReviewQueuePage packs={packs} skills={skills} onStatusChanged={loadDashboard} />
+        ) : route.name === "agentKit" ? (
+          <AgentKitDetailPage agentKitId={route.agentKitId} />
         ) : route.name === "composer" ? (
-          <ComposerPage packs={packs} />
+          <ComposerPage packs={packs} skills={skills} mode={route.mode ?? "agent-kit"} />
         ) : route.name === "exports" ? (
           <ExportsPage packs={packs} skills={skills} />
         ) : route.name === "health" ? (
@@ -1475,7 +1497,445 @@ function ExportsTab({ pack }: { pack: PackDetail }) {
   );
 }
 
-function ComposerPage({ packs }: { packs: PackSummary[] }) {
+function ComposerPage({ packs, skills, mode }: { packs: PackSummary[]; skills: SkillSummary[]; mode: "agent-kit" | "record-export" }) {
+  return (
+    <>
+      <section className="library-panel composer-mode-shell" aria-label="Composer mode">
+        <div className="composer-mode-strip">
+          <a className={mode === "agent-kit" ? "is-selected" : ""} href={composerHref("agent-kit")}>
+            <Sparkles size={16} aria-hidden="true" />
+            <span>Agent Kit</span>
+          </a>
+          <a className={mode === "record-export" ? "is-selected" : ""} href={composerHref("record-export")}>
+            <FileText size={16} aria-hidden="true" />
+            <span>Record Export</span>
+          </a>
+        </div>
+      </section>
+      {mode === "record-export" ? <RecordExportComposerPage packs={packs} /> : <AgentKitComposerPage packs={packs} skills={skills} />}
+    </>
+  );
+}
+
+function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSummary[] }) {
+  const [name, setName] = useState("Implementation Support Kit");
+  const [goal, setGoal] = useState("Prepare a safe, source-backed assistant brief for a specific task.");
+  const [description, setDescription] = useState("Combine selected local context packs with reusable skills without execution, cloud sync, telemetry, or marketplace behavior.");
+  const [selectedPackIds, setSelectedPackIds] = useState<string[]>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [target, setTarget] = useState("codex");
+  const [format, setFormat] = useState<"markdown" | "json" | "text">("markdown");
+  const [redactionMode, setRedactionMode] = useState<"redacted" | "public_safe">("redacted");
+  const [tokenBudget, setTokenBudget] = useState("");
+  const [packFilters, setPackFilters] = useState<AgentKitPackFilters>({
+    query: "",
+    type: "all",
+    trustLevel: "all",
+    healthStatus: "all"
+  });
+  const [skillFilters, setSkillFilters] = useState<AgentKitSkillFilters>({
+    query: "",
+    type: "all",
+    trustLevel: "all",
+    healthStatus: "all",
+    target: "all"
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAgentKit, setSavedAgentKit] = useState<{ id: string; detailHref: string; message: string } | null>(null);
+
+  const draft = {
+    name,
+    goal,
+    description,
+    selectedPackIds,
+    selectedSkillIds,
+    target,
+    format,
+    redactionMode,
+    tokenBudget: parseAgentKitTokenBudget(tokenBudget)
+  };
+  const validation = useMemo(() => validateAgentKitDraft(draft, packs, skills), [draft, packs, skills]);
+  const preview = useMemo(() => buildAgentKitPreviewMetadata(draft, packs, skills), [draft, packs, skills]);
+  const packFilterOptions = useMemo(() => getAgentKitPackFilterOptions(packs), [packs]);
+  const skillFilterOptions = useMemo(() => getAgentKitSkillFilterOptions(skills), [skills]);
+  const visiblePacks = useMemo(() => filterAgentKitPacks(packs, packFilters), [packFilters, packs]);
+  const visibleSkills = useMemo(() => filterAgentKitSkills(skills, skillFilters), [skillFilters, skills]);
+  const saveDisabled = isAgentKitSaveDisabled(draft, packs, skills, saving);
+  const notices = [...validation.errors, ...validation.warnings];
+
+  function togglePackSelection(packId: string) {
+    setSelectedPackIds((current) => toggleSelectedId(current, packId));
+    setSavedAgentKit(null);
+    setSaveError(null);
+  }
+
+  function toggleSkillSelection(skillId: string) {
+    setSelectedSkillIds((current) => toggleSelectedId(current, skillId));
+    setSavedAgentKit(null);
+    setSaveError(null);
+  }
+
+  async function saveAgentKit() {
+    if (saveDisabled) {
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+    setSavedAgentKit(null);
+    try {
+      const response = await apiClient.saveAgentKit(buildAgentKitSaveRequest(draft, packs, skills));
+      const savedId = response.agentKit?.id ?? response.id ?? preview.id;
+      setSavedAgentKit({
+        id: savedId,
+        detailHref: response.detailUrl ?? agentKitHref(savedId),
+        message: response.message ?? "Agent Kit saved locally."
+      });
+    } catch (error) {
+      setSaveError(toErrorMessage(error, "Unable to save Agent Kit."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (packs.length === 0 || skills.length === 0) {
+    return (
+      <StateCard
+        title="Agent Kit Composer unavailable"
+        detail="Agent Kit composition needs indexed context packs and skills from the local API."
+        icon={Sparkles}
+      />
+    );
+  }
+
+  return (
+    <section className="library-panel composer-page agent-kit-composer" aria-labelledby="agent-kit-composer-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <Sparkles size={16} aria-hidden="true" />
+            <span>Agent Kit Composer</span>
+          </div>
+          <h1 id="agent-kit-composer-title">Agent Kit Composer</h1>
+          <p>Pair local context packs with reusable skills for a non-executing assistant export brief.</p>
+        </div>
+        <a className="secondary-action action-link" href={composerHref("record-export")}>
+          Record Export
+        </a>
+      </div>
+
+      <div className="agent-kit-grid">
+        <section className="composer-panel agent-kit-setup">
+          <div className="composer-panel-heading">
+            <div>
+              <h2>Kit Setup</h2>
+              <p>Name the job and choose the export contract.</p>
+            </div>
+          </div>
+          <label className="field-label">
+            Name
+            <input value={name} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label className="field-label">
+            Goal
+            <input value={goal} onChange={(event) => setGoal(event.target.value)} />
+          </label>
+          <label className="field-label">
+            Description
+            <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={5} />
+          </label>
+          <div className="agent-kit-options">
+            <label className="field-label">
+              Target assistant
+              <select value={target} onChange={(event) => setTarget(event.target.value)}>
+                {agentKitTargetOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Export format
+              <select value={format} onChange={(event) => setFormat(event.target.value as typeof format)}>
+                {agentKitFormatOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Redaction mode
+              <select value={redactionMode} onChange={(event) => setRedactionMode(event.target.value as typeof redactionMode)}>
+                {agentKitRedactionModeOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-label">
+              Token budget
+              <input
+                inputMode="numeric"
+                min="1"
+                placeholder="optional"
+                value={tokenBudget}
+                onChange={(event) => setTokenBudget(event.target.value.replace(/\D/g, ""))}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="composer-panel agent-kit-selection">
+          <SelectablePacks
+            packs={visiblePacks}
+            selectedPackIds={selectedPackIds}
+            filters={packFilters}
+            filterOptions={packFilterOptions}
+            onFiltersChange={setPackFilters}
+            onToggle={togglePackSelection}
+          />
+        </section>
+
+        <section className="composer-panel agent-kit-selection">
+          <SelectableSkills
+            skills={visibleSkills}
+            selectedSkillIds={selectedSkillIds}
+            filters={skillFilters}
+            filterOptions={skillFilterOptions}
+            onFiltersChange={setSkillFilters}
+            onToggle={toggleSkillSelection}
+          />
+        </section>
+
+        <aside className="composer-panel agent-kit-preview">
+          <div className="composer-panel-heading">
+            <div>
+              <h2>Preview Metadata</h2>
+              <p>{preview.id}</p>
+            </div>
+          </div>
+          <div className="agent-kit-preview-grid">
+            <Stat value={preview.contextPackCount} label="Context Packs" />
+            <Stat value={preview.skillCount} label="Skills" />
+            <Stat value={preview.targetLabel} label="Target" />
+            <Stat value={preview.formatLabel} label="Format" />
+          </div>
+          <dl className="agent-kit-meta">
+            <div>
+              <dt>Export profile</dt>
+              <dd>{preview.exportProfile}</dd>
+            </div>
+            <div>
+              <dt>Redaction</dt>
+              <dd>{preview.redactionLabel}</dd>
+            </div>
+            <div>
+              <dt>Excluded tags</dt>
+              <dd>{defaultAgentKitExcludeTags.join(", ")}</dd>
+            </div>
+            <div>
+              <dt>Selected packs</dt>
+              <dd>{preview.selectedContextPackNames.length > 0 ? preview.selectedContextPackNames.join(", ") : "None"}</dd>
+            </div>
+            <div>
+              <dt>Selected skills</dt>
+              <dd>{preview.selectedSkillNames.length > 0 ? preview.selectedSkillNames.join(", ") : "None"}</dd>
+            </div>
+          </dl>
+
+          <div className="boundary-list" aria-label="Agent Kit boundaries">
+            <span>No execution</span>
+            <span>No cloud sync</span>
+            <span>No telemetry</span>
+            <span>No marketplace publish</span>
+          </div>
+
+          {notices.length > 0 ? (
+            <div className="agent-kit-notices" aria-label="Selection warnings">
+              {notices.map((notice) => (
+                <p className={`composer-error ${notice.severity}`} key={`${notice.code}-${notice.objectId ?? notice.message}`}>
+                  <ShieldAlert size={15} aria-hidden="true" />
+                  <span>{notice.message}</span>
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="composer-success">Selection is compatible with the current local-only boundaries.</p>
+          )}
+
+          <button className="primary-action" type="button" onClick={saveAgentKit} disabled={saveDisabled}>
+            {saving ? "Saving..." : "Save Agent Kit"}
+          </button>
+
+          {saveError ? (
+            <p className="composer-error">
+              <ShieldAlert size={15} aria-hidden="true" />
+              <span>{saveError}</span>
+            </p>
+          ) : null}
+
+          {savedAgentKit ? (
+            <div className="composer-success-card">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <span>{savedAgentKit.message}</span>
+              <a href={savedAgentKit.detailHref}>Open {savedAgentKit.id}</a>
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function SelectablePacks({
+  packs,
+  selectedPackIds,
+  filters,
+  filterOptions,
+  onFiltersChange,
+  onToggle
+}: {
+  packs: PackSummary[];
+  selectedPackIds: string[];
+  filters: AgentKitPackFilters;
+  filterOptions: ReturnType<typeof getAgentKitPackFilterOptions>;
+  onFiltersChange(filters: AgentKitPackFilters): void;
+  onToggle(packId: string): void;
+}) {
+  return (
+    <>
+      <div className="composer-panel-heading">
+        <div>
+          <h2>Context Packs</h2>
+          <p>{packs.length} visible / {selectedPackIds.length} selected</p>
+        </div>
+      </div>
+      <div className="agent-kit-filters">
+        <label>
+          <Search size={15} aria-hidden="true" />
+          <input
+            value={filters.query}
+            placeholder="Filter packs..."
+            onChange={(event) => onFiltersChange({ ...filters, query: event.target.value })}
+          />
+        </label>
+        <select value={filters.type} onChange={(event) => onFiltersChange({ ...filters, type: event.target.value })}>
+          <option value="all">All types</option>
+          {filterOptions.types.map((type) => (
+            <option value={type} key={type}>
+              {formatPackType(type)}
+            </option>
+          ))}
+        </select>
+        <select value={filters.trustLevel} onChange={(event) => onFiltersChange({ ...filters, trustLevel: event.target.value })}>
+          <option value="all">All trust</option>
+          {filterOptions.trustLevels.map((trustLevel) => (
+            <option value={trustLevel} key={trustLevel}>
+              {formatPackType(trustLevel)}
+            </option>
+          ))}
+        </select>
+        <select value={filters.healthStatus} onChange={(event) => onFiltersChange({ ...filters, healthStatus: event.target.value })}>
+          <option value="all">All health</option>
+          {filterOptions.healthStatuses.map((healthStatus) => (
+            <option value={healthStatus} key={healthStatus}>
+              {formatPackType(healthStatus)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="composer-pack-list agent-kit-list">
+        {packs.map((pack) => (
+          <label className={selectedPackIds.includes(pack.id) ? "composer-pack is-active" : "composer-pack"} key={pack.id}>
+            <input type="checkbox" checked={selectedPackIds.includes(pack.id)} onChange={() => onToggle(pack.id)} />
+            <span>
+              <strong>{pack.name}</strong>
+              <small>{formatPackType(pack.type)} / {formatPackType(pack.trustLevel)} / {pack.healthScore}% health</small>
+            </span>
+          </label>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SelectableSkills({
+  skills,
+  selectedSkillIds,
+  filters,
+  filterOptions,
+  onFiltersChange,
+  onToggle
+}: {
+  skills: SkillSummary[];
+  selectedSkillIds: string[];
+  filters: AgentKitSkillFilters;
+  filterOptions: ReturnType<typeof getAgentKitSkillFilterOptions>;
+  onFiltersChange(filters: AgentKitSkillFilters): void;
+  onToggle(skillId: string): void;
+}) {
+  return (
+    <>
+      <div className="composer-panel-heading">
+        <div>
+          <h2>Skills</h2>
+          <p>{skills.length} visible / {selectedSkillIds.length} selected</p>
+        </div>
+      </div>
+      <div className="agent-kit-filters">
+        <label>
+          <Search size={15} aria-hidden="true" />
+          <input
+            value={filters.query}
+            placeholder="Filter skills..."
+            onChange={(event) => onFiltersChange({ ...filters, query: event.target.value })}
+          />
+        </label>
+        <select value={filters.target} onChange={(event) => onFiltersChange({ ...filters, target: event.target.value })}>
+          <option value="all">All targets</option>
+          {filterOptions.targets.map((targetOption) => (
+            <option value={targetOption} key={targetOption}>
+              {formatPackType(targetOption)}
+            </option>
+          ))}
+        </select>
+        <select value={filters.type} onChange={(event) => onFiltersChange({ ...filters, type: event.target.value })}>
+          <option value="all">All types</option>
+          {filterOptions.types.map((type) => (
+            <option value={type} key={type}>
+              {formatPackType(type)}
+            </option>
+          ))}
+        </select>
+        <select value={filters.healthStatus} onChange={(event) => onFiltersChange({ ...filters, healthStatus: event.target.value })}>
+          <option value="all">All health</option>
+          {filterOptions.healthStatuses.map((healthStatus) => (
+            <option value={healthStatus} key={healthStatus}>
+              {formatPackType(healthStatus)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="composer-pack-list agent-kit-list">
+        {skills.map((skill) => (
+          <label className={selectedSkillIds.includes(skill.id) ? "composer-pack is-active" : "composer-pack"} key={skill.id}>
+            <input type="checkbox" checked={selectedSkillIds.includes(skill.id)} onChange={() => onToggle(skill.id)} />
+            <span>
+              <strong>{skill.name}</strong>
+              <small>{skill.targets.join(", ") || "No targets"} / {skill.healthScore}% health</small>
+            </span>
+          </label>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
   const [recordsByPack, setRecordsByPack] = useState<Record<string, RecordSummary[]>>({});
   const [activePackId, setActivePackId] = useState("");
   const [selectedByPack, setSelectedByPack] = useState<Record<string, string[]>>({});
@@ -2408,6 +2868,133 @@ function HealthPage({ health, packs, skills }: { health: HealthResponse | null; 
           </table>
         </div>
       </article>
+    </section>
+  );
+}
+
+function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
+  const [agentKit, setAgentKit] = useState<AgentKitDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    async function loadAgentKit() {
+      try {
+        const response = await apiClient.getAgentKit(agentKitId);
+        if (!cancelled) {
+          setAgentKit(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load Agent Kit.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadAgentKit();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentKitId]);
+
+  if (loading) {
+    return <DetailLoading />;
+  }
+
+  if (error || !agentKit) {
+    return (
+      <section className="detail-page">
+        <BackLink href={composerHref("agent-kit")} label="Agent Kit Composer" />
+        <StateCard title="Agent Kit unavailable" detail={error ?? "The local API did not return this Agent Kit."} />
+      </section>
+    );
+  }
+
+  return (
+    <section className="detail-page" aria-labelledby="agent-kit-detail-title">
+      <BackLink href={composerHref("agent-kit")} label="Agent Kit Composer" />
+      <div className="pack-detail-hero">
+        <div className="pack-cover pack-cover-large" style={{ "--accent": agentKit.accentColor ?? "#22d3e8" } as CSSProperties}>
+          <Sparkles size={52} aria-hidden="true" />
+          <span>{agentKit.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</span>
+        </div>
+        <div>
+          <div className="eyebrow">
+            <Sparkles size={16} aria-hidden="true" />
+            <span>{formatPackType(agentKit.type)}</span>
+          </div>
+          <h1 id="agent-kit-detail-title">{agentKit.name}</h1>
+          <p>{agentKit.description}</p>
+          <div className="hero-badges">
+            <span className={`health-badge ${agentKit.healthStatus}`}>
+              <HeartPulse size={14} aria-hidden="true" />
+              {agentKit.healthScore}%
+            </span>
+            <span className="trust-badge">
+              <ShieldCheck size={14} aria-hidden="true" />
+              {formatPackType(agentKit.trustLevel)}
+            </span>
+            <span className="version-pill">{agentKit.version}</span>
+          </div>
+          <div className="last-reviewed">
+            <CalendarDays size={15} aria-hidden="true" />
+            <span>Last reviewed: {formatDate(agentKit.lastReviewedAt)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="detail-grid">
+        <article className="detail-card summary-card">
+          <h2>
+            <Sparkles size={19} aria-hidden="true" />
+            Kit Summary
+          </h2>
+          <p>{agentKit.description}</p>
+          <dl className="fact-grid">
+            <Fact label="Target" value={formatPackType(agentKit.target)} />
+            <Fact label="Privacy" value={formatPackType(agentKit.privacyMode)} />
+            <Fact label="Context Packs" value={agentKit.counts.contextPacks} />
+            <Fact label="Skills" value={agentKit.counts.skills} />
+          </dl>
+        </article>
+
+        <article className="detail-card">
+          <h2>Context Packs</h2>
+          <ul className="simple-list">
+            {agentKit.contextPacks.map((pack) => (
+              <li key={pack.id}>
+                <a href={packHref(pack.id)}>{pack.name}</a>
+                <span>{formatPackType(pack.healthStatus)}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="detail-card">
+          <h2>Skills</h2>
+          <ul className="simple-list">
+            {agentKit.skills.map((skill) => (
+              <li key={skill.id}>
+                <a href={skillHref(skill.id)}>{skill.name}</a>
+                <span>{skill.targets.join(", ")}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="detail-card">
+          <h2>Export Profiles</h2>
+          <ProfileList profiles={agentKit.exportProfiles} />
+        </article>
+      </div>
     </section>
   );
 }

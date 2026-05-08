@@ -12,6 +12,10 @@ export interface HealthResponse {
     skillExamples: number;
     skillSources: number;
     skillExportProfiles: number;
+    agentKits?: number;
+    agentKitContextPackRefs?: number;
+    agentKitSkillRefs?: number;
+    agentKitExportProfiles?: number;
     reviewItems: number;
     openReviewItems: number;
   };
@@ -65,6 +69,64 @@ export interface SkillSummary {
   outputs: string[];
 }
 
+export interface AgentKitSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  validationErrors: number;
+  validationWarnings: number;
+  contextPackCount: number;
+  skillCount: number;
+  exportProfileCount: number;
+  accentColor?: string | null;
+  coverImage: string | null;
+  reviewQueueCount: number;
+  lastReviewedAt: string | null;
+  updatedAt: string;
+  target: string;
+  privacyMode: string;
+}
+
+export interface AgentKitContextPackSummary {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  recordCount: number;
+  sourceCount: number;
+  exportProfileCount: number;
+  accentColor?: string | null;
+  coverImage: string | null;
+  sortOrder?: number;
+}
+
+export interface AgentKitSkillSummary {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  instructionCount: number;
+  exampleCount: number;
+  sourceCount: number;
+  exportProfileCount: number;
+  targets: string[];
+  sortOrder?: number;
+}
+
 export interface SourceSummary {
   id: string;
   type: string;
@@ -84,6 +146,78 @@ export interface ExportProfileSummary {
   format: string;
   privacyMode?: string | null;
   tokenBudget?: number | null;
+}
+
+export type AgentKitExportFormat = "markdown" | "json" | "text";
+export type AgentKitPrivacyMode = "redacted" | "public_safe";
+
+export interface AgentKitDetail extends AgentKitSummary {
+  author: string;
+  license: string;
+  createdAt: string;
+  tokenBudget?: number | null;
+  manifest: Record<string, unknown>;
+  counts: {
+    contextPacks: number;
+    skills: number;
+    exportProfiles: number;
+  };
+  validation: {
+    errors: number;
+    warnings: number;
+  };
+  health: {
+    score: number;
+    status: string;
+  };
+  contextPacks: AgentKitContextPackSummary[];
+  skills: AgentKitSkillSummary[];
+  exportProfiles: ExportProfileSummary[];
+}
+
+export interface CreateAgentKitRequest {
+  id?: string;
+  name: string;
+  goal: string;
+  description: string;
+  contextPacks: string[];
+  skills: string[];
+  target: string;
+  format: AgentKitExportFormat;
+  privacyMode: AgentKitPrivacyMode;
+  exportProfile: string;
+  exportProfileName: string;
+  excludeTags: string[];
+  tokenBudget?: number;
+  boundaries: {
+    containsExecutableCode: false;
+    requiresNetwork: false;
+    cloudSync: false;
+    telemetry: false;
+    marketplacePublish: false;
+    permissions: {
+      readVault: false;
+      writeDrafts: false;
+      runCommands: false;
+      networkAccess: false;
+      browserAutomation: false;
+      toolExecution: false;
+    };
+  };
+  compatibility: {
+    contextarr: string;
+    supportedTargets: string[];
+    requiredContextPacks: string[];
+    requiredSkills: string[];
+  };
+}
+
+export interface SaveAgentKitResponse {
+  id?: string;
+  agentKit?: AgentKitSummary;
+  message?: string;
+  detailUrl?: string;
+  libraryUrl?: string;
 }
 
 export interface ExportRecordSummary {
@@ -314,7 +448,7 @@ export interface RecordDetail extends RecordSummary {
 
 export interface SearchResult {
   id: string;
-  kind: "pack" | "record" | "skill" | "skill_instruction" | "skill_example";
+  kind: "pack" | "record" | "skill" | "skill_instruction" | "skill_example" | "agent-kit";
   title: string;
   snippet?: string;
   packId?: string;
@@ -329,6 +463,7 @@ export interface SearchResponse {
 
 export type SortKey = "name" | "health" | "lastReviewed" | "records";
 export type LibraryViewMode = "cover" | "compact" | "table";
+export type ComposerMode = "agent-kit" | "record-export";
 
 export type Route =
   | { name: "library" }
@@ -336,7 +471,8 @@ export type Route =
   | { name: "record"; recordId: string }
   | { name: "skills" }
   | { name: "skill"; skillId: string }
+  | { name: "agentKit"; agentKitId: string }
   | { name: "reviewQueue" }
-  | { name: "composer" }
+  | { name: "composer"; mode?: ComposerMode }
   | { name: "exports" }
   | { name: "health" };
