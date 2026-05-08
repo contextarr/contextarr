@@ -16,4 +16,4 @@ pnpm brand:build
 pnpm brand:verify
 ```
 
-The wordmark is converted to SVG paths from the open-source Oxanium font package so the checked-in SVGs render consistently without requiring the font on the viewer's machine.
+The wordmark is converted to SVG paths from the open-source Sora and Chakra Petch font packages so the checked-in SVGs render consistently without requiring those fonts on the viewer's machine.

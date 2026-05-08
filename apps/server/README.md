@@ -2,7 +2,7 @@
 
 Local Fastify API server and rebuildable SQLite index for Contextarr packs.
 
-Implemented through Phase 10:
+Implemented through Phase 11:
 
 - load and validate local pack folders
 - rebuild SQLite derived index from pack files
@@ -15,6 +15,7 @@ Implemented through Phase 10:
 - expose Review Queue and pack health API endpoints
 - expose local export preview API endpoints
 - expose read-only Composer preview API endpoint
+- optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`
 
 Run locally:
 
@@ -29,6 +30,8 @@ pnpm --filter @contextarr/server rescan
 ```
 
 The server binds to `127.0.0.1` by default and does not mutate pack files.
+
+Docker Compose sets `CONTEXTARR_HOST=0.0.0.0` and `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist` so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
 
 Export previews are generated from validated local pack files. The server does not write generated export files, fetch source URLs, call AI APIs, or upload data.
 

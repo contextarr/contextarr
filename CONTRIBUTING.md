@@ -24,7 +24,7 @@ Install dependencies and run verification:
 
 ```bash
 pnpm install
-pnpm phase8:verify
+pnpm phase11:verify
 ```
 
 Focused checks are also available:
@@ -35,7 +35,7 @@ pnpm test
 pnpm demo:validate
 ```
 
-Generated output belongs in ignored folders such as `rendered/`, `generated-exports/`, and `data/`.
+Generated output belongs in ignored folders such as `rendered/`, `generated-exports/`, `imported-packs/`, and `data/`.
 
 ## Pull Requests
 

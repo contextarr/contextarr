@@ -1,4 +1,6 @@
+import fs from "node:fs";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import staticPlugin from "@fastify/static";
 import { buildComposedExport, buildPackExport, ExportError, type BuildComposedExportOptions } from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
 import {
@@ -225,7 +227,33 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     };
   });
 
+  registerStaticWeb(app, config);
+
   return app;
+}
+
+function registerStaticWeb(app: FastifyInstance, config: ServerConfig): void {
+  if (!config.webDistDir) {
+    return;
+  }
+
+  if (!fs.existsSync(config.webDistDir)) {
+    throw new Error(`Configured web dist directory does not exist: ${config.webDistDir}`);
+  }
+
+  app.register(staticPlugin, {
+    root: config.webDistDir,
+    prefix: "/"
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    const pathName = request.url.split("?")[0] ?? "";
+    if (request.method === "GET" && !pathName.startsWith("/api/")) {
+      return reply.sendFile("index.html");
+    }
+
+    return reply.code(404).send({ error: "not_found", message: "Route not found." });
+  });
 }
 
 function isApiRequest(request: FastifyRequest): boolean {

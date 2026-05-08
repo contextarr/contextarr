@@ -25,4 +25,4 @@ AI-drafted records require human review before they become approved pack content
 
 ## Supported Versions
 
-Contextarr is early-stage software and is not production ready. Security reports against the default branch are welcome.
+Contextarr is early-stage software and is not production ready. The v0.1 Docker Compose path is a local preview, not a hosted deployment recipe. Security reports against the default branch are welcome.

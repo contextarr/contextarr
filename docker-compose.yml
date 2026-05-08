@@ -1,4 +1,23 @@
 name: contextarr
 
-# Phase 0 stub only. Runtime services are added in later phases.
-services: {}
+services:
+  app:
+    build:
+      context: .
+    image: contextarr:local-preview
+    ports:
+      - "127.0.0.1:3210:3210"
+    environment:
+      CONTEXTARR_HOST: 0.0.0.0
+      CONTEXTARR_PORT: 3210
+      CONTEXTARR_PACKS_DIR: /app/demo-packs
+      CONTEXTARR_DATABASE_PATH: /app/data/contextarr.db
+      CONTEXTARR_WEB_DIST_DIR: /app/apps/web/dist
+      CONTEXTARR_API_TOKEN: ""
+    volumes:
+      - ./demo-packs:/app/demo-packs:ro
+      - contextarr-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  contextarr-data:

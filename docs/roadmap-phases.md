@@ -82,8 +82,10 @@
 
 ## Phase 11: Launch Prep
 
+- Implemented in Phase 11.
 - Stabilize Docker Compose.
 - Polish README and docs.
 - Add screenshots placeholder.
 - Write demo script.
 - Verify validator, UI, exports, and MCP docs before release.
+- Stop before publishing, tagging, deploying, or creating a GitHub release.

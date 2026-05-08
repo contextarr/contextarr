@@ -2,7 +2,7 @@
 
 React and Vite local dashboard for Contextarr.
 
-Implemented through Phase 10:
+Implemented through Phase 11:
 
 - dark-first app shell
 - local API-backed Pack Library
@@ -24,3 +24,5 @@ pnpm --filter @contextarr/web dev
 ```
 
 The Vite dev server proxies `/api` to `http://127.0.0.1:3210` by default.
+
+For Docker preview, the Vite build output is served by the Fastify server from the same local origin. The browser token UI is intentionally absent; leave Docker `CONTEXTARR_API_TOKEN` empty for the default preview.

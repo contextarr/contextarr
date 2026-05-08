@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -10,17 +12,30 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
-function createTestContext(apiToken?: string, packsDir = demoPacksDir): { db: ContextarrDatabase; config: ServerConfig } {
+function createTestContext(
+  apiToken?: string,
+  packsDir = demoPacksDir,
+  overrides: Partial<ServerConfig> = {}
+): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
     packsDir,
     databasePath: ":memory:",
-    apiToken
+    apiToken,
+    ...overrides
   };
   rebuildIndex(db, packsDir);
   return { db, config };
+}
+
+function createWebDistFixture(): string {
+  const webDistDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-web-dist-"));
+  fs.mkdirSync(path.join(webDistDir, "assets"), { recursive: true });
+  fs.writeFileSync(path.join(webDistDir, "index.html"), "<!doctype html><div id=\"root\"></div>", "utf8");
+  fs.writeFileSync(path.join(webDistDir, "assets", "app.js"), "console.log('contextarr');\n", "utf8");
+  return webDistDir;
 }
 
 describe("Contextarr API", () => {
@@ -50,6 +65,28 @@ describe("Contextarr API", () => {
         openReviewItems: 0
       }
     });
+    await app.close();
+    db.close();
+  });
+
+  it("serves the built web app when webDistDir is configured", async () => {
+    const webDistDir = createWebDistFixture();
+    const app = createApp({ config: { ...config, webDistDir }, db });
+    const root = await app.inject({ method: "GET", url: "/" });
+    const asset = await app.inject({ method: "GET", url: "/assets/app.js" });
+    const health = await app.inject({ method: "GET", url: "/api/health" });
+    const missingApi = await app.inject({ method: "GET", url: "/api/not-real" });
+    const clientRoute = await app.inject({ method: "GET", url: "/packs/ai-workstation-pack" });
+
+    expect(root.statusCode).toBe(200);
+    expect(root.body).toContain("root");
+    expect(asset.statusCode).toBe(200);
+    expect(asset.body).toContain("contextarr");
+    expect(health.statusCode).toBe(200);
+    expect(missingApi.statusCode).toBe(404);
+    expect(missingApi.json()).toEqual({ error: "not_found", message: "Route not found." });
+    expect(clientRoute.statusCode).toBe(200);
+    expect(clientRoute.body).toContain("root");
     await app.close();
     db.close();
   });

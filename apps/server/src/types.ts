@@ -7,6 +7,7 @@ export interface ServerConfig {
   port: number;
   packsDir: string;
   databasePath: string;
+  webDistDir?: string;
   apiToken?: string;
 }
 

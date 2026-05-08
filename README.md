@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 10: Composer v0.
+This repository is in Phase 11: v0.1 packaging and launch prep.
 
 Current scope:
 
@@ -54,6 +54,8 @@ Current scope:
 - Deterministic SVG brand kit and web app brand mark.
 - Read-only Composer page for selecting packs/records and building temporary custom exports.
 - `POST /api/compose/preview` local API endpoint for composed export previews.
+- Docker Compose local preview stack serving the built web app and API from one local origin.
+- Public-preview docs, release checklist, and screenshot placeholders.
 
 Not included yet:
 
@@ -128,11 +130,40 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 The public SVG brand kit lives in [assets/brand](assets/brand). PNG previews and base64 exports are generated locally and ignored by Git.
 
+## Quickstart
+
+Install dependencies and run the local dev stack:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open the dashboard at `http://127.0.0.1:5173`.
+
+Docker local preview:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Open the Docker preview at `http://127.0.0.1:3210`. Docker serves the built web app and local API from the same Fastify server. See [docs/quickstart.md](docs/quickstart.md) and [docs/docker.md](docs/docker.md).
+
+Useful launch docs:
+
+- [docs/security.md](docs/security.md)
+- [docs/pack-authoring.md](docs/pack-authoring.md)
+- [docs/export-profiles.md](docs/export-profiles.md)
+- [docs/mcp.md](docs/mcp.md)
+- [docs/roadmap.md](docs/roadmap.md)
+- [docs/release-checklist.md](docs/release-checklist.md)
+
 ## Verification
 
 ```bash
 pnpm install
-pnpm phase10:verify
+pnpm phase11:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```
@@ -193,6 +224,7 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_PORT=3210`
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
+- `CONTEXTARR_WEB_DIST_DIR=` optional built web app directory for same-origin serving
 - `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
 - `VITE_CONTEXTARR_API_BASE=` optional web override; leave empty to use the Vite `/api` proxy
 - `VITE_CONTEXTARR_API_TOKEN=` optional web token for protected local APIs

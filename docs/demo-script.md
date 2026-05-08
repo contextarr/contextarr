@@ -16,7 +16,8 @@ Stop re-explaining your systems to AI.
 8. Use the export or read-only MCP to answer the same question.
 9. Show the improved answer.
 10. Open the raw Markdown files to prove local ownership.
-11. End with Docker quickstart and the GitHub repo.
+11. Open the Docker preview at `http://127.0.0.1:3210`.
+12. End with the quickstart docs and the GitHub repo.
 
 ## Demo Data Rules
 
@@ -25,3 +26,4 @@ Stop re-explaining your systems to AI.
 - Do not include credentials.
 - Do not include real private system details.
 - Do not call external AI APIs during the repository demo unless explicitly approved later.
+- Do not show marketplace, cloud sync, telemetry, or executable pack behavior.

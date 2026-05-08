@@ -45,6 +45,7 @@ docs
 7. The MCP server exposes selected context through read-only local stdio tools.
 8. Importers can generate local draft pack folders from selected local inputs.
 9. Composer builds temporary custom exports from selected local records.
+10. Docker Compose can serve the built web app and local API from one Fastify origin.
 
 ## Source of Truth
 
@@ -56,7 +57,7 @@ Fastify is the preferred v0 API server because Contextarr is local-server-first 
 
 ## Frontend Direction
 
-The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports.
+The web app is a power-user dashboard, not a marketing site. Phase 4 implemented the app shell and API-backed Pack Library. Phase 5 added hash-based pack and record detail views plus sanitized record rendering. Phase 6 added deterministic Pack Health and Review Queue views. Phase 7 added export preview, copy, and download flows for profile-driven generated artifacts. Phase 10 added a read-only Composer workflow for temporary custom exports. Phase 11 added same-origin serving of built web assets for the Docker preview.
 
 ## Renderer Direction
 
@@ -79,6 +80,12 @@ Composed exports are temporary derived artifacts. The web UI can preview, copy, 
 ## Local API Direction
 
 The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes.
+
+When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
+
+## Docker Direction
+
+Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs` read-only, and stores derived SQLite state in a Docker volume.
 
 ## MCP Direction
 

@@ -67,6 +67,8 @@ Use absolute paths on Windows.
 
 For local development, `pnpm --filter @contextarr/mcp dev` remains an alias. The canonical workspace command is `pnpm contextarr-mcp`.
 
+Docker Compose does not host MCP. MCP remains a local stdio process launched by the client.
+
 ## Safety
 
 The MCP server does not mutate pack files, run shell commands, fetch URLs, call AI APIs, upload data, create marketplace behavior, or implement importers/composer flows. Query logging stores metadata only and does not store returned context or raw query text.
