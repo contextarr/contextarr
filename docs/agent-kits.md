@@ -1,6 +1,6 @@
 # Contextarr Agent Kits
 
-Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 24 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing/search, a local Composer save flow, Library/detail/health surfaces, and profile-driven export generation.
+Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 25 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing/search, a local Composer save flow, Library/detail/health surfaces, profile-driven export generation, and read-only MCP exposure.
 
 ## Definition
 
@@ -62,10 +62,21 @@ Phase 23 adds read-only Agent Kit Library and detail surfaces and local-only hea
 
 Agent Kit source files are local, inspectable, and versionable. Generated Export Briefs, previews, search indexes, and MCP responses remain derived artifacts.
 
-## Boundaries
-
 ## Phase 24: Export Engine
 
 Phase 24 builds deterministic Agent Kit export previews by merging profile-selected Context Pack records and Skill documents. Export generation strips local source paths, excludes secret and `never_export` content, preserves profile order, and exposes copy/download in the browser without server-side generated-file writes.
 
-Phase 24 does not implement MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, arbitrary path writes, or execution behavior.
+## Phase 25: Read-Only MCP
+
+Phase 25 exposes Agent Kits through local stdio MCP tools:
+
+- `list_agent_kits`
+- `get_agent_kit_summary`
+- `query_agent_kit_context`
+- `build_agent_kit_export_preview`
+
+These tools reuse the derived SQLite index and local export engine. They do not write Agent Kit files, run Agent Kits, execute Skills, fetch URLs, call AI APIs, expose local filesystem paths, or bypass redaction rules.
+
+## Boundaries
+
+Contextarr does not implement registry behavior, marketplace behavior, cloud behavior, telemetry, arbitrary path writes, or Agent Kit execution behavior.

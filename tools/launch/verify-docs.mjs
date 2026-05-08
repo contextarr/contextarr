@@ -224,6 +224,41 @@ if (!failed) {
     fail("Root package scripts must include phase24:verify.");
   }
 
+  const requiredPhase25Text = [
+    "Phase 25",
+    "phase25:verify",
+    "list_packs",
+    "get_pack_summary",
+    "query_pack_context",
+    "get_record",
+    "list_export_profiles",
+    "build_export_preview",
+    "list_skills",
+    "get_skill_summary",
+    "get_skill",
+    "list_agent_kits",
+    "get_agent_kit_summary",
+    "query_agent_kit_context",
+    "build_agent_kit_export_preview",
+  ];
+  for (const text of requiredPhase25Text) {
+    if (!readme.includes(text) && !mcp.includes(text)) {
+      fail(`README or MCP docs are missing Phase 25 text: ${text}`);
+    }
+  }
+  if (!roadmap.includes("Phase 25: Read-only MCP for Skills and Agent Kits. Complete.")) {
+    fail("Roadmap must mark Phase 25 complete.");
+  }
+  if (!securityModel.includes("Phase 25") || !securityModel.includes("read-only stdio MCP")) {
+    fail("Security model docs must include Phase 25 read-only MCP boundaries.");
+  }
+  if (!packageJson.scripts["phase25:verify"]) {
+    fail("Root package scripts must include phase25:verify.");
+  }
+  if (!packageJson.scripts["phase25:verify"]?.includes("research-delta:verify")) {
+    fail("phase25:verify must include research-delta:verify.");
+  }
+
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
     fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");
   }

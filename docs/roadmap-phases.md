@@ -174,9 +174,13 @@
 ## Phase 25: Read-Only MCP for Skills and Agent Kits
 
 - Extend read-only MCP to approved Skills and Agent Kits.
+- Add `list_skills`, `get_skill_summary`, `get_skill`, `list_agent_kits`, `get_agent_kit_summary`, `query_agent_kit_context`, and `build_agent_kit_export_preview`.
+- Reuse the derived SQLite index and export engines.
+- Omit local paths from MCP output.
 - Do not mutate files.
 - Do not execute Skills.
 - Respect redaction rules.
+- Status: complete.
 
 ## Later Only
 

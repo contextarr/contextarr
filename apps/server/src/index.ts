@@ -18,6 +18,14 @@ export {
   getPacks,
   getRecord,
   getReviewItems,
+  getSkill,
+  getSkillExamples,
+  getSkillExportProfiles,
+  getSkillHealth,
+  getSkillInstructions,
+  getSkillPath,
+  getSkillSources,
+  getSkills,
   rebuildIndex,
   searchIndex
 } from "./indexer";
@@ -38,6 +46,8 @@ export type {
   ReviewItem,
   ReviewItemFilters,
   ServerConfig,
+  SkillHealthDetail,
+  SkillSummary,
   SkippedAgentKit,
   SkippedPack
 } from "./types";

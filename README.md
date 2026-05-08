@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 24R: Research Delta Foundation Catch-Up. Phase 24: Agent Kit Export Engine remains complete.
+This repository is in Phase 25: Read-Only MCP for Skills and Agent Kits. Phase 24R: Research Delta Foundation Catch-Up and Phase 24: Agent Kit Export Engine remain complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -77,6 +77,7 @@ Current scope:
 - Phase 23 read-only Agent Kit Library and Detail views plus Agent Kit health/review status derived from SQLite.
 - Phase 24 profile-driven Agent Kit export generation that merges selected Context Pack records and Skill documents without execution.
 - Research Delta foundation fields for Context Pack source provenance, source license status, source hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets (`AGENTS.md`, `CLAUDE.md`, and `llms.txt`).
+- Phase 25 read-only MCP tools for Skills and Agent Kits, including privacy-aware Skill retrieval, Agent Kit context search, and Agent Kit export previews.
 
 Not included yet:
 
@@ -84,7 +85,6 @@ Not included yet:
 - API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
-- Agent Kit and Skill MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
 
 ## Product Positioning
@@ -212,6 +212,8 @@ pnpm phase21:verify
 pnpm phase22:verify
 pnpm phase23:verify
 pnpm phase24:verify
+pnpm research-delta:verify
+pnpm phase25:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
@@ -260,7 +262,7 @@ Run the read-only MCP server:
 pnpm contextarr-mcp
 ```
 
-Use `pnpm --silent contextarr-mcp` for pnpm-launched MCP client smoke checks so pnpm's script banner does not write to stdout. The MCP server uses stdio only. It exposes `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`. See [docs/mcp.md](docs/mcp.md).
+Use `pnpm --silent contextarr-mcp` for pnpm-launched MCP client smoke checks so pnpm's script banner does not write to stdout. The MCP server uses stdio only. It exposes read-only Context Pack, Skill, and Agent Kit tools, including `list_packs`, `get_record`, `list_skills`, `get_skill`, `list_agent_kits`, `query_agent_kit_context`, and `build_agent_kit_export_preview`. See [docs/mcp.md](docs/mcp.md).
 
 ## Local API
 

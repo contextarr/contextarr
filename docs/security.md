@@ -30,11 +30,11 @@ Exports and Composer previews are temporary derived artifacts. They apply profil
 
 ## MCP
 
-The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, run tools, call external APIs, or log raw returned context.
+The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, Skills, or Agent Kits, run tools, execute Skills, run Agent Kits, call external APIs, or log raw returned context. Phase 25 extends MCP to Skills and Agent Kits with privacy-aware bodies, scoped Agent Kit context search, local export previews, and path-free responses.
 
 ## Skills And Agent Kits
 
-Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Phase 23 adds read-only Agent Kit Library and detail views plus local health/status artifacts. Phase 24 adds read-only Agent Kit export previews that strip local source paths and exclude secret or `never_export` content. Contextarr prepares Agent Kits. It does not run them.
+Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Phase 23 adds read-only Agent Kit Library and detail views plus local health/status artifacts. Phase 24 adds read-only Agent Kit export previews that strip local source paths and exclude secret or `never_export` content. Phase 25 exposes Skills and Agent Kits to MCP clients without mutation or execution. Contextarr prepares Agent Kits. It does not run them.
 
 Agent Kit saves are constrained to `CONTEXTARR_AGENT_KITS_DIR`, defaulting to ignored `agent-kits/`. The browser sends object IDs and metadata only; it never sends an output path. Saved kits are validated before they are indexed.
 

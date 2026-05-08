@@ -64,11 +64,12 @@ The MCP server is local, stdio-only, and read-only. It must not:
 
 - Mutate files.
 - Run commands.
+- Execute Skills or run Agent Kits.
 - Call network services.
 - Access secrets.
 - Return raw private source dumps unless explicitly configured.
 
-`CONTEXTARR_MCP_ALLOW_PRIVATE=false` is the default. Secret record bodies are never returned through MCP. Private, internal, or sensitive record bodies are omitted unless private MCP access is explicitly enabled. MCP query logs store metadata only: tool name, ids, query hash and length, result count, timing, and sanitized flags. They must not store raw query text or returned context.
+`CONTEXTARR_MCP_ALLOW_PRIVATE=false` is the default. Secret record and Skill document bodies are never returned through MCP. Private, internal, or sensitive record and Skill document bodies are omitted unless private MCP access is explicitly enabled. Phase 25 extends MCP to Skills and Agent Kits with the same read-only and redaction-aware rules. MCP query logs store metadata only: tool name, ids, query hash and length, result count, timing, and sanitized flags. They must not store raw query text or returned context.
 
 ## Human Review
 
@@ -92,7 +93,7 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 ## Skills and Agent Kits
 
-Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. Phase 25 exposes Skills and Agent Kits through read-only stdio MCP tools without execution or file mutation. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Skill health checks reuse the same local, deterministic review queue model as Context Packs. They do not fetch source URLs, probe local source paths, run commands, execute Skill content, or rewrite Skill files. Review item status changes are stored in SQLite only.
 

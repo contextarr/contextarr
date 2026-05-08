@@ -24,9 +24,7 @@ async function main(): Promise<void> {
   });
 
   await server.connect(transport);
-  console.error(
-    `Contextarr MCP server ready. packsDir=${context.config.packsDir} databasePath=${context.config.databasePath}`
-  );
+  console.error("Contextarr MCP server ready.");
 }
 
 main().catch((error: unknown) => {

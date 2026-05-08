@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
+const demoSkillsDir = path.join(repoRoot, "demo-skills");
+const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 
 describe("Contextarr MCP stdio protocol", () => {
   let tempDir: string | undefined;
@@ -30,10 +32,16 @@ describe("Contextarr MCP stdio protocol", () => {
         env: {
           ...getDefaultEnvironment(),
           CONTEXTARR_PACKS_DIR: demoPacksDir,
+          CONTEXTARR_SKILLS_DIR: demoSkillsDir,
+          CONTEXTARR_DEMO_AGENT_KITS_DIR: demoAgentKitsDir,
           CONTEXTARR_DATABASE_PATH: path.join(tempDir, "contextarr.db"),
           CONTEXTARR_MCP_RESCAN_ON_START: "true"
         },
         stderr: "pipe"
+      });
+      const stderrChunks: Buffer[] = [];
+      transport.stderr?.on("data", (chunk) => {
+        stderrChunks.push(Buffer.from(chunk));
       });
       const client = new Client({ name: "contextarr-mcp-test", version: "0.0.0" });
 
@@ -41,12 +49,48 @@ describe("Contextarr MCP stdio protocol", () => {
         await client.connect(transport);
         const tools = await client.listTools();
         expect(tools.tools.map((tool) => tool.name)).toEqual(
-          expect.arrayContaining(["list_packs", "get_record", "build_export_preview"])
+          expect.arrayContaining([
+            "list_packs",
+            "get_record",
+            "build_export_preview",
+            "list_skills",
+            "get_skill_summary",
+            "get_skill",
+            "list_agent_kits",
+            "get_agent_kit_summary",
+            "query_agent_kit_context",
+            "build_agent_kit_export_preview"
+          ])
         );
 
         const packs = parseToolJson(await client.callTool({ name: "list_packs", arguments: { limit: 1 } }));
+        const skills = parseToolJson(await client.callTool({ name: "list_skills", arguments: { limit: 1 } }));
         const record = parseToolJson(
           await client.callTool({ name: "get_record", arguments: { recordId: "ai-workstation.local-ai-stack" } })
+        );
+        const skill = parseToolJson(
+          await client.callTool({
+            name: "get_skill",
+            arguments: { skillId: "support-ticket-writing-skill", includeBody: false }
+          })
+        );
+        const skillSummary = parseToolJson(
+          await client.callTool({
+            name: "get_skill_summary",
+            arguments: { skillId: "support-ticket-writing-skill" }
+          })
+        );
+        const agentKitSummary = parseToolJson(
+          await client.callTool({
+            name: "get_agent_kit_summary",
+            arguments: { agentKitId: "support-ticket-writing-kit" }
+          })
+        );
+        const agentKitQuery = parseToolJson(
+          await client.callTool({
+            name: "query_agent_kit_context",
+            arguments: { agentKitId: "support-ticket-writing-kit", query: "ticket", limit: 2 }
+          })
         );
         const preview = parseToolJson(
           await client.callTool({
@@ -54,16 +98,41 @@ describe("Contextarr MCP stdio protocol", () => {
             arguments: { packId: "ai-workstation-pack", profileId: "ai-workstation-codex" }
           })
         );
+        const agentKitPreview = parseToolJson(
+          await client.callTool({
+            name: "build_agent_kit_export_preview",
+            arguments: { agentKitId: "support-ticket-writing-kit", profileId: "support-ticket-writing-kit-codex" }
+          })
+        );
 
         expect(packs.ok).toBe(true);
         expect(packs.packs).toHaveLength(1);
+        expect(skills.ok).toBe(true);
+        expect(skills.skills).toHaveLength(1);
         expect(record.ok).toBe(true);
         expect(record.record).toEqual(expect.objectContaining({ id: "ai-workstation.local-ai-stack" }));
+        expect(skill.ok).toBe(true);
+        expect(skill.skill).toEqual(expect.objectContaining({ id: "support-ticket-writing-skill" }));
+        expect(skillSummary.ok).toBe(true);
+        expect(skillSummary.skill).toEqual(expect.objectContaining({ id: "support-ticket-writing-skill" }));
+        expect(agentKitSummary.ok).toBe(true);
+        expect(agentKitSummary.agentKit).toEqual(expect.objectContaining({ id: "support-ticket-writing-kit" }));
+        expect(agentKitQuery.ok).toBe(true);
+        expect(agentKitQuery.results).toEqual(expect.arrayContaining([expect.objectContaining({ kind: expect.any(String) })]));
         expect(preview.ok).toBe(true);
         expect(preview.artifact).toEqual(expect.objectContaining({ profileId: "ai-workstation-codex" }));
+        expect(agentKitPreview.ok).toBe(true);
+        expect(agentKitPreview.artifact).toEqual(expect.objectContaining({ profileId: "support-ticket-writing-kit-codex" }));
       } finally {
         await client.close();
       }
+
+      const stderr = Buffer.concat(stderrChunks).toString("utf8");
+      expect(stderr).toContain("Contextarr MCP server ready.");
+      expect(stderr).not.toContain(repoRoot);
+      expect(stderr).not.toContain(tempDir);
+      expect(stderr).not.toContain("packsDir=");
+      expect(stderr).not.toContain("databasePath=");
     },
     30000
   );
