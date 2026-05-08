@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const idSchema = z.string().min(1).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+export const idSchema = z.string().min(1).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 const isoDateTimeSchema = z.preprocess(
   (value) => (value instanceof Date ? value.toISOString() : value),
   z.string().datetime({ offset: true })
@@ -119,6 +119,122 @@ export const exportProfileSchema = z
   })
   .passthrough();
 
+export const skillManifestSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    version: z.string().min(1),
+    description: z.string().min(1),
+    type: z.string().min(1),
+    visibility: z.enum(["local", "private", "public"]),
+    trustLevel: trustLevelSchema,
+    author: z.string().min(1),
+    license: z.string().min(1),
+    createdAt: isoDateTimeSchema,
+    updatedAt: isoDateTimeSchema,
+    lastReviewedAt: isoDateTimeSchema.nullable(),
+    containsPersonalData: z.boolean(),
+    containsExecutableCode: z.boolean(),
+    requiresNetwork: z.boolean(),
+    permissions: z
+      .object({
+        readVault: z.boolean().default(false),
+        writeDrafts: z.boolean().default(false),
+        runCommands: z.boolean(),
+        networkAccess: z.boolean(),
+        browserAutomation: z.boolean(),
+        toolExecution: z.boolean()
+      })
+      .passthrough(),
+    instructionsPath: z.string().min(1),
+    examplesPath: z.string().min(1),
+    sourcesPath: z.string().min(1),
+    exportsPath: z.string().min(1),
+    rulesPath: z.string().min(1),
+    targets: z.array(z.string().min(1)).default([]),
+    inputs: z.array(z.string().min(1)).default([]),
+    outputs: z.array(z.string().min(1)).default([]),
+    assets: z
+      .object({
+        coverImage: z.string().min(1).optional(),
+        accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional()
+      })
+      .passthrough()
+      .default({}),
+    compatibility: z
+      .object({
+        contextarr: z.string().min(1)
+      })
+      .passthrough()
+  })
+  .passthrough();
+
+export const skillInstructionFrontmatterSchema = z
+  .object({
+    id: idSchema,
+    title: z.string().min(1),
+    type: z.string().min(1),
+    skill: idSchema,
+    tags: z.array(z.string().min(1)).default([]),
+    confidence: z.enum(["low", "medium", "high", "unknown"]),
+    source_status: z.enum(["source_backed", "authored", "manual", "draft", "unsourced", "imported"]),
+    freshness: z.enum(["current", "stale", "unknown"]),
+    privacy: z.enum(["public_safe", "internal", "private", "sensitive", "secret"]),
+    last_reviewed: localDateSchema.optional(),
+    sources: z.array(idSchema).default([]),
+    review_status: z.enum(["approved", "needs_review", "draft", "rejected"])
+  })
+  .passthrough();
+
+export const skillExportProfileSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    target: z.string().min(1),
+    format: z.enum(["markdown", "json", "text"]),
+    privacy_mode: z.enum(["redacted", "full", "public_safe"]).optional(),
+    include: z
+      .object({
+        instructions: z.array(idSchema).optional(),
+        examples: z.array(idSchema).optional()
+      })
+      .passthrough()
+      .optional(),
+    exclude_tags: z.array(z.string().min(1)).default([]),
+    token_budget: z.number().int().positive().optional(),
+    sections: z.array(z.string().min(1)).default([])
+  })
+  .passthrough();
+
+export const skillSafetyRulesSchema = z
+  .object({
+    disallowed: z
+      .object({
+        executable_files: z.boolean().default(true),
+        shell_commands: z.boolean().default(true),
+        network_calls: z.boolean().default(true),
+        credential_requests: z.boolean().default(true),
+        browser_automation: z.boolean().default(true),
+        hidden_prompts: z.boolean().default(true),
+        tool_execution: z.boolean().default(true)
+      })
+      .passthrough()
+      .default({}),
+    patterns: z
+      .array(
+        z
+          .object({
+            name: idSchema,
+            regex: z.string().min(1),
+            severity: z.enum(["critical", "high", "medium", "low"]),
+            action: z.enum(["block", "review", "warn"])
+          })
+          .passthrough()
+      )
+      .default([])
+  })
+  .passthrough();
+
 export const validationRulesSchema = z
   .object({
     required_fields: z
@@ -163,3 +279,7 @@ export type ExportProfile = z.infer<typeof exportProfileSchema>;
 export type ValidationRules = z.infer<typeof validationRulesSchema>;
 export type RedactionRules = z.infer<typeof redactionRulesSchema>;
 export type FreshnessRules = z.infer<typeof freshnessRulesSchema>;
+export type SkillManifest = z.infer<typeof skillManifestSchema>;
+export type SkillInstructionFrontmatter = z.infer<typeof skillInstructionFrontmatterSchema>;
+export type SkillExportProfile = z.infer<typeof skillExportProfileSchema>;
+export type SkillSafetyRules = z.infer<typeof skillSafetyRulesSchema>;

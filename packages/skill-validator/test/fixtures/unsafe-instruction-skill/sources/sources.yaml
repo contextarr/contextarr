@@ -1,0 +1,7 @@
+sources:
+  - id: unsafe-instruction-skill.manual-authoring
+    type: manual
+    title: Manual Test Source
+    retrieved_at: 2026-05-07T00:00:00Z
+    trust: local
+    status: current

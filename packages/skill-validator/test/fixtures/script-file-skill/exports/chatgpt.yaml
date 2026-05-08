@@ -1,0 +1,10 @@
+id: script-file-skill-chatgpt
+name: Script File Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - script-file-skill.core
+exclude_tags: [secret]
+sections: [instructions]

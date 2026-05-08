@@ -1,0 +1,10 @@
+id: missing-source-reference-skill-chatgpt
+name: Missing Source Reference Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - missing-source-reference-skill.core
+exclude_tags: [secret]
+sections: [instructions]

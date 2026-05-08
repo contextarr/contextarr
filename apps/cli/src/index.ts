@@ -16,6 +16,12 @@ import {
   type ValidationResult
 } from "@contextarr/pack-validator";
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
+import {
+  formatSkillValidationResult,
+  SkillReadError,
+  validateSkill,
+  type SkillValidationResult
+} from "@contextarr/skill-validator";
 
 export type OutputFormat = "text" | "json";
 
@@ -109,7 +115,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
   program
     .command("validate")
-    .argument("<path>", "pack directory to validate")
+    .argument("<path>", "pack, Skill, or directory of child objects to validate")
     .option("--format <format>", "output format: text or json", "text")
     .action((targetPath: string, options: { format: string }) => {
       const format = parseFormat(options.format);
@@ -123,14 +129,16 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       const resolvedTargetPath = path.resolve(process.env.INIT_CWD ?? process.cwd(), targetPath);
 
       if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
-        io.stderr.write(`Pack path is not a readable directory: ${targetPath}\n`);
+        io.stderr.write(`Validation path is not a readable directory: ${targetPath}\n`);
         exitCode = 2;
         return;
       }
 
       try {
         const targets = getValidationTargets(resolvedTargetPath);
-        const results = targets.map((target) => validatePack(target));
+        const results = targets.map((target) =>
+          target.kind === "skill" ? validateSkill(target.path) : validatePack(target.path)
+        );
         io.stdout.write(
           format === "json"
             ? `${JSON.stringify(formatValidationJson(resolvedTargetPath, results), null, 2)}\n`
@@ -138,7 +146,42 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         );
         exitCode = results.every((result) => result.valid) ? 0 : 1;
       } catch (error) {
-        io.stderr.write(`${error instanceof PackReadError ? error.message : errorMessage(error)}\n`);
+        io.stderr.write(`${error instanceof PackReadError || error instanceof SkillReadError ? error.message : errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("validate-skill")
+    .argument("<path>", "Skill directory or directory of child Skills to validate")
+    .option("--format <format>", "output format: text or json", "text")
+    .action((targetPath: string, options: { format: string }) => {
+      const format = parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      const resolvedTargetPath = resolveUserPath(targetPath);
+
+      if (!fs.existsSync(resolvedTargetPath) || !fs.statSync(resolvedTargetPath).isDirectory()) {
+        io.stderr.write(`Skill path is not a readable directory: ${targetPath}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const results = getSkillTargets(resolvedTargetPath).map((target) => validateSkill(target));
+        io.stdout.write(
+          format === "json"
+            ? `${JSON.stringify(formatValidationJson(resolvedTargetPath, results), null, 2)}\n`
+            : formatValidationText(results)
+        );
+        exitCode = results.every((result) => result.valid) ? 0 : 1;
+      } catch (error) {
+        io.stderr.write(`${error instanceof SkillReadError ? error.message : errorMessage(error)}\n`);
         exitCode = 2;
       }
     });
@@ -244,8 +287,34 @@ function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
 }
 
-function getValidationTargets(targetPath: string): string[] {
-  return getPackTargets(targetPath);
+type ValidationTarget = { kind: "pack" | "skill"; path: string };
+type AnyValidationResult = ValidationResult | SkillValidationResult;
+
+function getValidationTargets(targetPath: string): ValidationTarget[] {
+  if (fs.existsSync(path.join(targetPath, "contextarr-pack.json"))) {
+    return [{ kind: "pack", path: targetPath }];
+  }
+
+  if (fs.existsSync(path.join(targetPath, "contextarr-skill.json"))) {
+    return [{ kind: "skill", path: targetPath }];
+  }
+
+  const childTargets = fs
+    .readdirSync(targetPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry): ValidationTarget[] => {
+      const candidate = path.join(targetPath, entry.name);
+      if (fs.existsSync(path.join(candidate, "contextarr-pack.json"))) {
+        return [{ kind: "pack", path: candidate }];
+      }
+      if (fs.existsSync(path.join(candidate, "contextarr-skill.json"))) {
+        return [{ kind: "skill", path: candidate }];
+      }
+      return [];
+    })
+    .sort((left, right) => left.path.localeCompare(right.path));
+
+  return childTargets.length > 0 ? childTargets : [{ kind: "pack", path: targetPath }];
 }
 
 function getPackTargets(targetPath: string): string[] {
@@ -263,6 +332,21 @@ function getPackTargets(targetPath: string): string[] {
   return childPacks.length > 0 ? childPacks : [targetPath];
 }
 
+function getSkillTargets(targetPath: string): string[] {
+  if (fs.existsSync(path.join(targetPath, "contextarr-skill.json"))) {
+    return [targetPath];
+  }
+
+  const childSkills = fs
+    .readdirSync(targetPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(targetPath, entry.name))
+    .filter((candidate) => fs.existsSync(path.join(candidate, "contextarr-skill.json")))
+    .sort((left, right) => left.localeCompare(right));
+
+  return childSkills.length > 0 ? childSkills : [targetPath];
+}
+
 function writeExportArtifacts(outputPath: string, artifacts: ExportArtifact[]): string[] {
   const writtenFiles: string[] = [];
 
@@ -277,30 +361,44 @@ function writeExportArtifacts(outputPath: string, artifacts: ExportArtifact[]): 
   return writtenFiles;
 }
 
-function formatValidationText(results: ValidationResult[]): string {
-  return results.map((result) => formatValidationResult(result)).join(results.length > 1 ? "\n" : "");
+function formatValidationText(results: AnyValidationResult[]): string {
+  return results
+    .map((result) => ("skillPath" in result ? formatSkillValidationResult(result) : formatValidationResult(result)))
+    .join(results.length > 1 ? "\n" : "");
 }
 
-function formatValidationJson(targetPath: string, results: ValidationResult[]): ValidationResult | {
-  packPath: string;
+function formatValidationJson(targetPath: string, results: AnyValidationResult[]): AnyValidationResult | {
+  targetPath: string;
+  packPath?: string;
+  skillPath?: string;
   valid: boolean;
-  results: ValidationResult[];
+  results: AnyValidationResult[];
   summary: { errors: number; warnings: number; infos: number };
 } {
   if (results.length === 1) {
     return results[0];
   }
 
-  return {
-    packPath: targetPath,
+  const aggregate = {
+    targetPath,
     valid: results.every((result) => result.valid),
     results,
     summary: {
       errors: results.reduce((count, result) => count + result.summary.errors, 0),
       warnings: results.reduce((count, result) => count + result.summary.warnings, 0),
-      infos: results.reduce((count, result) => count + result.summary.infos, 0)
-    }
+        infos: results.reduce((count, result) => count + result.summary.infos, 0)
+      }
   };
+
+  if (results.every((result) => "packPath" in result)) {
+    return { packPath: targetPath, ...aggregate };
+  }
+
+  if (results.every((result) => "skillPath" in result)) {
+    return { skillPath: targetPath, ...aggregate };
+  }
+
+  return aggregate;
 }
 
 function formatImportText(result: DraftImportResult): string {

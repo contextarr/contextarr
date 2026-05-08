@@ -1,0 +1,39 @@
+{
+  "id": "script-file-skill",
+  "name": "Script File Skill",
+  "version": "1.0.0",
+  "description": "A fixture that contains a disallowed script file.",
+  "type": "unsafe_skill",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Tests",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": null,
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false,
+    "browserAutomation": false,
+    "toolExecution": false
+  },
+  "instructionsPath": "instructions",
+  "examplesPath": "examples",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "targets": ["chatgpt"],
+  "inputs": ["notes"],
+  "outputs": ["draft"],
+  "assets": {
+    "accentColor": "#ef4444"
+  },
+  "compatibility": {
+    "contextarr": ">=0.2.0"
+  }
+}

@@ -10,6 +10,10 @@ const fixturesDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../packages/pack-validator/test/fixtures"
 );
+const skillFixturesDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../packages/skill-validator/test/fixtures"
+);
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const tempDirs: string[] = [];
@@ -107,6 +111,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(json).toMatchObject({
+      packPath: demoPacksDir,
       valid: true,
       summary: {
         errors: 0,
@@ -122,7 +127,41 @@ describe("contextarr CLI", () => {
     const code = await runCli(["validate", "does-not-exist"], output.io);
 
     expect(code).toBe(2);
-    expect(output.stderr).toContain("Pack path is not a readable directory");
+    expect(output.stderr).toContain("Validation path is not a readable directory");
+  });
+
+  it("validates Skills through the unified and explicit commands", async () => {
+    const unifiedOutput = createIo();
+    const skillOutput = createIo();
+
+    expect(await runCli(["validate", path.join(skillFixturesDir, "valid-skill"), "--format", "json"], unifiedOutput.io)).toBe(0);
+    expect(JSON.parse(unifiedOutput.stdout)).toMatchObject({
+      valid: true,
+      summary: {
+        errors: 0
+      }
+    });
+
+    expect(await runCli(["validate-skill", path.join(skillFixturesDir, "valid-skill")], skillOutput.io)).toBe(0);
+    expect(skillOutput.stdout).toContain("Skill validation passed");
+  });
+
+  it("returns 1 for invalid Skill validation", async () => {
+    const output = createIo();
+    const code = await runCli(["validate-skill", path.join(skillFixturesDir, "unsafe-instruction-skill")], output.io);
+
+    expect(code).toBe(1);
+    expect(output.stdout).toContain("scan.shell_command");
+  });
+
+  it("returns 1 for invalid Skills through unified validation", async () => {
+    const output = createIo();
+    const code = await runCli(["validate", path.join(skillFixturesDir, "malformed-manifest-skill"), "--format", "json"], output.io);
+    const json = JSON.parse(output.stdout);
+
+    expect(code).toBe(1);
+    expect(json.valid).toBe(false);
+    expect(json.issues).toContainEqual(expect.objectContaining({ code: "skill_manifest.schema" }));
   });
 
   it("imports a Markdown folder to a generated draft pack", async () => {

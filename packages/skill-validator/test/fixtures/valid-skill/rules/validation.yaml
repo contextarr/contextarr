@@ -1,0 +1,7 @@
+required_fields:
+  record:
+    - id
+    - title
+checks:
+  - no_executable_content
+  - sources_required

@@ -1,0 +1,10 @@
+id: unsafe-instruction-skill-chatgpt
+name: Unsafe Instruction Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - unsafe-instruction-skill.core
+exclude_tags: [secret]
+sections: [instructions]

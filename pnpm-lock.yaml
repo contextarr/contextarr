@@ -50,6 +50,9 @@ importers:
       '@contextarr/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
+      '@contextarr/skill-validator':
+        specifier: workspace:*
+        version: link:../../packages/skill-validator
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -207,6 +210,21 @@ importers:
 
   packages/schema:
     dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/skill-validator:
+    dependencies:
+      '@contextarr/schema':
+        specifier: workspace:*
+        version: link:../schema
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.4
       zod:
         specifier: ^3.24.1
         version: 3.25.76

@@ -1,0 +1,10 @@
+id: relaxed-safety-rules-skill-chatgpt
+name: Relaxed Safety Rules Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - relaxed-safety-rules-skill.core
+exclude_tags: [secret]
+sections: [instructions]

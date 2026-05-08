@@ -1,0 +1,10 @@
+id: invalid-permissions-skill-chatgpt
+name: Invalid Permissions Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - invalid-permissions-skill.core
+exclude_tags: [secret]
+sections: [instructions]

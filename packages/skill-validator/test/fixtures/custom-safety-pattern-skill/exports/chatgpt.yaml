@@ -1,0 +1,10 @@
+id: custom-safety-pattern-skill-chatgpt
+name: Custom Safety Pattern Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - custom-safety-pattern-skill.core
+exclude_tags: [secret]
+sections: [instructions]

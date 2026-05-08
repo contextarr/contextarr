@@ -73,20 +73,61 @@ if (!failed) {
   }
 }
 
-const schemaChanges = execFileSync("git", ["diff", "--name-only", "HEAD", "--", "packages/schema", "apps/server/src", "apps/web/src", "apps/mcp/src"], {
-  cwd: repoRoot,
-  encoding: "utf8",
-})
-  .trim()
-  .split(/\r?\n/)
-  .filter(Boolean);
-
-if (schemaChanges.length > 0) {
-  fail(`Phase 12 must stay docs-only; runtime/schema files changed:\n${schemaChanges.join("\n")}`);
-}
+verifyPhase12CommitBoundary();
 
 if (failed) {
   process.exitCode = 1;
 } else {
   console.log("Contextarr Phase 12 terminology docs verified.");
+}
+
+function verifyPhase12CommitBoundary() {
+  let commit = "";
+  try {
+    commit = execFileSync(
+      "git",
+      ["log", "--format=%H", "--grep=^docs: add skills and agent kits terminology$", "-n", "1"],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }
+    ).trim();
+  } catch (error) {
+    fail(`Could not inspect Phase 12 commit boundary: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+
+  if (!commit) {
+    fail("Could not find Phase 12 terminology commit.");
+    return;
+  }
+
+  const changedFiles = execFileSync("git", ["diff-tree", "--no-commit-id", "--name-only", "-r", commit], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  })
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  const allowedFiles = new Set([
+    "README.md",
+    "docs/agent-kits.md",
+    "docs/architecture.md",
+    "docs/contextarr_prd_addition_skills_agent_kits.md",
+    "docs/non-executable-skills.md",
+    "docs/roadmap.md",
+    "docs/roadmap-phases.md",
+    "docs/security.md",
+    "docs/security-model.md",
+    "docs/terminology.md",
+    "docs/skills.md",
+    "package.json",
+    "tools/launch/verify-phase12-docs.mjs",
+  ]);
+
+  const unexpectedFiles = changedFiles.filter((file) => !allowedFiles.has(file));
+  if (unexpectedFiles.length > 0) {
+    fail(`Phase 12 commit must stay docs-only; unexpected files:\n${unexpectedFiles.join("\n")}`);
+  }
 }

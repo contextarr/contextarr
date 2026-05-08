@@ -1,0 +1,10 @@
+id: credential-request-skill-chatgpt
+name: Credential Request Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - credential-request-skill.core
+exclude_tags: [secret]
+sections: [instructions]

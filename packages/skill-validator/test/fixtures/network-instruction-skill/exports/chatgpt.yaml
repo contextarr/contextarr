@@ -1,0 +1,10 @@
+id: network-instruction-skill-chatgpt
+name: Network Instruction Skill ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  instructions:
+    - network-instruction-skill.core
+exclude_tags: [secret]
+sections: [instructions]

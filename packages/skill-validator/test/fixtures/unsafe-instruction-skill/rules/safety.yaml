@@ -1,0 +1,9 @@
+disallowed:
+  executable_files: true
+  shell_commands: true
+  network_calls: true
+  credential_requests: true
+  browser_automation: true
+  hidden_prompts: true
+  tool_execution: true
+patterns: []
