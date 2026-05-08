@@ -17,6 +17,7 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
+const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 describe("SQLite indexer", () => {
@@ -24,7 +25,7 @@ describe("SQLite indexer", () => {
     const db = openDatabase(":memory:");
 
     try {
-      const result = rebuildIndex(db, demoPacksDir, demoSkillsDir);
+      const result = rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
       const stats = getIndexStats(db);
 
       expect(result).toMatchObject({
@@ -38,7 +39,12 @@ describe("SQLite indexer", () => {
         skillInstructionsIndexed: 24,
         skillExamplesIndexed: 16,
         skillSourcesIndexed: 24,
-        skillExportProfilesIndexed: 48
+        skillExportProfilesIndexed: 48,
+        agentKitsIndexed: 8,
+        agentKitsSkipped: 0,
+        agentKitContextPackRefsIndexed: 15,
+        agentKitSkillRefsIndexed: 17,
+        agentKitExportProfilesIndexed: 24
       });
       expect(stats).toMatchObject({
         packs: 5,
@@ -50,6 +56,10 @@ describe("SQLite indexer", () => {
         skillExamples: 16,
         skillSources: 24,
         skillExportProfiles: 48,
+        agentKits: 8,
+        agentKitContextPackRefs: 15,
+        agentKitSkillRefs: 17,
+        agentKitExportProfiles: 24,
         reviewItems: 0,
         openReviewItems: 0
       });
@@ -62,8 +72,8 @@ describe("SQLite indexer", () => {
     const db = openDatabase(":memory:");
 
     try {
-      rebuildIndex(db, demoPacksDir, demoSkillsDir);
-      rebuildIndex(db, demoPacksDir, demoSkillsDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
 
       expect(getIndexStats(db)).toMatchObject({
         packs: 5,
@@ -75,6 +85,10 @@ describe("SQLite indexer", () => {
         skillExamples: 16,
         skillSources: 24,
         skillExportProfiles: 48,
+        agentKits: 8,
+        agentKitContextPackRefs: 15,
+        agentKitSkillRefs: 17,
+        agentKitExportProfiles: 24,
         reviewItems: 0,
         openReviewItems: 0
       });
@@ -131,6 +145,55 @@ describe("SQLite indexer", () => {
       expect(getReviewItems(db, { type: "validation" }).length).toBeGreaterThan(1);
     } finally {
       db.close();
+    }
+  });
+
+  it("skips Agent Kits whose referenced packs or Skills are not in the loaded index", () => {
+    const db = openDatabase(":memory:");
+
+    try {
+      const result = rebuildIndex(db, validatorFixturesDir, demoSkillsDir, demoAgentKitsDir);
+
+      expect(result.agentKitsIndexed).toBe(0);
+      expect(result.agentKitsSkipped).toBeGreaterThan(0);
+      expect(result.skippedAgentKits).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            issues: expect.arrayContaining([
+              expect.objectContaining({ code: "agent_kit_reference.unindexed_context_pack" })
+            ])
+          })
+        ])
+      );
+      expect(getIndexStats(db).agentKits).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("reports duplicate Agent Kit IDs without aborting rebuild", () => {
+    const db = openDatabase(":memory:");
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-index-duplicates-"));
+
+    try {
+      fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), path.join(tempRoot, "support-ticket-writing-kit-a"), {
+        recursive: true
+      });
+      fs.cpSync(path.join(demoAgentKitsDir, "support-ticket-writing-kit"), path.join(tempRoot, "support-ticket-writing-kit-b"), {
+        recursive: true
+      });
+
+      const result = rebuildIndex(db, demoPacksDir, demoSkillsDir, tempRoot);
+
+      expect(result.agentKitsIndexed).toBe(1);
+      expect(result.agentKitsSkipped).toBe(1);
+      expect(result.skippedAgentKits[0].issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "agent_kit_manifest.duplicate_id" })])
+      );
+      expect(getIndexStats(db).agentKits).toBe(1);
+    } finally {
+      db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
@@ -279,15 +342,46 @@ describe("SQLite indexer", () => {
     }
   });
 
+  it("searches Agent Kit names, targets, Skills, and Context Pack references with Agent Kit scope", () => {
+    const db = openDatabase(":memory:");
+
+    try {
+      rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
+
+      expect(searchIndex(db, "ticket", "agent-kit")).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "agent-kit",
+            id: "support-ticket-writing-kit"
+          })
+        ])
+      );
+      expect(searchIndex(db, "codex", "agent-kit")).toEqual(
+        expect.arrayContaining([expect.objectContaining({ kind: "agent-kit", target: "codex" })])
+      );
+      expect(searchIndex(db, "bug-report-structuring-skill", "agent-kit")).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "support-ticket-writing-kit" })])
+      );
+      expect(searchIndex(db, "fake-product-line-pack", "agent-kit")).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: "support-ticket-writing-kit" })])
+      );
+      expect(searchIndex(db, "ticket", "agent-kit").every((result) => (result as { kind: string }).kind === "agent-kit")).toBe(true);
+    } finally {
+      db.close();
+    }
+  });
+
   it("returns array results without throwing for punctuation-heavy searches", () => {
     const db = openDatabase(":memory:");
 
     try {
-      rebuildIndex(db, demoPacksDir, demoSkillsDir);
+      rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
 
       for (const query of ["workstation", "C++", "tag:ai", "local-ai", "ai/workstation", "?", "\"quoted\""]) {
         expect(() => searchIndex(db, query)).not.toThrow();
         expect(Array.isArray(searchIndex(db, query))).toBe(true);
+        expect(() => searchIndex(db, query, "agent-kit")).not.toThrow();
+        expect(Array.isArray(searchIndex(db, query, "agent-kit"))).toBe(true);
       }
     } finally {
       db.close();

@@ -110,7 +110,10 @@ async function verify() {
     health.counts?.packs !== 5 ||
     health.counts?.records !== 25 ||
     health.counts?.skills !== 8 ||
-    health.counts?.skillInstructions !== 24
+    health.counts?.skillInstructions !== 24 ||
+    health.counts?.agentKits !== 8 ||
+    health.counts?.agentKitContextPackRefs !== 15 ||
+    health.counts?.agentKitSkillRefs !== 17
   ) {
     throw new Error(`Unexpected Docker health response: ${JSON.stringify(health)}`);
   }
@@ -133,6 +136,30 @@ async function verify() {
   const skillSearch = await getJson("/api/search?type=skill&q=support");
   if (!skillSearch.results?.some((result) => result.kind === "skill" && result.id === "support-ticket-writing-skill")) {
     throw new Error(`Unexpected skill search response: ${JSON.stringify(skillSearch)}`);
+  }
+
+  const agentKits = await getJson("/api/agent-kits");
+  if (!agentKits.agentKits?.some((agentKit) => agentKit.id === "support-ticket-writing-kit")) {
+    throw new Error(`Unexpected Agent Kits response: ${JSON.stringify(agentKits)}`);
+  }
+
+  const agentKitDetail = await getJson("/api/agent-kits/support-ticket-writing-kit");
+  if (
+    agentKitDetail.id !== "support-ticket-writing-kit" ||
+    agentKitDetail.contextPacks?.length !== 2 ||
+    agentKitDetail.skills?.length !== 2
+  ) {
+    throw new Error(`Unexpected Agent Kit detail response: ${JSON.stringify(agentKitDetail)}`);
+  }
+
+  const agentKitSearch = await getJson("/api/search?type=agent-kit&q=ticket");
+  if (!agentKitSearch.results?.some((result) => result.kind === "agent-kit" && result.id === "support-ticket-writing-kit")) {
+    throw new Error(`Unexpected Agent Kit search response: ${JSON.stringify(agentKitSearch)}`);
+  }
+
+  const agentKitPreview = await getJson("/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview");
+  if (agentKitPreview.agentKitId !== "support-ticket-writing-kit" || agentKitPreview.contentStatus !== "scheduled_for_phase_24") {
+    throw new Error(`Unexpected Agent Kit preview response: ${JSON.stringify(agentKitPreview)}`);
   }
 
   const composed = await postJson("/api/compose/preview", {

@@ -80,6 +80,9 @@ importers:
 
   apps/server:
     dependencies:
+      '@contextarr/agent-kit-validator':
+        specifier: workspace:*
+        version: link:../../packages/agent-kit-validator
       '@contextarr/export-profiles':
         specifier: workspace:*
         version: link:../../packages/export-profiles

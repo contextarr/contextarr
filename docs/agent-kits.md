@@ -1,6 +1,6 @@
 # Contextarr Agent Kits
 
-Agent Kits are future Contextarr objects for pairing reusable instructions with source-backed context. Phase 12 documents the concept only. No schema code is added in Phase 12.
+Agent Kits are Contextarr objects for pairing reusable instructions with source-backed context. Phase 21 supports schemas, validation, public-safe demo Agent Kits, read-only SQLite indexing, and read-only local API/search.
 
 ## Definition
 
@@ -18,25 +18,37 @@ Agent Kits are meant to make repeated AI-assisted work safer and more consistent
 - Choose a target tool such as ChatGPT, Claude, Codex, Claude Code, Cursor, OpenCode, Open WebUI, AnythingLLM, Hermes, OpenClaw, or a local MCP client.
 - Generate an Export Brief for use outside Contextarr.
 
-## Future Data Shape
+## Current Data Shape
 
-A future Agent Kit may reference:
+An Agent Kit references:
 
 - Included Context Packs.
 - Included Skills.
-- Selected records or instruction files.
-- Target and format.
-- Export profile.
-- Redaction and exclusion rules.
-- Health and review metadata.
+- Target tool and default export profile.
+- Target-specific export profile YAML files.
+- Redaction, validation, and compatibility rules.
 - Compatibility notes.
 
-The exact schema begins in Phase 19.
+The current source files live under `demo-agent-kits/` for fake public-safe examples. Generated previews, search indexes, and later exports remain derived artifacts.
+
+## Read-Only API
+
+Phase 21 adds local API endpoints:
+
+- `GET /api/agent-kits`
+- `GET /api/agent-kits/:id`
+- `GET /api/agent-kits/:id/context-packs`
+- `GET /api/agent-kits/:id/skills`
+- `GET /api/agent-kits/:id/exports`
+- `GET /api/agent-kits/:id/exports/:profileId/preview`
+- `GET /api/search?type=agent-kit&q=`
+
+The preview route returns metadata and selected relationship summaries only until the full Agent Kit export engine lands in Phase 24.
 
 ## Source Of Truth
 
 Agent Kit source files will be local, inspectable, and versionable. Generated Export Briefs, previews, search indexes, and MCP responses remain derived artifacts.
 
-## Phase 12 Boundary
+## Boundaries
 
-Phase 12 does not implement Agent Kit schemas, demo Agent Kits, Agent Kit indexing, Agent Kit API endpoints, Agent Kit Composer UI, Agent Kit exports, MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, or execution behavior.
+Phase 21 does not implement Agent Kit UI, full Agent Kit export content generation, MCP Agent Kit tools, registry behavior, marketplace behavior, cloud behavior, telemetry, mutation, or execution behavior.

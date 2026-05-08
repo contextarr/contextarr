@@ -158,6 +158,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     port: 0,
     packsDir: demoPacksDir,
     skillsDir: demoSkillsDir,
+    agentKitsDir: path.join(repoRoot, "demo-agent-kits"),
     databasePath: ":memory:",
     rescanOnStart: true,
     maxResults: 8,
@@ -166,7 +167,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     ...overrides
   };
 
-  rebuildIndex(db, demoPacksDir, demoSkillsDir);
+  rebuildIndex(db, demoPacksDir, demoSkillsDir, config.agentKitsDir);
   return { config, db };
 }
 

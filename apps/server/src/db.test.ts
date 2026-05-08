@@ -138,4 +138,55 @@ describe("SQLite schema migrations", () => {
       db.close();
     }
   });
+
+  it("creates Phase 21 Agent Kit tables and FTS search table", () => {
+    const db = new Database(":memory:");
+
+    try {
+      createSchema(db);
+
+      const expectedTables = [
+        "agent_kits",
+        "agent_kit_context_packs",
+        "agent_kit_skills",
+        "agent_kit_export_profiles",
+        "agent_kits_fts"
+      ];
+      for (const table of expectedTables) {
+        expect(db.prepare("SELECT name FROM sqlite_master WHERE name = ?").get(table)).toBeTruthy();
+      }
+      const agentKitColumns = db.prepare("PRAGMA table_info(agent_kits)").all() as Array<{ name: string }>;
+      expect(agentKitColumns.map((column) => column.name)).toEqual(
+        expect.arrayContaining(["target", "privacy_mode", "token_budget", "context_pack_count", "skill_count"])
+      );
+      const contextPackForeignKeys = db.prepare("PRAGMA foreign_key_list(agent_kit_context_packs)").all() as Array<{
+        table: string;
+        on_delete: string;
+      }>;
+      expect(contextPackForeignKeys).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ table: "agent_kits", on_delete: "CASCADE" }),
+          expect.objectContaining({ table: "packs", on_delete: "CASCADE" })
+        ])
+      );
+      const skillForeignKeys = db.prepare("PRAGMA foreign_key_list(agent_kit_skills)").all() as Array<{
+        table: string;
+        on_delete: string;
+      }>;
+      expect(skillForeignKeys).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ table: "agent_kits", on_delete: "CASCADE" }),
+          expect.objectContaining({ table: "skills", on_delete: "CASCADE" })
+        ])
+      );
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_agent_kit_context_packs_pack'").get()
+      ).toBeTruthy();
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_agent_kit_skills_skill'").get()
+      ).toBeTruthy();
+    } finally {
+      db.close();
+    }
+  });
 });

@@ -10,6 +10,12 @@ import {
 } from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
 import {
+  getAgentKit,
+  getAgentKitContextPacks,
+  getAgentKitExportProfilePreview,
+  getAgentKitExportProfiles,
+  getAgentKitSkills,
+  getAgentKits,
   getIndexStats,
   getPack,
   getPackHealth,
@@ -79,11 +85,75 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
         skillExamples: stats.skillExamples,
         skillSources: stats.skillSources,
         skillExportProfiles: stats.skillExportProfiles,
+        agentKits: stats.agentKits,
+        agentKitContextPackRefs: stats.agentKitContextPackRefs,
+        agentKitSkillRefs: stats.agentKitSkillRefs,
+        agentKitExportProfiles: stats.agentKitExportProfiles,
         reviewItems: stats.reviewItems,
         openReviewItems: stats.openReviewItems
       }
     };
   });
+
+  app.get("/api/agent-kits", async () => {
+    return {
+      agentKits: getAgentKits(db)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kits/:id", async (request, reply) => {
+    const agentKit = getAgentKit(db, request.params.id);
+    if (!agentKit) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+    }
+
+    return agentKit;
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kits/:id/context-packs", async (request, reply) => {
+    if (!getAgentKit(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+    }
+
+    return {
+      contextPacks: getAgentKitContextPacks(db, request.params.id)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kits/:id/skills", async (request, reply) => {
+    if (!getAgentKit(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+    }
+
+    return {
+      skills: getAgentKitSkills(db, request.params.id)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/agent-kits/:id/exports", async (request, reply) => {
+    if (!getAgentKit(db, request.params.id)) {
+      return reply.code(404).send({ error: "not_found", message: `Agent Kit not found: ${request.params.id}` });
+    }
+
+    return {
+      exportProfiles: getAgentKitExportProfiles(db, request.params.id)
+    };
+  });
+
+  app.get<{ Params: { id: string; profileId: string } }>(
+    "/api/agent-kits/:id/exports/:profileId/preview",
+    async (request, reply) => {
+      const preview = getAgentKitExportProfilePreview(db, request.params.id, request.params.profileId);
+      if (!preview) {
+        return reply.code(404).send({
+          error: "not_found",
+          message: `Agent Kit export profile not found: ${request.params.id}/${request.params.profileId}`
+        });
+      }
+
+      return preview;
+    }
+  );
 
   app.get("/api/skills", async () => {
     return {
@@ -273,9 +343,9 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return record;
   });
 
-  app.get<{ Querystring: { q?: string; type?: "all" | "pack" | "record" | "skill" } }>("/api/search", async (request, reply) => {
+  app.get<{ Querystring: { q?: string; type?: "all" | "pack" | "record" | "skill" | "agent-kit" } }>("/api/search", async (request, reply) => {
     const type = request.query.type ?? "all";
-    if (!["all", "pack", "record", "skill"].includes(type)) {
+    if (!["all", "pack", "record", "skill", "agent-kit"].includes(type)) {
       return reply.code(400).send({ error: "invalid_search_type", message: "Search type is invalid." });
     }
 
@@ -337,7 +407,7 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   });
 
   app.post("/api/rescan", async () => {
-    const result = rebuildIndex(db, config.packsDir, config.skillsDir);
+    const result = rebuildIndex(db, config.packsDir, config.skillsDir, config.agentKitsDir);
 
     return {
       ok: true,
@@ -400,9 +470,10 @@ function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
   return typeof value === "string" && reviewItemStatuses.includes(value as ReviewItemStatus);
 }
 
-function sanitizeRebuildResultForApi(result: RebuildIndexResult): Omit<RebuildIndexResult, "skipped" | "skippedSkills"> & {
+function sanitizeRebuildResultForApi(result: RebuildIndexResult): Omit<RebuildIndexResult, "skipped" | "skippedSkills" | "skippedAgentKits"> & {
   skipped: Array<{ packId?: string; issues: RebuildIndexResult["skipped"][number]["issues"] }>;
   skippedSkills: Array<{ skillId?: string; issues: RebuildIndexResult["skippedSkills"][number]["issues"] }>;
+  skippedAgentKits: Array<{ agentKitId?: string; issues: RebuildIndexResult["skippedAgentKits"][number]["issues"] }>;
 } {
   return {
     ...result,
@@ -413,6 +484,10 @@ function sanitizeRebuildResultForApi(result: RebuildIndexResult): Omit<RebuildIn
     skippedSkills: result.skippedSkills.map((skipped) => ({
       skillId: skipped.skillId,
       issues: skipped.issues.map((issue) => sanitizeSkippedIssue(issue, skipped.skillPath))
+    })),
+    skippedAgentKits: result.skippedAgentKits.map((skipped) => ({
+      agentKitId: skipped.agentKitId,
+      issues: skipped.issues.map((issue) => sanitizeSkippedIssue(issue, skipped.agentKitPath))
     }))
   };
 }

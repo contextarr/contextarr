@@ -11,6 +11,7 @@ import type { ServerConfig } from "./types";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
+const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 function createTestContext(
@@ -19,16 +20,20 @@ function createTestContext(
   overrides: Partial<ServerConfig> = {}
 ): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
+  const skillsDir = overrides.skillsDir ?? demoSkillsDir;
+  const agentKitsDir =
+    overrides.agentKitsDir ?? (packsDir === demoPacksDir && skillsDir === demoSkillsDir ? demoAgentKitsDir : path.join(os.tmpdir(), "contextarr-no-agent-kits"));
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
     packsDir,
-    skillsDir: demoSkillsDir,
+    skillsDir,
+    agentKitsDir,
     databasePath: ":memory:",
     apiToken,
     ...overrides
   };
-  rebuildIndex(db, packsDir, config.skillsDir);
+  rebuildIndex(db, packsDir, config.skillsDir, config.agentKitsDir);
   return { db, config };
 }
 
@@ -76,6 +81,10 @@ describe("Contextarr API", () => {
         skillExamples: 16,
         skillSources: 24,
         skillExportProfiles: 48,
+        agentKits: 8,
+        agentKitContextPackRefs: 15,
+        agentKitSkillRefs: 17,
+        agentKitExportProfiles: 24,
         reviewItems: 0,
         openReviewItems: 0
       }
@@ -594,6 +603,27 @@ describe("Contextarr API", () => {
     fixtureContext.db.close();
   });
 
+  it("sanitizes skipped Agent Kit issue paths from rescan responses", async () => {
+    const missingAgentKitsDir = path.join(os.tmpdir(), `contextarr-missing-agent-kits-${Date.now()}`);
+    db.close();
+
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { agentKitsDir: missingAgentKitsDir });
+    const app = createApp(fixtureContext);
+    const response = await app.inject({ method: "POST", url: "/api/rescan" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().skippedAgentKits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          issues: expect.arrayContaining([expect.objectContaining({ code: "agent_kits_dir.missing" })])
+        })
+      ])
+    );
+    expect(JSON.stringify(response.json())).not.toContain(missingAgentKitsDir);
+    await app.close();
+    fixtureContext.db.close();
+  });
+
   it("POST /api/review-items/:id/status updates SQLite-only status", async () => {
     db.close();
     const fixtureContext = createTestContext(undefined, validatorFixturesDir);
@@ -670,6 +700,210 @@ describe("Contextarr API", () => {
 
     expect(missingPack.statusCode).toBe(404);
     expect(missingProfile.statusCode).toBe(404);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits returns demo Agent Kit summaries", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/agent-kits" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().agentKits).toHaveLength(8);
+    expect(response.json().agentKits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "support-ticket-writing-kit",
+          contextPackCount: 2,
+          skillCount: 2,
+          exportProfileCount: 3,
+          target: "codex",
+          privacyMode: "redacted",
+          healthStatus: "healthy",
+          reviewQueueCount: 0
+        })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id returns Agent Kit detail without local-only manifest paths", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      id: "support-ticket-writing-kit",
+      target: "codex",
+      privacyMode: "redacted",
+      healthScore: 100,
+      healthStatus: "healthy",
+      counts: {
+        contextPacks: 2,
+        skills: 2,
+        exportProfiles: 3
+      }
+    });
+    expect(response.json().contextPacks.map((pack: { id: string }) => pack.id)).toEqual([
+      "internal-support-kb-pack",
+      "fake-product-line-pack"
+    ]);
+    expect(response.json().skills.map((skill: { id: string }) => skill.id)).toEqual([
+      "support-ticket-writing-skill",
+      "bug-report-structuring-skill"
+    ]);
+    expect(response.json().exportProfiles).toHaveLength(3);
+    expect(response.json().manifest).not.toHaveProperty("rulesPath");
+    expect(response.json().manifest).not.toHaveProperty("exportsPath");
+    expect(response.json().manifest).not.toHaveProperty("examplesPath");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    await app.close();
+    db.close();
+  });
+
+  it("allowlists Agent Kit manifest and asset fields without leaking local paths", async () => {
+    const agentKitId = "support-ticket-writing-kit";
+    const manifestJson = db.prepare("SELECT manifest_json FROM agent_kits WHERE id = ?").pluck().get(agentKitId) as string;
+    const manifest = JSON.parse(manifestJson) as Record<string, unknown>;
+    db.prepare("UPDATE agent_kits SET manifest_json = ?, cover_image = ? WHERE id = ?").run(
+      JSON.stringify({
+        ...manifest,
+        localPath: "D:\\private\\agent-kits",
+        secretToken: "not-a-real-token",
+        assets: {
+          ...(manifest.assets as Record<string, unknown>),
+          coverImage: "D:\\private\\agent-kit-cover.png"
+        }
+      }),
+      "D:\\private\\agent-kit-cover.png",
+      agentKitId
+    );
+
+    const app = createApp({ config, db });
+    const detail = await app.inject({ method: "GET", url: `/api/agent-kits/${agentKitId}` });
+    const list = await app.inject({ method: "GET", url: "/api/agent-kits" });
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().manifest).not.toHaveProperty("localPath");
+    expect(detail.json().manifest).not.toHaveProperty("secretToken");
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
+    expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
+    expect(list.statusCode).toBe(200);
+    expect(JSON.stringify(list.json())).not.toContain("D:\\private");
+    await app.close();
+    db.close();
+  });
+
+  it("sanitizes referenced Context Pack cover images in Agent Kit responses", async () => {
+    db.prepare("UPDATE packs SET cover_image = ? WHERE id = ?").run("D:\\private\\pack-cover.png", "internal-support-kb-pack");
+    db.prepare("UPDATE packs SET cover_image = ? WHERE id = ?").run("/home/rob/private/pack-cover.png", "fake-product-line-pack");
+
+    const app = createApp({ config, db });
+    const contextPacks = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/context-packs" });
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview"
+    });
+
+    expect(contextPacks.statusCode).toBe(200);
+    expect(contextPacks.json().contextPacks.map((pack: { coverImage: string | null }) => pack.coverImage)).toEqual([null, null]);
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json().includedContextPacks.map((pack: { coverImage: string | null }) => pack.coverImage)).toEqual([null, null]);
+    expect(JSON.stringify(contextPacks.json())).not.toContain("D:\\private");
+    expect(JSON.stringify(preview.json())).not.toContain("/home/rob/private");
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id relationship and export routes resolve included objects", async () => {
+    const app = createApp({ config, db });
+    const contextPacks = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/context-packs" });
+    const skills = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/skills" });
+    const exportsResponse = await app.inject({ method: "GET", url: "/api/agent-kits/support-ticket-writing-kit/exports" });
+    const missing = await app.inject({ method: "GET", url: "/api/agent-kits/missing-kit/context-packs" });
+
+    expect(contextPacks.statusCode).toBe(200);
+    expect(contextPacks.json().contextPacks.map((pack: { id: string }) => pack.id)).toEqual([
+      "internal-support-kb-pack",
+      "fake-product-line-pack"
+    ]);
+    expect(skills.statusCode).toBe(200);
+    expect(skills.json().skills.map((skill: { id: string }) => skill.id)).toEqual([
+      "support-ticket-writing-skill",
+      "bug-report-structuring-skill"
+    ]);
+    expect(exportsResponse.statusCode).toBe(200);
+    expect(exportsResponse.json().exportProfiles).toHaveLength(3);
+    expect(missing.statusCode).toBe(404);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id/exports/:profileId/preview returns Phase 21 metadata only", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview"
+    });
+    const missing = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/missing-profile/preview"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      agentKitId: "support-ticket-writing-kit",
+      profileId: "support-ticket-writing-kit-codex",
+      target: "codex",
+      format: "markdown",
+      content: null,
+      contentStatus: "scheduled_for_phase_24"
+    });
+    expect(response.json().includedContextPacks.map((pack: { id: string }) => pack.id)).toEqual([
+      "internal-support-kb-pack",
+      "fake-product-line-pack"
+    ]);
+    expect(response.json().includedSkills.map((skill: { id: string }) => skill.id)).toEqual([
+      "support-ticket-writing-skill",
+      "bug-report-structuring-skill"
+    ]);
+    expect(response.json().warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "agent_kit_export_engine_later" })])
+    );
+    expect(missing.statusCode).toBe(404);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/agent-kits/:id/exports/:profileId/preview honors profile-specific subset order", async () => {
+    const profileJson = db
+      .prepare("SELECT profile_json FROM agent_kit_export_profiles WHERE agent_kit_id = ? AND id = ?")
+      .pluck()
+      .get("support-ticket-writing-kit", "support-ticket-writing-kit-codex") as string;
+    const profile = JSON.parse(profileJson) as Record<string, unknown>;
+    db.prepare("UPDATE agent_kit_export_profiles SET profile_json = ? WHERE agent_kit_id = ? AND id = ?").run(
+      JSON.stringify({
+        ...profile,
+        include: {
+          context_packs: ["fake-product-line-pack"],
+          skills: ["bug-report-structuring-skill"]
+        }
+      }),
+      "support-ticket-writing-kit",
+      "support-ticket-writing-kit-codex"
+    );
+
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().includedContextPacks.map((pack: { id: string }) => pack.id)).toEqual(["fake-product-line-pack"]);
+    expect(response.json().includedSkills.map((skill: { id: string }) => skill.id)).toEqual(["bug-report-structuring-skill"]);
     await app.close();
     db.close();
   });
@@ -839,6 +1073,31 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/search?type=agent-kit&q= returns Agent Kit results only", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/search?type=agent-kit&q=ticket" });
+    const bySkill = await app.inject({
+      method: "GET",
+      url: "/api/search?type=agent-kit&q=bug-report-structuring-skill"
+    });
+    const emptyResponse = await app.inject({ method: "GET", url: "/api/search?type=agent-kit&q=zzzzzzzzqqqqqq" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().type).toBe("agent-kit");
+    expect(response.json().results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "agent-kit", id: "support-ticket-writing-kit" })])
+    );
+    expect(response.json().results.every((result: { kind: string }) => result.kind === "agent-kit")).toBe(true);
+    expect(bySkill.statusCode).toBe(200);
+    expect(bySkill.json().results).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "support-ticket-writing-kit" })])
+    );
+    expect(emptyResponse.statusCode).toBe(200);
+    expect(emptyResponse.json()).toMatchObject({ type: "agent-kit", results: [] });
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/search honors pack and record scopes", async () => {
     const app = createApp({ config, db });
     const packResponse = await app.inject({ method: "GET", url: "/api/search?type=pack&q=workstation" });
@@ -882,10 +1141,15 @@ describe("Contextarr API", () => {
       packsIndexed: 5,
       recordsIndexed: 25,
       skillsIndexed: 8,
-      skillInstructionsIndexed: 24
+      skillInstructionsIndexed: 24,
+      agentKitsIndexed: 8,
+      agentKitContextPackRefsIndexed: 15,
+      agentKitSkillRefsIndexed: 17,
+      agentKitExportProfilesIndexed: 24
     });
     expect(JSON.stringify(response.json())).not.toContain(repoRoot);
     expect(JSON.stringify(response.json())).not.toContain("demo-skills");
+    expect(JSON.stringify(response.json())).not.toContain("demo-agent-kits");
     await app.close();
     db.close();
   });
@@ -996,7 +1260,7 @@ describe("Contextarr API", () => {
     authedContext.db.close();
   });
 
-  it("requires token auth on Skill API, typed search, and rescan routes", async () => {
+  it("requires token auth on Skill and Agent Kit API, typed search, and rescan routes", async () => {
     db.close();
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
@@ -1004,6 +1268,21 @@ describe("Contextarr API", () => {
     const allowedSkills = await app.inject({
       method: "GET",
       url: "/api/skills",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedAgentKits = await app.inject({ method: "GET", url: "/api/agent-kits" });
+    const allowedAgentKits = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedAgentKitPreview = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview"
+    });
+    const allowedAgentKitPreview = await app.inject({
+      method: "GET",
+      url: "/api/agent-kits/support-ticket-writing-kit/exports/support-ticket-writing-kit-codex/preview",
       headers: { authorization: "Bearer test-token" }
     });
     const blockedSearch = await app.inject({ method: "GET", url: "/api/search?type=skill&q=support" });
@@ -1027,6 +1306,10 @@ describe("Contextarr API", () => {
 
     expect(blockedSkills.statusCode).toBe(401);
     expect(allowedSkills.statusCode).toBe(200);
+    expect(blockedAgentKits.statusCode).toBe(401);
+    expect(allowedAgentKits.statusCode).toBe(200);
+    expect(blockedAgentKitPreview.statusCode).toBe(401);
+    expect(allowedAgentKitPreview.statusCode).toBe(200);
     expect(blockedSearch.statusCode).toBe(401);
     expect(allowedSearch.statusCode).toBe(200);
     expect(blockedRescan.statusCode).toBe(401);

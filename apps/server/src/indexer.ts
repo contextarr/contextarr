@@ -11,9 +11,12 @@ import {
   generateSkippedSkillReviewItems,
   type ReviewItemCandidate
 } from "./health";
+import { loadAgentKits } from "./agent-kit-loader";
 import { loadPacks } from "./pack-loader";
 import { loadSkills } from "./skill-loader";
 import type {
+  AgentKitSummary,
+  LoadedAgentKit,
   LoadedPack,
   LoadedSkill,
   LoadedSkillDocument,
@@ -24,16 +27,29 @@ import type {
   ReviewItemFilters,
   ReviewObjectType,
   ReviewItemStatus,
+  SkippedAgentKit,
   SkillHealthDetail,
   SkillSummary
 } from "./types";
 
 export const reviewItemStatuses: ReviewItemStatus[] = ["open", "ignored", "accepted", "reviewed", "resolved"];
 
-export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir?: string): RebuildIndexResult {
+export function rebuildIndex(
+  db: ContextarrDatabase,
+  packsDir: string,
+  skillsDir?: string,
+  agentKitsDir?: string
+): RebuildIndexResult {
   const indexedAt = new Date().toISOString();
   const loaded = loadPacks(packsDir);
   const loadedSkills = skillsDir ? loadSkills(skillsDir) : { skills: [], skipped: [] };
+  const loadedAgentKits = agentKitsDir
+    ? filterAgentKitsWithAvailableReferences(
+        loadAgentKits(agentKitsDir, { contextPacksDir: packsDir, skillsDir }),
+        new Set(loaded.packs.map((pack) => pack.manifest.id)),
+        new Set(loadedSkills.skills.map((skill) => skill.manifest.id))
+      )
+    : { agentKits: [], skipped: [] };
   const reviewCandidates = [
     ...loaded.packs.flatMap((pack) => generatePackReviewItems(pack, new Date(indexedAt))),
     ...loaded.skipped.flatMap((skipped) => generateSkippedPackReviewItems(skipped)),
@@ -67,6 +83,13 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir
       insertSkillExportProfiles(db, skill);
     }
 
+    for (const agentKit of loadedAgentKits.agentKits) {
+      const health = calculateHealthScore([]);
+      insertAgentKit(db, agentKit, indexedAt, health);
+      insertAgentKitRelationships(db, agentKit);
+      insertAgentKitExportProfiles(db, agentKit);
+    }
+
     db.prepare(
       `INSERT INTO events (type, message, created_at, metadata_json)
        VALUES (?, ?, ?, ?)`
@@ -77,10 +100,13 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir
       JSON.stringify({
         packsDir,
         skillsDir,
+        agentKitsDir,
         packsIndexed: loaded.packs.length,
         packsSkipped: loaded.skipped.length,
         skillsIndexed: loadedSkills.skills.length,
-        skillsSkipped: loadedSkills.skipped.length
+        skillsSkipped: loadedSkills.skipped.length,
+        agentKitsIndexed: loadedAgentKits.agentKits.length,
+        agentKitsSkipped: loadedAgentKits.skipped.length
       })
     );
   });
@@ -100,9 +126,24 @@ export function rebuildIndex(db: ContextarrDatabase, packsDir: string, skillsDir
     skillExamplesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.examples.length, 0),
     skillSourcesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.sources.length, 0),
     skillExportProfilesIndexed: loadedSkills.skills.reduce((count, skill) => count + skill.exportProfiles.length, 0),
+    agentKitsIndexed: loadedAgentKits.agentKits.length,
+    agentKitsSkipped: loadedAgentKits.skipped.length,
+    agentKitContextPackRefsIndexed: loadedAgentKits.agentKits.reduce(
+      (count, agentKit) => count + agentKit.manifest.contextPacks.length,
+      0
+    ),
+    agentKitSkillRefsIndexed: loadedAgentKits.agentKits.reduce(
+      (count, agentKit) => count + agentKit.manifest.skills.length,
+      0
+    ),
+    agentKitExportProfilesIndexed: loadedAgentKits.agentKits.reduce(
+      (count, agentKit) => count + agentKit.exportProfiles.length,
+      0
+    ),
     reviewItemsGenerated: reviewCandidates.length,
     skipped: loaded.skipped,
-    skippedSkills: loadedSkills.skipped
+    skippedSkills: loadedSkills.skipped,
+    skippedAgentKits: loadedAgentKits.skipped
   };
 }
 
@@ -116,6 +157,10 @@ export function getIndexStats(db: ContextarrDatabase): {
   skillExamples: number;
   skillSources: number;
   skillExportProfiles: number;
+  agentKits: number;
+  agentKitContextPackRefs: number;
+  agentKitSkillRefs: number;
+  agentKitExportProfiles: number;
   reviewItems: number;
   openReviewItems: number;
   lastIndexedAt: string | null;
@@ -130,6 +175,10 @@ export function getIndexStats(db: ContextarrDatabase): {
     skillExamples: getCount(db, "skill_examples"),
     skillSources: getCount(db, "skill_sources"),
     skillExportProfiles: getCount(db, "skill_export_profiles"),
+    agentKits: getCount(db, "agent_kits"),
+    agentKitContextPackRefs: getCount(db, "agent_kit_context_packs"),
+    agentKitSkillRefs: getCount(db, "agent_kit_skills"),
+    agentKitExportProfiles: getCount(db, "agent_kit_export_profiles"),
     reviewItems: getCount(db, "review_items"),
     openReviewItems: getReviewItems(db, { status: "open" }).length,
     lastIndexedAt:
@@ -138,6 +187,46 @@ export function getIndexStats(db: ContextarrDatabase): {
         .pluck()
         .get("index.rebuilt") as string | undefined ?? null
   };
+}
+
+function filterAgentKitsWithAvailableReferences(
+  result: { agentKits: LoadedAgentKit[]; skipped: SkippedAgentKit[] },
+  availablePackIds: Set<string>,
+  availableSkillIds: Set<string>
+): { agentKits: LoadedAgentKit[]; skipped: SkippedAgentKit[] } {
+  const agentKits: LoadedAgentKit[] = [];
+  const skipped: SkippedAgentKit[] = [...result.skipped];
+
+  for (const agentKit of result.agentKits) {
+    const missingPackIds = agentKit.manifest.contextPacks.filter((packId) => !availablePackIds.has(packId));
+    const missingSkillIds = agentKit.manifest.skills.filter((skillId) => !availableSkillIds.has(skillId));
+
+    if (missingPackIds.length === 0 && missingSkillIds.length === 0) {
+      agentKits.push(agentKit);
+      continue;
+    }
+
+    skipped.push({
+      agentKitPath: agentKit.agentKitPath,
+      agentKitId: agentKit.manifest.id,
+      issues: [
+        ...missingPackIds.map((packId) => ({
+          severity: "error" as const,
+          code: "agent_kit_reference.unindexed_context_pack",
+          message: `Agent Kit references a Context Pack that is not loaded in the current index: ${packId}`,
+          path: "contextPacks"
+        })),
+        ...missingSkillIds.map((skillId) => ({
+          severity: "error" as const,
+          code: "agent_kit_reference.unindexed_skill",
+          message: `Agent Kit references a Skill that is not loaded in the current index: ${skillId}`,
+          path: "skills"
+        }))
+      ]
+    });
+  }
+
+  return { agentKits, skipped };
 }
 
 export function getPacks(db: ContextarrDatabase): PackSummary[] {
@@ -324,6 +413,184 @@ export function getSkillSources(db: ContextarrDatabase, skillId: string): unknow
        ORDER BY id`
     )
     .all(skillId);
+}
+
+export function getAgentKits(db: ContextarrDatabase): AgentKitSummary[] {
+  return db
+    .prepare(
+      `SELECT
+        id, name, version, description, type, visibility, trust_level AS trustLevel,
+        health_score AS healthScore, health_status AS healthStatus,
+        validation_errors AS validationErrors, validation_warnings AS validationWarnings,
+        context_pack_count AS contextPackCount, skill_count AS skillCount,
+        export_profile_count AS exportProfileCount, accent_color AS accentColor,
+        cover_image AS coverImage, review_queue_count AS reviewQueueCount,
+        last_reviewed_at AS lastReviewedAt, updated_at AS updatedAt,
+        target, privacy_mode AS privacyMode
+      FROM agent_kits
+      ORDER BY name`
+    )
+    .all()
+    .map((agentKit) => normalizeAgentKitSummary(agentKit as Row));
+}
+
+export function getAgentKit(db: ContextarrDatabase, agentKitId: string): unknown | undefined {
+  const agentKit = db.prepare("SELECT * FROM agent_kits WHERE id = ?").get(agentKitId) as Row | undefined;
+  if (!agentKit) {
+    return undefined;
+  }
+
+  const contextPacks = getAgentKitContextPacks(db, agentKitId);
+  const skills = getAgentKitSkills(db, agentKitId);
+  const exportProfiles = getAgentKitExportProfiles(db, agentKitId);
+
+  return {
+    id: agentKit.id,
+    name: agentKit.name,
+    version: agentKit.version,
+    description: agentKit.description,
+    type: agentKit.type,
+    visibility: agentKit.visibility,
+    trustLevel: agentKit.trust_level,
+    author: agentKit.author,
+    license: agentKit.license,
+    createdAt: agentKit.created_at,
+    updatedAt: agentKit.updated_at,
+    lastReviewedAt: agentKit.last_reviewed_at,
+    accentColor: agentKit.accent_color,
+    coverImage: safePublicAssetRef(typeof agentKit.cover_image === "string" ? agentKit.cover_image : undefined),
+    reviewQueueCount: agentKit.review_queue_count,
+    healthScore: agentKit.health_score,
+    healthStatus: agentKit.health_status,
+    validationErrors: agentKit.validation_errors,
+    validationWarnings: agentKit.validation_warnings,
+    contextPackCount: agentKit.context_pack_count,
+    skillCount: agentKit.skill_count,
+    exportProfileCount: agentKit.export_profile_count,
+    target: agentKit.target,
+    privacyMode: agentKit.privacy_mode,
+    tokenBudget: agentKit.token_budget,
+    manifest: sanitizeAgentKitManifestForApi(JSON.parse(String(agentKit.manifest_json)) as Record<string, unknown>),
+    counts: {
+      contextPacks: agentKit.context_pack_count,
+      skills: agentKit.skill_count,
+      exportProfiles: agentKit.export_profile_count
+    },
+    validation: {
+      errors: agentKit.validation_errors,
+      warnings: agentKit.validation_warnings
+    },
+    health: {
+      score: agentKit.health_score,
+      status: agentKit.health_status
+    },
+    contextPacks,
+    skills,
+    exportProfiles
+  };
+}
+
+export function getAgentKitPath(db: ContextarrDatabase, agentKitId: string): string | undefined {
+  return db.prepare("SELECT agent_kit_path FROM agent_kits WHERE id = ?").pluck().get(agentKitId) as string | undefined;
+}
+
+export function getAgentKitContextPacks(db: ContextarrDatabase, agentKitId: string): unknown[] {
+  return db
+    .prepare(
+      `SELECT
+        packs.id, packs.name, packs.description, packs.type, packs.visibility,
+        packs.trust_level AS trustLevel, packs.health_score AS healthScore,
+        packs.health_status AS healthStatus, packs.record_count AS recordCount,
+        packs.source_count AS sourceCount, packs.export_profile_count AS exportProfileCount,
+        packs.accent_color AS accentColor, packs.cover_image AS coverImage,
+        agent_kit_context_packs.sort_order AS sortOrder
+       FROM agent_kit_context_packs
+       JOIN packs ON packs.id = agent_kit_context_packs.pack_id
+       WHERE agent_kit_context_packs.agent_kit_id = ?
+       ORDER BY agent_kit_context_packs.sort_order`
+    )
+    .all(agentKitId)
+    .map((pack) => normalizeAgentKitContextPackSummary(pack as Row));
+}
+
+export function getAgentKitSkills(db: ContextarrDatabase, agentKitId: string): unknown[] {
+  return db
+    .prepare(
+      `SELECT
+        skills.id, skills.name, skills.description, skills.type, skills.visibility,
+        skills.trust_level AS trustLevel, skills.health_score AS healthScore,
+        skills.health_status AS healthStatus, skills.instruction_count AS instructionCount,
+        skills.example_count AS exampleCount, skills.source_count AS sourceCount,
+        skills.export_profile_count AS exportProfileCount, skills.targets_json AS targetsJson,
+        agent_kit_skills.sort_order AS sortOrder
+       FROM agent_kit_skills
+       JOIN skills ON skills.id = agent_kit_skills.skill_id
+       WHERE agent_kit_skills.agent_kit_id = ?
+       ORDER BY agent_kit_skills.sort_order`
+    )
+    .all(agentKitId)
+    .map((skill) => {
+      const { targetsJson, ...rest } = skill as Row;
+      return {
+        ...rest,
+        targets: JSON.parse(String(targetsJson))
+      };
+    });
+}
+
+export function getAgentKitExportProfiles(db: ContextarrDatabase, agentKitId: string): unknown[] {
+  return db
+    .prepare(
+      `SELECT id, name, target, format, privacy_mode AS privacyMode, token_budget AS tokenBudget
+       FROM agent_kit_export_profiles
+       WHERE agent_kit_id = ?
+       ORDER BY id`
+    )
+    .all(agentKitId);
+}
+
+export function getAgentKitExportProfilePreview(
+  db: ContextarrDatabase,
+  agentKitId: string,
+  profileId: string
+): unknown | undefined {
+  const agentKit = db.prepare("SELECT * FROM agent_kits WHERE id = ?").get(agentKitId) as Row | undefined;
+  if (!agentKit) {
+    return undefined;
+  }
+
+  const profile = db
+    .prepare("SELECT * FROM agent_kit_export_profiles WHERE agent_kit_id = ? AND id = ?")
+    .get(agentKitId, profileId) as Row | undefined;
+  if (!profile) {
+    return undefined;
+  }
+
+  const manifest = JSON.parse(String(agentKit.manifest_json)) as Record<string, unknown>;
+  const profileJson = JSON.parse(String(profile.profile_json)) as Record<string, unknown>;
+  const include = isRecord(profileJson.include) ? profileJson.include : {};
+  const selectedPackIds = arrayOfStrings(include.context_packs) ?? arrayOfStrings(manifest.contextPacks) ?? [];
+  const selectedSkillIds = arrayOfStrings(include.skills) ?? arrayOfStrings(manifest.skills) ?? [];
+
+  return {
+    agentKitId,
+    profileId,
+    target: profile.target,
+    format: profile.format,
+    privacyMode: profile.privacy_mode,
+    tokenBudget: profile.token_budget,
+    filename: `${profileId}.${profile.format === "json" ? "json" : profile.format === "text" ? "txt" : "md"}`,
+    content: null,
+    contentStatus: "scheduled_for_phase_24",
+    includedContextPacks: orderByIds(getAgentKitContextPacks(db, agentKitId), selectedPackIds),
+    includedSkills: orderByIds(getAgentKitSkills(db, agentKitId), selectedSkillIds),
+    warnings: [
+      {
+        code: "agent_kit_export_engine_later",
+        message: "Agent Kit export content generation is scheduled for Phase 24."
+      }
+    ]
+  };
 }
 
 export function getReviewItems(db: ContextarrDatabase, filters: ReviewItemFilters = {}): ReviewItem[] {
@@ -519,7 +786,11 @@ export function getRecord(db: ContextarrDatabase, recordId: string): unknown | u
   };
 }
 
-export function searchIndex(db: ContextarrDatabase, query: string, type: "all" | "pack" | "record" | "skill" = "all"): unknown[] {
+export function searchIndex(
+  db: ContextarrDatabase,
+  query: string,
+  type: "all" | "pack" | "record" | "skill" | "agent-kit" = "all"
+): unknown[] {
   const trimmed = query.trim();
   if (!trimmed) {
     return [];
@@ -542,8 +813,9 @@ export function searchIndex(db: ContextarrDatabase, query: string, type: "all" |
 
   const recordMatches = type === "all" || type === "record" ? searchRecords(db, trimmed, ftsQuery) : [];
   const skillMatches = type === "all" || type === "skill" ? searchSkills(db, trimmed, ftsQuery) : [];
+  const agentKitMatches = type === "all" || type === "agent-kit" ? searchAgentKits(db, trimmed, ftsQuery) : [];
 
-  return [...packMatches, ...recordMatches, ...skillMatches];
+  return [...packMatches, ...recordMatches, ...skillMatches, ...agentKitMatches];
 }
 
 function insertPack(
@@ -656,6 +928,122 @@ function insertSkill(
     outputsJson: JSON.stringify(skill.manifest.outputs),
     indexedAt
   });
+}
+
+function insertAgentKit(
+  db: ContextarrDatabase,
+  agentKit: LoadedAgentKit,
+  indexedAt: string,
+  health: { score: number; status: string; reviewQueueCount: number }
+): void {
+  db.prepare(
+    `INSERT INTO agent_kits (
+      id, name, version, description, type, visibility, trust_level, author, license,
+      created_at, updated_at, last_reviewed_at, contains_personal_data,
+      contains_executable_code, requires_network, accent_color, cover_image, agent_kit_path,
+      manifest_json, validation_errors, validation_warnings, health_score,
+      health_status, context_pack_count, skill_count, export_profile_count,
+      review_queue_count, target, privacy_mode, token_budget, indexed_at
+    ) VALUES (
+      @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
+      @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
+      @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @agentKitPath,
+      @manifestJson, @validationErrors, @validationWarnings, @healthScore,
+      @healthStatus, @contextPackCount, @skillCount, @exportProfileCount,
+      @reviewQueueCount, @target, @privacyMode, @tokenBudget, @indexedAt
+    )`
+  ).run({
+    id: agentKit.manifest.id,
+    name: agentKit.manifest.name,
+    version: agentKit.manifest.version,
+    description: agentKit.manifest.description,
+    type: agentKit.manifest.type,
+    visibility: agentKit.manifest.visibility,
+    trustLevel: agentKit.manifest.trustLevel,
+    author: agentKit.manifest.author,
+    license: agentKit.manifest.license,
+    createdAt: agentKit.manifest.createdAt,
+    updatedAt: agentKit.manifest.updatedAt,
+    lastReviewedAt: agentKit.manifest.lastReviewedAt,
+    containsPersonalData: agentKit.manifest.containsPersonalData ? 1 : 0,
+    containsExecutableCode: agentKit.manifest.containsExecutableCode ? 1 : 0,
+    requiresNetwork: agentKit.manifest.requiresNetwork ? 1 : 0,
+    accentColor: agentKit.manifest.assets.accentColor ?? null,
+    coverImage: safePublicAssetRef(agentKit.manifest.assets.coverImage),
+    agentKitPath: path.resolve(agentKit.agentKitPath),
+    manifestJson: JSON.stringify(agentKit.manifest),
+    validationErrors: agentKit.validation.summary.errors,
+    validationWarnings: agentKit.validation.summary.warnings,
+    healthScore: health.score,
+    healthStatus: health.status,
+    contextPackCount: agentKit.manifest.contextPacks.length,
+    skillCount: agentKit.manifest.skills.length,
+    exportProfileCount: agentKit.exportProfiles.length,
+    reviewQueueCount: health.reviewQueueCount,
+    target: agentKit.manifest.target,
+    privacyMode: agentKit.manifest.privacyMode,
+    tokenBudget: agentKit.manifest.tokenBudget ?? null,
+    indexedAt
+  });
+
+  db.prepare(
+    `INSERT INTO agent_kits_fts (agent_kit_id, title, body, tags)
+     VALUES (?, ?, ?, ?)`
+  ).run(
+    agentKit.manifest.id,
+    agentKit.manifest.name,
+    [
+      agentKit.manifest.description,
+      agentKit.manifest.type,
+      agentKit.manifest.target,
+      agentKit.manifest.contextPacks.join(" "),
+      agentKit.manifest.skills.join(" "),
+      agentKit.exportProfiles.map((profile) => `${profile.id} ${profile.name} ${profile.target}`).join(" ")
+    ].join("\n"),
+    [agentKit.manifest.type, agentKit.manifest.target, agentKit.manifest.privacyMode].join(" ")
+  );
+}
+
+function insertAgentKitRelationships(db: ContextarrDatabase, agentKit: LoadedAgentKit): void {
+  const insertContextPack = db.prepare(
+    `INSERT INTO agent_kit_context_packs (agent_kit_id, pack_id, sort_order)
+     VALUES (?, ?, ?)`
+  );
+  const insertSkill = db.prepare(
+    `INSERT INTO agent_kit_skills (agent_kit_id, skill_id, sort_order)
+     VALUES (?, ?, ?)`
+  );
+
+  agentKit.manifest.contextPacks.forEach((packId, index) => {
+    insertContextPack.run(agentKit.manifest.id, packId, index);
+  });
+
+  agentKit.manifest.skills.forEach((skillId, index) => {
+    insertSkill.run(agentKit.manifest.id, skillId, index);
+  });
+}
+
+function insertAgentKitExportProfiles(db: ContextarrDatabase, agentKit: LoadedAgentKit): void {
+  const insert = db.prepare(
+    `INSERT INTO agent_kit_export_profiles (
+      id, agent_kit_id, name, target, format, privacy_mode, token_budget, profile_json
+    ) VALUES (
+      @id, @agentKitId, @name, @target, @format, @privacyMode, @tokenBudget, @profileJson
+    )`
+  );
+
+  for (const profile of agentKit.exportProfiles) {
+    insert.run({
+      id: profile.id,
+      agentKitId: agentKit.manifest.id,
+      name: profile.name,
+      target: profile.target,
+      format: profile.format,
+      privacyMode: profile.privacy_mode ?? null,
+      tokenBudget: profile.token_budget ?? null,
+      profileJson: JSON.stringify(profile)
+    });
+  }
 }
 
 function insertRecords(db: ContextarrDatabase, pack: LoadedPack): void {
@@ -1092,6 +1480,39 @@ function normalizeSkillSummary(skill: Row): SkillSummary {
   };
 }
 
+function normalizeAgentKitSummary(agentKit: Row): AgentKitSummary {
+  return {
+    id: String(agentKit.id),
+    name: String(agentKit.name),
+    version: String(agentKit.version),
+    description: String(agentKit.description),
+    type: String(agentKit.type),
+    visibility: String(agentKit.visibility),
+    trustLevel: String(agentKit.trustLevel),
+    healthScore: Number(agentKit.healthScore),
+    healthStatus: String(agentKit.healthStatus),
+    validationErrors: Number(agentKit.validationErrors),
+    validationWarnings: Number(agentKit.validationWarnings),
+    contextPackCount: Number(agentKit.contextPackCount),
+    skillCount: Number(agentKit.skillCount),
+    exportProfileCount: Number(agentKit.exportProfileCount),
+    accentColor: agentKit.accentColor ? String(agentKit.accentColor) : undefined,
+    coverImage: safePublicAssetRef(typeof agentKit.coverImage === "string" ? agentKit.coverImage : undefined),
+    reviewQueueCount: Number(agentKit.reviewQueueCount),
+    lastReviewedAt: agentKit.lastReviewedAt ? String(agentKit.lastReviewedAt) : null,
+    updatedAt: String(agentKit.updatedAt),
+    target: String(agentKit.target),
+    privacyMode: String(agentKit.privacyMode)
+  };
+}
+
+function normalizeAgentKitContextPackSummary(pack: Row): unknown {
+  return {
+    ...pack,
+    coverImage: safePublicAssetRef(typeof pack.coverImage === "string" ? pack.coverImage : undefined)
+  };
+}
+
 function normalizeRecordSummary(record: Row): unknown {
   return {
     id: record.id,
@@ -1166,6 +1587,97 @@ function sanitizeSkillManifestForApi(manifest: Record<string, unknown>): Record<
       contextarr: compatibility.contextarr
     }
   };
+}
+
+function sanitizeAgentKitManifestForApi(manifest: Record<string, unknown>): Record<string, unknown> {
+  const permissions = isRecord(manifest.permissions) ? manifest.permissions : {};
+  const assets = isRecord(manifest.assets) ? manifest.assets : {};
+  const compatibility = isRecord(manifest.compatibility) ? manifest.compatibility : {};
+  const sanitizedAssets: Record<string, unknown> = {};
+  if (typeof assets.accentColor === "string") {
+    sanitizedAssets.accentColor = assets.accentColor;
+  }
+  const coverImage = safePublicAssetRef(typeof assets.coverImage === "string" ? assets.coverImage : undefined);
+  if (coverImage) {
+    sanitizedAssets.coverImage = coverImage;
+  }
+
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    description: manifest.description,
+    type: manifest.type,
+    visibility: manifest.visibility,
+    trustLevel: manifest.trustLevel,
+    author: manifest.author,
+    license: manifest.license,
+    createdAt: manifest.createdAt,
+    updatedAt: manifest.updatedAt,
+    lastReviewedAt: manifest.lastReviewedAt,
+    containsPersonalData: manifest.containsPersonalData,
+    containsExecutableCode: manifest.containsExecutableCode,
+    requiresNetwork: manifest.requiresNetwork,
+    permissions: {
+      readVault: permissions.readVault,
+      writeDrafts: permissions.writeDrafts,
+      runCommands: permissions.runCommands,
+      networkAccess: permissions.networkAccess,
+      browserAutomation: permissions.browserAutomation,
+      toolExecution: permissions.toolExecution
+    },
+    contextPacks: manifest.contextPacks,
+    skills: manifest.skills,
+    target: manifest.target,
+    exportProfile: manifest.exportProfile,
+    privacyMode: manifest.privacyMode,
+    tokenBudget: manifest.tokenBudget,
+    assets: sanitizedAssets,
+    compatibility: {
+      contextarr: compatibility.contextarr
+    }
+  };
+}
+
+function safePublicAssetRef(value: string | undefined): string | null {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/\\/g, "/");
+  if (
+    /^file:/i.test(normalized) ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("//") ||
+    normalized.startsWith("../") ||
+    normalized === ".."
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function arrayOfStrings(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function orderByIds(items: unknown[], ids: string[]): unknown[] {
+  const byId = new Map(items.map((item) => [String((item as Row).id), item]));
+  const ordered: unknown[] = [];
+  for (const id of ids) {
+    const item = byId.get(id);
+    if (item) {
+      ordered.push(item);
+    }
+  }
+
+  return ordered;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1288,6 +1800,57 @@ function searchSkillDocumentsLike(db: ContextarrDatabase, query: string): unknow
        LIMIT 30`
     )
     .all(likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery);
+}
+
+function searchAgentKits(db: ContextarrDatabase, query: string, ftsQuery: string): unknown[] {
+  if (!ftsQuery) {
+    return searchAgentKitsLike(db, query);
+  }
+
+  try {
+    return db
+      .prepare(
+        `SELECT agent_kits.id, 'agent-kit' AS kind, agent_kits.name AS title,
+          agent_kits.target AS target, agent_kits.privacy_mode AS privacyMode,
+          snippet(agent_kits_fts, 2, '[', ']', '...', 12) AS snippet
+         FROM agent_kits_fts
+         JOIN agent_kits ON agent_kits.id = agent_kits_fts.agent_kit_id
+         WHERE agent_kits_fts MATCH ?
+         ORDER BY rank
+         LIMIT 30`
+      )
+      .all(ftsQuery);
+  } catch {
+    return searchAgentKitsLike(db, query);
+  }
+}
+
+function searchAgentKitsLike(db: ContextarrDatabase, query: string): unknown[] {
+  const likeQuery = `%${query}%`;
+
+  return db
+    .prepare(
+      `SELECT DISTINCT
+        agent_kits.id, 'agent-kit' AS kind, agent_kits.name AS title,
+        agent_kits.target AS target, agent_kits.privacy_mode AS privacyMode,
+        agent_kits.description AS snippet
+       FROM agent_kits
+       LEFT JOIN agent_kit_context_packs ON agent_kit_context_packs.agent_kit_id = agent_kits.id
+       LEFT JOIN agent_kit_skills ON agent_kit_skills.agent_kit_id = agent_kits.id
+       LEFT JOIN agent_kit_export_profiles ON agent_kit_export_profiles.agent_kit_id = agent_kits.id
+       WHERE agent_kits.name LIKE ?
+          OR agent_kits.description LIKE ?
+          OR agent_kits.type LIKE ?
+          OR agent_kits.target LIKE ?
+          OR agent_kits.privacy_mode LIKE ?
+          OR agent_kit_context_packs.pack_id LIKE ?
+          OR agent_kit_skills.skill_id LIKE ?
+          OR agent_kit_export_profiles.target LIKE ?
+          OR agent_kit_export_profiles.name LIKE ?
+       ORDER BY agent_kits.name
+       LIMIT 30`
+    )
+    .all(likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery, likeQuery);
 }
 
 type Row = Record<string, unknown>;

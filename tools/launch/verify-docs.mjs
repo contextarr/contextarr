@@ -83,9 +83,10 @@ if (!failed) {
     !docker.includes("http://127.0.0.1:3210") ||
     !docker.includes("CONTEXTARR_WEB_DIST_DIR") ||
     !docker.includes("CONTEXTARR_DOCKER_PORT") ||
-    !docker.includes("CONTEXTARR_SKILLS_DIR")
+    !docker.includes("CONTEXTARR_SKILLS_DIR") ||
+    !docker.includes("CONTEXTARR_AGENT_KITS_DIR")
   ) {
-    fail("Docker docs must include the local URL, web dist env var, Skills dir, and host port override.");
+    fail("Docker docs must include the local URL, web dist env var, Skills dir, Agent Kits dir, and host port override.");
   }
 
   if (!security.includes("No telemetry") || !security.includes("No marketplace") || !security.includes("No executable packs")) {
@@ -108,6 +109,25 @@ if (!failed) {
   }
   if (!security.includes("Skills") || !security.includes("non-executable")) {
     fail("Security docs must describe non-executable Skill boundaries.");
+  }
+
+  const requiredPhase21Text = [
+    "Phase 21",
+    "phase21:verify",
+    "CONTEXTARR_AGENT_KITS_DIR",
+    "/api/agent-kits",
+    "/api/search?type=agent-kit&q=",
+  ];
+  for (const text of requiredPhase21Text) {
+    if (!readme.includes(text)) {
+      fail(`README is missing Phase 21 text: ${text}`);
+    }
+  }
+  if (!architecture.includes("/api/agent-kits") || !architecture.includes("Agent Kit-scoped search")) {
+    fail("Architecture docs must describe Phase 21 Agent Kit API and search.");
+  }
+  if (!packageJson.scripts["phase21:verify"]) {
+    fail("Root package scripts must include phase21:verify.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

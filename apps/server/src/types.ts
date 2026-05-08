@@ -1,4 +1,6 @@
 import type {
+  AgentKitExportProfile,
+  AgentKitManifest,
   ContextPackManifest,
   ExportProfile,
   RecordFrontmatter,
@@ -8,6 +10,7 @@ import type {
   Source
 } from "@contextarr/schema";
 import type { ValidationIssue, ValidationResult } from "@contextarr/pack-validator";
+import type { AgentKitValidationIssue, AgentKitValidationResult } from "@contextarr/agent-kit-validator";
 import type { SkillValidationIssue, SkillValidationResult } from "@contextarr/skill-validator";
 
 export interface ServerConfig {
@@ -15,6 +18,7 @@ export interface ServerConfig {
   port: number;
   packsDir: string;
   skillsDir: string;
+  agentKitsDir: string;
   databasePath: string;
   webDistDir?: string;
   apiToken?: string;
@@ -73,6 +77,24 @@ export interface LoadSkillsResult {
   skipped: SkippedSkill[];
 }
 
+export interface LoadedAgentKit {
+  agentKitPath: string;
+  manifest: AgentKitManifest;
+  validation: AgentKitValidationResult;
+  exportProfiles: AgentKitExportProfile[];
+}
+
+export interface SkippedAgentKit {
+  agentKitPath: string;
+  agentKitId?: string;
+  issues: AgentKitValidationIssue[];
+}
+
+export interface LoadAgentKitsResult {
+  agentKits: LoadedAgentKit[];
+  skipped: SkippedAgentKit[];
+}
+
 export interface RebuildIndexResult {
   indexedAt: string;
   packsIndexed: number;
@@ -86,9 +108,15 @@ export interface RebuildIndexResult {
   skillExamplesIndexed: number;
   skillSourcesIndexed: number;
   skillExportProfilesIndexed: number;
+  agentKitsIndexed: number;
+  agentKitsSkipped: number;
+  agentKitContextPackRefsIndexed: number;
+  agentKitSkillRefsIndexed: number;
+  agentKitExportProfilesIndexed: number;
   reviewItemsGenerated: number;
   skipped: SkippedPack[];
   skippedSkills: SkippedSkill[];
+  skippedAgentKits: SkippedAgentKit[];
 }
 
 export type ReviewItemSeverity = "error" | "warning" | "info";
@@ -209,4 +237,28 @@ export interface SkillSummary {
   targets: string[];
   inputs: string[];
   outputs: string[];
+}
+
+export interface AgentKitSummary {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  type: string;
+  visibility: string;
+  trustLevel: string;
+  healthScore: number;
+  healthStatus: string;
+  validationErrors: number;
+  validationWarnings: number;
+  contextPackCount: number;
+  skillCount: number;
+  exportProfileCount: number;
+  accentColor?: string;
+  coverImage: string | null;
+  reviewQueueCount: number;
+  lastReviewedAt: string | null;
+  updatedAt: string;
+  target: string;
+  privacyMode: string;
 }

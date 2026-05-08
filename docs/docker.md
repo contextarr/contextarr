@@ -32,6 +32,8 @@ The Compose service runs one container:
 - Fastify API on `0.0.0.0:3210`.
 - Built Vite web app served by the same Fastify process.
 - `./demo-packs` mounted read-only at `/app/demo-packs`.
+- `./demo-skills` mounted read-only at `/app/demo-skills`.
+- `./demo-agent-kits` mounted read-only at `/app/demo-agent-kits`.
 - SQLite stored in the `contextarr-data` Docker volume at `/app/data/contextarr.db`.
 - Optional host port override through `CONTEXTARR_DOCKER_PORT`.
 
@@ -42,6 +44,7 @@ CONTEXTARR_HOST=0.0.0.0
 CONTEXTARR_PORT=3210
 CONTEXTARR_PACKS_DIR=/app/demo-packs
 CONTEXTARR_SKILLS_DIR=/app/demo-skills
+CONTEXTARR_AGENT_KITS_DIR=/app/demo-agent-kits
 CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
 CONTEXTARR_API_TOKEN=

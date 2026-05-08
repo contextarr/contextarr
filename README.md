@@ -16,9 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 18: Skill Export Engine.
+This repository is in Phase 21: Agent Kit Index and API.
 
-The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, and read-only Skill export previews.
+The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
 Current scope:
 
@@ -69,6 +69,10 @@ Current scope:
 - Deterministic Skill Health v0, object-aware Review Queue items, and SQLite-only Skill review status actions.
 - Profile-driven Skill export generation for ChatGPT, Claude, Codex, Claude Code, Markdown, and JSON.
 - Skill export previews through CLI, local API, Skill detail, and the Export Center.
+- Zod schemas and validator for non-executable Agent Kits.
+- `contextarr validate-agent-kit <path>` and unified Agent Kit detection in `contextarr validate <path>`.
+- Eight public-safe demo Agent Kits under `demo-agent-kits/`.
+- Phase 21 rebuildable SQLite index and read-only API endpoints for Agent Kits, included Context Packs, included Skills, export profile metadata, and Agent Kit-scoped search.
 
 Not included yet:
 
@@ -76,8 +80,8 @@ Not included yet:
 - API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
-- Demo Agent Kits.
-- Agent Kit UI/API/MCP extensions.
+- Agent Kit UI/MCP extensions.
+- Full Agent Kit export content generation.
 - Skill execution or Agent Kit runtime behavior.
 
 ## Product Positioning
@@ -122,6 +126,7 @@ packages/
 
 demo-packs/            Fake public-safe demo packs
 demo-skills/           Fake public-safe non-executable demo Skills
+demo-agent-kits/       Fake public-safe non-executable Agent Kits
 docs/                  Product, architecture, security, and roadmap docs
 assets/brand/          Deterministic SVG brand kit
 tools/brand-kit/       Private pnpm brand asset generator
@@ -200,10 +205,11 @@ Useful launch docs:
 pnpm install
 pnpm phase11:verify
 pnpm phase12:verify
-pnpm phase18:verify
+pnpm phase21:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
+pnpm --filter @contextarr/cli contextarr validate-agent-kit demo-agent-kits/support-ticket-writing-kit
 ```
 
 The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
@@ -269,6 +275,7 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_PORT=3210`
 - `CONTEXTARR_PACKS_DIR=./demo-packs`
 - `CONTEXTARR_SKILLS_DIR=./demo-skills`
+- `CONTEXTARR_AGENT_KITS_DIR=./demo-agent-kits`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
 - `CONTEXTARR_WEB_DIST_DIR=` optional built web app directory for same-origin serving
 - `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
@@ -300,4 +307,11 @@ Available local API endpoints:
 - `GET /api/skills/:id/examples`
 - `GET /api/skills/:id/exports`
 - `GET /api/search?type=skill&q=`
+- `GET /api/agent-kits`
+- `GET /api/agent-kits/:id`
+- `GET /api/agent-kits/:id/context-packs`
+- `GET /api/agent-kits/:id/skills`
+- `GET /api/agent-kits/:id/exports`
+- `GET /api/agent-kits/:id/exports/:profileId/preview`
+- `GET /api/search?type=agent-kit&q=`
 - `POST /api/rescan`

@@ -12,12 +12,14 @@ services:
       CONTEXTARR_PORT: 3210
       CONTEXTARR_PACKS_DIR: /app/demo-packs
       CONTEXTARR_SKILLS_DIR: /app/demo-skills
+      CONTEXTARR_AGENT_KITS_DIR: /app/demo-agent-kits
       CONTEXTARR_DATABASE_PATH: /app/data/contextarr.db
       CONTEXTARR_WEB_DIST_DIR: /app/apps/web/dist
       CONTEXTARR_API_TOKEN: ""
     volumes:
       - ./demo-packs:/app/demo-packs:ro
       - ./demo-skills:/app/demo-skills:ro
+      - ./demo-agent-kits:/app/demo-agent-kits:ro
       - contextarr-data:/app/data
     restart: unless-stopped
 

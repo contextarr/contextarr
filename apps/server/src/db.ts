@@ -198,6 +198,66 @@ export function createSchema(db: ContextarrDatabase): void {
       PRIMARY KEY (skill_id, id)
     );
 
+    CREATE TABLE IF NOT EXISTS agent_kits (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      version TEXT NOT NULL,
+      description TEXT NOT NULL,
+      type TEXT NOT NULL,
+      visibility TEXT NOT NULL,
+      trust_level TEXT NOT NULL,
+      author TEXT NOT NULL,
+      license TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_reviewed_at TEXT,
+      contains_personal_data INTEGER NOT NULL,
+      contains_executable_code INTEGER NOT NULL,
+      requires_network INTEGER NOT NULL,
+      accent_color TEXT,
+      cover_image TEXT,
+      agent_kit_path TEXT NOT NULL,
+      manifest_json TEXT NOT NULL,
+      validation_errors INTEGER NOT NULL,
+      validation_warnings INTEGER NOT NULL,
+      health_score INTEGER NOT NULL,
+      health_status TEXT NOT NULL,
+      context_pack_count INTEGER NOT NULL,
+      skill_count INTEGER NOT NULL,
+      export_profile_count INTEGER NOT NULL,
+      review_queue_count INTEGER NOT NULL DEFAULT 0,
+      target TEXT NOT NULL,
+      privacy_mode TEXT NOT NULL,
+      token_budget INTEGER,
+      indexed_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_kit_context_packs (
+      agent_kit_id TEXT NOT NULL REFERENCES agent_kits(id) ON DELETE CASCADE,
+      pack_id TEXT NOT NULL REFERENCES packs(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (agent_kit_id, pack_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_kit_skills (
+      agent_kit_id TEXT NOT NULL REFERENCES agent_kits(id) ON DELETE CASCADE,
+      skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (agent_kit_id, skill_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_kit_export_profiles (
+      id TEXT NOT NULL,
+      agent_kit_id TEXT NOT NULL REFERENCES agent_kits(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      target TEXT NOT NULL,
+      format TEXT NOT NULL,
+      privacy_mode TEXT,
+      token_budget INTEGER,
+      profile_json TEXT NOT NULL,
+      PRIMARY KEY (agent_kit_id, id)
+    );
+
     CREATE TABLE IF NOT EXISTS pack_health (
       pack_id TEXT PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
       score INTEGER NOT NULL,
@@ -282,6 +342,13 @@ export function createSchema(db: ContextarrDatabase): void {
       body,
       tags
     );
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS agent_kits_fts USING fts5(
+      agent_kit_id UNINDEXED,
+      title,
+      body,
+      tags
+    );
   `);
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
@@ -292,6 +359,8 @@ export function createSchema(db: ContextarrDatabase): void {
   db.prepare("UPDATE review_items SET object_type = 'pack' WHERE object_type IS NULL OR object_type = ''").run();
   db.prepare("UPDATE review_items SET object_id = pack_id WHERE object_id IS NULL OR object_id = ''").run();
   db.exec("CREATE INDEX IF NOT EXISTS idx_review_items_object ON review_items(object_type, object_id);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_agent_kit_context_packs_pack ON agent_kit_context_packs(pack_id);");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_agent_kit_skills_skill ON agent_kit_skills(skill_id);");
   ensureReviewItemsTable(db);
 }
 
@@ -328,6 +397,11 @@ export function clearDerivedIndex(db: ContextarrDatabase): void {
   db.exec(`
     DELETE FROM records_fts;
     DELETE FROM skills_fts;
+    DELETE FROM agent_kits_fts;
+    DELETE FROM agent_kit_export_profiles;
+    DELETE FROM agent_kit_skills;
+    DELETE FROM agent_kit_context_packs;
+    DELETE FROM agent_kits;
     DELETE FROM skill_export_profiles;
     DELETE FROM skill_sources;
     DELETE FROM skill_examples;
