@@ -1,4 +1,5 @@
 export const brandMarkUrl = new URL("../../../assets/brand/svg/mini-mark.svg", import.meta.url).href;
+export const brandWordmarkUrl = new URL("../../../assets/brand/svg/wordmark-only.svg", import.meta.url).href;
 export const faviconMarkUrl = new URL("../../../assets/brand/svg/favicon-mark.svg", import.meta.url).href;
 
 export function installBrandMetadata(documentRef: Document = document): void {

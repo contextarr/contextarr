@@ -43,7 +43,7 @@ import {
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
-import { brandMarkUrl } from "./brand";
+import { brandMarkUrl, brandWordmarkUrl } from "./brand";
 import {
   buildComposePreviewRequest,
   composerTargets,
@@ -269,7 +269,7 @@ function Sidebar({ health, route }: { health: HealthResponse | null; route: Rout
         <div className="brand-mark">
           <img src={brandMarkUrl} alt="" aria-hidden="true" />
         </div>
-        <span>Contextarr</span>
+        <img className="brand-wordmark" src={brandWordmarkUrl} alt="Contextarr" />
       </a>
 
       <nav className="nav-list" aria-label="Primary">
@@ -414,7 +414,10 @@ function LibraryHeader(props: LibraryHeaderProps) {
           <span>Library</span>
         </div>
         <h1 id="library-title">Pack Library</h1>
-        <p>Manage, browse, and maintain your local context packs.</p>
+        <div className="library-title-row">
+          <p>Manage, browse, and maintain your local context packs.</p>
+          <div className="library-count">{props.packCount} packs</div>
+        </div>
       </div>
 
       <div className="library-controls">
@@ -476,7 +479,6 @@ function LibraryHeader(props: LibraryHeaderProps) {
         </button>
       </div>
 
-      <div className="library-count">{props.packCount} packs</div>
     </div>
   );
 }
@@ -534,8 +536,13 @@ function CoverGrid({ packs }: { packs: PackSummary[] }) {
               <TrustBadge pack={pack} />
             </div>
             <div className="card-footer">
-              <span>{formatDate(pack.lastReviewedAt)}</span>
-              <ExternalLink size={17} aria-hidden="true" />
+              <span>
+                <CalendarDays size={14} aria-hidden="true" />
+                {formatDate(pack.lastReviewedAt)}
+              </span>
+              <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
+                <MoreVertical size={17} aria-hidden="true" />
+              </a>
             </div>
           </div>
         </article>
@@ -560,12 +567,14 @@ function CompactCards({ packs }: { packs: PackSummary[] }) {
             </h2>
             <p>{pack.description}</p>
             <span className="pack-type">{formatPackType(pack.type)}</span>
+            <div className="badge-row compact-badges">
+              <HealthBadge pack={pack} />
+              <TrustBadge pack={pack} />
+            </div>
           </div>
           <div className="compact-metrics">
-            <HealthBadge pack={pack} />
-            <TrustBadge pack={pack} />
-            <span>{pack.sourceCount} sources</span>
             <span>{pack.recordCount} records</span>
+            <span>{pack.sourceCount} sources</span>
             <span>{formatDate(pack.lastReviewedAt)}</span>
           </div>
           <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
@@ -608,6 +617,7 @@ function DenseTable({ packs }: { packs: PackSummary[] }) {
                       </a>
                     </strong>
                     <span>{pack.description}</span>
+                    <span className="pack-type">{formatPackType(pack.type)}</span>
                   </div>
                 </div>
               </td>
@@ -618,8 +628,8 @@ function DenseTable({ packs }: { packs: PackSummary[] }) {
               <td>
                 <HealthBadge pack={pack} />
               </td>
-              <td>{pack.recordCount}</td>
-              <td>{pack.sourceCount}</td>
+              <td className="numeric-cell">{pack.recordCount}</td>
+              <td className="numeric-cell">{pack.sourceCount}</td>
               <td>
                 <span className={pack.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
                   {pack.reviewQueueCount}
