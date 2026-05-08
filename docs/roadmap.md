@@ -13,9 +13,26 @@ Contextarr currently supports:
 - CLI/core local importers for draft packs.
 - Read-only stdio MCP.
 - Docker Compose local preview.
+- Phase 12 terminology planning for future Skills and Agent Kits.
+
+## Second PRD Direction
+
+The second PRD keeps Context Packs as the core source-backed knowledge object and adds future data-only objects:
+
+- Skills: non-executable instruction artifacts that tell agents how to work.
+- Agent Kits: task-ready pairings of Context Packs and Skills.
+- Export Briefs: generated output artifacts for AI tools or humans.
+
+Contextarr prepares Agent Kits. It does not run them.
 
 ## Near-Term
 
+- Phase 13: Skill schema and validator.
+- Phase 14: fake public-safe demo Skills.
+- Phase 15: Skill index and API.
+- Phase 16: Skill Library UI.
+- Phase 17: Skill Health and Review Queue.
+- Phase 18: Skill export engine.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -23,6 +40,10 @@ Contextarr currently supports:
 
 ## Deferred
 
+- Agent Kit schema and validator.
+- Demo Agent Kits.
+- Agent Kit index, API, Composer UI, detail UI, health, and export engine.
+- Read-only MCP for Skills and Agent Kits.
 - Web importer UI.
 - API import endpoints.
 - Saving Composer output as a new pack.

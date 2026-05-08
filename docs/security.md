@@ -7,6 +7,8 @@ Contextarr v0.1 is local-first, data-only, and human-review centered.
 - No telemetry.
 - No marketplace.
 - No executable packs.
+- No executable Skills.
+- No Agent Kit runner.
 - No scripts inside packs.
 - No hidden network calls from pack content.
 - No hosted cloud.
@@ -29,3 +31,7 @@ Exports and Composer previews are temporary derived artifacts. They apply profil
 ## MCP
 
 The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, run tools, call external APIs, or log raw returned context.
+
+## Skills And Agent Kits
+
+Phase 12 defines future Skills and Agent Kits as docs only. Skills are non-executable instruction artifacts. Agent Kits pair Skills with Context Packs. Contextarr prepares Agent Kits. It does not run them.

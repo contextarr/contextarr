@@ -4,6 +4,8 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
+Phase 12 begins the second PRD track as documentation only. It keeps Context Packs as the core source-backed knowledge object and defines future Skills, Agent Kits, and Export Briefs before any schema or runtime work begins.
+
 ## Core Decisions
 
 - Use a TypeScript monorepo managed by pnpm.
@@ -15,6 +17,7 @@ Contextarr is a local-first context pack compiler and manager. Source files are 
 - Use sanitized Markdown rendering for human-readable records and static output.
 - Use Docker Compose for local operation.
 - Use read-only stdio MCP as a local context access layer.
+- Keep future Skills and Agent Kits data-only and non-executable.
 
 ## Monorepo Shape
 
@@ -98,3 +101,16 @@ Phase 9 importers are CLI/core only. They read local folders, Markdown folders, 
 ## Composer Direction
 
 Phase 10 Composer v0 selects indexed packs and records, filters by local metadata, chooses a target and privacy mode, and calls the local compose preview API. It reuses the export engine and redaction rules. Saving composed packs is deferred.
+
+## Skills and Agent Kits Direction
+
+The second PRD adds future terminology for Skills and Agent Kits:
+
+- Context Packs tell agents what to know.
+- Skills tell agents how to work.
+- Agent Kits combine both for a specific task.
+- Export Briefs are generated from those ingredients.
+
+Contextarr prepares Agent Kits. It does not run them.
+
+No schema code is added in Phase 12. Future Skill and Agent Kit files must remain local, inspectable, source-backed, reviewable, and non-executable. Future indexes, previews, exports, and MCP responses must remain derived artifacts.

@@ -89,3 +89,87 @@
 - Write demo script.
 - Verify validator, UI, exports, and MCP docs before release.
 - Stop before publishing, tagging, deploying, or creating a GitHub release.
+
+## Phase 12: Terminology and Schema Planning
+
+- Implemented as docs-only planning.
+- Keep Context Pack as the core context object.
+- Define Skill as a non-executable instruction artifact.
+- Define Agent Kit as a composed pairing of Context Packs and Skills.
+- Define Export Brief as generated output, not source of truth.
+- State clearly: Contextarr prepares Agent Kits. It does not run them.
+- No schema code is added in Phase 12.
+
+## Phase 13: Skill Schema and Validator
+
+- Add Skill manifest and instruction schemas.
+- Add Skill source map and safety rule schemas.
+- Add Skill validation tests.
+- Do not add Skill execution.
+
+## Phase 14: Demo Skills
+
+- Add fake public-safe demo Skills.
+- Keep Skills data-only and non-executable.
+
+## Phase 15: Skill Index and API
+
+- Add rebuildable derived Skill index.
+- Add read-only local Skill API endpoints.
+
+## Phase 16: Skill Library UI
+
+- Add Skill Library views.
+- Keep Skill actions read-only.
+
+## Phase 17: Skill Health and Review Queue
+
+- Add deterministic Skill health.
+- Add Skill review items.
+- Keep review actions local app state unless later scoped otherwise.
+
+## Phase 18: Skill Export Engine
+
+- Generate target-specific Skill exports.
+- Preserve redaction, review, and compatibility metadata.
+
+## Phase 19: Agent Kit Schema and Validator
+
+- Define Agent Kit manifest and references.
+- Validate referenced Context Packs and Skills.
+
+## Phase 20: Demo Agent Kits
+
+- Add fake public-safe Agent Kits that pair demo Context Packs and demo Skills.
+
+## Phase 21: Agent Kit Index and API
+
+- Add rebuildable derived Agent Kit index.
+- Add read-only local Agent Kit API endpoints.
+
+## Phase 22: Agent Kit Composer UI
+
+- Compose Agent Kits from existing Context Packs and Skills.
+- Keep save or mutation behavior separately scoped.
+
+## Phase 23: Agent Kit Detail UI and Health
+
+- Add Agent Kit detail views and health summaries.
+
+## Phase 24: Agent Kit Export Engine
+
+- Generate Agent Kit Export Briefs for supported targets.
+
+## Phase 25: Read-Only MCP for Skills and Agent Kits
+
+- Extend read-only MCP to approved Skills and Agent Kits.
+- Do not mutate files.
+- Do not execute Skills.
+- Respect redaction rules.
+
+## Later Only
+
+- Skill importers.
+- Agent Kit templates.
+- Signing and trust model research.
+- Private team registry prototype.

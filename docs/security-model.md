@@ -13,6 +13,8 @@ Contextarr v0 must not include:
 - Marketplace.
 - Marketplace payments.
 - Executable packs.
+- Executable Skills.
+- Agent Kit runner.
 - Scripts inside packs.
 - Agent action runner.
 - Direct Gmail connector.
@@ -86,6 +88,14 @@ Composer previews reuse the same export engine and redaction rules. They are rea
 Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
 
 Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use. Composer excludes `imported_draft` and `never_export` records by default.
+
+## Skills and Agent Kits
+
+Phase 12 defines future Skills and Agent Kits without implementation. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+
+Contextarr prepares Agent Kits. It does not run them.
+
+Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
 
 ## Telemetry
 

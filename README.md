@@ -8,7 +8,7 @@
 
 # Contextarr
 
-Contextarr is a self-hosted context automation system and pack manager for AI assistants and agents.
+Contextarr is a self-hosted context automation and agent preparation system for AI assistants and agents.
 
 It is designed to help power users and teams build, validate, review, render, compose, and export local-first context packs for tools like ChatGPT, Claude, Codex, Claude Code, OpenCode, Cursor, local agents, and read-only MCP clients.
 
@@ -16,7 +16,9 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 11: v0.1 packaging and launch prep.
+This repository is in Phase 12: Skills and Agent Kits terminology planning.
+
+The original PRD through Phase 11 is implemented locally. Phase 12 begins the second PRD track with documentation only: no schema code, app functionality, runtime behavior, or execution capability is added.
 
 Current scope:
 
@@ -56,6 +58,8 @@ Current scope:
 - `POST /api/compose/preview` local API endpoint for composed export previews.
 - Docker Compose local preview stack serving the built web app and API from one local origin.
 - Public-preview docs, release checklist, and screenshot placeholders.
+- Second PRD appendix for future Skills and Agent Kits.
+- Phase 12 terminology docs for Context Packs, Skills, Agent Kits, Export Briefs, and non-executable Skill boundaries.
 
 Not included yet:
 
@@ -63,6 +67,10 @@ Not included yet:
 - API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
+- Skill schema and Skill validator.
+- Demo Skills or demo Agent Kits.
+- Skill Library or Agent Kit UI/API/MCP extensions.
+- Skill execution or Agent Kit runtime behavior.
 
 ## Product Positioning
 
@@ -75,6 +83,17 @@ Human-readable dashboard.
 Profile-driven AI exports.
 Read-only local MCP.
 ```
+
+The second PRD keeps Context Packs as the core source-backed knowledge object and adds planning language for future Skills and Agent Kits:
+
+```text
+Context Packs tell agents what to know.
+Skills tell agents how to work.
+Agent Kits combine both for a specific task.
+Export Briefs are generated from those ingredients.
+```
+
+Contextarr prepares Agent Kits. It does not run them.
 
 ## Repository Layout
 
@@ -118,6 +137,8 @@ Contextarr v0 must stay local-first and data-only:
 - No hosted cloud.
 - No marketplace.
 - No executable packs.
+- No executable Skills.
+- No Agent Kit runner.
 - No scripts inside packs.
 - No direct Gmail, bank, or brokerage connectors.
 - No managed AI dependency.
@@ -152,6 +173,10 @@ Open the Docker preview at `http://127.0.0.1:3210`. Docker serves the built web 
 
 Useful launch docs:
 
+- [docs/terminology.md](docs/terminology.md)
+- [docs/skills.md](docs/skills.md)
+- [docs/agent-kits.md](docs/agent-kits.md)
+- [docs/non-executable-skills.md](docs/non-executable-skills.md)
 - [docs/security.md](docs/security.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/export-profiles.md](docs/export-profiles.md)
@@ -164,6 +189,7 @@ Useful launch docs:
 ```bash
 pnpm install
 pnpm phase11:verify
+pnpm phase12:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 ```
