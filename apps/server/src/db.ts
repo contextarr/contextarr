@@ -39,8 +39,16 @@ export function createSchema(db: ContextarrDatabase): void {
       cover_image TEXT,
       pack_path TEXT NOT NULL,
       manifest_json TEXT NOT NULL,
+      validation_status TEXT NOT NULL DEFAULT 'valid',
+      export_readiness TEXT NOT NULL DEFAULT 'ready',
       validation_errors INTEGER NOT NULL,
       validation_warnings INTEGER NOT NULL,
+      redaction_warning_count INTEGER NOT NULL DEFAULT 0,
+      stale_source_count INTEGER NOT NULL DEFAULT 0,
+      license_warning_count INTEGER NOT NULL DEFAULT 0,
+      license_missing_count INTEGER NOT NULL DEFAULT 0,
+      license_unknown_count INTEGER NOT NULL DEFAULT 0,
+      license_risk_count INTEGER NOT NULL DEFAULT 0,
       health_score INTEGER NOT NULL,
       health_status TEXT NOT NULL,
       record_count INTEGER NOT NULL,
@@ -64,6 +72,12 @@ export function createSchema(db: ContextarrDatabase): void {
       last_reviewed TEXT,
       review_status TEXT NOT NULL,
       sources_json TEXT NOT NULL,
+      redaction_warning_count INTEGER NOT NULL DEFAULT 0,
+      stale_source_count INTEGER NOT NULL DEFAULT 0,
+      license_warning_count INTEGER NOT NULL DEFAULT 0,
+      license_missing_count INTEGER NOT NULL DEFAULT 0,
+      license_unknown_count INTEGER NOT NULL DEFAULT 0,
+      license_risk_count INTEGER NOT NULL DEFAULT 0,
       body TEXT NOT NULL,
       file_path TEXT NOT NULL,
       metadata_json TEXT NOT NULL
@@ -78,6 +92,15 @@ export function createSchema(db: ContextarrDatabase): void {
       path TEXT,
       retrieved_at TEXT,
       license TEXT,
+      license_status TEXT NOT NULL DEFAULT 'unknown',
+      license_url TEXT,
+      license_notes TEXT,
+      content_hash_algorithm TEXT,
+      content_hash TEXT,
+      hash_calculated_at TEXT,
+      last_checked_at TEXT,
+      stale_after_days INTEGER,
+      stale_reason TEXT,
       trust TEXT,
       status TEXT,
       source_json TEXT NOT NULL,
@@ -92,6 +115,9 @@ export function createSchema(db: ContextarrDatabase): void {
       format TEXT NOT NULL,
       privacy_mode TEXT,
       token_budget INTEGER,
+      readiness_status TEXT NOT NULL DEFAULT 'ready',
+      readiness_warning_codes_json TEXT NOT NULL DEFAULT '[]',
+      readiness_blocking_codes_json TEXT NOT NULL DEFAULT '[]',
       profile_json TEXT NOT NULL,
       PRIMARY KEY (pack_id, id)
     );
@@ -264,6 +290,14 @@ export function createSchema(db: ContextarrDatabase): void {
       status TEXT NOT NULL,
       validation_errors INTEGER NOT NULL,
       validation_warnings INTEGER NOT NULL,
+      validation_status TEXT NOT NULL DEFAULT 'valid',
+      export_readiness TEXT NOT NULL DEFAULT 'ready',
+      redaction_warning_count INTEGER NOT NULL DEFAULT 0,
+      stale_source_count INTEGER NOT NULL DEFAULT 0,
+      license_warning_count INTEGER NOT NULL DEFAULT 0,
+      license_missing_count INTEGER NOT NULL DEFAULT 0,
+      license_unknown_count INTEGER NOT NULL DEFAULT 0,
+      license_risk_count INTEGER NOT NULL DEFAULT 0,
       record_count INTEGER NOT NULL,
       source_count INTEGER NOT NULL,
       export_profile_count INTEGER NOT NULL,
@@ -354,6 +388,40 @@ export function createSchema(db: ContextarrDatabase): void {
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
   ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "validation_status", "TEXT NOT NULL DEFAULT 'valid'");
+  ensureColumn(db, "packs", "export_readiness", "TEXT NOT NULL DEFAULT 'ready'");
+  ensureColumn(db, "packs", "redaction_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "stale_source_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "license_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "license_missing_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "license_unknown_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "license_risk_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "validation_status", "TEXT NOT NULL DEFAULT 'valid'");
+  ensureColumn(db, "pack_health", "export_readiness", "TEXT NOT NULL DEFAULT 'ready'");
+  ensureColumn(db, "pack_health", "redaction_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "stale_source_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "license_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "license_missing_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "license_unknown_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "pack_health", "license_risk_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "redaction_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "stale_source_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "license_warning_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "license_missing_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "license_unknown_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "records", "license_risk_count", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "sources", "license_status", "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn(db, "sources", "license_url", "TEXT");
+  ensureColumn(db, "sources", "license_notes", "TEXT");
+  ensureColumn(db, "sources", "content_hash_algorithm", "TEXT");
+  ensureColumn(db, "sources", "content_hash", "TEXT");
+  ensureColumn(db, "sources", "hash_calculated_at", "TEXT");
+  ensureColumn(db, "sources", "last_checked_at", "TEXT");
+  ensureColumn(db, "sources", "stale_after_days", "INTEGER");
+  ensureColumn(db, "sources", "stale_reason", "TEXT");
+  ensureColumn(db, "export_profiles", "readiness_status", "TEXT NOT NULL DEFAULT 'ready'");
+  ensureColumn(db, "export_profiles", "readiness_warning_codes_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(db, "export_profiles", "readiness_blocking_codes_json", "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, "review_items", "object_type", "TEXT NOT NULL DEFAULT 'pack'");
   ensureColumn(db, "review_items", "object_id", "TEXT");
   ensureColumn(db, "review_items", "skill_id", "TEXT");

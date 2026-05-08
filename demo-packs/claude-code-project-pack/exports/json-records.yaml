@@ -1,6 +1,6 @@
 id: claude-code-project-json-records
 name: Claude Code Project JSON Records Export
-target: json_records
+target: json
 format: json
 privacy_mode: redacted
 include:

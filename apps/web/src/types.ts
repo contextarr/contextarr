@@ -31,8 +31,16 @@ export interface PackSummary {
   trustLevel: string;
   healthScore: number;
   healthStatus: string;
+  validationStatus?: string;
+  exportReadiness?: string;
   validationErrors: number;
   validationWarnings: number;
+  redactionWarningCount?: number;
+  staleSourceCount?: number;
+  licenseWarningCount?: number;
+  licenseMissingCount?: number;
+  licenseUnknownCount?: number;
+  licenseRiskCount?: number;
   recordCount: number;
   sourceCount: number;
   exportProfileCount: number;
@@ -135,6 +143,15 @@ export interface SourceSummary {
   path?: string | null;
   retrievedAt?: string | null;
   license?: string | null;
+  licenseStatus?: string | null;
+  licenseUrl?: string | null;
+  licenseNotes?: string | null;
+  contentHashAlgorithm?: string | null;
+  contentHash?: string | null;
+  hashCalculatedAt?: string | null;
+  lastCheckedAt?: string | null;
+  staleAfterDays?: number | null;
+  staleReason?: string | null;
   trust?: string | null;
   status?: string | null;
 }
@@ -163,8 +180,26 @@ export interface AgentKitDetail extends AgentKitSummary {
     exportProfiles: number;
   };
   validation: {
+    status?: string;
     errors: number;
     warnings: number;
+    redactionWarningCount?: number;
+    staleSourceCount?: number;
+    licenseWarningCount?: number;
+    licenseMissingCount?: number;
+    licenseUnknownCount?: number;
+    licenseRiskCount?: number;
+  };
+  exportReadiness?: {
+    status: string;
+    profilesReady: number;
+    profilesWithWarnings: number;
+    profilesBlocked: number;
+    profiles: Array<ExportProfileSummary & {
+      status: string;
+      warningIssueCodes: string[];
+      blockingIssueCodes: string[];
+    }>;
   };
   health: {
     score: number;

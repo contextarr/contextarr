@@ -1,0 +1,14 @@
+id: copyleft-source-license-pack-codex
+name: Copyleft Source License Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - copyleft-source-license-pack.overview
+exclude_tags:
+  - secret
+token_budget: 8000
+sections:
+  - summary
+  - sources

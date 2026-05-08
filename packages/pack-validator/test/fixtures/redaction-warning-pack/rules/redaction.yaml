@@ -1,0 +1,11 @@
+redact_tags:
+  - secret
+  - never_export
+patterns:
+  - name: token_like
+    regex: "(token)\\s*[:=]\\s*[^\\s]+"
+    action: remove
+
+  - name: review_only_phrase
+    regex: "review-only-fixture"
+    action: warn

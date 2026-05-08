@@ -1,6 +1,6 @@
 id: jellyfin-server-json-records
 name: Jellyfin Server JSON Records Export
-target: json_records
+target: json
 format: json
 privacy_mode: redacted
 include:

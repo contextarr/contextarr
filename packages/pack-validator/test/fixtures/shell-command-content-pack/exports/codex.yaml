@@ -1,0 +1,14 @@
+id: shell-command-content-pack-codex
+name: Shell Command Content Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - shell-command-content-pack.overview
+exclude_tags:
+  - secret
+token_budget: 8000
+sections:
+  - summary
+  - sources

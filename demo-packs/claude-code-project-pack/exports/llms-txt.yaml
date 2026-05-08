@@ -1,0 +1,20 @@
+id: claude-code-project-llms-txt
+name: Claude Code Project llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - claude-code-project.repo-overview
+    - claude-code-project.agent-instructions
+    - claude-code-project.dev-workflow
+    - claude-code-project.testing-checklist
+    - claude-code-project.handoff-notes
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - records
+  - sources

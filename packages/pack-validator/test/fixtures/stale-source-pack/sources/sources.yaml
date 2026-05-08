@@ -1,0 +1,11 @@
+sources:
+  - id: manual-source
+    type: markdown
+    title: Manual Source
+    path: ../raw/manual-note.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+    last_checked_at: 2025-01-01T00:00:00Z
+    stale_after_days: 30

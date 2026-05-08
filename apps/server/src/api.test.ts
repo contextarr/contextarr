@@ -122,7 +122,7 @@ describe("Contextarr API", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 25,
+        exportProfiles: 40,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -194,7 +194,7 @@ describe("Contextarr API", () => {
           id: "ai-workstation-pack",
           recordCount: 5,
           sourceCount: 5,
-          exportProfileCount: 5,
+          exportProfileCount: 8,
           healthStatus: "healthy",
           coverImage: null,
           reviewQueueCount: 0
@@ -844,11 +844,76 @@ describe("Contextarr API", () => {
       counts: {
         records: 5,
         sources: 5,
-        exportProfiles: 5
+        exportProfiles: 8
       }
     });
     await app.close();
     db.close();
+  });
+
+  it("projects research-delta validation, source, readiness, and record fields through the API", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-api-research-delta-"));
+    const packRoot = path.join(tempRoot, "stale-source-pack");
+    fs.cpSync(path.join(validatorFixturesDir, "stale-source-pack"), packRoot, { recursive: true });
+    const sourcesPath = path.join(packRoot, "sources", "sources.yaml");
+    const sourceMap = YAML.parse(fs.readFileSync(sourcesPath, "utf8")) as { sources: Array<Record<string, unknown>> };
+    sourceMap.sources[0] = {
+      ...sourceMap.sources[0],
+      content_hash_algorithm: "sha256",
+      content_hash: "0".repeat(64),
+      hash_calculated_at: "2026-05-07T00:00:00Z"
+    };
+    fs.writeFileSync(sourcesPath, YAML.stringify(sourceMap), "utf8");
+
+    const fixtureContext = createTestContext(undefined, tempRoot, {
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    const app = createApp({ config: fixtureContext.config, db: fixtureContext.db });
+    const detail = await app.inject({ method: "GET", url: "/api/packs/stale-source-pack" });
+    const record = await app.inject({ method: "GET", url: "/api/records/stale-source-pack.overview" });
+    const health = await app.inject({ method: "GET", url: "/api/packs/stale-source-pack/health" });
+
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json()).toMatchObject({
+      validation: {
+        status: "valid_with_warnings",
+        staleSourceCount: 1,
+        licenseWarningCount: 0
+      },
+      exportReadiness: {
+        status: "ready_with_warnings",
+        profilesWithWarnings: 1
+      }
+    });
+    expect(String(detail.json().packPath ?? "")).not.toContain(":\\");
+    expect(detail.json().sources[0]).toMatchObject({
+      licenseStatus: "known_permissive",
+      contentHashAlgorithm: "sha256",
+      contentHash: "0".repeat(64),
+      staleAfterDays: 30
+    });
+    expect(detail.json().sources[0]).not.toHaveProperty("path");
+    expect(detail.json().exportReadiness.profiles[0]).toMatchObject({
+      id: "stale-source-pack-codex",
+      status: "ready_with_warnings",
+      warningIssueCodes: expect.arrayContaining(["export_profile.readiness_warning"])
+    });
+    expect(record.json()).toMatchObject({
+      id: "stale-source-pack.overview",
+      staleSourceCount: 1,
+      resolvedSources: [expect.objectContaining({ licenseStatus: "known_permissive", contentHash: "0".repeat(64) })]
+    });
+    expect(record.json().resolvedSources[0]).not.toHaveProperty("path");
+    expect(health.json().checks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "freshness", status: "warning" })])
+    );
+
+    await app.close();
+    fixtureContext.db.close();
+    db.close();
+    fs.rmSync(tempRoot, { recursive: true, force: true });
   });
 
   it("GET /api/packs/:id/exports/:profileId/preview returns an export artifact", async () => {

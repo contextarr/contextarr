@@ -89,6 +89,17 @@ export const sourceSchema = z
     path: z.string().min(1).optional(),
     retrieved_at: isoDateTimeSchema.optional(),
     license: z.string().min(1).optional(),
+    license_url: z.string().url().optional(),
+    license_status: z
+      .enum(["known_permissive", "known_copyleft", "known_restricted", "unknown", "not_applicable"])
+      .optional(),
+    license_notes: z.string().min(1).optional(),
+    content_hash_algorithm: z.literal("sha256").optional(),
+    content_hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    hash_calculated_at: isoDateTimeSchema.optional(),
+    last_checked_at: isoDateTimeSchema.optional(),
+    stale_after_days: z.number().int().positive().optional(),
+    stale_reason: z.string().min(1).optional(),
     trust: trustLevelSchema.or(z.string().min(1)).optional(),
     status: z.enum(["current", "stale", "missing", "unknown"]).or(z.string().min(1)).optional()
   })
@@ -104,7 +115,7 @@ export const exportProfileSchema = z
   .object({
     id: idSchema,
     name: z.string().min(1),
-    target: z.string().min(1),
+    target: z.enum(["chatgpt", "claude", "codex", "generic_markdown", "json", "agents_md", "claude_md", "llms_txt"]),
     format: z.enum(["markdown", "json", "csv", "html", "text"]),
     privacy_mode: z.enum(["redacted", "full", "public_safe"]).optional(),
     include: z

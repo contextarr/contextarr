@@ -99,10 +99,11 @@ describe("contextarr CLI", () => {
 
   it("returns 1 for validation errors and supports JSON output", async () => {
     const output = createIo();
-    const code = await runCli(["validate", fixture("missing-manifest-pack"), "--format", "json"], output.io);
+    const code = await runCli(["validate", fixture("missing-manifest-pack"), "--json"], output.io);
 
     expect(code).toBe(1);
     expect(JSON.parse(output.stdout)).toMatchObject({
+      schemaVersion: "contextarr.validation-report.v1",
       valid: false,
       summary: {
         errors: expect.any(Number)
@@ -334,8 +335,9 @@ describe("contextarr CLI", () => {
     const code = await runCli(["export", demoPacksDir, "--all", "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Exported 25 file(s)");
+    expect(output.stdout).toContain("Exported 40 file(s)");
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
+    expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-llms-txt.txt"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);
   });
 

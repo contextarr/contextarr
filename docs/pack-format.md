@@ -45,9 +45,28 @@ Records are Markdown files with structured frontmatter. They should contain stab
 
 Sources live in `sources/sources.yaml`. Source maps connect pack records to local files, public URLs, manual notes, exports, or other provenance records.
 
+Phase 24R source metadata can include optional license and freshness fields:
+
+- `license`, `license_url`, `license_status`, and `license_notes`.
+- `content_hash_algorithm: sha256`, `content_hash`, and `hash_calculated_at`.
+- `last_checked_at`, `stale_after_days`, and `stale_reason`.
+
+The validator derives normalized source license status and stale-source counts from these fields. It does not fetch URLs or rewrite source metadata.
+
 ## Export Profiles
 
-Export profiles define target-specific output. Phase 7 supports ChatGPT, Claude, Codex, generic Markdown, and JSON records. Later targets include Claude Code, OpenCode, Cursor, Open WebUI, AnythingLLM, Hermes, OpenClaw, CSV, and llms.txt-style output.
+Export profiles define target-specific output. Context Pack profile YAML uses these canonical targets:
+
+- `chatgpt`
+- `claude`
+- `codex`
+- `generic_markdown`
+- `json`
+- `agents_md`
+- `claude_md`
+- `llms_txt`
+
+`json_records` remains a compatibility alias in already-shipped Composer and Agent Kit API/UI flows, but new Context Pack export profile YAML should use `json`.
 
 ## Rules
 

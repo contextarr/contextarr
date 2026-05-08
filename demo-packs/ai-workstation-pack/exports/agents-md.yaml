@@ -1,0 +1,21 @@
+id: ai-workstation-agents-md
+name: AI Workstation AGENTS.md Export
+target: agents_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - ai-workstation.hardware-overview
+    - ai-workstation.local-ai-stack
+    - ai-workstation.storage-layout
+    - ai-workstation.networking-notes
+    - ai-workstation.troubleshooting-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 16000
+sections:
+  - summary
+  - instructions
+  - records
+  - sources

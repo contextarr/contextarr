@@ -1,0 +1,20 @@
+id: ai-workstation-llms-txt
+name: AI Workstation llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - ai-workstation.hardware-overview
+    - ai-workstation.local-ai-stack
+    - ai-workstation.storage-layout
+    - ai-workstation.networking-notes
+    - ai-workstation.troubleshooting-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - records
+  - sources

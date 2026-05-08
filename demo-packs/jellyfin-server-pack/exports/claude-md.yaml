@@ -1,0 +1,21 @@
+id: jellyfin-server-claude-md
+name: Jellyfin Server CLAUDE.md Export
+target: claude_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - jellyfin-server.media-library-layout
+    - jellyfin-server.container-setup
+    - jellyfin-server.user-roles
+    - jellyfin-server.backup-routine
+    - jellyfin-server.playback-troubleshooting
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 16000
+sections:
+  - summary
+  - instructions
+  - records
+  - sources

@@ -1,0 +1,21 @@
+id: claude-code-project-claude-md
+name: Claude Code Project CLAUDE.md Export
+target: claude_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - claude-code-project.repo-overview
+    - claude-code-project.agent-instructions
+    - claude-code-project.dev-workflow
+    - claude-code-project.testing-checklist
+    - claude-code-project.handoff-notes
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 16000
+sections:
+  - summary
+  - instructions
+  - records
+  - sources

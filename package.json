@@ -48,7 +48,8 @@
     "phase21:verify": "pnpm phase20:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/server rescan",
     "phase22:verify": "pnpm phase21:verify && pnpm docs:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase23:verify": "pnpm phase22:verify && pnpm docs:verify && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test",
-    "phase24:verify": "pnpm phase23:verify && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-agent-kits/support-ticket-writing-kit --profile support-ticket-writing-kit-codex --out generated-exports/phase24-agent-kit --context-packs-dir demo-packs --skills-dir demo-skills && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build"
+    "phase24:verify": "pnpm phase23:verify && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr export demo-agent-kits/support-ticket-writing-kit --profile support-ticket-writing-kit-codex --out generated-exports/phase24-agent-kit --context-packs-dir demo-packs --skills-dir demo-skills && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
+    "research-delta:verify": "pnpm typecheck && pnpm --filter @contextarr/pack-validator test && pnpm --filter @contextarr/export-profiles test && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/server rescan"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

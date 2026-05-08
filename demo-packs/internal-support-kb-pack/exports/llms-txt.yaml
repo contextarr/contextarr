@@ -1,0 +1,20 @@
+id: internal-support-llms-txt
+name: Internal Support KB llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - internal-support.ticket-intake
+    - internal-support.escalation-policy
+    - internal-support.customer-safe-response-rules
+    - internal-support.known-issues
+    - internal-support.review-workflow
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - records
+  - sources

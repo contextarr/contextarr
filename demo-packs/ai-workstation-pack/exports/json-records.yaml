@@ -1,6 +1,6 @@
 id: ai-workstation-json-records
 name: AI Workstation JSON Records Export
-target: json_records
+target: json
 format: json
 privacy_mode: redacted
 include:

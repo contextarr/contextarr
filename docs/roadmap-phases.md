@@ -163,6 +163,14 @@
 
 - Generate Agent Kit Export Briefs for supported targets.
 
+## Phase 24R: Research Delta Foundation Catch-Up
+
+- Strengthen Context Pack source provenance with license, hash, and freshness metadata.
+- Add deterministic `contextarr.validation-report.v1` JSON output.
+- Normalize Context Pack export profile targets to `chatgpt`, `claude`, `codex`, `generic_markdown`, `json`, `agents_md`, `claude_md`, and `llms_txt`.
+- Index validation status, export readiness, redaction warning counts, stale-source counts, and license-risk counts.
+- Keep clean demo packs at zero errors and zero warnings.
+
 ## Phase 25: Read-Only MCP for Skills and Agent Kits
 
 - Extend read-only MCP to approved Skills and Agent Kits.

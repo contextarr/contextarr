@@ -4,7 +4,9 @@ sources:
     title: Fictional Product Overview Note
     path: ../raw/overview-note.md
     retrieved_at: 2026-05-07T00:00:00Z
-    license: MIT
+    license: N/A
+    license_status: not_applicable
+    license_notes: Synthetic demo source with no external license.
     trust: official
     status: current
   - id: product-comparison-note

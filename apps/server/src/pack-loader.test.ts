@@ -28,13 +28,13 @@ describe("loadPacks", () => {
 
     expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(25);
     expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(25);
-    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(25);
+    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(40);
   });
 
   it("skips invalid packs without failing the whole load", () => {
     const result = loadPacks(validatorFixturesDir);
 
-    expect(result.packs.map((pack) => pack.manifest.id)).toEqual(["valid-minimal-pack"]);
+    expect(result.packs.map((pack) => pack.manifest.id)).toContain("valid-minimal-pack");
     expect(result.skipped.length).toBeGreaterThan(1);
   });
 });

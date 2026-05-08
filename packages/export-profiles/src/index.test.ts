@@ -91,8 +91,11 @@ describe("export profile engine", () => {
         { id: "ai-workstation-chatgpt", target: "chatgpt", format: "markdown" },
         { id: "ai-workstation-claude", target: "claude", format: "markdown" },
         { id: "ai-workstation-codex", target: "codex", format: "markdown" },
-        { id: "ai-workstation-markdown", target: "markdown", format: "markdown" },
-        { id: "ai-workstation-json-records", target: "json_records", format: "json" }
+        { id: "ai-workstation-markdown", target: "generic_markdown", format: "markdown" },
+        { id: "ai-workstation-json-records", target: "json", format: "json" },
+        { id: "ai-workstation-agents-md", target: "agents_md", format: "markdown" },
+        { id: "ai-workstation-claude-md", target: "claude_md", format: "markdown" },
+        { id: "ai-workstation-llms-txt", target: "llms_txt", format: "text" }
       ])
     );
   });
@@ -102,7 +105,10 @@ describe("export profile engine", () => {
       "ai-workstation-chatgpt",
       "ai-workstation-claude",
       "ai-workstation-codex",
-      "ai-workstation-markdown"
+      "ai-workstation-markdown",
+      "ai-workstation-agents-md",
+      "ai-workstation-claude-md",
+      "ai-workstation-llms-txt"
     ]) {
       const artifact = buildPackExport({
         packPath: demoPack("ai-workstation-pack"),
@@ -119,7 +125,7 @@ describe("export profile engine", () => {
         "ai-workstation.troubleshooting-workflow"
       ]);
       expect(artifact.sources).toHaveLength(5);
-      expect(artifact.filename).toMatch(/\.(md)$/);
+      expect(artifact.filename).toMatch(/\.(md|txt)$/);
     }
 
     const jsonArtifact = buildPackExport({
@@ -524,6 +530,55 @@ describe("export profile engine", () => {
     expect(artifact.excludedRecords).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "valid.overview", reason: expect.stringContaining("secret") })])
     );
+  });
+
+  it("excludes private and sensitive records in redacted pack exports", () => {
+    const packPath = copyFixture();
+    const privatePath = path.join(packPath, "records", "private.md");
+    const sensitivePath = path.join(packPath, "records", "sensitive.md");
+    const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
+
+    fs.writeFileSync(
+      privatePath,
+      baseRecord
+        .replace("id: valid.overview", "id: valid.private")
+        .replace("title: Valid Overview", "title: Private Context")
+        .replace("privacy: public_safe", "privacy: private"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      sensitivePath,
+      baseRecord
+        .replace("id: valid.overview", "id: valid.sensitive")
+        .replace("title: Valid Overview", "title: Sensitive Context")
+        .replace("privacy: public_safe", "privacy: sensitive"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs
+        .readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8")
+        .replace("    - valid.overview", "    - valid.overview\n    - valid.private\n    - valid.sensitive"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "valid.private", reason: expect.stringContaining("private") }),
+        expect.objectContaining({ id: "valid.sensitive", reason: expect.stringContaining("sensitive") })
+      ])
+    );
+  });
+
+  it("omits local source paths from pack exports", () => {
+    const packPath = copyFixture();
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(JSON.stringify(artifact.sources)).not.toContain("path");
+    expect(artifact.content).not.toContain("../raw/manual-note.md");
   });
 
   it("fails clearly for missing profiles and missing record references", () => {

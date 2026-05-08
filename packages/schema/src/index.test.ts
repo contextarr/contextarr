@@ -92,6 +92,15 @@ describe("Contextarr schemas", () => {
             title: "Manual Note",
             path: "../raw/note.md",
             retrieved_at: "2026-05-07T00:00:00Z",
+            license: "Apache-2.0",
+            license_status: "known_permissive",
+            license_url: "https://example.test/license",
+            license_notes: "Fake public-safe source license note.",
+            content_hash_algorithm: "sha256",
+            content_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            hash_calculated_at: "2026-05-07T00:00:00Z",
+            last_checked_at: "2026-05-07T00:00:00Z",
+            stale_after_days: 365,
             trust: "local",
             status: "current"
           }
@@ -114,6 +123,15 @@ describe("Contextarr schemas", () => {
         sections: ["summary", "constraints", "sources"]
       }).success
     ).toBe(true);
+
+    expect(
+      exportProfileSchema.safeParse({
+        id: "legacy-json-records",
+        name: "Legacy JSON Records",
+        target: "json_records",
+        format: "json"
+      }).success
+    ).toBe(false);
   });
 
   it("accepts non-executable Skill manifests and instruction frontmatter", () => {

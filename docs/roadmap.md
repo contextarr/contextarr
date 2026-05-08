@@ -16,6 +16,7 @@ Contextarr currently supports:
 - Phase 12 terminology planning for Skills and Agent Kits.
 - Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, deterministic Skill Health/Review Queue support, and profile-driven Skill exports.
 - Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, Agent Kit Composer save flow, Agent Kit Library/detail/health, and profile-driven Agent Kit exports.
+- Research Delta foundation for Context Packs: source license/hash/freshness metadata, deterministic validation reports, export readiness, redaction warning counts, and assistant handoff profile targets.
 
 ## Second PRD Direction
 
@@ -41,6 +42,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Phase 22: Agent Kit Composer UI. Complete.
 - Phase 23: Agent Kit Library, detail, and health. Complete.
 - Phase 24: Agent Kit export engine. Complete.
+- Phase 24R: Research Delta foundation catch-up. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -48,7 +50,11 @@ Contextarr prepares Agent Kits. It does not run them.
 
 ## Deferred
 
-- Read-only MCP for Skills and Agent Kits.
+- Phase 25: Read-only MCP for Skills and Agent Kits.
+- Phase 26: Local Skill importers.
+- Phase 27: Agent Kit templates.
+- Phase 28: Signing and trust model research.
+- Phase 29: Private team registry prototype.
 - Web importer UI.
 - API import endpoints.
 - Saving Composer output as a new pack.

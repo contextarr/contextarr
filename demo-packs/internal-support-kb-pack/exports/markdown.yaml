@@ -1,6 +1,6 @@
 id: internal-support-markdown
 name: Internal Support KB Generic Markdown Export
-target: markdown
+target: generic_markdown
 format: markdown
 privacy_mode: redacted
 include:

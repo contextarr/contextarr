@@ -1,0 +1,20 @@
+id: fake-product-line-llms-txt
+name: Fake Product Line llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - fake-product-line.product-overview
+    - fake-product-line.model-comparison
+    - fake-product-line.support-matrix
+    - fake-product-line.release-notes
+    - fake-product-line.sales-support-faq
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - records
+  - sources

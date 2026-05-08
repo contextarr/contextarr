@@ -12,7 +12,10 @@ import {
   sourceMapSchema,
   validationRulesSchema,
   type ContextPackManifest,
+  type ExportProfile,
   type RecordFrontmatter,
+  type RedactionRules,
+  type Source,
   type SourceMap
 } from "@contextarr/schema";
 
@@ -28,17 +31,90 @@ export interface ValidationIssue {
 
 export interface ValidationResult {
   packPath: string;
+  packId: string | null;
   valid: boolean;
+  validationStatus: "valid" | "valid_with_warnings" | "invalid";
   issues: ValidationIssue[];
   summary: {
     errors: number;
     warnings: number;
     infos: number;
+    redactionHits: number;
+    exportProfilesReady: number;
+    exportProfilesWithWarnings: number;
+    exportProfilesBlocked: number;
+    staleSources: number;
+    licenseWarnings: number;
+    licenseMissing: number;
+    licenseUnknown: number;
+    licenseRisks: number;
+    docsWarnings: number;
   };
+  redactionHits: RedactionHit[];
+  exportReadiness: ExportReadinessReport;
 }
 
 export interface ValidatePackOptions {
   scanText?: boolean;
+  currentDate?: Date | string;
+}
+
+export type ExportProfileTarget =
+  | "chatgpt"
+  | "claude"
+  | "codex"
+  | "generic_markdown"
+  | "json"
+  | "agents_md"
+  | "claude_md"
+  | "llms_txt";
+
+export type SourceLicenseStatus =
+  | "known_permissive"
+  | "known_copyleft"
+  | "known_restricted"
+  | "unknown"
+  | "not_applicable";
+
+export interface RedactionHit {
+  code: "redaction.hit_warn";
+  severity: "warning";
+  file: string;
+  pattern: string;
+  action: "warn";
+  matchCount: number;
+  recordId?: string;
+}
+
+export interface ExportReadinessReport {
+  status: "ready" | "ready_with_warnings" | "blocked";
+  profiles: Array<{
+    id: string;
+    target: ExportProfileTarget | string;
+    format: string;
+    status: "ready" | "ready_with_warnings" | "blocked";
+    blockingIssueCodes: string[];
+    warningIssueCodes: string[];
+  }>;
+}
+
+interface ExportReadinessProfileInput {
+  id: string;
+  target: string;
+  format: string;
+  file: string;
+}
+
+export interface ValidationReportV1 {
+  schemaVersion: "contextarr.validation-report.v1";
+  packPath: string;
+  packId: string | null;
+  valid: boolean;
+  validationStatus: "valid" | "valid_with_warnings" | "invalid";
+  summary: ValidationResult["summary"];
+  issues: ValidationIssue[];
+  redactionHits: RedactionHit[];
+  exportReadiness: ExportReadinessReport;
 }
 
 export class PackReadError extends Error {
@@ -90,9 +166,34 @@ const credentialPattern =
 const shellCommandPattern =
   /(?:^|[\s`])(rm\s+-rf|sudo\s+|curl\s+[^\n]*\|\s*(?:sh|bash)|powershell(?:\.exe)?\s+-|cmd(?:\.exe)?\s+\/c|bash\s+-c|sh\s+-c|Invoke-WebRequest|Start-Process|chmod\s+\+x|execSync|child_process)(?:\b|[\s`])/i;
 
+const sourceLicenseStatuses: SourceLicenseStatus[] = [
+  "known_permissive",
+  "known_copyleft",
+  "known_restricted",
+  "unknown",
+  "not_applicable"
+];
+
+const permissiveLicensePattern = /\b(MIT|Apache-?2\.0|BSD-?2|BSD-?3|CC0|ISC|Unlicense|permissive)\b/i;
+const copyleftLicensePattern = /\b(AGPL|GPL|LGPL|MPL|copyleft)\b/i;
+const restrictedLicensePattern = /\b(proprietary|restricted|noncommercial|non-commercial|no[- ]?derivatives|commercial use restricted)\b/i;
+const nonLicenseSourceTypes = new Set(["manual", "note", "synthetic", "internal", "private"]);
+const exportTargetFormats: Record<string, string> = {
+  chatgpt: "markdown",
+  claude: "markdown",
+  codex: "markdown",
+  generic_markdown: "markdown",
+  json: "json",
+  agents_md: "markdown",
+  claude_md: "markdown",
+  llms_txt: "text"
+};
+
 export function validatePack(packPath: string, options: ValidatePackOptions = {}): ValidationResult {
   const resolvedPackPath = path.resolve(packPath);
   const issues: ValidationIssue[] = [];
+  const redactionHits: RedactionHit[] = [];
+  const currentDate = options.currentDate ? new Date(options.currentDate) : new Date();
 
   if (!fs.existsSync(resolvedPackPath)) {
     throw new PackReadError(`Pack path does not exist: ${resolvedPackPath}`);
@@ -120,17 +221,20 @@ export function validatePack(packPath: string, options: ValidatePackOptions = {}
     }
 
     scanTextFiles(resolvedPackPath, allFiles, issues, options.scanText ?? true);
-    return finish(resolvedPackPath, issues);
+    return finish(resolvedPackPath, null, issues, redactionHits, []);
   }
 
+  validateDocs(resolvedPackPath, issues);
   validateManifestSafety(manifest, issues);
   const records = validateRecords(resolvedPackPath, manifest, issues);
-  validateSourceMap(resolvedPackPath, manifest, records, issues);
-  validateExportProfiles(resolvedPackPath, manifest, issues);
-  validateRules(resolvedPackPath, manifest, issues);
+  validateSourceMap(resolvedPackPath, manifest, records, issues, currentDate);
+  const exportProfiles = validateExportProfiles(resolvedPackPath, manifest, issues);
+  const redactionRules = validateRules(resolvedPackPath, manifest, issues);
   scanTextFiles(resolvedPackPath, allFiles, issues, options.scanText ?? true);
+  scanRedactionWarnHits(resolvedPackPath, allFiles, manifest.recordsPath, records, redactionRules, redactionHits, issues);
+  applyExportReadinessWarnings(exportProfiles, issues, redactionHits);
 
-  return finish(resolvedPackPath, issues);
+  return finish(resolvedPackPath, manifest.id, issues, redactionHits, exportProfiles);
 }
 
 export function formatValidationResult(result: ValidationResult): string {
@@ -194,6 +298,19 @@ function validateManifestSafety(manifest: ContextPackManifest, issues: Validatio
       "contextarr-pack.json",
       "permissions.networkAccess"
     );
+  }
+}
+
+function validateDocs(packPath: string, issues: ValidationIssue[]): void {
+  const readme = path.join(packPath, "README.md");
+  if (!fs.existsSync(readme)) {
+    addIssue(issues, "warning", "docs.readme_missing", "Pack root should include README.md.", "README.md");
+    return;
+  }
+
+  const content = fs.readFileSync(readme, "utf8").trim();
+  if (content.length < 40) {
+    addIssue(issues, "warning", "docs.readme_minimal", "Pack README.md is too minimal to be useful.", "README.md");
   }
 }
 
@@ -272,11 +389,138 @@ function validateRecords(
   return records;
 }
 
+function validateSourceMetadata(
+  packPath: string,
+  manifest: ContextPackManifest,
+  source: Source,
+  issues: ValidationIssue[],
+  currentDate: Date
+): void {
+  const sourceFile = manifest.sourcesPath;
+  const licenseStatus = normalizeSourceLicenseStatus(source);
+
+  if (!source.license && !source.license_status && licenseStatus !== "not_applicable") {
+    addIssue(
+      issues,
+      "warning",
+      "source.license_missing",
+      `Source "${source.id}" is missing license metadata.`,
+      sourceFile,
+      `sources.${source.id}.license`
+    );
+  } else if (licenseStatus === "unknown") {
+    addIssue(
+      issues,
+      "warning",
+      "source.license_unknown",
+      `Source "${source.id}" has unknown license status.`,
+      sourceFile,
+      `sources.${source.id}.license_status`
+    );
+  }
+
+  if (licenseStatus === "known_copyleft" || licenseStatus === "known_restricted") {
+    addIssue(
+      issues,
+      "warning",
+      "source.license_risk",
+      `Source "${source.id}" has ${licenseStatus.replace("known_", "")} license status.`,
+      sourceFile,
+      `sources.${source.id}.license_status`
+    );
+  }
+
+  if (isSourceStale(source, currentDate)) {
+    addIssue(
+      issues,
+      "warning",
+      "source.stale",
+      `Source "${source.id}" is stale or needs review.`,
+      sourceFile,
+      `sources.${source.id}.status`
+    );
+  }
+
+  if (source.content_hash && source.content_hash_algorithm !== "sha256") {
+    addIssue(
+      issues,
+      "error",
+      "source.hash_algorithm",
+      `Source "${source.id}" content_hash requires content_hash_algorithm: sha256.`,
+      sourceFile,
+      `sources.${source.id}.content_hash_algorithm`
+    );
+  }
+
+  if (source.path && path.isAbsolute(source.path)) {
+    addIssue(
+      issues,
+      "warning",
+      "source.absolute_path",
+      `Source "${source.id}" should not expose absolute local paths.`,
+      sourceFile,
+      `sources.${source.id}.path`
+    );
+  }
+}
+
+export function normalizeSourceLicenseStatus(source: Pick<Source, "type" | "license" | "license_status">): SourceLicenseStatus {
+  if (source.license_status && sourceLicenseStatuses.includes(source.license_status)) {
+    if (source.license_status !== "unknown") {
+      return source.license_status;
+    }
+  }
+
+  const license = source.license?.trim();
+  if (!license) {
+    return nonLicenseSourceTypes.has(source.type.toLowerCase()) ? "not_applicable" : "unknown";
+  }
+
+  if (/^(n\/a|not applicable|not_applicable|internal synthetic|synthetic demo)$/i.test(license)) {
+    return "not_applicable";
+  }
+  if (copyleftLicensePattern.test(license)) {
+    return "known_copyleft";
+  }
+  if (restrictedLicensePattern.test(license)) {
+    return "known_restricted";
+  }
+  if (permissiveLicensePattern.test(license)) {
+    return "known_permissive";
+  }
+
+  return source.license_status ?? "unknown";
+}
+
+function isSourceStale(source: Source, currentDate: Date): boolean {
+  if (source.status === "stale" || Boolean(source.stale_reason)) {
+    return true;
+  }
+
+  if (!source.stale_after_days) {
+    return false;
+  }
+
+  const basis = source.last_checked_at ?? source.retrieved_at;
+  if (!basis) {
+    return false;
+  }
+
+  const basisDate = new Date(basis);
+  if (Number.isNaN(basisDate.getTime()) || Number.isNaN(currentDate.getTime())) {
+    return false;
+  }
+
+  const ageDays = Math.floor((currentDate.getTime() - basisDate.getTime()) / 86_400_000);
+  return ageDays > source.stale_after_days;
+}
+
 function validateSourceMap(
   packPath: string,
   manifest: ContextPackManifest,
   records: RecordFrontmatter[],
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
+  currentDate: Date
 ): SourceMap | undefined {
   const sourcesFile = path.join(packPath, manifest.sourcesPath);
   const sourceMap = readYamlSchemaFile(packPath, sourcesFile, sourceMapSchema, issues, "sources");
@@ -289,6 +533,10 @@ function validateSourceMap(
   }
 
   const sourceIds = new Set(sourceMap.sources.map((source) => source.id));
+
+  for (const source of sourceMap.sources) {
+    validateSourceMetadata(packPath, manifest, source, issues, currentDate);
+  }
 
   for (const record of records) {
     for (const sourceId of record.sources) {
@@ -308,7 +556,7 @@ function validateSourceMap(
   return sourceMap;
 }
 
-function validateExportProfiles(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): void {
+function validateExportProfiles(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): ExportReadinessProfileInput[] {
   const exportsDir = path.join(packPath, manifest.exportsPath);
 
   if (!fs.existsSync(exportsDir) || !fs.statSync(exportsDir).isDirectory()) {
@@ -319,7 +567,7 @@ function validateExportProfiles(packPath: string, manifest: ContextPackManifest,
       `Export profiles folder does not exist: ${manifest.exportsPath}.`,
       manifest.exportsPath
     );
-    return;
+    return [];
   }
 
   const exportFiles = listFiles(exportsDir, issues).filter(isYamlFile);
@@ -328,12 +576,45 @@ function validateExportProfiles(packPath: string, manifest: ContextPackManifest,
     addIssue(issues, "warning", "exports.empty", "Export profiles folder contains no YAML profiles.", manifest.exportsPath);
   }
 
+  const profiles: ExportReadinessProfileInput[] = [];
   for (const file of exportFiles) {
-    readYamlSchemaFile(packPath, file, exportProfileSchema, issues, "export_profile");
+    const relativeFile = relativePath(packPath, file);
+    const profile = readYamlSchemaFile(packPath, file, exportProfileSchema, issues, "export_profile");
+    if (!profile) {
+      profiles.push({
+        id: path.basename(file, path.extname(file)),
+        target: "unknown",
+        format: "unknown",
+        file: relativeFile
+      });
+      continue;
+    }
+    validateExportProfileMapping(packPath, file, profile, issues);
+    profiles.push({
+      id: profile.id,
+      target: profile.target,
+      format: profile.format,
+      file: relativeFile
+    });
+  }
+  return profiles;
+}
+
+function validateExportProfileMapping(packPath: string, file: string, profile: ExportProfile, issues: ValidationIssue[]): void {
+  const expectedFormat = exportTargetFormats[profile.target];
+  if (expectedFormat && profile.format !== expectedFormat) {
+    addIssue(
+      issues,
+      "error",
+      "export_profile.schema",
+      `Export profile target "${profile.target}" must use format "${expectedFormat}".`,
+      relativePath(packPath, file),
+      `${profile.id}.format`
+    );
   }
 }
 
-function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): void {
+function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): RedactionRules | undefined {
   const rulesDir = path.join(packPath, manifest.rulesPath);
 
   if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
@@ -344,7 +625,7 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
       `Rules folder does not exist: ${manifest.rulesPath}.`,
       manifest.rulesPath
     );
-    return;
+    return undefined;
   }
 
   const rules = [
@@ -353,11 +634,116 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
     ["freshness.yaml", freshnessRulesSchema, "rules.freshness"]
   ] as const;
 
+  let redactionRules: RedactionRules | undefined;
   for (const [fileName, schema, code] of rules) {
     const file = path.join(rulesDir, fileName);
     if (fs.existsSync(file)) {
-      readYamlSchemaFile(packPath, file, schema, issues, code);
+      const parsed = readYamlSchemaFile(packPath, file, schema, issues, code);
+      if (fileName === "redaction.yaml") {
+        redactionRules = parsed as RedactionRules | undefined;
+      }
     }
+  }
+
+  return redactionRules;
+}
+
+function scanRedactionWarnHits(
+  packPath: string,
+  files: string[],
+  recordsPath: string,
+  records: RecordFrontmatter[],
+  rules: RedactionRules | undefined,
+  redactionHits: RedactionHit[],
+  issues: ValidationIssue[]
+): void {
+  const warnPatterns = (rules?.patterns ?? []).filter((pattern) => pattern.action === "warn");
+  if (warnPatterns.length === 0) {
+    return;
+  }
+
+  const recordIds = new Set(records.map((record) => record.id));
+  const normalizedRecordsPath = normalizePath(recordsPath).replace(/\/?$/, "/");
+
+  for (const file of files.filter(isScannableTextFile)) {
+    const relativeFile = relativePath(packPath, file);
+    if (relativeFile.startsWith("rules/")) {
+      continue;
+    }
+    let content = "";
+
+    try {
+      content = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+
+    for (const pattern of warnPatterns) {
+      let regex: RegExp;
+      try {
+        const flags = pattern.flags?.includes("g") ? pattern.flags : `${pattern.flags ?? ""}g`;
+        regex = new RegExp(pattern.regex, flags);
+      } catch (error) {
+        addIssue(issues, "warning", "redaction.pattern_invalid", errorMessage(error), "rules/redaction.yaml", pattern.name);
+        continue;
+      }
+
+      const matches = content.match(regex);
+      const matchCount = matches?.length ?? 0;
+      if (matchCount === 0) {
+        continue;
+      }
+
+      const frontmatterId = relativeFile.startsWith(normalizedRecordsPath)
+        ? String((matter(content).data as { id?: unknown }).id ?? "")
+        : "";
+      const recordId = recordIds.has(frontmatterId) ? frontmatterId : undefined;
+      redactionHits.push({
+        code: "redaction.hit_warn",
+        severity: "warning",
+        file: relativeFile,
+        pattern: pattern.name,
+        action: "warn",
+        matchCount,
+        recordId
+      });
+      addIssue(
+        issues,
+        "warning",
+        "redaction.hit_warn",
+        `Redaction warn pattern "${pattern.name}" matched ${matchCount} time(s).`,
+        relativeFile
+      );
+    }
+  }
+}
+
+function applyExportReadinessWarnings(
+  profiles: ExportReadinessProfileInput[],
+  issues: ValidationIssue[],
+  redactionHits: RedactionHit[]
+): void {
+  if (profiles.length === 0) {
+    return;
+  }
+
+  const hasSourceWarnings = issues.some(
+    (issue) => issue.code === "source.stale" || issue.code.startsWith("source.license_")
+  );
+
+  if (!hasSourceWarnings && redactionHits.length === 0) {
+    return;
+  }
+
+  for (const profile of profiles) {
+    addIssue(
+      issues,
+      "warning",
+      "export_profile.readiness_warning",
+      `Export profile "${profile.id}" is ready with warnings from source or redaction metadata.`,
+      "exports",
+      profile.id
+    );
   }
 }
 
@@ -505,19 +891,107 @@ function isScannableTextFile(file: string): boolean {
   return [".json", ".md", ".yaml", ".yml", ".txt"].includes(path.extname(file).toLowerCase());
 }
 
-function finish(packPath: string, issues: ValidationIssue[]): ValidationResult {
+function finish(
+  packPath: string,
+  packId: string | null,
+  issues: ValidationIssue[],
+  redactionHits: RedactionHit[],
+  profiles: ExportReadinessProfileInput[]
+): ValidationResult {
+  sortIssues(issues);
+  redactionHits.sort((a, b) =>
+    `${a.file}\u0000${a.pattern}\u0000${a.recordId ?? ""}`.localeCompare(`${b.file}\u0000${b.pattern}\u0000${b.recordId ?? ""}`)
+  );
+
+  const readiness = buildExportReadiness(issues, profiles);
   const summary = {
     errors: issues.filter((issue) => issue.severity === "error").length,
     warnings: issues.filter((issue) => issue.severity === "warning").length,
-    infos: issues.filter((issue) => issue.severity === "info").length
+    infos: issues.filter((issue) => issue.severity === "info").length,
+    redactionHits: redactionHits.length,
+    exportProfilesReady: readiness.profiles.filter((profile) => profile.status === "ready").length,
+    exportProfilesWithWarnings: readiness.profiles.filter((profile) => profile.status === "ready_with_warnings").length,
+    exportProfilesBlocked: readiness.profiles.filter((profile) => profile.status === "blocked").length,
+    staleSources: issues.filter((issue) => issue.code === "source.stale").length,
+    licenseWarnings: issues.filter((issue) => issue.code.startsWith("source.license_")).length,
+    licenseMissing: issues.filter((issue) => issue.code === "source.license_missing").length,
+    licenseUnknown: issues.filter((issue) => issue.code === "source.license_unknown").length,
+    licenseRisks: issues.filter((issue) => issue.code === "source.license_risk").length,
+    docsWarnings: issues.filter((issue) => issue.code.startsWith("docs.")).length
   };
+  const valid = summary.errors === 0;
+  const validationStatus = !valid ? "invalid" : summary.warnings > 0 ? "valid_with_warnings" : "valid";
 
   return {
     packPath,
-    valid: summary.errors === 0,
+    packId,
+    valid,
+    validationStatus,
     issues,
-    summary
+    summary,
+    redactionHits,
+    exportReadiness: readiness
   };
+}
+
+export function toValidationReportV1(result: ValidationResult): ValidationReportV1 {
+  return {
+    schemaVersion: "contextarr.validation-report.v1",
+    packPath: result.packPath,
+    packId: result.packId,
+    valid: result.valid,
+    validationStatus: result.validationStatus,
+    summary: result.summary,
+    issues: result.issues,
+    redactionHits: result.redactionHits,
+    exportReadiness: result.exportReadiness
+  };
+}
+
+function buildExportReadiness(issues: ValidationIssue[], profiles: ExportReadinessProfileInput[]): ExportReadinessReport {
+  const exportSchemaErrors = issues.filter((issue) => issue.severity === "error" && issue.code.startsWith("export_profile."));
+  const exportWarnings = issues.filter((issue) => issue.severity === "warning" && issue.code === "export_profile.readiness_warning");
+  const profilesReport = profiles
+    .map((profile) => {
+      const blockingIssueCodes = exportSchemaErrors
+        .filter((issue) => issue.file === profile.file || issue.path === profile.id || issue.path?.startsWith(`${profile.id}.`))
+        .map((issue) => issue.code);
+      const warningIssueCodes = exportWarnings
+        .filter((issue) => issue.file === profile.file || issue.path === profile.id || issue.path?.startsWith(`${profile.id}.`))
+        .map((issue) => issue.code);
+      const status: "ready" | "ready_with_warnings" | "blocked" =
+        blockingIssueCodes.length > 0 ? "blocked" : warningIssueCodes.length > 0 ? "ready_with_warnings" : "ready";
+
+      return {
+        id: profile.id,
+        target: profile.target,
+        format: profile.format,
+        status,
+        blockingIssueCodes,
+        warningIssueCodes
+      };
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  return {
+    status: profilesReport.some((profile) => profile.status === "blocked")
+      ? "blocked"
+      : profilesReport.some((profile) => profile.status === "ready_with_warnings")
+        ? "ready_with_warnings"
+        : "ready",
+    profiles: profilesReport
+  };
+}
+
+function sortIssues(issues: ValidationIssue[]): void {
+  const rank: Record<ValidationSeverity, number> = { error: 0, warning: 1, info: 2 };
+  issues.sort((a, b) =>
+    rank[a.severity] - rank[b.severity] ||
+    a.code.localeCompare(b.code) ||
+    (a.file ?? "").localeCompare(b.file ?? "") ||
+    (a.path ?? "").localeCompare(b.path ?? "") ||
+    a.message.localeCompare(b.message)
+  );
 }
 
 function addIssue(

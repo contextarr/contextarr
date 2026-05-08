@@ -1,0 +1,14 @@
+id: redaction-warning-pack-codex
+name: Redaction Warning Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - redaction-warning-pack.overview
+exclude_tags:
+  - secret
+token_budget: 8000
+sections:
+  - summary
+  - sources

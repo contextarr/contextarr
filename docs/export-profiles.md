@@ -10,10 +10,13 @@ Export profiles define how validated pack records, approved Skill documents, and
 - Codex.
 - Generic Markdown.
 - JSON records.
+- AGENTS.md.
+- CLAUDE.md.
+- llms.txt.
 
 ## Behavior
 
-Pack exports select records from a validated local pack, preserve configured order, apply privacy mode, apply redaction rules, include source summaries, and return warnings for token budget estimates. Skill exports select approved instructions and examples from a validated local Skill, preserve profile order, exclude secret/private/draft material, omit local filesystem paths from source summaries, and return deterministic preview artifacts. Agent Kit exports merge profile-selected Context Pack records and Skill documents, strip local source paths, hard-exclude secret or `never_export` content, and keep Skills non-executable. Exports do not truncate content in v0.1.
+Pack exports select records from a validated local pack, preserve configured order, apply privacy mode, apply redaction rules, include source summaries without local filesystem paths, and return warnings for token budget estimates. Context Pack profile YAML uses canonical targets `chatgpt`, `claude`, `codex`, `generic_markdown`, `json`, `agents_md`, `claude_md`, and `llms_txt`; `json_records` is only a backward-compatible API/UI alias where already shipped. For Context Packs, `redacted` exports include public-safe records and exclude private, internal, sensitive, secret, and redaction-tagged records. Skill exports select approved instructions and examples from a validated local Skill, preserve profile order, exclude secret/private/draft material, omit local filesystem paths from source summaries, and return deterministic preview artifacts. Agent Kit exports merge profile-selected Context Pack records and Skill documents, strip local source paths, hard-exclude secret or `never_export` content, and keep Skills non-executable. Exports do not truncate content in v0.1.
 
 Composer uses the same export engine to build temporary custom exports across selected records from one or more packs.
 

@@ -18,7 +18,7 @@ Contextarr v0.1 is local-first, data-only, and human-review centered.
 
 ## Pack Safety
 
-Packs are folders of manifests, Markdown records, source maps, export profiles, and rules. The validator and runtime must read pack files only. They must not execute pack content, run shell commands, fetch source URLs, or rewrite packs during validation, indexing, exports, MCP access, or Composer previews.
+Packs are folders of manifests, Markdown records, source maps, export profiles, and rules. The validator and runtime must read pack files only. They must not execute pack content, run shell commands, fetch source URLs, or rewrite packs during validation, indexing, exports, MCP access, or Composer previews. API and export surfaces must not expose absolute local source paths; Context Pack exports omit local source paths from source summaries.
 
 ## Derived State
 

@@ -1,7 +1,9 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { formatValidationResult, validatePack } from "./index";
+import { formatValidationResult, toValidationReportV1, validatePack } from "./index";
 
 const fixturesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../test/fixtures");
 
@@ -15,6 +17,8 @@ describe("validatePack", () => {
 
     expect(result.valid).toBe(true);
     expect(result.summary.errors).toBe(0);
+    expect(result.validationStatus).toBe("valid");
+    expect(result.exportReadiness.status).toBe("ready");
   });
 
   it("reports a missing manifest", () => {
@@ -76,6 +80,95 @@ describe("validatePack", () => {
 
     expect(result.valid).toBe(false);
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "scan.credential_pattern" }));
+  });
+
+  it("reports docs, license, stale source, redaction, and shell-command research warnings", () => {
+    const missingReadme = validatePack(fixture("missing-readme-pack"));
+    const missingLicense = validatePack(fixture("missing-source-license-pack"));
+    const unknownLicense = validatePack(fixture("unknown-source-license-pack"));
+    const copyleftLicense = validatePack(fixture("copyleft-source-license-pack"));
+    const staleSource = validatePack(fixture("stale-source-pack"), { currentDate: "2026-05-08T00:00:00Z" });
+    const redactionWarning = validatePack(fixture("redaction-warning-pack"));
+    const shellCommand = validatePack(fixture("shell-command-content-pack"));
+
+    expect(missingReadme).toMatchObject({ valid: true, validationStatus: "valid_with_warnings" });
+    expect(missingReadme.issues).toContainEqual(expect.objectContaining({ code: "docs.readme_missing" }));
+    expect(missingReadme.summary.docsWarnings).toBe(1);
+
+    expect(missingLicense.issues).toContainEqual(expect.objectContaining({ code: "source.license_missing" }));
+    expect(missingLicense.summary.licenseMissing).toBe(1);
+    expect(missingLicense.summary.licenseWarnings).toBe(1);
+
+    expect(unknownLicense.issues).toContainEqual(expect.objectContaining({ code: "source.license_unknown" }));
+    expect(unknownLicense.summary.licenseUnknown).toBe(1);
+
+    expect(copyleftLicense.issues).toContainEqual(expect.objectContaining({ code: "source.license_risk" }));
+    expect(copyleftLicense.summary.licenseRisks).toBe(1);
+
+    expect(staleSource.issues).toContainEqual(expect.objectContaining({ code: "source.stale" }));
+    expect(staleSource.summary.staleSources).toBe(1);
+    expect(staleSource.exportReadiness.status).toBe("ready_with_warnings");
+    expect(staleSource.summary.exportProfilesWithWarnings).toBeGreaterThan(0);
+
+    expect(redactionWarning.issues).toContainEqual(expect.objectContaining({ code: "redaction.hit_warn" }));
+    expect(redactionWarning.redactionHits).toHaveLength(1);
+    expect(redactionWarning.summary.redactionHits).toBe(1);
+
+    expect(shellCommand.valid).toBe(false);
+    expect(shellCommand.issues).toContainEqual(expect.objectContaining({ code: "scan.shell_command" }));
+  });
+
+  it("does not let one broken export profile block valid profiles", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-pack-readiness-"));
+    const packPath = path.join(tempRoot, "valid-minimal-pack");
+
+    try {
+      fs.cpSync(fixture("valid-minimal-pack"), packPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(packPath, "exports", "broken.yaml"),
+        ["id: broken-profile", "target: codex", "format: markdown"].join("\n"),
+        "utf8"
+      );
+
+      const result = validatePack(packPath);
+      const goodProfile = result.exportReadiness.profiles.find((profile) => profile.id === "codex-context");
+      const brokenProfile = result.exportReadiness.profiles.find((profile) => profile.id === "broken");
+
+      expect(result.valid).toBe(false);
+      expect(goodProfile).toMatchObject({ status: "ready", blockingIssueCodes: [] });
+      expect(brokenProfile).toMatchObject({ status: "blocked" });
+      expect(result.summary.exportProfilesBlocked).toBe(1);
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("does not attribute redaction warn hits in non-record files to records", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-redaction-attribution-"));
+    const packPath = path.join(tempRoot, "redaction-warning-pack");
+
+    try {
+      fs.cpSync(fixture("redaction-warning-pack"), packPath, { recursive: true });
+      fs.appendFileSync(path.join(packPath, "README.md"), "\nreview-only-fixture\nid: redaction-warning-pack.overview\n", "utf8");
+
+      const result = validatePack(packPath);
+      const readmeHit = result.redactionHits.find((hit) => hit.file === "README.md");
+      const recordHit = result.redactionHits.find((hit) => hit.file === "records/overview.md");
+
+      expect(readmeHit).toMatchObject({ file: "README.md" });
+      expect(readmeHit?.recordId).toBeUndefined();
+      expect(recordHit?.recordId).toBe("redaction-warning-pack.overview");
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("emits deterministic validation report v1", () => {
+    const first = toValidationReportV1(validatePack(fixture("deterministic-validation-pack"), { currentDate: "2026-05-08T00:00:00Z" }));
+    const second = toValidationReportV1(validatePack(fixture("deterministic-validation-pack"), { currentDate: "2026-05-08T00:00:00Z" }));
+
+    expect(first).toEqual(second);
+    expect(first.schemaVersion).toBe("contextarr.validation-report.v1");
   });
 
   it("formats a human-readable report", () => {

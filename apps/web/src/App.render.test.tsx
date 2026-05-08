@@ -548,7 +548,7 @@ function healthFixture(): HealthResponse {
       packs: 1,
       records: 5,
       sources: 5,
-      exportProfiles: 5,
+      exportProfiles: 8,
       skills: 1,
       skillInstructions: 3,
       skillExamples: 2,
@@ -575,11 +575,19 @@ function packFixture(): PackSummary {
     trustLevel: "local",
     healthScore: 100,
     healthStatus: "healthy",
+    validationStatus: "valid",
+    exportReadiness: "ready",
     validationErrors: 0,
     validationWarnings: 0,
+    redactionWarningCount: 0,
+    staleSourceCount: 0,
+    licenseWarningCount: 0,
+    licenseMissingCount: 0,
+    licenseUnknownCount: 0,
+    licenseRiskCount: 0,
     recordCount: 5,
     sourceCount: 5,
-    exportProfileCount: 5,
+    exportProfileCount: 8,
     accentColor: "#38bdf8",
     coverImage: null,
     reviewQueueCount: 0,
@@ -599,11 +607,25 @@ function packDetailFixture() {
     counts: {
       records: 5,
       sources: 5,
-      exportProfiles: 5
+      exportProfiles: 8
     },
     validation: {
+      status: "valid",
       errors: 0,
-      warnings: 0
+      warnings: 0,
+      redactionWarningCount: 0,
+      staleSourceCount: 0,
+      licenseWarningCount: 0,
+      licenseMissingCount: 0,
+      licenseUnknownCount: 0,
+      licenseRiskCount: 0
+    },
+    exportReadiness: {
+      status: "ready",
+      profilesReady: 8,
+      profilesWithWarnings: 0,
+      profilesBlocked: 0,
+      profiles: []
     },
     health: {
       score: 100,
@@ -612,7 +634,7 @@ function packDetailFixture() {
       validationWarnings: 0,
       recordCount: 5,
       sourceCount: 5,
-      exportProfileCount: 5,
+      exportProfileCount: 8,
       updatedAt: "2026-05-07T00:00:00.000Z"
     },
     sources: [],

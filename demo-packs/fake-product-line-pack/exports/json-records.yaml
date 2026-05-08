@@ -1,6 +1,6 @@
 id: fake-product-line-json-records
 name: Fake Product Line JSON Records Export
-target: json_records
+target: json
 format: json
 privacy_mode: redacted
 include:

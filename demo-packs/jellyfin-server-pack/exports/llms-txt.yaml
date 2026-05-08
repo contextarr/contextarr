@@ -1,0 +1,20 @@
+id: jellyfin-server-llms-txt
+name: Jellyfin Server llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - jellyfin-server.media-library-layout
+    - jellyfin-server.container-setup
+    - jellyfin-server.user-roles
+    - jellyfin-server.backup-routine
+    - jellyfin-server.playback-troubleshooting
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 12000
+sections:
+  - summary
+  - records
+  - sources

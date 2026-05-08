@@ -1,6 +1,6 @@
 id: ai-workstation-markdown
 name: AI Workstation Generic Markdown Export
-target: markdown
+target: generic_markdown
 format: markdown
 privacy_mode: redacted
 include:

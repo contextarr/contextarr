@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 24: Agent Kit Export Engine.
+This repository is in Phase 24R: Research Delta Foundation Catch-Up. Phase 24: Agent Kit Export Engine remains complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -76,6 +76,7 @@ Current scope:
 - Phase 22 Agent Kit Composer UI for selecting existing Context Packs and Skills, saving validated local Agent Kit files under the configured local Agent Kit directory, and opening saved Agent Kit detail views.
 - Phase 23 read-only Agent Kit Library and Detail views plus Agent Kit health/review status derived from SQLite.
 - Phase 24 profile-driven Agent Kit export generation that merges selected Context Pack records and Skill documents without execution.
+- Research Delta foundation fields for Context Pack source provenance, source license status, source hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets (`AGENTS.md`, `CLAUDE.md`, and `llms.txt`).
 
 Not included yet:
 
@@ -83,7 +84,7 @@ Not included yet:
 - API import endpoints.
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
-- Agent Kit MCP extensions.
+- Agent Kit and Skill MCP extensions.
 - Skill execution or Agent Kit runtime behavior.
 
 ## Product Positioning

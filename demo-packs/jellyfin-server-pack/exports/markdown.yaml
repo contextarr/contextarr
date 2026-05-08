@@ -1,6 +1,6 @@
 id: jellyfin-server-markdown
 name: Jellyfin Server Generic Markdown Export
-target: markdown
+target: generic_markdown
 format: markdown
 privacy_mode: redacted
 include:

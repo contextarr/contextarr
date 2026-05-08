@@ -283,6 +283,14 @@ function reviewTypeForValidationIssue(code: string): ReviewItemType {
     return "source_coverage";
   }
 
+  if (code.startsWith("source.license_")) {
+    return "source_coverage";
+  }
+
+  if (code === "source.stale") {
+    return "freshness";
+  }
+
   if (
     code === "agent_kit.context_pack_missing" ||
     code === "agent_kit.skill_missing" ||
@@ -298,6 +306,7 @@ function reviewTypeForValidationIssue(code: string): ReviewItemType {
 
   if (
     code.startsWith("exports.") ||
+    code.startsWith("export_profile.") ||
     code.startsWith("skill_export_profile.") ||
     code.startsWith("agent_kit_exports.") ||
     code.startsWith("agent_kit_export_profile.")
@@ -308,6 +317,7 @@ function reviewTypeForValidationIssue(code: string): ReviewItemType {
   if (
     code.startsWith("agent_kit_policy.") ||
     code.startsWith("agent_kit_rules.redaction") ||
+    code === "redaction.hit_warn" ||
     code === "agent_kit_manifest.executable_code" ||
     code === "agent_kit_manifest.requires_network" ||
     code === "agent_kit_manifest.read_vault" ||

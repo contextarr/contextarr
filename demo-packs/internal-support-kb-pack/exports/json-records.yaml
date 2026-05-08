@@ -1,6 +1,6 @@
 id: internal-support-json-records
 name: Internal Support KB JSON Records Export
-target: json_records
+target: json
 format: json
 privacy_mode: redacted
 include:

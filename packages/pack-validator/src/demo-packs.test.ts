@@ -26,6 +26,12 @@ const requiredFiles = [
   "exports/codex.yaml",
   "exports/markdown.yaml",
   "exports/json-records.yaml",
+  "exports/agents-md.yaml",
+  "exports/claude-md.yaml",
+  "exports/llms-txt.yaml",
+  "examples/sample-agents-md.md",
+  "examples/sample-claude-md.md",
+  "examples/sample-llms-txt.txt",
   "rules/validation.yaml",
   "rules/redaction.yaml",
   "rules/freshness.yaml"
@@ -50,14 +56,19 @@ describe("demo packs", () => {
     }
 
     const recordFiles = fs.readdirSync(path.join(packPath, "records")).filter((file) => file.endsWith(".md"));
+    const exportFiles = fs.readdirSync(path.join(packPath, "exports")).filter((file) => file.endsWith(".yaml"));
 
     expect(recordFiles).toHaveLength(5);
+    expect(exportFiles).toHaveLength(8);
   });
 
-  it.each(expectedPackIds)("%s validates with zero errors", (packId) => {
+  it.each(expectedPackIds)("%s validates with zero errors and warnings", (packId) => {
     const result = validatePack(path.join(demoPacksDir, packId));
 
     expect(result.summary.errors, JSON.stringify(result.issues, null, 2)).toBe(0);
+    expect(result.summary.warnings, JSON.stringify(result.issues, null, 2)).toBe(0);
+    expect(result.exportReadiness.status).toBe("ready");
+    expect(result.summary.exportProfilesReady).toBe(8);
     expect(result.valid).toBe(true);
   });
 });

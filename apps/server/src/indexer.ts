@@ -17,6 +17,7 @@ import {
 import { loadAgentKits, type LoadAgentKitsOptions } from "./agent-kit-loader";
 import { loadPacks } from "./pack-loader";
 import { loadSkills } from "./skill-loader";
+import { normalizeSourceLicenseStatus } from "@contextarr/pack-validator";
 import type {
   AgentKitSummary,
   LoadedAgentKit,
@@ -91,7 +92,7 @@ export function rebuildIndex(
       const packReviewItems = reviewItemsByObject.get(reviewObjectKey("pack", pack.manifest.id)) ?? [];
       const health = calculateHealthScore(packReviewItems);
       insertPack(db, pack, indexedAt, health);
-      insertRecords(db, pack);
+      insertRecords(db, pack, indexedAt);
       insertSources(db, pack);
       insertExportProfiles(db, pack);
       insertPackHealth(db, pack, indexedAt, health);
@@ -166,6 +167,12 @@ export function rebuildIndex(
       0
     ),
     reviewItemsGenerated: reviewCandidates.length,
+    redactionWarningCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.redactionHits, 0),
+    staleSourceCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.staleSources, 0),
+    licenseWarningCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.licenseWarnings, 0),
+    licenseMissingCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.licenseMissing, 0),
+    licenseUnknownCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.licenseUnknown, 0),
+    licenseRiskCount: loaded.packs.reduce((count, pack) => count + pack.validation.summary.licenseRisks, 0),
     skipped: loaded.skipped,
     skippedSkills: loadedSkills.skipped,
     skippedAgentKits: loadedAgentKits.skipped
@@ -407,7 +414,11 @@ export function getPacks(db: ContextarrDatabase): PackSummary[] {
       `SELECT
         id, name, version, description, type, visibility, trust_level AS trustLevel,
         health_score AS healthScore, health_status AS healthStatus,
+        validation_status AS validationStatus, export_readiness AS exportReadiness,
         validation_errors AS validationErrors, validation_warnings AS validationWarnings,
+        redaction_warning_count AS redactionWarningCount, stale_source_count AS staleSourceCount,
+        license_warning_count AS licenseWarningCount, license_missing_count AS licenseMissingCount,
+        license_unknown_count AS licenseUnknownCount, license_risk_count AS licenseRiskCount,
         record_count AS recordCount, source_count AS sourceCount,
         export_profile_count AS exportProfileCount, accent_color AS accentColor,
         cover_image AS coverImage, review_queue_count AS reviewQueueCount,
@@ -426,12 +437,33 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
   }
 
   const sources = db
-    .prepare("SELECT id, type, title, url, path, retrieved_at AS retrievedAt, license, trust, status FROM sources WHERE pack_id = ? ORDER BY id")
-    .all(packId);
+    .prepare(
+      `SELECT id, type, title, url, path, retrieved_at AS retrievedAt, license,
+        license_status AS licenseStatus, license_url AS licenseUrl, license_notes AS licenseNotes,
+        content_hash_algorithm AS contentHashAlgorithm, content_hash AS contentHash,
+        hash_calculated_at AS hashCalculatedAt, last_checked_at AS lastCheckedAt,
+        stale_after_days AS staleAfterDays, stale_reason AS staleReason, trust, status
+       FROM sources WHERE pack_id = ? ORDER BY id`
+    )
+    .all(packId) as Row[];
   const exportProfiles = db
-    .prepare("SELECT id, name, target, format, privacy_mode AS privacyMode, token_budget AS tokenBudget FROM export_profiles WHERE pack_id = ? ORDER BY id")
-    .all(packId);
-  const health = db.prepare("SELECT score, status, validation_errors AS validationErrors, validation_warnings AS validationWarnings, record_count AS recordCount, source_count AS sourceCount, export_profile_count AS exportProfileCount, updated_at AS updatedAt FROM pack_health WHERE pack_id = ?").get(packId);
+    .prepare(
+      `SELECT id, name, target, format, privacy_mode AS privacyMode, token_budget AS tokenBudget,
+        readiness_status AS readinessStatus,
+        readiness_warning_codes_json AS readinessWarningCodesJson,
+        readiness_blocking_codes_json AS readinessBlockingCodesJson
+       FROM export_profiles WHERE pack_id = ? ORDER BY id`
+    )
+    .all(packId) as Row[];
+  const health = db.prepare(
+    `SELECT score, status, validation_status AS validationStatus, export_readiness AS exportReadiness,
+      validation_errors AS validationErrors, validation_warnings AS validationWarnings,
+      redaction_warning_count AS redactionWarningCount, stale_source_count AS staleSourceCount,
+      license_warning_count AS licenseWarningCount, license_missing_count AS licenseMissingCount,
+      license_unknown_count AS licenseUnknownCount, license_risk_count AS licenseRiskCount,
+      record_count AS recordCount, source_count AS sourceCount, export_profile_count AS exportProfileCount,
+      updated_at AS updatedAt FROM pack_health WHERE pack_id = ?`
+  ).get(packId);
 
   return {
     id: pack.id,
@@ -449,7 +481,7 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
     accentColor: pack.accent_color,
     coverImage: safePublicAssetRef(typeof pack.cover_image === "string" ? pack.cover_image : undefined),
     reviewQueueCount: pack.review_queue_count,
-    packPath: pack.pack_path,
+    packPath: displaySafePath(pack.pack_path) ?? String(pack.id),
     manifest: sanitizePackManifestForApi(JSON.parse(String(pack.manifest_json)) as Record<string, unknown>),
     counts: {
       records: pack.record_count,
@@ -457,12 +489,43 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
       exportProfiles: pack.export_profile_count
     },
     validation: {
+      status: pack.validation_status,
       errors: pack.validation_errors,
-      warnings: pack.validation_warnings
+      warnings: pack.validation_warnings,
+      redactionWarningCount: pack.redaction_warning_count,
+      staleSourceCount: pack.stale_source_count,
+      licenseWarningCount: pack.license_warning_count,
+      licenseMissingCount: pack.license_missing_count,
+      licenseUnknownCount: pack.license_unknown_count,
+      licenseRiskCount: pack.license_risk_count
+    },
+    exportReadiness: {
+      status: pack.export_readiness,
+      profilesReady: exportProfiles.filter((profile) => profile.readinessStatus === "ready").length,
+      profilesWithWarnings: exportProfiles.filter((profile) => profile.readinessStatus === "ready_with_warnings").length,
+      profilesBlocked: exportProfiles.filter((profile) => profile.readinessStatus === "blocked").length,
+      profiles: exportProfiles.map((profile: Row) => ({
+        id: profile.id,
+        name: profile.name,
+        target: profile.target,
+        format: profile.format,
+        privacyMode: profile.privacyMode,
+        tokenBudget: profile.tokenBudget,
+        status: profile.readinessStatus,
+        warningIssueCodes: parseJsonArray(profile.readinessWarningCodesJson),
+        blockingIssueCodes: parseJsonArray(profile.readinessBlockingCodesJson)
+      }))
     },
     health,
-    sources,
-    exportProfiles
+    sources: sources.map(sanitizeSourceForApi),
+    exportProfiles: exportProfiles.map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      target: profile.target,
+      format: profile.format,
+      privacyMode: profile.privacyMode,
+      tokenBudget: profile.tokenBudget
+    }))
   };
 }
 
@@ -929,7 +992,11 @@ export function getPackRecords(
       `SELECT
         id, pack_id AS packId, title, type, confidence, source_status AS sourceStatus,
         freshness, privacy, last_reviewed AS lastReviewed, review_status AS reviewStatus,
-        tags_json AS tagsJson, sources_json AS sourcesJson, file_path AS filePath
+        tags_json AS tagsJson, sources_json AS sourcesJson,
+        redaction_warning_count AS redactionWarningCount, stale_source_count AS staleSourceCount,
+        license_warning_count AS licenseWarningCount, license_missing_count AS licenseMissingCount,
+        license_unknown_count AS licenseUnknownCount, license_risk_count AS licenseRiskCount,
+        file_path AS filePath
       FROM records
       WHERE ${where.join(" AND ")}
       ORDER BY title`
@@ -950,12 +1017,14 @@ export function getRecord(db: ContextarrDatabase, recordId: string): unknown | u
       ? []
       : db
           .prepare(
-            `SELECT id, type, title, url, path, retrieved_at AS retrievedAt, license, trust, status
+            `SELECT id, type, title, url, path, retrieved_at AS retrievedAt, license,
+               license_status AS licenseStatus, content_hash AS contentHash, stale_reason AS staleReason,
+               trust, status
              FROM sources
              WHERE pack_id = ? AND id IN (${sourceIds.map(() => "?").join(",")})
              ORDER BY id`
           )
-          .all(record.pack_id, ...sourceIds);
+          .all(record.pack_id, ...sourceIds) as Row[];
 
   return {
     id: record.id,
@@ -970,9 +1039,15 @@ export function getRecord(db: ContextarrDatabase, recordId: string): unknown | u
     lastReviewed: record.last_reviewed,
     reviewStatus: record.review_status,
     sources: sourceIds,
-    resolvedSources: sources,
+    resolvedSources: sources.map(sanitizeSourceForApi),
+    redactionWarningCount: record.redaction_warning_count,
+    staleSourceCount: record.stale_source_count,
+    licenseWarningCount: record.license_warning_count,
+    licenseMissingCount: record.license_missing_count,
+    licenseUnknownCount: record.license_unknown_count,
+    licenseRiskCount: record.license_risk_count,
     body: record.body,
-    filePath: record.file_path,
+    filePath: sanitizeRelativePath(record.file_path) ?? path.basename(String(record.file_path)),
     metadata: JSON.parse(String(record.metadata_json))
   };
 }
@@ -1020,14 +1095,18 @@ function insertPack(
       id, name, version, description, type, visibility, trust_level, author, license,
       created_at, updated_at, last_reviewed_at, contains_personal_data,
       contains_executable_code, requires_network, accent_color, cover_image, pack_path,
-      manifest_json, validation_errors, validation_warnings, health_score,
+      manifest_json, validation_status, export_readiness, validation_errors, validation_warnings,
+      redaction_warning_count, stale_source_count, license_warning_count, license_missing_count,
+      license_unknown_count, license_risk_count, health_score,
       health_status, record_count, source_count, export_profile_count,
       review_queue_count, indexed_at
     ) VALUES (
       @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
       @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
       @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @packPath,
-      @manifestJson, @validationErrors, @validationWarnings, @healthScore,
+      @manifestJson, @validationStatus, @exportReadiness, @validationErrors, @validationWarnings,
+      @redactionWarningCount, @staleSourceCount, @licenseWarningCount, @licenseMissingCount,
+      @licenseUnknownCount, @licenseRiskCount, @healthScore,
       @healthStatus, @recordCount, @sourceCount, @exportProfileCount,
       @reviewQueueCount, @indexedAt
     )`
@@ -1051,8 +1130,16 @@ function insertPack(
     coverImage: safePublicAssetRef(pack.manifest.assets.coverImage),
     packPath: path.resolve(pack.packPath),
     manifestJson: JSON.stringify(pack.manifest),
+    validationStatus: pack.validation.validationStatus,
+    exportReadiness: pack.validation.exportReadiness.status,
     validationErrors: pack.validation.summary.errors,
     validationWarnings: pack.validation.summary.warnings,
+    redactionWarningCount: pack.validation.summary.redactionHits,
+    staleSourceCount: pack.validation.summary.staleSources,
+    licenseWarningCount: pack.validation.summary.licenseWarnings,
+    licenseMissingCount: pack.validation.summary.licenseMissing,
+    licenseUnknownCount: pack.validation.summary.licenseUnknown,
+    licenseRiskCount: pack.validation.summary.licenseRisks,
     healthScore: health.score,
     healthStatus: health.status,
     recordCount: pack.records.length,
@@ -1237,16 +1324,18 @@ function insertAgentKitExportProfiles(db: ContextarrDatabase, agentKit: LoadedAg
   }
 }
 
-function insertRecords(db: ContextarrDatabase, pack: LoadedPack): void {
+function insertRecords(db: ContextarrDatabase, pack: LoadedPack, indexedAt: string): void {
   const insertRecord = db.prepare(
     `INSERT INTO records (
       id, pack_id, title, type, tags_json, tags_text, confidence, source_status,
       freshness, privacy, last_reviewed, review_status, sources_json, body,
-      file_path, metadata_json
+      redaction_warning_count, stale_source_count, license_warning_count, license_missing_count,
+      license_unknown_count, license_risk_count, file_path, metadata_json
     ) VALUES (
       @id, @packId, @title, @type, @tagsJson, @tagsText, @confidence, @sourceStatus,
       @freshness, @privacy, @lastReviewed, @reviewStatus, @sourcesJson, @body,
-      @filePath, @metadataJson
+      @redactionWarningCount, @staleSourceCount, @licenseWarningCount, @licenseMissingCount,
+      @licenseUnknownCount, @licenseRiskCount, @filePath, @metadataJson
     )`
   );
   const insertFts = db.prepare(
@@ -1254,7 +1343,9 @@ function insertRecords(db: ContextarrDatabase, pack: LoadedPack): void {
      VALUES (?, ?, ?, ?, ?)`
   );
 
+  const now = new Date(indexedAt);
   for (const record of pack.records) {
+    const derivedCounts = recordDerivedCounts(pack, record.metadata.sources, record.metadata.id, now);
     insertRecord.run({
       id: record.metadata.id,
       packId: pack.manifest.id,
@@ -1270,6 +1361,12 @@ function insertRecords(db: ContextarrDatabase, pack: LoadedPack): void {
       reviewStatus: record.metadata.review_status,
       sourcesJson: JSON.stringify(record.metadata.sources),
       body: record.body,
+      redactionWarningCount: derivedCounts.redactionWarningCount,
+      staleSourceCount: derivedCounts.staleSourceCount,
+      licenseWarningCount: derivedCounts.licenseWarningCount,
+      licenseMissingCount: derivedCounts.licenseMissingCount,
+      licenseUnknownCount: derivedCounts.licenseUnknownCount,
+      licenseRiskCount: derivedCounts.licenseRiskCount,
       filePath: record.file,
       metadataJson: JSON.stringify(record.metadata)
     });
@@ -1286,9 +1383,13 @@ function insertRecords(db: ContextarrDatabase, pack: LoadedPack): void {
 function insertSources(db: ContextarrDatabase, pack: LoadedPack): void {
   const insert = db.prepare(
     `INSERT INTO sources (
-      id, pack_id, type, title, url, path, retrieved_at, license, trust, status, source_json
+      id, pack_id, type, title, url, path, retrieved_at, license, license_status,
+      license_url, license_notes, content_hash_algorithm, content_hash, hash_calculated_at,
+      last_checked_at, stale_after_days, stale_reason, trust, status, source_json
     ) VALUES (
-      @id, @packId, @type, @title, @url, @path, @retrievedAt, @license, @trust, @status, @sourceJson
+      @id, @packId, @type, @title, @url, @path, @retrievedAt, @license, @licenseStatus,
+      @licenseUrl, @licenseNotes, @contentHashAlgorithm, @contentHash, @hashCalculatedAt,
+      @lastCheckedAt, @staleAfterDays, @staleReason, @trust, @status, @sourceJson
     )`
   );
 
@@ -1302,6 +1403,15 @@ function insertSources(db: ContextarrDatabase, pack: LoadedPack): void {
       path: source.path ?? null,
       retrievedAt: source.retrieved_at ?? null,
       license: source.license ?? null,
+      licenseStatus: normalizeSourceLicenseStatus(source),
+      licenseUrl: source.license_url ?? null,
+      licenseNotes: source.license_notes ?? null,
+      contentHashAlgorithm: source.content_hash_algorithm ?? null,
+      contentHash: source.content_hash ?? null,
+      hashCalculatedAt: source.hash_calculated_at ?? null,
+      lastCheckedAt: source.last_checked_at ?? null,
+      staleAfterDays: source.stale_after_days ?? null,
+      staleReason: source.stale_reason ?? null,
       trust: source.trust ?? null,
       status: source.status ?? null,
       sourceJson: JSON.stringify(source)
@@ -1309,16 +1419,87 @@ function insertSources(db: ContextarrDatabase, pack: LoadedPack): void {
   }
 }
 
+function recordDerivedCounts(pack: LoadedPack, sourceIds: string[], recordId: string, now: Date): {
+  redactionWarningCount: number;
+  staleSourceCount: number;
+  licenseWarningCount: number;
+  licenseMissingCount: number;
+  licenseUnknownCount: number;
+  licenseRiskCount: number;
+} {
+  const sources = new Map(pack.sources.map((source) => [source.id, source]));
+  let staleSourceCount = 0;
+  let licenseMissingCount = 0;
+  let licenseUnknownCount = 0;
+  let licenseRiskCount = 0;
+
+  for (const sourceId of sourceIds) {
+    const source = sources.get(sourceId);
+    if (!source) {
+      continue;
+    }
+
+    const licenseStatus = normalizeSourceLicenseStatus(source);
+    if (!source.license && !source.license_status && licenseStatus !== "not_applicable") {
+      licenseMissingCount += 1;
+    } else if (licenseStatus === "unknown") {
+      licenseUnknownCount += 1;
+    }
+    if (licenseStatus === "known_copyleft" || licenseStatus === "known_restricted") {
+      licenseRiskCount += 1;
+    }
+    if (isSourceStaleForIndex(source, now)) {
+      staleSourceCount += 1;
+    }
+  }
+
+  return {
+    redactionWarningCount: pack.validation.redactionHits.filter((hit) => hit.recordId === recordId).length,
+    staleSourceCount,
+    licenseWarningCount: licenseMissingCount + licenseUnknownCount + licenseRiskCount,
+    licenseMissingCount,
+    licenseUnknownCount,
+    licenseRiskCount
+  };
+}
+
+function isSourceStaleForIndex(source: LoadedPack["sources"][number], now: Date): boolean {
+  if (source.status === "stale" || Boolean(source.stale_reason)) {
+    return true;
+  }
+
+  if (!source.stale_after_days) {
+    return false;
+  }
+
+  const basis = source.last_checked_at ?? source.retrieved_at;
+  if (!basis) {
+    return false;
+  }
+
+  const basisDate = new Date(basis);
+  if (Number.isNaN(basisDate.getTime()) || Number.isNaN(now.getTime())) {
+    return false;
+  }
+
+  const ageDays = Math.floor((now.getTime() - basisDate.getTime()) / 86_400_000);
+  return ageDays > source.stale_after_days;
+}
+
 function insertExportProfiles(db: ContextarrDatabase, pack: LoadedPack): void {
   const insert = db.prepare(
     `INSERT INTO export_profiles (
-      id, pack_id, name, target, format, privacy_mode, token_budget, profile_json
+      id, pack_id, name, target, format, privacy_mode, token_budget,
+      readiness_status, readiness_warning_codes_json, readiness_blocking_codes_json, profile_json
     ) VALUES (
-      @id, @packId, @name, @target, @format, @privacyMode, @tokenBudget, @profileJson
+      @id, @packId, @name, @target, @format, @privacyMode, @tokenBudget,
+      @readinessStatus, @readinessWarningCodesJson, @readinessBlockingCodesJson, @profileJson
     )`
   );
+  const readinessByProfileId = new Map(pack.validation.exportReadiness.profiles.map((profile) => [profile.id, profile]));
 
   for (const profile of pack.exportProfiles) {
+    const readiness = readinessByProfileId.get(profile.id);
     insert.run({
       id: profile.id,
       packId: pack.manifest.id,
@@ -1327,6 +1508,9 @@ function insertExportProfiles(db: ContextarrDatabase, pack: LoadedPack): void {
       format: profile.format,
       privacyMode: profile.privacy_mode ?? null,
       tokenBudget: profile.token_budget ?? null,
+      readinessStatus: readiness?.status ?? "ready",
+      readinessWarningCodesJson: JSON.stringify(readiness?.warningIssueCodes ?? []),
+      readinessBlockingCodesJson: JSON.stringify(readiness?.blockingIssueCodes ?? []),
       profileJson: JSON.stringify(profile)
     });
   }
@@ -1442,15 +1626,25 @@ function insertPackHealth(
 ): void {
   db.prepare(
     `INSERT INTO pack_health (
-      pack_id, score, status, validation_errors, validation_warnings,
+      pack_id, score, status, validation_status, export_readiness, validation_errors, validation_warnings,
+      redaction_warning_count, stale_source_count, license_warning_count,
+      license_missing_count, license_unknown_count, license_risk_count,
       record_count, source_count, export_profile_count, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     pack.manifest.id,
     health.score,
     health.status,
+    pack.validation.validationStatus,
+    pack.validation.exportReadiness.status,
     pack.validation.summary.errors,
     pack.validation.summary.warnings,
+    pack.validation.summary.redactionHits,
+    pack.validation.summary.staleSources,
+    pack.validation.summary.licenseWarnings,
+    pack.validation.summary.licenseMissing,
+    pack.validation.summary.licenseUnknown,
+    pack.validation.summary.licenseRisks,
     pack.records.length,
     pack.sources.length,
     pack.exportProfiles.length,
@@ -1703,8 +1897,16 @@ function normalizePackSummary(pack: Row): PackSummary {
     trustLevel: String(pack.trustLevel),
     healthScore: Number(pack.healthScore),
     healthStatus: String(pack.healthStatus),
+    validationStatus: String(pack.validationStatus),
+    exportReadiness: String(pack.exportReadiness),
     validationErrors: Number(pack.validationErrors),
     validationWarnings: Number(pack.validationWarnings),
+    redactionWarningCount: Number(pack.redactionWarningCount),
+    staleSourceCount: Number(pack.staleSourceCount),
+    licenseWarningCount: Number(pack.licenseWarningCount),
+    licenseMissingCount: Number(pack.licenseMissingCount),
+    licenseUnknownCount: Number(pack.licenseUnknownCount),
+    licenseRiskCount: Number(pack.licenseRiskCount),
     recordCount: Number(pack.recordCount),
     sourceCount: Number(pack.sourceCount),
     exportProfileCount: Number(pack.exportProfileCount),
@@ -1763,7 +1965,13 @@ function normalizeRecordSummary(record: Row): unknown {
     reviewStatus: record.reviewStatus,
     tags: JSON.parse(String(record.tagsJson)),
     sources: JSON.parse(String(record.sourcesJson)),
-    filePath: record.filePath
+    redactionWarningCount: Number(record.redactionWarningCount),
+    staleSourceCount: Number(record.staleSourceCount),
+    licenseWarningCount: Number(record.licenseWarningCount),
+    licenseMissingCount: Number(record.licenseMissingCount),
+    licenseUnknownCount: Number(record.licenseUnknownCount),
+    licenseRiskCount: Number(record.licenseRiskCount),
+    filePath: sanitizeRelativePath(record.filePath) ?? path.basename(String(record.filePath))
   };
 }
 
@@ -1937,6 +2145,57 @@ function safePublicAssetRef(value: string | undefined): string | null {
   }
 
   return normalized;
+}
+
+function sanitizeRelativePath(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  const normalized = value.trim().replace(/\\/g, "/");
+  if (
+    /^[A-Za-z][A-Za-z0-9+.-]*:/i.test(normalized) ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("//") ||
+    normalized.startsWith("../") ||
+    normalized === ".." ||
+    normalized.includes("/../") ||
+    /[\u0000-\u001F"'<>]/.test(normalized)
+  ) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
+function displaySafePath(value: unknown): string | undefined {
+  const relative = sanitizeRelativePath(value);
+  if (relative) {
+    return relative;
+  }
+
+  return typeof value === "string" && value.trim() ? path.basename(value) : undefined;
+}
+
+function sanitizeSourceForApi(source: Row): Row {
+  return {
+    ...source,
+    path: sanitizeRelativePath(source.path)
+  };
+}
+
+function parseJsonArray(value: unknown): string[] {
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 function arrayOfStrings(value: unknown): string[] | undefined {

@@ -1,0 +1,21 @@
+id: fake-product-line-claude-md
+name: Fake Product Line CLAUDE.md Export
+target: claude_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - fake-product-line.product-overview
+    - fake-product-line.model-comparison
+    - fake-product-line.support-matrix
+    - fake-product-line.release-notes
+    - fake-product-line.sales-support-faq
+exclude_tags:
+  - secret
+  - never_export
+token_budget: 16000
+sections:
+  - summary
+  - instructions
+  - records
+  - sources

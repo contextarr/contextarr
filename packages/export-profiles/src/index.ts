@@ -240,6 +240,9 @@ const supportedTargets = new Set([
   "codex",
   "markdown",
   "generic_markdown",
+  "agents_md",
+  "claude_md",
+  "llms_txt",
   "json",
   "json_records"
 ]);
@@ -782,8 +785,8 @@ function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, ru
   }
 
   if (profile.privacy_mode === "redacted") {
-    if (metadata.privacy === "secret") {
-      return "Excluded by redacted privacy mode: secret";
+    if (metadata.privacy !== "public_safe") {
+      return `Excluded by redacted privacy mode: ${metadata.privacy}`;
     }
 
     const redactionTag = metadata.tags.find((tag) => rules.redact_tags.includes(tag));
@@ -1609,7 +1612,6 @@ function summarizeSources(sources: Source[], sourceIds: string[]): ExportSourceS
       title: source.title,
       type: source.type,
       url: source.url,
-      path: source.path,
       trust: source.trust,
       status: source.status
     }));
@@ -1738,6 +1740,9 @@ function targetLabel(target: string): string {
     claude: "Claude",
     claude_code: "Claude Code",
     codex: "Codex",
+    agents_md: "AGENTS.md",
+    claude_md: "CLAUDE.md",
+    llms_txt: "llms.txt",
     markdown: "Generic Markdown",
     generic_markdown: "Generic Markdown",
     json: "JSON Records",

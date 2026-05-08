@@ -49,7 +49,7 @@ describe("Contextarr MCP tools", () => {
     expect(result.pack).toEqual(
       expect.objectContaining({
         id: "ai-workstation-pack",
-        counts: expect.objectContaining({ records: 5, exportProfiles: 5 })
+          counts: expect.objectContaining({ records: 5, exportProfiles: 8 })
       })
     );
     expect(JSON.stringify(result.pack)).not.toContain("packPath");
@@ -122,7 +122,7 @@ describe("Contextarr MCP tools", () => {
     });
 
     expect(profiles.ok).toBe(true);
-    expect(profiles.count).toBe(5);
+    expect(profiles.count).toBe(8);
     expect(profiles.profiles).toEqual(expect.arrayContaining([expect.objectContaining({ id: "ai-workstation-codex" })]));
     expect(preview.ok).toBe(true);
     expect(preview.artifact).toEqual(

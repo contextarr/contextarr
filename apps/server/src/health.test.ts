@@ -47,12 +47,29 @@ const baseManifest: ContextPackManifest = {
 
 const validValidation: ValidationResult = {
   packPath: "D:/fake/pack",
+  packId: "health-fixture-pack",
   valid: true,
+  validationStatus: "valid",
   issues: [],
   summary: {
     errors: 0,
     warnings: 0,
-    infos: 0
+    infos: 0,
+    redactionHits: 0,
+    exportProfilesReady: 0,
+    exportProfilesWithWarnings: 0,
+    exportProfilesBlocked: 0,
+    staleSources: 0,
+    licenseWarnings: 0,
+    licenseMissing: 0,
+    licenseUnknown: 0,
+    licenseRisks: 0,
+    docsWarnings: 0
+  },
+  redactionHits: [],
+  exportReadiness: {
+    status: "ready",
+    profiles: []
   }
 };
 

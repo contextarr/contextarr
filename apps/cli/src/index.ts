@@ -27,6 +27,7 @@ import {
 import {
   formatValidationResult,
   PackReadError,
+  toValidationReportV1,
   validatePack,
   type ValidationResult
 } from "@contextarr/pack-validator";
@@ -132,8 +133,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .command("validate")
     .argument("<path>", "pack, Skill, Agent Kit, or directory of child objects to validate")
     .option("--format <format>", "output format: text or json", "text")
-    .action((targetPath: string, options: { format: string }) => {
-      const format = parseFormat(options.format);
+    .option("--json", "emit deterministic JSON validation report", false)
+    .action((targetPath: string, options: { format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
 
       if (!format) {
         io.stderr.write(`Unsupported output format: ${options.format}\n`);
@@ -520,23 +522,23 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   skillPath?: string;
   agentKitPath?: string;
   valid: boolean;
-  results: AnyValidationResult[];
+  results: unknown[];
   summary: { errors: number; warnings: number; infos: number };
 } {
   if (results.length === 1) {
-    return results[0];
+    return "packPath" in results[0] ? toValidationReportV1(results[0]) : results[0];
   }
 
   const displayTargetPath = displayPath(targetPath);
   const aggregate = {
     targetPath: displayTargetPath,
     valid: results.every((result) => result.valid),
-    results,
+    results: results.map((result) => ("packPath" in result ? toValidationReportV1(result) : result)),
     summary: {
       errors: results.reduce((count, result) => count + result.summary.errors, 0),
       warnings: results.reduce((count, result) => count + result.summary.warnings, 0),
-        infos: results.reduce((count, result) => count + result.summary.infos, 0)
-      }
+      infos: results.reduce((count, result) => count + result.summary.infos, 0)
+    }
   };
 
   if (results.every((result) => "packPath" in result)) {

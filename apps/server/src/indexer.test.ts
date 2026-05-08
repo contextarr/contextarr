@@ -34,7 +34,7 @@ describe("SQLite indexer", () => {
         packsSkipped: 0,
         recordsIndexed: 25,
         sourcesIndexed: 25,
-        exportProfilesIndexed: 25,
+        exportProfilesIndexed: 40,
         skillsIndexed: 8,
         skillsSkipped: 0,
         skillInstructionsIndexed: 24,
@@ -51,7 +51,7 @@ describe("SQLite indexer", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 25,
+        exportProfiles: 40,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -80,7 +80,7 @@ describe("SQLite indexer", () => {
         packs: 5,
         records: 25,
         sources: 25,
-        exportProfiles: 25,
+        exportProfiles: 40,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -140,9 +140,9 @@ describe("SQLite indexer", () => {
     try {
       const result = rebuildIndex(db, validatorFixturesDir);
 
-      expect(result.packsIndexed).toBe(1);
+      expect(result.packsIndexed).toBeGreaterThan(1);
       expect(result.packsSkipped).toBeGreaterThan(1);
-      expect(getIndexStats(db).packs).toBe(1);
+      expect(getIndexStats(db).packs).toBe(result.packsIndexed);
       expect(getReviewItems(db, { type: "validation" }).length).toBeGreaterThan(1);
     } finally {
       db.close();
