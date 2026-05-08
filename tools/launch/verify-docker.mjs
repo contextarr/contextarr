@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import http from "node:http";
 
 const projectName = "contextarr-phase11-smoke";
 const hostPort = process.env.CONTEXTARR_DOCKER_VERIFY_PORT ?? "33210";
@@ -21,23 +22,67 @@ function run(args) {
 }
 
 async function getJson(path) {
-  const response = await fetch(`${baseUrl}${path}`);
-  if (!response.ok) {
-    throw new Error(`${path} returned HTTP ${response.status}`);
+  const { statusCode, body } = await request(path);
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(`${path} returned HTTP ${statusCode}`);
   }
-  return response.json();
+  return JSON.parse(body);
 }
 
 async function postJson(path, body) {
-  const response = await fetch(`${baseUrl}${path}`, {
+  const payload = JSON.stringify(body);
+  const response = await request(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload).toString() },
+    body: payload,
   });
-  if (!response.ok) {
-    throw new Error(`${path} returned HTTP ${response.status}: ${await response.text()}`);
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`${path} returned HTTP ${response.statusCode}: ${response.body}`);
   }
-  return response.json();
+  return JSON.parse(response.body);
+}
+
+async function getText(path) {
+  const { statusCode, body } = await request(path);
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(`${path} returned HTTP ${statusCode}`);
+  }
+  return body;
+}
+
+function request(path, options = {}) {
+  const url = new URL(path, baseUrl);
+  const body = options.body ?? "";
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      url,
+      {
+        method: options.method ?? "GET",
+        headers: options.headers,
+        timeout: 5000,
+      },
+      (res) => {
+        let responseBody = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          responseBody += chunk;
+        });
+        res.on("end", () => {
+          resolve({ statusCode: res.statusCode ?? 0, body: responseBody });
+        });
+      }
+    );
+
+    req.on("timeout", () => {
+      req.destroy(new Error(`${url.href} timed out`));
+    });
+    req.on("error", reject);
+    if (body) {
+      req.write(body);
+    }
+    req.end();
+  });
 }
 
 async function waitForHealth() {
@@ -64,8 +109,8 @@ async function verify() {
     throw new Error(`Unexpected Docker health response: ${JSON.stringify(health)}`);
   }
 
-  const root = await fetch(`${baseUrl}/`);
-  if (!root.ok || !(await root.text()).includes("<div id=\"root\"></div>")) {
+  const root = await getText("/");
+  if (!root.includes("<div id=\"root\"></div>")) {
     throw new Error("Docker web root did not return the built Vite app shell.");
   }
 
