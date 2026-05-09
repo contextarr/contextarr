@@ -103,6 +103,7 @@ import {
   agentKitsHref,
   collectorsHref,
   composerHref,
+  draftsHref,
   exportsHref,
   healthHref,
   packHref,
@@ -124,6 +125,8 @@ import type {
   ContextPackCollectorId,
   ContextPackCollectorPreview,
   ContextPackCollectorResult,
+  ContextPackDraftDetail,
+  ContextPackDraftSummary,
   PackDetail,
   PackHealthResponse,
   PackSummary,
@@ -154,6 +157,7 @@ const navItems = [
   { label: "Agent Kits", icon: Sparkles, href: agentKitsHref(), route: "agentKits" },
   { label: "Packs", icon: Boxes },
   { label: "Collectors", icon: Layers3, href: collectorsHref(), route: "collectors" },
+  { label: "Drafts", icon: Import, href: draftsHref(), route: "drafts" },
   { label: "Sources", icon: Database },
   { label: "Review Queue", icon: ShieldCheck, href: reviewQueueHref(), route: "reviewQueue" },
   { label: "Composer", icon: PenLine, href: composerHref("agent-kit"), route: "composer" },
@@ -394,6 +398,8 @@ export function App() {
           <AgentKitDetailPage agentKitId={route.agentKitId} />
         ) : route.name === "collectors" ? (
           <CollectorsPage health={health} onImported={loadDashboard} />
+        ) : route.name === "drafts" ? (
+          <DraftReviewPage health={health} onActivated={loadDashboard} />
         ) : route.name === "composer" ? (
           <ComposerPage packs={packs} skills={skills} mode={route.mode ?? "agent-kit"} />
         ) : route.name === "exports" ? (
@@ -1175,6 +1181,240 @@ function CollectorsPage({ health, onImported }: { health: HealthResponse | null;
       )}
 
       <SkillImportPanel health={health} onImported={onImported} />
+    </section>
+  );
+}
+
+function DraftReviewPage({ health, onActivated }: { health: HealthResponse | null; onActivated(): void }) {
+  const [drafts, setDrafts] = useState<ContextPackDraftSummary[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<ContextPackDraftDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const selectedDraft = drafts.find((draft) => draft.id === selectedId) ?? null;
+  const counts = useMemo(
+    () => ({
+      total: drafts.length,
+      activatable: drafts.filter((draft) => draft.activation.canActivate).length,
+      blocked: drafts.filter((draft) => !draft.activation.canActivate).length
+    }),
+    [drafts]
+  );
+
+  const loadDrafts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.getContextPackDrafts();
+      setDrafts(response);
+      setSelectedId((current) => (current && response.some((draft) => draft.id === current) ? current : response[0]?.id ?? null));
+    } catch (loadError) {
+      setDrafts([]);
+      setSelectedId(null);
+      setError(loadError instanceof Error ? loadError.message : "Unable to load Context Pack drafts.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDrafts();
+  }, [loadDrafts]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDetail() {
+      if (!selectedId) {
+        setDetail(null);
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        const response = await apiClient.getContextPackDraft(selectedId);
+        if (!cancelled) {
+          setDetail(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setDetail(null);
+          setError(loadError instanceof Error ? loadError.message : "Unable to load draft details.");
+        }
+      } finally {
+        if (!cancelled) {
+          setBusy(false);
+        }
+      }
+    }
+
+    void loadDetail();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
+  async function activateDraft() {
+    if (!detail || !detail.activation.canActivate) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await apiClient.activateContextPackDraft(detail.id, { expectedHash: detail.contentHash });
+      setMessage(`${result.packId} activated for review. Activation did not approve records or expose exports/MCP.`);
+      await loadDrafts();
+      onActivated();
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to activate Context Pack draft.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="library-panel collector-page" aria-labelledby="draft-review-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <Import size={16} aria-hidden="true" />
+            <span>Drafts</span>
+          </div>
+          <h1 id="draft-review-title">Draft Review</h1>
+          <p>Validate, scan, and activate local Context Pack drafts into the active pack root for human review.</p>
+        </div>
+        <div className="summary-strip">
+          <Stat value={counts.total} label="Drafts" />
+          <Stat value={counts.activatable} label="Ready" />
+          <Stat value={counts.blocked} label="Blocked" />
+          <Stat value={health?.counts.packs ?? 0} label="Active Packs" />
+        </div>
+      </div>
+
+      {error ? <p className="composer-error">{error}</p> : null}
+      {message ? <p className="composer-success">{message}</p> : null}
+
+      {loading ? (
+        <div className="state-card">
+          <Import size={34} aria-hidden="true" />
+          <h2>Loading draft inventory</h2>
+        </div>
+      ) : drafts.length === 0 ? (
+        <div className="state-card">
+          <ShieldCheck size={34} aria-hidden="true" />
+          <h2>No Context Pack drafts found</h2>
+          <p>Draft roots are empty or unavailable.</p>
+        </div>
+      ) : (
+        <div className="collector-grid draft-review-grid">
+          <div className="composer-panel draft-list-panel">
+            <h2>Draft Inventory</h2>
+            <div className="draft-list">
+              {drafts.map((draft) => (
+                <button
+                  className={draft.id === selectedId ? "draft-row is-selected" : "draft-row"}
+                  type="button"
+                  onClick={() => setSelectedId(draft.id)}
+                  key={draft.id}
+                >
+                  <span>
+                    <strong>{draft.name}</strong>
+                    <small>{draft.packId ?? "Missing pack id"}</small>
+                  </span>
+                  <span className={`status-pill ${draft.activation.canActivate ? "healthy" : "needs-review"}`}>
+                    {formatPackType(draft.sourceType)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="composer-panel draft-detail-panel">
+            <h2>{detail?.name ?? selectedDraft?.name ?? "Draft Detail"}</h2>
+            {detail ? (
+              <>
+                <div className="summary-strip compact-summary">
+                  <Stat value={detail.recordCount} label="Records" />
+                  <Stat value={detail.sourceCount} label="Sources" />
+                  <Stat value={detail.validation.errors} label="Errors" />
+                  <Stat value={detail.validation.warnings} label="Warnings" />
+                </div>
+                <div className="badge-row">
+                  <span className={`status-pill ${detail.activation.canActivate ? "healthy" : "needs-review"}`}>
+                    {formatPackType(detail.activation.status)}
+                  </span>
+                  <span className={`status-pill ${detail.security.blocked ? "needs-review" : "healthy"}`}>
+                    {formatPackType(detail.security.status)}
+                  </span>
+                  <span className="status-pill">{formatPackType(detail.trustLevel ?? "unreviewed")}</span>
+                </div>
+                <p className="muted-note">{detail.description}</p>
+                <div className="draft-gates">
+                  {detail.activation.blockingReasons.length > 0 ? (
+                    <div>
+                      <h3>Blocking Reasons</h3>
+                      <ul>
+                        {detail.activation.blockingReasons.map((reason) => (
+                          <li key={reason}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div>
+                    <h3>Review Warnings</h3>
+                    <ul>
+                      {detail.activation.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="table-wrap">
+                  <table className="pack-table compact-table">
+                    <thead>
+                      <tr>
+                        <th>Record</th>
+                        <th>Privacy</th>
+                        <th>Review</th>
+                        <th>Tags</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.records.map((record) => (
+                        <tr key={record.id}>
+                          <td>
+                            <strong>{record.title}</strong>
+                            <span>{record.id}</span>
+                          </td>
+                          <td>{formatPackType(record.privacy)}</td>
+                          <td>{formatPackType(record.reviewStatus)}</td>
+                          <td>{record.tags.join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="inline-actions">
+                  <button className="secondary-action" type="button" disabled={busy} onClick={() => void loadDrafts()}>
+                    Refresh
+                  </button>
+                  <button className="primary-action" type="button" disabled={busy || !detail.activation.canActivate} onClick={activateDraft}>
+                    <CheckCircle2 size={18} aria-hidden="true" />
+                    <span>Activate for Review</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="muted-note">{busy ? "Loading selected draft..." : "Select a draft to review activation gates."}</p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

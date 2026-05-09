@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
 import { validatePack } from "@contextarr/pack-validator";
+import { importToDraftPack } from "@contextarr/importers";
 import { createApp } from "./api";
 import { getAgentKitIndexDirs, getSkillIndexDirs } from "./config";
 import { openDatabase, type ContextarrDatabase } from "./db";
@@ -26,6 +27,7 @@ function createTestContext(
   const db = openDatabase(":memory:");
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
   const draftPacksDir = overrides.draftPacksDir ?? path.join(os.tmpdir(), "contextarr-no-draft-packs");
+  const importedPacksDir = overrides.importedPacksDir ?? path.join(os.tmpdir(), "contextarr-no-imported-packs");
   const composedPacksDir = overrides.composedPacksDir ?? path.join(os.tmpdir(), "contextarr-no-composed-packs");
   const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
@@ -36,6 +38,7 @@ function createTestContext(
     port: 0,
     packsDir,
     draftPacksDir,
+    importedPacksDir,
     composedPacksDir,
     skillsDir,
     importedSkillsDir,
@@ -73,6 +76,27 @@ function createTempAgentKitsDir(): string {
 
 function createTempComposedPacksDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-pack-save-"));
+}
+
+function createMarkdownDraftPack(outputDir: string, packId: string, name = "Draft Review Pack"): string {
+  const inputDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-input-"));
+  fs.writeFileSync(
+    path.join(inputDir, "note.md"),
+    `# ${name}\n\nThis public-safe fixture note becomes a private unreviewed draft record.\n`,
+    "utf8"
+  );
+  const result = importToDraftPack({
+    inputPath: inputDir,
+    kind: "markdown",
+    outputDir,
+    packId,
+    name,
+    maxRecords: 3,
+    overwrite: true,
+    generatedAt: "2026-05-09T00:00:00.000Z"
+  });
+  fs.rmSync(inputDir, { recursive: true, force: true });
+  return result.packPath;
 }
 
 function copyDemoPacksFixture(prefix: string): string {
@@ -813,6 +837,154 @@ describe("Contextarr API", () => {
       await app.close();
       fixtureContext.db.close();
       fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    }
+  });
+
+  it("lists, validates, and activates Context Pack drafts without indexing or approval changes", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-active-pack-root-"));
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-pack-root-"));
+    const importedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-imported-pack-root-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-pack-root-"));
+    createMarkdownDraftPack(draftPacksDir, "collector-review-draft", "Collector Review Draft");
+    createMarkdownDraftPack(importedPacksDir, "imported-review-draft", "Imported Review Draft");
+    createMarkdownDraftPack(composedPacksDir, "composed-review-draft", "Composed Review Draft");
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      draftPacksDir,
+      importedPacksDir,
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills-for-drafts"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits-for-drafts")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const list = await app.inject({ method: "GET", url: "/api/context-pack-drafts" });
+      const drafts = list.json().drafts as Array<{ id: string; packId: string; sourceType: string; contentHash: string }>;
+      const imported = drafts.find((draft) => draft.packId === "imported-review-draft");
+      expect(list.statusCode).toBe(200);
+      expect(drafts).toHaveLength(3);
+      expect(drafts.map((draft) => draft.sourceType).sort()).toEqual(["collector", "composed", "imported"]);
+      expect(list.body).not.toContain(draftPacksDir);
+      expect(list.body).not.toContain(importedPacksDir);
+      expect(list.body).not.toContain(composedPacksDir);
+      expect(imported).toBeDefined();
+
+      const detail = await app.inject({ method: "GET", url: `/api/context-pack-drafts/${encodeURIComponent(imported!.id)}` });
+      const validate = await app.inject({ method: "POST", url: `/api/context-pack-drafts/${encodeURIComponent(imported!.id)}/validate` });
+      const activate = await app.inject({
+        method: "POST",
+        url: `/api/context-pack-drafts/${encodeURIComponent(imported!.id)}/activate`,
+        payload: { expectedHash: imported!.contentHash }
+      });
+      const activeLookup = await app.inject({ method: "GET", url: "/api/packs/imported-review-draft" });
+      const duplicateActivate = await app.inject({
+        method: "POST",
+        url: `/api/context-pack-drafts/${encodeURIComponent(imported!.id)}/activate`,
+        payload: { expectedHash: imported!.contentHash }
+      });
+
+      expect(detail.statusCode).toBe(200);
+      expect(detail.json()).toMatchObject({
+        packId: "imported-review-draft",
+        activation: { canActivate: true },
+        security: { status: "policy_clean" }
+      });
+      expect(detail.json().records).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            reviewStatus: "draft",
+            privacy: "private",
+            tags: expect.arrayContaining(["imported_draft", "never_export"])
+          })
+        ])
+      );
+      expect(validate.statusCode).toBe(200);
+      expect(validate.json()).toMatchObject({ ok: true, draft: { packId: "imported-review-draft" } });
+      expect(activate.statusCode).toBe(201);
+      expect(activate.json()).toMatchObject({
+        ok: true,
+        packId: "imported-review-draft",
+        activated: {
+          status: "activated_for_review",
+          indexed: false,
+          approvalChanged: false,
+          exportReady: false,
+          mcpReady: false
+        }
+      });
+      expect(fs.existsSync(path.join(activePacksDir, "imported-review-draft", "contextarr-pack.json"))).toBe(true);
+      expect(validatePack(path.join(activePacksDir, "imported-review-draft")).summary.errors).toBe(0);
+      const copiedRecords = listFilesRecursive(path.join(activePacksDir, "imported-review-draft", "records"))
+        .map((file) => fs.readFileSync(file, "utf8"))
+        .join("\n");
+      expect(copiedRecords).toContain("review_status: draft");
+      expect(copiedRecords).toContain("privacy: private");
+      expect(copiedRecords).toContain("never_export");
+      expect(activeLookup.statusCode).toBe(404);
+      expect(duplicateActivate.statusCode).toBe(409);
+      expect(duplicateActivate.json()).toMatchObject({ error: "active_pack.exists" });
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(activePacksDir, { recursive: true, force: true });
+      fs.rmSync(draftPacksDir, { recursive: true, force: true });
+      fs.rmSync(importedPacksDir, { recursive: true, force: true });
+      fs.rmSync(composedPacksDir, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks draft activation for scanner findings and protects draft endpoints with token auth", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-active-pack-root-auth-"));
+    const importedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-imported-pack-root-auth-"));
+    const blockedPackPath = createMarkdownDraftPack(importedPacksDir, "blocked-review-draft", "Blocked Review Draft");
+    fs.writeFileSync(path.join(blockedPackPath, "unsafe.ps1"), "Write-Host 'not allowed'\n", "utf8");
+    const fixtureContext = createTestContext("draft-token", activePacksDir, {
+      draftPacksDir: fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-pack-root-auth-")),
+      importedPacksDir,
+      composedPacksDir: fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-pack-root-auth-")),
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills-for-draft-auth"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits-for-draft-auth")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const unauthorized = await app.inject({ method: "GET", url: "/api/context-pack-drafts" });
+      const list = await app.inject({
+        method: "GET",
+        url: "/api/context-pack-drafts",
+        headers: { Authorization: "Bearer draft-token" }
+      });
+      const draft = (list.json().drafts as Array<{ id: string; activation: { canActivate: boolean }; security: { blocked: boolean } }>)[0]!;
+      const invalidBody = await app.inject({
+        method: "POST",
+        url: `/api/context-pack-drafts/${encodeURIComponent(draft.id)}/activate`,
+        headers: { Authorization: "Bearer draft-token" },
+        payload: { overwrite: true }
+      });
+      const blocked = await app.inject({
+        method: "POST",
+        url: `/api/context-pack-drafts/${encodeURIComponent(draft.id)}/activate`,
+        headers: { Authorization: "Bearer draft-token" },
+        payload: {}
+      });
+
+      expect(unauthorized.statusCode).toBe(401);
+      expect(list.statusCode).toBe(200);
+      expect(draft.activation.canActivate).toBe(false);
+      expect(draft.security.blocked).toBe(true);
+      expect(invalidBody.statusCode).toBe(400);
+      expect(invalidBody.json()).toMatchObject({ error: "invalid_draft_activation_request" });
+      expect(blocked.statusCode).toBe(400);
+      expect(blocked.json()).toMatchObject({ error: "draft.activation_blocked" });
+      expect(blocked.body).not.toContain(importedPacksDir);
+      expect(fs.existsSync(path.join(activePacksDir, "blocked-review-draft"))).toBe(false);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(activePacksDir, { recursive: true, force: true });
+      fs.rmSync(importedPacksDir, { recursive: true, force: true });
+      fs.rmSync(fixtureContext.config.draftPacksDir, { recursive: true, force: true });
+      fs.rmSync(fixtureContext.config.composedPacksDir, { recursive: true, force: true });
     }
   });
 

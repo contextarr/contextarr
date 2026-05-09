@@ -90,12 +90,13 @@ Current scope:
 - Context Pack Backup/Restore v0 with local backup directories, checksum manifests, validation-before-activation restore, and quarantine-only restore reports.
 - Registry Trust Foundation planning docs for future validation, scanner reports, signing, encryption, quarantine import, local re-scan, revocation, and public/private registry gates.
 - Local Security Scanner foundation with deterministic text-only reports and a `contextarr scan` CLI command.
+- Context Pack Draft Review v0 for `draft-packs/`, `imported-packs/`, and `composed-packs/`, with validation/scanner-gated activation-for-review into the active packs root.
 
 Not included yet:
 
 - Always-on web/API import endpoints.
 - Pack file editing from review actions.
-- Activating or approving composed draft packs automatically.
+- Approving draft packs automatically, exposing draft packs to exports/MCP automatically, or activating drafts without validation/scanner gates.
 - Skill execution or Agent Kit runtime behavior.
 - Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
 - Cloud backup or automatic restore activation.
@@ -237,6 +238,7 @@ Useful launch docs:
 - [docs/restore.md](docs/restore.md)
 - [docs/collectors.md](docs/collectors.md)
 - [docs/composed-packs.md](docs/composed-packs.md)
+- [docs/draft-review.md](docs/draft-review.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -279,6 +281,7 @@ pnpm phase27:verify
 pnpm backup:verify
 pnpm collectors:verify
 pnpm composer:verify
+pnpm drafts:verify
 pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
@@ -338,6 +341,14 @@ pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out 
 ```
 
 Restored packs land in quarantine/review output only. Contextarr validates restored packs and writes a restore report, but it does not activate packs automatically. See [docs/backups.md](docs/backups.md) and [docs/restore.md](docs/restore.md).
+
+Review local draft Context Packs:
+
+```bash
+pnpm drafts:verify
+```
+
+The dashboard route `#/drafts` inventories collector, importer, and composed draft roots. Activating a draft copies it into the active packs root for review only; it does not approve records, rebuild the index, or expose export/MCP content. See [docs/draft-review.md](docs/draft-review.md).
 
 Run the read-only MCP server:
 

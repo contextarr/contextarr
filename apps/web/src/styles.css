@@ -1340,6 +1340,70 @@ h1 {
   align-items: start;
 }
 
+.draft-review-grid {
+  grid-template-columns: minmax(280px, 0.75fr) minmax(480px, 1.35fr);
+}
+
+.draft-list,
+.draft-gates {
+  display: grid;
+  gap: 10px;
+}
+
+.draft-row {
+  align-items: center;
+  background: rgba(11, 18, 28, 0.68);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+  text-align: left;
+}
+
+.draft-row.is-selected {
+  border-color: rgba(40, 212, 215, 0.52);
+  box-shadow: 0 0 0 1px rgba(40, 212, 215, 0.1);
+}
+
+.draft-row span:first-child,
+.draft-detail-panel td:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.draft-row small,
+.draft-detail-panel td:first-child span {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.draft-gates {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.draft-gates h3 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.draft-gates ul {
+  color: var(--muted);
+  margin: 0;
+  padding-left: 18px;
+}
+
+.compact-summary {
+  margin: 4px 0;
+}
+
 .collector-form,
 .collector-preview,
 .import-result {
@@ -1597,6 +1661,18 @@ h1 {
   background: rgba(40, 212, 215, 0.12);
   border-color: rgba(40, 212, 215, 0.34);
   color: #a7f8fb;
+}
+
+.status-pill.healthy {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.3);
+  color: #bbf7d0;
+}
+
+.status-pill.needs-review {
+  background: rgba(255, 209, 102, 0.12);
+  border-color: rgba(255, 209, 102, 0.34);
+  color: #ffe29a;
 }
 
 .health-check-grid {

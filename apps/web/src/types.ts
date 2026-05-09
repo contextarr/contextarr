@@ -603,6 +603,113 @@ export interface ContextPackCollectorResult {
   };
 }
 
+export type DraftPackSourceType = "collector" | "imported" | "composed";
+
+export interface DraftValidationSummary {
+  valid: boolean;
+  status: string;
+  errors: number;
+  warnings: number;
+  infos: number;
+}
+
+export interface DraftSecuritySummary {
+  status: string;
+  recommendedAction: string;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  blocked: boolean;
+}
+
+export interface DraftActivationSummary {
+  canActivate: boolean;
+  status: "ready_for_review" | "review_required" | "blocked";
+  targetPackId: string | null;
+  blockingReasons: string[];
+  warnings: string[];
+}
+
+export interface DraftRecordSummary {
+  id: string;
+  title: string;
+  type: string;
+  privacy: string;
+  reviewStatus: string;
+  tags: string[];
+  sources: string[];
+}
+
+export interface ContextPackDraftSummary {
+  id: string;
+  sourceType: DraftPackSourceType;
+  sourceLabel: string;
+  relativePath: string;
+  packId: string | null;
+  name: string;
+  version: string | null;
+  description: string;
+  type: string | null;
+  visibility: string | null;
+  trustLevel: string | null;
+  recordCount: number;
+  sourceCount: number;
+  exportProfileCount: number;
+  contentHash: string;
+  validation: DraftValidationSummary;
+  security: DraftSecuritySummary;
+  activation: DraftActivationSummary;
+}
+
+export interface ContextPackDraftDetail extends ContextPackDraftSummary {
+  records: DraftRecordSummary[];
+  validationIssues: Array<{
+    severity: string;
+    code: string;
+    message: string;
+    file?: string;
+    path?: string;
+  }>;
+  securityFindings: Array<{
+    id?: string;
+    code: string;
+    severity: string;
+    category: string;
+    file: string;
+    path: string;
+    line?: number;
+    message: string;
+    recommendedAction: string;
+    blocking: boolean;
+    ruleId: string;
+    confidence: number;
+  }>;
+}
+
+export interface ContextPackDraftsResponse {
+  roots: Array<{ sourceType: DraftPackSourceType; label: string }>;
+  drafts: ContextPackDraftSummary[];
+}
+
+export interface DraftActivationResponse {
+  ok: true;
+  draftId: string;
+  packId: string;
+  sourceType: DraftPackSourceType;
+  contentHash: string;
+  activated: {
+    status: "activated_for_review";
+    indexed: false;
+    approvalChanged: false;
+    exportReady: false;
+    mcpReady: false;
+  };
+  validation: DraftValidationSummary;
+  security: DraftSecuritySummary;
+  warnings: string[];
+}
+
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
 export type ReviewObjectType = "pack" | "skill" | "agent_kit";
@@ -734,6 +841,7 @@ export type Route =
   | { name: "agentKits" }
   | { name: "agentKit"; agentKitId: string }
   | { name: "collectors" }
+  | { name: "drafts" }
   | { name: "reviewQueue" }
   | { name: "composer"; mode?: ComposerMode }
   | { name: "exports" }

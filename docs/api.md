@@ -47,7 +47,16 @@ Review item status changes are SQLite app state. They must not rewrite pack file
 - `POST /api/context-pack-collectors/:id/preview`: previews draft output for a collector without writing files.
 - `POST /api/context-pack-collectors/:id/run`: writes a private draft Context Pack under `CONTEXTARR_DRAFT_PACKS_DIR`, defaulting to ignored `draft-packs/`.
 
-Collector endpoints never accept an output path from the browser. Draft packs remain unindexed, unreviewed, private, and excluded from exports by default until a later review/activation workflow exists. Error responses must not expose submitted local input paths.
+Collector endpoints never accept an output path from the browser. Draft packs remain unindexed, unreviewed, private, and excluded from exports by default until they pass Draft Review gates. Error responses must not expose submitted local input paths.
+
+## Context Pack Draft Review Endpoints
+
+- `GET /api/context-pack-drafts`: inventories draft Context Packs from `CONTEXTARR_DRAFT_PACKS_DIR`, `CONTEXTARR_IMPORTED_PACKS_DIR`, and `CONTEXTARR_COMPOSED_PACKS_DIR`.
+- `GET /api/context-pack-drafts/:id`: returns draft detail, record metadata, validation issues, scanner findings, and activation gates.
+- `POST /api/context-pack-drafts/:id/validate`: reruns the read-only draft detail validation/scanner view.
+- `POST /api/context-pack-drafts/:id/activate`: copies a passing draft into `CONTEXTARR_PACKS_DIR/<pack-id>/` for review.
+
+Activation never overwrites active packs, never accepts arbitrary output paths, never approves records, never changes privacy, never removes `never_export` or `imported_draft` tags, and does not rebuild the index automatically. Activation is not approval and is not export or MCP exposure.
 
 ## Advanced Preview Endpoints
 

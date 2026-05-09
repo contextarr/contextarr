@@ -32,6 +32,10 @@ export function parseHashRoute(hash: string): Route {
     return { name: "collectors" };
   }
 
+  if (parts[0] === "drafts") {
+    return { name: "drafts" };
+  }
+
   if (parts[0] === "review-queue") {
     return { name: "reviewQueue" };
   }
@@ -81,6 +85,10 @@ export function agentKitsHref(): string {
 
 export function collectorsHref(): string {
   return "#/collectors";
+}
+
+export function draftsHref(): string {
+  return "#/drafts";
 }
 
 export function reviewQueueHref(): string {

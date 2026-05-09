@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const smokeRoot = path.join(repoRoot, ".contextarr-cache", "composer-save-smoke");
 const composedPacksDir = path.join(smokeRoot, "composed-packs");
+const importedPacksDir = path.join(smokeRoot, "imported-packs");
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
@@ -26,6 +27,7 @@ const config = {
   port: 0,
   packsDir: demoPacksDir,
   draftPacksDir: path.join(smokeRoot, "draft-packs"),
+  importedPacksDir,
   composedPacksDir,
   skillsDir: demoSkillsDir,
   importedSkillsDir: path.join(smokeRoot, "imported-skills"),

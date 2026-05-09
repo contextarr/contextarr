@@ -46,6 +46,13 @@ import {
   type ComposeDraftRecord
 } from "./composed-pack-writer";
 import {
+  activateContextPackDraft,
+  DraftPackError,
+  getContextPackDraft,
+  getDraftPackRoots,
+  listContextPackDrafts
+} from "./draft-packs";
+import {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,
@@ -232,6 +239,89 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
           return reply
             .code(statusForCollectorError(error))
             .send({ error: error.code, message: messageForCollectorError(error) });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  app.get("/api/context-pack-drafts", async () => {
+    try {
+      return {
+        roots: getDraftPackRoots(config).map((root) => ({
+          sourceType: root.sourceType,
+          label: root.label
+        })),
+        drafts: listContextPackDrafts(config)
+      };
+    } catch (error) {
+      if (error instanceof DraftPackError) {
+        return {
+          roots: [],
+          drafts: [],
+          warning: {
+            error: error.code,
+            message: error.message
+          }
+        };
+      }
+
+      throw error;
+    }
+  });
+
+  app.get<{ Params: { id: string } }>("/api/context-pack-drafts/:id", async (request, reply) => {
+    try {
+      const draft = getContextPackDraft(config, request.params.id);
+      if (!draft) {
+        return reply.code(404).send({ error: "not_found", message: `Context Pack draft not found: ${request.params.id}` });
+      }
+
+      return draft;
+    } catch (error) {
+      if (error instanceof DraftPackError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post<{ Params: { id: string } }>("/api/context-pack-drafts/:id/validate", async (request, reply) => {
+    try {
+      const draft = getContextPackDraft(config, request.params.id);
+      if (!draft) {
+        return reply.code(404).send({ error: "not_found", message: `Context Pack draft not found: ${request.params.id}` });
+      }
+
+      return {
+        ok: true,
+        draft
+      };
+    } catch (error) {
+      if (error instanceof DraftPackError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post<{ Params: { id: string }; Body: DraftActivationBody }>(
+    "/api/context-pack-drafts/:id/activate",
+    async (request, reply) => {
+      const parsed = parseDraftActivationBody(request.body ?? {});
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_draft_activation_request", message: parsed.message });
+      }
+
+      try {
+        const result = activateContextPackDraft(config, request.params.id, parsed.value);
+        return reply.code(201).send(result);
+      } catch (error) {
+        if (error instanceof DraftPackError) {
+          return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
         }
 
         throw error;
@@ -1289,6 +1379,10 @@ interface ContextPackCollectorBody {
   overwrite?: unknown;
 }
 
+interface DraftActivationBody {
+  expectedHash?: unknown;
+}
+
 interface SaveAgentKitBody {
   id?: unknown;
   name?: unknown;
@@ -1407,6 +1501,31 @@ function parseContextPackCollectorBody(
       maxRecords
     },
     overwrite: includeOverwrite ? Boolean(body.overwrite) : false
+  };
+}
+
+function parseDraftActivationBody(
+  body: DraftActivationBody
+): { ok: true; value: { expectedHash?: string } } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Draft activation request body must be an object." };
+  }
+
+  const allowedKeys = new Set(["expectedHash"]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Draft activation field is not allowed: ${unknownKey}.` };
+  }
+
+  if (body.expectedHash !== undefined && (typeof body.expectedHash !== "string" || !/^[a-f0-9]{64}$/i.test(body.expectedHash))) {
+    return { ok: false, message: "Draft activation expectedHash must be a SHA-256 hex string." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      expectedHash: trimOptional(body.expectedHash)
+    }
   };
 }
 

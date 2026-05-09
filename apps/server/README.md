@@ -19,6 +19,7 @@ Implemented through Phase 17:
 - expose Review Queue, pack health, and Skill health API endpoints
 - expose local export preview API endpoints
 - expose Composer preview and Context Pack save-as-draft-pack API endpoints
+- expose Context Pack draft inventory, validation, and activation-for-review API endpoints
 - optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`
 
 Run locally:
@@ -44,6 +45,8 @@ Skill Health review items cover validation, safety rules, disallowed pattern sca
 `POST /api/compose/preview` builds a temporary export artifact from selected pack records. It reuses local pack validation, redaction rules, and the shared export engine.
 
 `POST /api/compose/save-pack` writes selected approved `public_safe` records to a private unreviewed draft Context Pack under `CONTEXTARR_COMPOSED_PACKS_DIR`, defaulting to ignored `composed-packs/`. It applies source pack redaction rules to persisted drafts, validates before success, returns no local filesystem path, does not index drafts automatically, and does not mutate source pack files.
+
+`GET /api/context-pack-drafts` inventories draft Context Packs from collector, importer, and composed draft roots. `POST /api/context-pack-drafts/:id/activate` copies a passing draft into the active packs root for review only. Activation is not approval: it does not rewrite metadata, rebuild the index automatically, expose exports, or expose MCP.
 
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 

@@ -14,6 +14,7 @@ const requiredFiles = [
   "docs/api.md",
   "docs/collectors.md",
   "docs/composed-packs.md",
+  "docs/draft-review.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
@@ -55,6 +56,7 @@ if (!failed) {
   const apiDocs = read("docs/api.md");
   const collectorsDocs = read("docs/collectors.md");
   const composedPacksDocs = read("docs/composed-packs.md");
+  const draftReviewDocs = read("docs/draft-review.md");
   const configReference = read("docs/config-reference.md");
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
@@ -386,6 +388,38 @@ if (!failed) {
   }
   if (!serverReadme.includes("POST /api/compose/save-pack") || !serverReadme.includes("does not index drafts automatically")) {
     fail("Server README must document Composer save-as-draft-pack behavior.");
+  }
+
+  const requiredDraftReviewText = [
+    "CONTEXTARR_IMPORTED_PACKS_DIR",
+    "/api/context-pack-drafts",
+    "#/drafts",
+    "drafts:verify",
+    "Activation is not approval",
+    "does not rebuild the index",
+    "does not approve records",
+    "does not expose export",
+    "does not expose MCP"
+  ];
+  for (const text of requiredDraftReviewText) {
+    if (
+      !readme.includes(text) &&
+      !apiDocs.includes(text) &&
+      !draftReviewDocs.includes(text) &&
+      !architecture.includes(text) &&
+      !securityModel.includes(text)
+    ) {
+      fail(`README or docs are missing Draft Review text: ${text}`);
+    }
+  }
+  if (!packageJson.scripts["drafts:verify"]) {
+    fail("Root package scripts must include drafts:verify.");
+  }
+  if (!envExample.includes("CONTEXTARR_IMPORTED_PACKS_DIR=./imported-packs")) {
+    fail(".env.example must include CONTEXTARR_IMPORTED_PACKS_DIR.");
+  }
+  if (!configReference.includes("CONTEXTARR_IMPORTED_PACKS_DIR") || !configReference.includes("./imported-packs")) {
+    fail("Config reference must document CONTEXTARR_IMPORTED_PACKS_DIR.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

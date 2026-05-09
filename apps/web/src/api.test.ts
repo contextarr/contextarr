@@ -197,6 +197,64 @@ describe("Contextarr API client", () => {
     });
   });
 
+  it("reads, validates, and activates Context Pack draft review requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const draft = {
+      id: "draft-id",
+      packId: "draft-pack",
+      name: "Draft Pack",
+      sourceType: "imported",
+      activation: { canActivate: true },
+      contentHash: "a".repeat(64)
+    };
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/validate")) {
+          return jsonResponse({ ok: true, draft: { ...draft, records: [] } });
+        }
+        if (String(url).endsWith("/activate")) {
+          return jsonResponse({
+            ok: true,
+            draftId: "draft-id",
+            packId: "draft-pack",
+            sourceType: "imported",
+            contentHash: "a".repeat(64),
+            activated: {
+              status: "activated_for_review",
+              indexed: false,
+              approvalChanged: false,
+              exportReady: false,
+              mcpReady: false
+            },
+            validation: { valid: true, status: "valid", errors: 0, warnings: 0, infos: 0 },
+            security: { status: "policy_clean", recommendedAction: "quarantine", critical: 0, high: 0, medium: 0, low: 0, blocked: false },
+            warnings: []
+          });
+        }
+        if (String(url).endsWith("/draft-id")) {
+          return jsonResponse({ ...draft, records: [] });
+        }
+        return jsonResponse({ drafts: [draft] });
+      }
+    });
+
+    await expect(client.getContextPackDrafts()).resolves.toEqual([expect.objectContaining({ id: "draft-id" })]);
+    await expect(client.getContextPackDraft("draft-id")).resolves.toMatchObject({ packId: "draft-pack" });
+    await expect(client.validateContextPackDraft("draft-id")).resolves.toMatchObject({ packId: "draft-pack" });
+    await expect(client.activateContextPackDraft("draft-id", { expectedHash: "a".repeat(64) })).resolves.toMatchObject({
+      activated: { indexed: false, approvalChanged: false, exportReady: false, mcpReady: false }
+    });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/context-pack-drafts",
+      "/api/context-pack-drafts/draft-id",
+      "/api/context-pack-drafts/draft-id/validate",
+      "/api/context-pack-drafts/draft-id/activate"
+    ]);
+    expect(JSON.parse(String(requests[3].init?.body))).toEqual({ expectedHash: "a".repeat(64) });
+  });
+
   it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

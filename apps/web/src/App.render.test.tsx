@@ -44,6 +44,10 @@ const mocks = vi.hoisted(() => {
       getContextPackCollectors: vi.fn(),
       previewContextPackCollector: vi.fn(),
       runContextPackCollector: vi.fn(),
+      getContextPackDrafts: vi.fn(),
+      getContextPackDraft: vi.fn(),
+      validateContextPackDraft: vi.fn(),
+      activateContextPackDraft: vi.fn(),
       getAgentKits: vi.fn(),
       getAgentKit: vi.fn(),
       getAgentKitContextPacks: vi.fn(),
@@ -199,6 +203,36 @@ describe("App Skill UI routes", () => {
       warnings: [],
       validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
       draft: { status: "review_required", indexed: false }
+    });
+    mocks.apiClient.getContextPackDrafts.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve([draftSummaryFixture()]), 0);
+        })
+    );
+    mocks.apiClient.getContextPackDraft.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(draftDetailFixture()), 0);
+        })
+    );
+    mocks.apiClient.validateContextPackDraft.mockResolvedValue(draftDetailFixture());
+    mocks.apiClient.activateContextPackDraft.mockResolvedValue({
+      ok: true,
+      draftId: "draft-review-id",
+      packId: "draft-review-pack",
+      sourceType: "imported",
+      contentHash: "a".repeat(64),
+      activated: {
+        status: "activated_for_review",
+        indexed: false,
+        approvalChanged: false,
+        exportReady: false,
+        mcpReady: false
+      },
+      validation: { valid: true, status: "valid", errors: 0, warnings: 0, infos: 0 },
+      security: { status: "policy_clean", recommendedAction: "quarantine", critical: 0, high: 0, medium: 0, low: 0, blocked: false },
+      warnings: ["Activation copies the draft for review; it does not approve records, exports, or MCP exposure."]
     });
     mocks.apiClient.getAgentKits.mockResolvedValue([agentKitSummaryFixture()]);
     mocks.apiClient.getAgentKit.mockResolvedValue(agentKitDetailFixture());
@@ -588,6 +622,25 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.runContextPackCollector).not.toHaveBeenCalled();
   });
 
+  it("renders Draft Review and activates a draft through the supported API path", async () => {
+    mountApp("#/drafts");
+
+    await waitForText("Draft Review");
+    await waitForText("Imported Draft Review Pack");
+    await waitForText("Imported Note");
+    expect(document.body.textContent).toContain("draft-review-pack");
+    expect(document.body.textContent).toContain("Activate for Review");
+
+    await clickButtonAndFlush("Activate for Review");
+    await waitForText("activated for review");
+
+    expect(mocks.apiClient.getContextPackDrafts).toHaveBeenCalled();
+    expect(mocks.apiClient.getContextPackDraft).toHaveBeenCalledWith("draft-review-id");
+    expect(mocks.apiClient.activateContextPackDraft).toHaveBeenCalledWith("draft-review-id", {
+      expectedHash: "a".repeat(64)
+    });
+  });
+
   it("keeps the local Skill import lane available when enabled", async () => {
     mocks.apiClient.getHealth.mockResolvedValue({ ...healthFixture(), localImportsEnabled: true });
 
@@ -971,6 +1024,54 @@ function packDetailFixture() {
     },
     sources: [],
     exportProfiles: []
+  };
+}
+
+function draftSummaryFixture() {
+  return {
+    id: "draft-review-id",
+    sourceType: "imported",
+    sourceLabel: "Imported Packs",
+    relativePath: "draft-review-pack",
+    packId: "draft-review-pack",
+    name: "Imported Draft Review Pack",
+    version: "0.0.1",
+    description: "Private unreviewed draft Context Pack.",
+    type: "imported_notes",
+    visibility: "private",
+    trustLevel: "unreviewed",
+    recordCount: 1,
+    sourceCount: 1,
+    exportProfileCount: 0,
+    contentHash: "a".repeat(64),
+    validation: { valid: true, status: "valid", errors: 0, warnings: 0, infos: 0 },
+    security: { status: "policy_clean", recommendedAction: "quarantine", critical: 0, high: 0, medium: 0, low: 0, blocked: false },
+    activation: {
+      canActivate: true,
+      status: "review_required",
+      targetPackId: "draft-review-pack",
+      blockingReasons: [],
+      warnings: ["Activation copies the draft for review; it does not approve records, exports, or MCP exposure."]
+    }
+  };
+}
+
+function draftDetailFixture() {
+  return {
+    ...draftSummaryFixture(),
+    records: [
+      {
+        id: "draft-review-pack.note",
+        title: "Imported Note",
+        type: "imported_note",
+        privacy: "private",
+        reviewStatus: "draft",
+        tags: ["imported_draft", "never_export"],
+        sources: ["draft-review-pack.source.note"]
+      }
+    ],
+    validationIssues: [],
+    securityFindings: []
   };
 }
 

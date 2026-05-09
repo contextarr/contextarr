@@ -39,6 +39,17 @@ export {
 export { loadPacks } from "./pack-loader";
 export { loadAgentKits } from "./agent-kit-loader";
 export { getAgentKitTemplate, loadAgentKitTemplates } from "./agent-kit-template-loader";
+export {
+  activateContextPackDraft,
+  getContextPackDraft,
+  getDraftPackRoots,
+  listContextPackDrafts,
+  DraftPackError,
+  type DraftActivationResult,
+  type DraftPackDetail,
+  type DraftPackSummary,
+  type DraftPackSourceType
+} from "./draft-packs";
 export { loadSkills } from "./skill-loader";
 export type {
   AgentKitSummary,

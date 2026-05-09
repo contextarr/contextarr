@@ -11,6 +11,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     port: Number.parseInt(env.CONTEXTARR_PORT ?? "3210", 10),
     packsDir: resolveFrom(invocationRoot, env.CONTEXTARR_PACKS_DIR ?? "./demo-packs"),
     draftPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_DRAFT_PACKS_DIR ?? "./draft-packs"),
+    importedPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_PACKS_DIR ?? "./imported-packs"),
     composedPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_COMPOSED_PACKS_DIR ?? "./composed-packs"),
     skillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_SKILLS_DIR ?? "./demo-skills"),
     importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
@@ -26,6 +27,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   assertSkillDirectorySeparation(config);
   assertAgentKitDirectorySeparation(config);
   assertDraftPackDirectorySeparation(config);
+  assertImportedPackDirectorySeparation(config);
   assertComposedPackDirectorySeparation(config);
   return config;
 }
@@ -84,17 +86,47 @@ export function assertDraftPacksDirectory(config: Pick<ServerConfig, "draftPacks
   }
 }
 
+export function assertImportedPackDirectorySeparation(
+  config: Pick<ServerConfig, "packsDir" | "draftPacksDir" | "importedPacksDir" | "composedPacksDir">
+): void {
+  const indexed = path.resolve(config.packsDir);
+  const drafts = path.resolve(config.draftPacksDir);
+  const imported = path.resolve(config.importedPacksDir);
+  const composed = path.resolve(config.composedPacksDir);
+  if (pathsOverlap(indexed, imported)) {
+    throw new Error("CONTEXTARR_IMPORTED_PACKS_DIR must not overlap CONTEXTARR_PACKS_DIR.");
+  }
+  if (pathsOverlap(drafts, imported)) {
+    throw new Error("CONTEXTARR_IMPORTED_PACKS_DIR must not overlap CONTEXTARR_DRAFT_PACKS_DIR.");
+  }
+  if (pathsOverlap(imported, composed)) {
+    throw new Error("CONTEXTARR_IMPORTED_PACKS_DIR must not overlap CONTEXTARR_COMPOSED_PACKS_DIR.");
+  }
+}
+
+export function assertImportedPacksDirectory(config: Pick<ServerConfig, "importedPacksDir">): void {
+  const resolved = path.resolve(config.importedPacksDir);
+  fs.mkdirSync(resolved, { recursive: true });
+  if (!fs.statSync(resolved).isDirectory()) {
+    throw new Error("CONTEXTARR_IMPORTED_PACKS_DIR must be a directory.");
+  }
+}
+
 export function assertComposedPackDirectorySeparation(
-  config: Pick<ServerConfig, "packsDir" | "composedPacksDir" | "draftPacksDir">
+  config: Pick<ServerConfig, "packsDir" | "composedPacksDir" | "draftPacksDir" | "importedPacksDir">
 ): void {
   const indexed = path.resolve(config.packsDir);
   const composed = path.resolve(config.composedPacksDir);
   const drafts = path.resolve(config.draftPacksDir);
+  const imported = path.resolve(config.importedPacksDir);
   if (pathsOverlap(indexed, composed)) {
     throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must not overlap CONTEXTARR_PACKS_DIR.");
   }
   if (pathsOverlap(drafts, composed)) {
     throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must not overlap CONTEXTARR_DRAFT_PACKS_DIR.");
+  }
+  if (pathsOverlap(imported, composed)) {
+    throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must not overlap CONTEXTARR_IMPORTED_PACKS_DIR.");
   }
 }
 

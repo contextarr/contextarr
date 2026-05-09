@@ -386,6 +386,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     port: 0,
     packsDir: demoPacksDir,
     draftPacksDir: path.join(repoRoot, "draft-packs"),
+    importedPacksDir: path.join(repoRoot, "imported-packs"),
     composedPacksDir: path.join(repoRoot, "composed-packs"),
     skillsDir: demoSkillsDir,
     importedSkillsDir: path.join(repoRoot, "imported-skills"),

@@ -24,6 +24,8 @@ Contextarr currently supports:
 - Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
 - Registry Trust Foundation planning docs plus a local scanner foundation for deterministic text-only scanner reports. This is local policy infrastructure only; no public registry or marketplace exists today.
 - Context Pack collector v0 creates private unreviewed draft packs under `draft-packs/` without activating them.
+- Composer save-as-draft-pack creates private unreviewed draft Context Packs under `composed-packs/`.
+- Draft Review v0 inventories `draft-packs/`, `imported-packs/`, and `composed-packs/`, then copies passing drafts into the active packs root for review without approval or exposure.
 
 ## Second PRD Direction
 
@@ -51,6 +53,10 @@ Phase 3A: Registry Trust Foundation defines how a future trusted registry should
 
 Context Pack Collectors v0 is now part of the v1 core hardening lane. It creates local private draft packs from starter templates or local text/Markdown folders under `CONTEXTARR_DRAFT_PACKS_DIR`. It does not activate drafts or expand Skills/Agent Kits.
 
+Composer Save-As-Pack v0 is now part of the v1 core hardening lane. It saves selected approved `public_safe` records as private unreviewed draft Context Packs under `CONTEXTARR_COMPOSED_PACKS_DIR`, preserves provenance, validates before success, and keeps generated drafts excluded from export/MCP by default.
+
+Context Pack Draft Review v0 is now part of the v1 core hardening lane. It inventories collector, importer, and composed draft roots, runs validation/scanner gates, and can copy a passing draft into `CONTEXTARR_PACKS_DIR` for review. Activation is not approval and does not rebuild the index, expose exports, or expose MCP.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.
@@ -72,6 +78,8 @@ Context Pack Collectors v0 is now part of the v1 core hardening lane. It creates
 - Phase 28: Signing and trust model research. Complete.
 - Phase 3A: Registry Trust Foundation. Planning/architecture added; local scanner foundation added; registry implementation remains deferred.
 - Context Pack Collectors v0: local draft Context Pack creation. Complete.
+- Composer Save-As-Pack v0: durable private draft pack output from selected approved records. Complete.
+- Draft Review v0: validation/scanner-gated activation-for-review from draft roots. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.

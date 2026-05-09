@@ -6,6 +6,7 @@ import {
   assertAgentKitDirectorySeparation,
   assertComposedPackDirectorySeparation,
   assertDraftPackDirectorySeparation,
+  assertImportedPackDirectorySeparation,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
   getSkillIndexDirs,
@@ -22,6 +23,7 @@ describe("server config", () => {
     expect(config.agentKitTemplatesDir).toBe(path.join(root, "agent-kit-templates"));
     expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
     expect(config.draftPacksDir).toBe(path.join(root, "draft-packs"));
+    expect(config.importedPacksDir).toBe(path.join(root, "imported-packs"));
     expect(config.composedPacksDir).toBe(path.join(root, "composed-packs"));
     expect(config.localImportsEnabled).toBe(false);
   });
@@ -45,8 +47,24 @@ describe("server config", () => {
     ).toThrow(/must not overlap/);
   });
 
-  it("rejects indexed, draft, and composed Context Pack directory overlap", () => {
+  it("rejects indexed, draft, imported, and composed Context Pack directory overlap", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_PACKS_DIR: "./demo-packs",
+        CONTEXTARR_IMPORTED_PACKS_DIR: "./demo-packs"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_DRAFT_PACKS_DIR: "./draft-packs",
+        CONTEXTARR_IMPORTED_PACKS_DIR: "./draft-packs/imported"
+      })
+    ).toThrow(/must not overlap/);
 
     expect(() =>
       loadConfig({
@@ -68,7 +86,17 @@ describe("server config", () => {
       assertComposedPackDirectorySeparation({
         packsDir: path.join(root, "demo-packs"),
         draftPacksDir: path.join(root, "draft-packs"),
+        importedPacksDir: path.join(root, "imported-packs"),
         composedPacksDir: path.join(root, "demo-packs", "composed")
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      assertImportedPackDirectorySeparation({
+        packsDir: path.join(root, "demo-packs"),
+        draftPacksDir: path.join(root, "draft-packs"),
+        importedPacksDir: path.join(root, "composed-packs", "imported"),
+        composedPacksDir: path.join(root, "composed-packs")
       })
     ).toThrow(/must not overlap/);
   });

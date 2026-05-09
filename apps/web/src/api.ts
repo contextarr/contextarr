@@ -17,6 +17,10 @@ import type {
   ContextPackCollectorPreview,
   ContextPackCollectorRequest,
   ContextPackCollectorResult,
+  ContextPackDraftDetail,
+  ContextPackDraftSummary,
+  ContextPackDraftsResponse,
+  DraftActivationResponse,
   ExportArtifact,
   PackDetail,
   PackHealthResponse,
@@ -70,6 +74,10 @@ export interface ApiClient {
   getContextPackCollectors(): Promise<ContextPackCollectorDefinition[]>;
   previewContextPackCollector(id: ContextPackCollectorId, request: ContextPackCollectorRequest): Promise<ContextPackCollectorPreview>;
   runContextPackCollector(id: ContextPackCollectorId, request: ContextPackCollectorRequest): Promise<ContextPackCollectorResult>;
+  getContextPackDrafts(): Promise<ContextPackDraftSummary[]>;
+  getContextPackDraft(id: string): Promise<ContextPackDraftDetail>;
+  validateContextPackDraft(id: string): Promise<ContextPackDraftDetail>;
+  activateContextPackDraft(id: string, request?: { expectedHash?: string }): Promise<DraftActivationResponse>;
   getAgentKits(): Promise<AgentKitSummary[]>;
   getAgentKit(id: string): Promise<AgentKitDetail>;
   getAgentKitContextPacks(id: string): Promise<AgentKitContextPackSummary[]>;
@@ -178,6 +186,29 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       }),
     runContextPackCollector: (id: ContextPackCollectorId, body: ContextPackCollectorRequest) =>
       requestJson<ContextPackCollectorResult>(`/api/context-pack-collectors/${encodeURIComponent(id)}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    getContextPackDrafts: async () => {
+      const response = await requestJson<ContextPackDraftsResponse>("/api/context-pack-drafts");
+      return response.drafts;
+    },
+    getContextPackDraft: (id: string) =>
+      requestJson<ContextPackDraftDetail>(`/api/context-pack-drafts/${encodeURIComponent(id)}`),
+    validateContextPackDraft: async (id: string) => {
+      const response = await requestJson<{ ok: true; draft: ContextPackDraftDetail }>(
+        `/api/context-pack-drafts/${encodeURIComponent(id)}/validate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}"
+        }
+      );
+      return response.draft;
+    },
+    activateContextPackDraft: (id: string, body: { expectedHash?: string } = {}) =>
+      requestJson<DraftActivationResponse>(`/api/context-pack-drafts/${encodeURIComponent(id)}/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

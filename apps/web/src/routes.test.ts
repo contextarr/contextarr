@@ -4,6 +4,7 @@ import {
   agentKitsHref,
   collectorsHref,
   composerHref,
+  draftsHref,
   exportsHref,
   healthHref,
   packHref,
@@ -47,6 +48,7 @@ describe("hash routes", () => {
       agentKitId: "support-ticket-writing-kit"
     });
     expect(parseHashRoute("#/collectors")).toEqual({ name: "collectors" });
+    expect(parseHashRoute("#/drafts")).toEqual({ name: "drafts" });
   });
 
   it("parses Skill routes", () => {
@@ -65,6 +67,7 @@ describe("hash routes", () => {
     expect(agentKitsHref()).toBe("#/agent-kits");
     expect(agentKitHref("agent kit/id")).toBe("#/agent-kits/agent%20kit%2Fid");
     expect(collectorsHref()).toBe("#/collectors");
+    expect(draftsHref()).toBe("#/drafts");
     expect(reviewQueueHref()).toBe("#/review-queue");
     expect(composerHref()).toBe("#/composer");
     expect(composerHref("agent-kit")).toBe("#/composer/agent-kit");
