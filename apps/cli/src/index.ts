@@ -42,6 +42,7 @@ import {
   type ValidationResult
 } from "@contextarr/pack-validator";
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
+import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
   formatSkillValidationResult,
   SkillReadError,
@@ -263,6 +264,29 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         }
       }
     );
+
+  program
+    .command("scan")
+    .argument("<path>", "local Contextarr artifact file or directory to scan")
+    .option("--format <format>", "output format: text or json", "text")
+    .action((targetPath: string, options: { format: string }) => {
+      const format = parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const report = scanArtifact({ path: resolveUserPath(targetPath) });
+        io.stdout.write(format === "json" ? `${JSON.stringify(report, null, 2)}\n` : formatSecurityScannerReport(report));
+        exitCode = isBlockingScanReport(report) ? 1 : 0;
+      } catch (error) {
+        io.stderr.write(`${error instanceof SecurityScannerError ? error.message : errorMessage(error)}\n`);
+        exitCode = error instanceof SecurityScannerError && isScannerUsageError(error.code) ? 2 : 1;
+      }
+    });
 
   program
     .command("validate")
@@ -511,6 +535,14 @@ function isBackupUsageError(code: string): boolean {
 
 function isRestoreUsageError(code: string): boolean {
   return code === "restore.input_unreadable" || code === "restore.manifest_missing" || code === "path.unsafe" || code === "path.escape";
+}
+
+function isScannerUsageError(code: string): boolean {
+  return code === "scan.input_missing" || code === "scan.input_unsupported" || code === "scan.path_escape";
+}
+
+function isBlockingScanReport(report: SecurityScannerReportV1): boolean {
+  return report.status === "blocked" || report.status === "critical_findings" || report.status === "scanning_failed";
 }
 
 function resolveUserPath(value: string): string {

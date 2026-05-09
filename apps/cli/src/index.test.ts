@@ -22,6 +22,7 @@ const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
+const scannerFixturesDir = path.join(repoRoot, "packages/security-scanner/test/fixtures");
 const tempDirs: string[] = [];
 
 function fixture(name: string): string {
@@ -421,6 +422,61 @@ describe("contextarr CLI", () => {
     });
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "restore-report.json"))).toBe(true);
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "ai-workstation-pack", "contextarr-pack.json"))).toBe(true);
+  });
+
+  it("scans local artifacts in text and JSON formats", async () => {
+    const cleanOutput = createIo();
+    const warningOutput = createIo();
+    const blockedOutput = createIo();
+    const credentialOutput = createIo();
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "clean-context-pack")], cleanOutput.io)).toBe(0);
+    expect(cleanOutput.stdout).toContain("Status: policy_clean");
+
+    expect(
+      await runCli(["scan", path.join(scannerFixturesDir, "suspicious-but-reviewable-pack"), "--format", "json"], warningOutput.io)
+    ).toBe(0);
+    expect(JSON.parse(warningOutput.stdout)).toMatchObject({
+      status: "policy_warning",
+      recommendedAction: "review"
+    });
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "shell-command-pack"), "--format", "json"], blockedOutput.io)).toBe(1);
+    expect(JSON.parse(blockedOutput.stdout)).toMatchObject({
+      status: "blocked",
+      recommendedAction: "block"
+    });
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "credential-pack"), "--format", "json"], credentialOutput.io)).toBe(1);
+    expect(JSON.parse(credentialOutput.stdout)).toMatchObject({
+      status: "blocked",
+      summary: {
+        secretHits: expect.any(Number)
+      }
+    });
+    expect(credentialOutput.stdout).not.toContain("ctx_fake_example_key_1234567890");
+  });
+
+  it("returns expected codes for scan usage failures", async () => {
+    const formatOutput = createIo();
+    const readOutput = createIo();
+    const failedOutput = createIo();
+    const badDir = tempDir();
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "clean-context-pack"), "--format", "yaml"], formatOutput.io)).toBe(2);
+    expect(formatOutput.stderr).toContain("Unsupported output format");
+
+    expect(await runCli(["scan", "does-not-exist"], readOutput.io)).toBe(2);
+    expect(readOutput.stderr).toContain("Scan path does not exist");
+
+    fs.writeFileSync(path.join(badDir, "contextarr-pack.json"), JSON.stringify({ id: "bad-cli-scan", version: "0.0.1" }));
+    fs.writeFileSync(path.join(badDir, "README.md"), Buffer.from([0x23, 0x20, 0x62, 0x61, 0x64, 0x00]));
+
+    expect(await runCli(["scan", badDir, "--format", "json"], failedOutput.io)).toBe(1);
+    expect(JSON.parse(failedOutput.stdout)).toMatchObject({
+      status: "scanning_failed",
+      recommendedAction: "block"
+    });
   });
 
   it("returns expected codes for backup and restore failures", async () => {

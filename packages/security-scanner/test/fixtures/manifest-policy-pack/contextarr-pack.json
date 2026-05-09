@@ -1,0 +1,12 @@
+{
+  "id": "manifest-policy-pack",
+  "name": "Manifest Policy Pack",
+  "version": "0.0.1",
+  "description": "Fixture with unsafe manifest flags.",
+  "containsExecutableCode": true,
+  "requiresNetwork": true,
+  "permissions": {
+    "runCommands": true,
+    "networkAccess": true
+  }
+}

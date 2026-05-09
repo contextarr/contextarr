@@ -1,0 +1,12 @@
+{
+  "id": "clean-context-pack",
+  "name": "Clean Context Pack",
+  "version": "0.0.1",
+  "description": "Public-safe fixture for scanner tests.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

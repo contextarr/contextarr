@@ -1,0 +1,12 @@
+{
+  "id": "credential-pack",
+  "name": "Credential Pack",
+  "version": "0.0.1",
+  "description": "Fixture with fake credential-like content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

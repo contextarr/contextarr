@@ -46,7 +46,7 @@
 - Define scanner limitations.
 - Define local re-scan before activation.
 - Define strict no-execution policy for registry content.
-- Optional code deliverables only if separately scoped: `packages/security-scanner` placeholder types, scanner fixture docs, and deterministic report contracts.
+- Local code deliverables: `packages/security-scanner` deterministic report types, scanner fixtures, and `contextarr scan` CLI command.
 - Hard boundaries: no public registry server, marketplace UI, payments, creator accounts, remote install, auto-activation, executable packs, executable Skills, Agent Kit runtime, hidden network calls, or telemetry.
 
 ## Phase 4: Web UI Shell and Library

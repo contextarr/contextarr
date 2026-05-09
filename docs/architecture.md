@@ -27,6 +27,7 @@ apps/server
 apps/cli
 apps/mcp
 packages/schema
+packages/security-scanner
 packages/renderer
 packages/pack-validator
 packages/skill-validator
@@ -107,7 +108,7 @@ Contextarr is evolving toward a trusted package manager for AI-ready context, bu
 
 Future registry artifacts are structured bundles containing metadata, an encrypted artifact payload, hashes, validation reports, scanner reports, human review records, license/source summaries, signatures, and revocation metadata. A listed artifact is not trusted merely because it appears in a registry.
 
-A scanner is a gate, not a guarantee. The future `packages/security-scanner` package may provide deterministic local scanner report types, policy checks, fixtures, and eventually text-only scanner primitives. It must not call external APIs, fetch networks, execute files, or copy third-party scanner rules. Scanner status can block known bad patterns and enforce Contextarr policy, but it cannot prove arbitrary natural-language instructions are safe in every downstream agent runtime.
+A scanner is a gate, not a guarantee. The `packages/security-scanner` package provides deterministic local scanner report types, policy checks, fixtures, and text-only scanner primitives. It must not call external APIs, fetch networks, execute files, or copy third-party scanner rules. Scanner status can block known bad patterns and enforce Contextarr policy, but it cannot prove arbitrary natural-language instructions are safe in every downstream agent runtime.
 
 Every imported registry item must enter quarantine first. Activation requires signature and hash verification, local re-scan, local validation, human review, and approval. Unreviewed or quarantined artifacts must not be exposed through exports or MCP by default. Revoked artifacts remain local but are blocked from export and MCP exposure by default.
 

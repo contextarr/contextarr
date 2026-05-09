@@ -1,0 +1,12 @@
+{
+  "id": "executable-file-pack",
+  "name": "Executable File Pack",
+  "version": "0.0.1",
+  "description": "Fixture with script file content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

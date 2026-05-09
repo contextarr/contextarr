@@ -1,32 +1,29 @@
 # Security Scanner
 
-Status: future package design. `packages/security-scanner` is not implemented by this document.
+Status: Phase 3A local scanner foundation plus future registry scanner design.
 
-The future security scanner is a deterministic local policy gate for Contextarr registry artifacts, imports, backups, and draft objects. It should help Contextarr block known bad patterns, suspicious instructions, executable files, credential requests, and policy violations before content is activated, exported, or exposed through MCP.
+The security scanner is a deterministic local policy gate for Contextarr registry artifacts, imports, backups, and draft objects. It should help Contextarr block known bad patterns, suspicious instructions, executable files, credential requests, and policy violations before content is activated, exported, or exposed through MCP.
 
 A scanner is a gate, not a guarantee.
 
-## Future Package
+## Current Package
 
-Future package path:
+Current package path:
 
 ```text
 packages/security-scanner
 ```
 
-Planned files if implementation is later approved:
+Implemented foundation:
 
-```text
-packages/security-scanner/
-  package.json
-  src/index.ts
-  src/types.ts
-  src/report.ts
-  src/policies.ts
-  src/index.test.ts
-```
+- deterministic `SecurityScannerReportV1` types
+- deterministic text-only scan reports
+- `contextarr scan <path> --format text|json`
+- executable and script extension blocking
+- obvious credential, shell-command, hidden-instruction, remote-instruction, unsafe-claim, and manifest-policy checks
+- redacted evidence snippets for secret-like findings
 
-Do not add this package until a scoped implementation phase explicitly permits it.
+This foundation does not implement registry import, remote install, signing, encryption, hosted scanning, AI-assisted scanning, or marketplace review. Future work may extend the package only through scoped implementation phases.
 
 ## Scanner Scope
 

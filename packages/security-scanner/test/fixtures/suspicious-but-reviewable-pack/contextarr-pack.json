@@ -1,0 +1,12 @@
+{
+  "id": "suspicious-but-reviewable-pack",
+  "name": "Suspicious But Reviewable Pack",
+  "version": "0.0.1",
+  "description": "Fixture with warning-only content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

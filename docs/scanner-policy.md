@@ -1,8 +1,10 @@
 # Scanner Policy
 
-Status: policy draft for a future deterministic security scanner. No scanner package is implemented by this document.
+Status: policy draft for the deterministic security scanner and future registry scanning.
 
 The scanner enforces Contextarr policy for local imports, registry artifacts, and quarantine activation. A scanner is a gate, not a guarantee.
+
+The current local foundation is intentionally narrow: deterministic text scanning, executable/script file detection, manifest policy checks, and redacted findings. It does not call AI models, fetch networks, execute files, or parse binary assets.
 
 ## Policy Goals
 

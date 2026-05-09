@@ -1,0 +1,12 @@
+{
+  "id": "remote-instruction-pack",
+  "name": "Remote Instruction Pack",
+  "version": "0.0.1",
+  "description": "Fixture with remote instruction loading content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

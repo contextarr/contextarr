@@ -1,0 +1,12 @@
+{
+  "id": "binary-skipped-pack",
+  "name": "Binary Skipped Pack",
+  "version": "0.0.1",
+  "description": "Fixture with binary-like asset extension.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

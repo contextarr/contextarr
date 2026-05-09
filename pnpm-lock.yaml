@@ -59,6 +59,9 @@ importers:
       '@contextarr/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
+      '@contextarr/security-scanner':
+        specifier: workspace:*
+        version: link:../../packages/security-scanner
       '@contextarr/skill-validator':
         specifier: workspace:*
         version: link:../../packages/skill-validator
@@ -267,6 +270,8 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/security-scanner: {}
 
   packages/skill-validator:
     dependencies:

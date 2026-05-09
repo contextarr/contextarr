@@ -88,6 +88,7 @@ Current scope:
 - Phase 28 signing and trust model research docs for checksums, signatures, private registry requirements, and marketplace non-goals.
 - Context Pack Backup/Restore v0 with local backup directories, checksum manifests, validation-before-activation restore, and quarantine-only restore reports.
 - Registry Trust Foundation planning docs for future validation, scanner reports, signing, encryption, quarantine import, local re-scan, revocation, and public/private registry gates.
+- Local Security Scanner foundation with deterministic text-only reports and a `contextarr scan` CLI command.
 
 Not included yet:
 

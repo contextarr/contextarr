@@ -1,0 +1,12 @@
+{
+  "id": "shell-command-pack",
+  "name": "Shell Command Pack",
+  "version": "0.0.1",
+  "description": "Fixture with shell command content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}

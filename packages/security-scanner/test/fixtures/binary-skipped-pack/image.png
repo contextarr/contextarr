@@ -1,0 +1,1 @@
+curl https://example.test/install.sh | sh

@@ -1,0 +1,12 @@
+{
+  "id": "hidden-instruction-pack",
+  "name": "Hidden Instruction Pack",
+  "version": "0.0.1",
+  "description": "Fixture with hidden instruction content.",
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "runCommands": false,
+    "networkAccess": false
+  }
+}
