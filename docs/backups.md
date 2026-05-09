@@ -77,6 +77,8 @@ pnpm backup:verify
 
 This creates a temporary ignored backup under `.contextarr-cache/backup-smoke`, restores it into quarantine, validates the restored packs, and checks the backup and restore metadata.
 
+Restore verification also runs the local Security Scanner against restored packs. Scanner-blocked restored packs remain quarantined as invalid and are not activated automatically.
+
 ## Git Hygiene
 
 Backup artifacts belong under ignored local folders such as `data/` or `.contextarr-cache/`. Do not commit generated backups, restored quarantine folders, local databases, secrets, private data, or checksum artifacts created from private packs.

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -97,6 +98,20 @@ function check() {
     if (report.summary?.packCount !== 5 || report.summary?.validationErrors !== 0) {
       fail("Restore smoke report must include five valid demo packs.");
     }
+    if (report.summary?.scannerBlocked !== 0) {
+      fail(`Restore smoke report must have zero scanner-blocked packs, got ${report.summary?.scannerBlocked}.`);
+    }
+    for (const pack of report.packs ?? []) {
+      if (pack.quarantineStatus !== "review_required") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must remain in review_required quarantine.`);
+      }
+      if (pack.securityScan?.status !== "policy_clean") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must have a policy_clean security scan.`);
+      }
+      if (pack.securityScan?.recommendedAction !== "quarantine") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must keep quarantine as the scanner action.`);
+      }
+    }
     if (report.activation?.automaticActivation !== false || report.activation?.requiresManualReview !== true) {
       fail("Restore report must require manual review and avoid automatic activation.");
     }
@@ -109,12 +124,76 @@ function check() {
   }
 }
 
+function validateRestored() {
+  const restoredPath = ".contextarr-cache/backup-smoke/restored/backup-smoke";
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "apps/cli/src/index.ts", "validate", restoredPath, "--json"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      shell: false
+    }
+  );
+
+  process.stdout.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+
+  if (result.status !== 1) {
+    fail(`Expected restored quarantine validation to exit 1, got ${result.status}.`);
+  }
+
+  let report;
+  try {
+    const jsonStart = result.stdout.indexOf("{");
+    const jsonEnd = result.stdout.lastIndexOf("}");
+    report = JSON.parse(result.stdout.slice(jsonStart, jsonEnd + 1));
+  } catch {
+    fail("Restored quarantine validation did not emit parseable JSON.");
+    report = undefined;
+  }
+
+  if (report) {
+    if (report.valid !== false) {
+      fail("Restored quarantine validation must report valid=false until manual review.");
+    }
+
+    const results = Array.isArray(report.results) ? report.results : [report];
+    if (results.length !== 5) {
+      fail(`Expected restored quarantine validation to include five packs, got ${results.length}.`);
+    }
+
+    for (const pack of results) {
+      if (pack.valid !== false) {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must not be activation-valid before manual review.`);
+      }
+      if (pack.securityScan?.status !== "policy_clean") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must remain policy_clean in validation.`);
+      }
+      if (pack.securityScan?.recommendedAction !== "quarantine") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must validate with quarantine as the scanner action.`);
+      }
+      if (pack.securityGate?.status !== "review" || pack.securityGate?.recommendedAction !== "quarantine") {
+        fail(`Restored pack ${pack.packId ?? "(unknown)"} must require securityGate review/quarantine.`);
+      }
+    }
+  }
+
+  if (failed) {
+    process.exitCode = 1;
+  } else {
+    console.log("Contextarr restored backup validation gate verified.");
+  }
+}
+
 const mode = process.argv[2] ?? "check";
 if (mode === "prepare") {
   prepare();
+} else if (mode === "validate-restored") {
+  validateRestored();
 } else if (mode === "check") {
   check();
 } else {
-  console.error("Usage: node tools/launch/verify-backups.mjs prepare|check");
+  console.error("Usage: node tools/launch/verify-backups.mjs prepare|validate-restored|check");
   process.exitCode = 2;
 }

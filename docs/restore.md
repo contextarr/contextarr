@@ -34,14 +34,16 @@ Restore performs these checks before writing a report:
 - Verifies each pack manifest checksum.
 - Copies files into the requested quarantine output root.
 - Runs the Context Pack validator on each restored pack.
+- Runs the local Security Scanner on each restored pack.
 - Writes `restore-report.json`.
 
 The restore report records:
 
 - `schemaVersion: contextarr.restore-report.v1`
-- `status: restored_to_quarantine` or `restored_with_validation_errors`
+- `status: restored_to_quarantine`, `restored_with_validation_errors`, or `restored_with_security_findings`
 - checksum status for every restored pack
 - validation summary and issues
+- security scan status, summary, findings, limitations, and recommended action
 - manual review requirement
 - `automaticActivation: false`
 
@@ -77,6 +79,8 @@ Restore fails before activation if:
 
 Validation errors after copying keep the restored files quarantined and are reported in `restore-report.json`.
 
+Security scanner blocks also keep restored files quarantined as invalid and are reported in `restore-report.json`. A scanner is a gate, not a guarantee; a clean scan still requires human review before activation.
+
 ## Recommended Review Flow
 
 1. Restore into an ignored local folder such as `data/restored-packs`.
@@ -88,4 +92,5 @@ pnpm --filter @contextarr/cli contextarr validate data/restored-packs/<backup-id
 ```
 
 4. Review warnings, source freshness, license status, and export readiness.
+   Validation under a restored backup tree keeps restored packs under imported-source scanner trust, so clean scanner results should still show quarantine rather than activation.
 5. Only after review, manually copy approved packs into the active packs directory.

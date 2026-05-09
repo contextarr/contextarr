@@ -34,6 +34,12 @@ Core fields:
 - `issues`: deterministic sorted validation issues.
 - `redactionHits`: deterministic redaction warn-hit entries.
 - `exportReadiness`: pack-level export readiness and per-profile readiness.
+- `securityScan`: local Security Scanner summary for Context Pack reports emitted by `contextarr validate --json`.
+- `securityGate`: scanner gate outcome for the report: `passed`, `review`, or `blocked`.
+
+For Context Pack reports, `valid` is the activation gate result, not just schema validity. A structurally valid pack with `securityScan.status: "blocked"`, `critical_findings`, or `scanning_failed` must report `valid: false`, `validationStatus: "invalid"`, and `securityGate.blocking: true`. A clean but imported or restored pack that still has `recommendedAction: "quarantine"` must also report `valid: false` until manual review promotes it out of quarantine.
+
+Clean restored backup content remains quarantined. When validation runs inside a restored backup tree that contains `restore-report.json`, the security scan uses imported-source trust and should keep `recommendedAction: "quarantine"` even when the scan is `policy_clean`.
 
 Directory validation wraps results in:
 
@@ -101,3 +107,4 @@ Validation must not:
 - mutate pack files
 - trust imported draft content automatically
 
+The Security Scanner is a gate, not a guarantee. Passing `securityGate` means the pack passed the current local scanner policy; it does not prove downstream agent-runtime safety.

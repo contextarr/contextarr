@@ -126,7 +126,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         });
 
         io.stdout.write(format === "json" ? `${JSON.stringify(formatRestoreJson(result), null, 2)}\n` : formatRestoreText(result));
-        exitCode = result.validationErrors > 0 ? 1 : 0;
+        exitCode = result.validationErrors > 0 || result.scannerBlocked > 0 ? 1 : 0;
       } catch (error) {
         io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
         exitCode = error instanceof BackupError && isRestoreUsageError(error.code) ? 2 : 1;
@@ -319,12 +319,13 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
               ? validateAgentKit(target.path)
               : validatePack(target.path)
         );
-        io.stdout.write(
-          format === "json"
-            ? `${JSON.stringify(formatValidationJson(resolvedTargetPath, results), null, 2)}\n`
-            : formatValidationText(results)
-        );
-        exitCode = results.every((result) => result.valid) ? 0 : 1;
+        const validationJson = formatValidationJson(resolvedTargetPath, results);
+        if (format === "json") {
+          io.stdout.write(`${JSON.stringify(validationJson, null, 2)}\n`);
+        } else {
+          io.stdout.write(formatValidationTextFromFormatted(validationJson));
+        }
+        exitCode = isFormattedValidationJsonValid(validationJson) ? 0 : 1;
       } catch (error) {
         io.stderr.write(
           `${error instanceof PackReadError || error instanceof SkillReadError || error instanceof AgentKitReadError ? error.message : errorMessage(error)}\n`
@@ -697,7 +698,52 @@ function formatValidationText(results: AnyValidationResult[]): string {
     .join(results.length > 1 ? "\n" : "");
 }
 
-function formatValidationJson(targetPath: string, results: AnyValidationResult[]): AnyValidationResult | {
+function formatValidationTextFromFormatted(result: FormattedValidationJson): string {
+  if ("results" in result) {
+    return result.results.map((child) => formatValidationTextFromFormatted(child as FormattedValidationJson)).join("\n");
+  }
+
+  if ("agentKitPath" in result) {
+    return formatAgentKitValidationResult(result);
+  }
+
+  if ("skillPath" in result) {
+    return formatSkillValidationResult(result);
+  }
+
+  return formatPackValidationText(result as FormattedPackValidationJson);
+}
+
+function formatPackValidationText(result: FormattedPackValidationJson): string {
+  const lines = [formatValidationResult(result)];
+
+  if (result.securityGate.status === "blocked") {
+    lines.push(`Security gate blocked: ${result.securityScan.status}`);
+  } else if (result.securityGate.status === "review") {
+    lines.push(`Security gate review required: ${result.securityScan.recommendedAction}`);
+  }
+
+  return lines.join("\n");
+}
+
+type FormattedPackValidationJson = ReturnType<typeof toValidationReportV1> & {
+  securityScan: SecurityScanJson;
+  securityGate: {
+    status: "passed" | "review" | "blocked";
+    blocking: boolean;
+    recommendedAction: "activate" | "quarantine" | "review" | "block";
+    message?: string;
+  };
+};
+
+type SecurityScanJson =
+  | Pick<
+      SecurityScannerReportV1,
+      "schemaVersion" | "artifactId" | "artifactType" | "artifactVersion" | "scannerVersion" | "status" | "summary" | "findings" | "limitations" | "recommendedAction"
+    >
+  | { status: "scanning_failed"; recommendedAction: "block"; message: string };
+
+type FormattedValidationJson = AnyValidationResult | FormattedPackValidationJson | {
   targetPath: string;
   packPath?: string;
   skillPath?: string;
@@ -705,16 +751,19 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   valid: boolean;
   results: unknown[];
   summary: { errors: number; warnings: number; infos: number };
-} {
+};
+
+function formatValidationJson(targetPath: string, results: AnyValidationResult[]): FormattedValidationJson {
   if (results.length === 1) {
-    return "packPath" in results[0] ? toValidationReportV1(results[0]) : results[0];
+    return "packPath" in results[0] ? formatPackValidationJson(results[0]) : results[0];
   }
 
   const displayTargetPath = displayPath(targetPath);
+  const formattedResults = results.map((result) => ("packPath" in result ? formatPackValidationJson(result) : result));
   const aggregate = {
     targetPath: displayTargetPath,
-    valid: results.every((result) => result.valid),
-    results: results.map((result) => ("packPath" in result ? toValidationReportV1(result) : result)),
+    valid: formattedResults.every((result) => result.valid),
+    results: formattedResults,
     summary: {
       errors: results.reduce((count, result) => count + result.summary.errors, 0),
       warnings: results.reduce((count, result) => count + result.summary.warnings, 0),
@@ -735,6 +784,121 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   }
 
   return aggregate;
+}
+
+function formatPackValidationJson(result: ValidationResult): FormattedPackValidationJson {
+  const report = toValidationReportV1(result);
+  try {
+    const securityScan = formatSecurityScanJson(scanArtifact({ path: result.packPath, sourceTrust: scanSourceTrustForPack(result.packPath) }));
+    const securityGate = formatSecurityGate(securityScan);
+    const activationReady = report.valid && securityGate.status === "passed";
+    return {
+      ...report,
+      valid: activationReady,
+      validationStatus: validationStatusForSecurityGate(report.validationStatus, securityGate),
+      securityScan,
+      securityGate
+    };
+  } catch (error) {
+    const securityScan = {
+      status: "scanning_failed" as const,
+      recommendedAction: "block" as const,
+      message: errorMessage(error)
+    };
+    return {
+      ...report,
+      valid: false,
+      validationStatus: "invalid",
+      securityScan,
+      securityGate: formatSecurityGate(securityScan)
+    };
+  }
+}
+
+function validationStatusForSecurityGate(
+  validationStatus: ReturnType<typeof toValidationReportV1>["validationStatus"],
+  securityGate: FormattedPackValidationJson["securityGate"]
+): ReturnType<typeof toValidationReportV1>["validationStatus"] {
+  if (securityGate.status === "blocked") {
+    return "invalid";
+  }
+
+  if (securityGate.status === "review" && validationStatus === "valid") {
+    return "valid_with_warnings";
+  }
+
+  return validationStatus;
+}
+
+function formatSecurityScanJson(report: SecurityScannerReportV1): Pick<
+  SecurityScannerReportV1,
+  "schemaVersion" | "artifactId" | "artifactType" | "artifactVersion" | "scannerVersion" | "status" | "summary" | "findings" | "limitations" | "recommendedAction"
+> {
+  return {
+    schemaVersion: report.schemaVersion,
+    artifactId: report.artifactId,
+    artifactType: report.artifactType,
+    artifactVersion: report.artifactVersion,
+    scannerVersion: report.scannerVersion,
+    status: report.status,
+    summary: report.summary,
+    findings: report.findings,
+    limitations: report.limitations,
+    recommendedAction: report.recommendedAction
+  };
+}
+
+function formatSecurityGate(report: SecurityScanJson): FormattedPackValidationJson["securityGate"] {
+  if (report.status === "blocked" || report.status === "critical_findings" || report.status === "scanning_failed") {
+    return {
+      status: "blocked",
+      blocking: true,
+      recommendedAction: "block",
+      message: "Security scanner findings block this Context Pack until reviewed and remediated."
+    };
+  }
+
+  if (report.status === "policy_warning" || report.recommendedAction === "review" || report.recommendedAction === "quarantine") {
+    return {
+      status: "review",
+      blocking: false,
+      recommendedAction: report.recommendedAction,
+      message:
+        report.recommendedAction === "quarantine"
+          ? "Imported or restored Context Packs require manual review before activation, export, or MCP exposure."
+          : "Security scanner warnings require human review before activation, export, or MCP exposure."
+    };
+  }
+
+  return {
+    status: "passed",
+    blocking: false,
+    recommendedAction: report.recommendedAction
+  };
+}
+
+function isFormattedValidationJsonValid(result: FormattedValidationJson): boolean {
+  if ("results" in result) {
+    return result.results.every((child) => isFormattedValidationJsonValid(child as FormattedValidationJson));
+  }
+
+  return result.valid;
+}
+
+function scanSourceTrustForPack(packPath: string): "local" | "imported" {
+  let current = path.resolve(packPath);
+
+  while (true) {
+    if (fs.existsSync(path.join(current, "restore-report.json"))) {
+      return "imported";
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return "local";
+    }
+    current = parent;
+  }
 }
 
 function formatImportText(result: DraftImportResult): string {
@@ -853,6 +1017,7 @@ function formatRestoreText(result: RestoreResult): string {
     `Status: ${result.status}`,
     `Packs: ${result.packCount}`,
     `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
+    `Scanner blocked: ${result.scannerBlocked}`,
     `Restore report: ${result.reportPath}`,
     "Activation: manual review required; no packs were activated automatically."
   ].join("\n") + "\n";

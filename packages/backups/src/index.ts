@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { toValidationReportV1, validatePack, type ValidationReportV1, type ValidationResult } from "@contextarr/pack-validator";
+import { scanArtifact, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 
 export const BACKUP_SCHEMA_VERSION = "contextarr.backup.v1";
 export const RESTORE_REPORT_SCHEMA_VERSION = "contextarr.restore-report.v1";
@@ -84,7 +85,13 @@ export interface RestoredPackEntry {
   checksumStatus: "verified";
   quarantineStatus: "review_required" | "invalid";
   validation: Pick<ValidationReportV1, "valid" | "validationStatus" | "summary" | "issues" | "exportReadiness">;
+  securityScan: RestoreSecurityScanSummary;
 }
+
+export type RestoreSecurityScanSummary = Pick<
+  SecurityScannerReportV1,
+  "schemaVersion" | "artifactId" | "artifactType" | "artifactVersion" | "scannerVersion" | "status" | "summary" | "findings" | "limitations" | "recommendedAction"
+>;
 
 export interface RestoreReport {
   schemaVersion: typeof RESTORE_REPORT_SCHEMA_VERSION;
@@ -92,7 +99,7 @@ export interface RestoreReport {
   restoredAt: string;
   sourceBackupPath: string;
   outputPath: string;
-  status: "restored_to_quarantine" | "restored_with_validation_errors";
+  status: "restored_to_quarantine" | "restored_with_validation_errors" | "restored_with_security_findings";
   activation: {
     automaticActivation: false;
     requiresManualReview: true;
@@ -102,6 +109,7 @@ export interface RestoreReport {
     packCount: number;
     validationErrors: number;
     validationWarnings: number;
+    scannerBlocked: number;
   };
   packs: RestoredPackEntry[];
 }
@@ -114,6 +122,7 @@ export interface RestoreResult {
   packCount: number;
   validationErrors: number;
   validationWarnings: number;
+  scannerBlocked: number;
   packs: RestoredPackEntry[];
 }
 
@@ -330,24 +339,32 @@ export function restoreContextPackBackup(options: RestoreContextPackBackupOption
       }
 
       const validation = validatePack(destinationPackRoot, { currentDate: options.currentDate });
+      const securityScan = compactSecurityScan(scanArtifact({ path: destinationPackRoot, sourceTrust: "imported" }));
       packs.push({
         packId,
         packPath: displayLocalPath(destinationPackRoot),
         checksumStatus: "verified",
-        quarantineStatus: validation.valid ? "review_required" : "invalid",
-        validation: compactValidation(validation)
+        quarantineStatus: validation.valid && !isBlockingSecurityScan(securityScan) ? "review_required" : "invalid",
+        validation: compactValidation(validation),
+        securityScan
       });
     }
 
     const validationErrors = packs.reduce((count, pack) => count + pack.validation.summary.errors, 0);
     const validationWarnings = packs.reduce((count, pack) => count + pack.validation.summary.warnings, 0);
+    const scannerBlocked = packs.filter((pack) => isBlockingSecurityScan(pack.securityScan)).length;
     const report: RestoreReport = {
       schemaVersion: RESTORE_REPORT_SCHEMA_VERSION,
       backupId: manifest.backupId,
       restoredAt: options.restoredAt ?? new Date().toISOString(),
       sourceBackupPath: displayLocalPath(backupRoot),
       outputPath: displayLocalPath(restoreRoot),
-      status: validationErrors > 0 ? "restored_with_validation_errors" : "restored_to_quarantine",
+      status:
+        scannerBlocked > 0
+          ? "restored_with_security_findings"
+          : validationErrors > 0
+            ? "restored_with_validation_errors"
+            : "restored_to_quarantine",
       activation: {
         automaticActivation: false,
         requiresManualReview: true,
@@ -357,7 +374,8 @@ export function restoreContextPackBackup(options: RestoreContextPackBackupOption
       summary: {
         packCount: packs.length,
         validationErrors,
-        validationWarnings
+        validationWarnings,
+        scannerBlocked
       },
       packs
     };
@@ -374,6 +392,7 @@ export function restoreContextPackBackup(options: RestoreContextPackBackupOption
       packCount: packs.length,
       validationErrors,
       validationWarnings,
+      scannerBlocked,
       packs
     };
   } catch (error) {
@@ -410,6 +429,25 @@ function compactValidation(result: ValidationResult): BackupPackEntry["validatio
     issues: report.issues,
     exportReadiness: report.exportReadiness
   };
+}
+
+function compactSecurityScan(report: SecurityScannerReportV1): RestoreSecurityScanSummary {
+  return {
+    schemaVersion: report.schemaVersion,
+    artifactId: report.artifactId,
+    artifactType: report.artifactType,
+    artifactVersion: report.artifactVersion,
+    scannerVersion: report.scannerVersion,
+    status: report.status,
+    summary: report.summary,
+    findings: report.findings,
+    limitations: report.limitations,
+    recommendedAction: report.recommendedAction
+  };
+}
+
+function isBlockingSecurityScan(report: RestoreSecurityScanSummary): boolean {
+  return report.status === "blocked" || report.status === "critical_findings" || report.status === "scanning_failed";
 }
 
 function readManifest(packPath: string): { id: string; name: string; version: string; description: string } {
