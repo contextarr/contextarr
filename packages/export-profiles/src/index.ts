@@ -248,6 +248,7 @@ const supportedTargets = new Set([
 ]);
 const defaultComposedExcludeTags = ["secret", "never_export", "imported_draft"];
 const defaultSkillRedactionTags = ["secret", "never_export", "imported_draft", "ai_draft"];
+const sensitiveExclusionTags = new Set(["secret", "never_export", "imported_draft", "ai_draft"]);
 
 export class ExportError extends Error {
   constructor(
@@ -553,7 +554,7 @@ function selectRecords(
     const reason = exclusionReason(record.metadata, profile, pack.redactionRules);
 
     if (reason) {
-      excluded.push({ ...summarizeRecord(record), reason });
+      excluded.push(summarizeExcludedRecord(record, reason, pack.redactionRules));
       continue;
     }
 
@@ -724,7 +725,7 @@ function selectAgentKitRecords(
     for (const record of pack.records) {
       const reason = agentKitRecordExclusionReason(record.metadata, profile, pack.redactionRules);
       if (reason) {
-        excluded.push({ ...summarizeRecord(record), reason });
+        excluded.push(summarizeExcludedRecord(record, reason, pack.redactionRules));
         continue;
       }
 
@@ -1667,6 +1668,46 @@ function summarizeRecord(record: LoadedRecord): ExportRecordSummary {
     tags: record.metadata.tags,
     sources: record.metadata.sources
   };
+}
+
+function summarizeExcludedRecord(record: LoadedRecord, reason: string, rules: RedactionRules): ExcludedExportRecord {
+  if (!shouldRedactExcludedRecordMetadata(record.metadata, reason, rules)) {
+    return { ...summarizeRecord(record), reason };
+  }
+
+  return {
+    id: record.metadata.id,
+    title: "[redacted]",
+    type: record.metadata.type,
+    privacy: record.metadata.privacy,
+    tags: [],
+    sources: [],
+    reason: safeRecordExclusionReason(reason)
+  };
+}
+
+function shouldRedactExcludedRecordMetadata(metadata: RecordFrontmatter, reason: string, rules: RedactionRules): boolean {
+  if (metadata.review_status !== "approved") {
+    return true;
+  }
+
+  if (metadata.privacy !== "public_safe") {
+    return true;
+  }
+
+  if (metadata.tags.some((tag) => sensitiveExclusionTags.has(tag) || rules.redact_tags.includes(tag))) {
+    return true;
+  }
+
+  return /redaction tag|export safety|public-safe privacy mode|redacted privacy mode/i.test(reason);
+}
+
+function safeRecordExclusionReason(reason: string): string {
+  if (/tag|redaction|export safety/i.test(reason)) {
+    return "Excluded by export safety policy.";
+  }
+
+  return reason;
 }
 
 function summarizeSkillDocument(document: LoadedSkillDocument): ExportRecordSummary {

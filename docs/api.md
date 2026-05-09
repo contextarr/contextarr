@@ -11,11 +11,11 @@ CONTEXTARR_HOST=127.0.0.1
 CONTEXTARR_PORT=3210
 ```
 
-Optional token auth is controlled by `CONTEXTARR_API_TOKEN`. When set, all `/api/*` routes except `GET /api/health` require `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
+Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local development. Non-loopback binds such as `0.0.0.0`, `::`, or LAN hostnames require `CONTEXTARR_API_TOKEN` at startup. When set, all `/api/*` routes except `GET /api/health` require `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
 
 ## Core Context Pack Endpoints
 
-- `GET /api/health`: local status, counts, configured paths, last indexed time, and `authRequired`.
+- `GET /api/health`: unauthenticated, path-redacted local status, aggregate counts, last indexed time, and `authRequired`.
 - `GET /api/packs`: pack summaries, validation status, export readiness, health, counts, and UI fields.
 - `GET /api/packs/:id`: pack detail with manifest-derived metadata, sources, export profiles, and health.
 - `GET /api/packs/:id/records`: record summaries with optional `q`, `tag`, and `type` filters.

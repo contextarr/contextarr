@@ -26,6 +26,46 @@ describe("server config", () => {
     expect(config.localImportsEnabled).toBe(false);
   });
 
+  it("allows unauthenticated loopback hosts", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    for (const host of ["localhost", "127.0.0.1", "127.0.1.1", "127.255.255.255", "::1", "[::1]"]) {
+      const config = loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_HOST: host
+      });
+
+      expect(config.host).toBe(host);
+      expect(config.apiToken).toBeUndefined();
+    }
+  });
+
+  it("requires token auth for non-loopback binds", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    for (const host of ["0.0.0.0", "::", "contextarr.local", "192.168.1.10", "10.0.0.5"]) {
+      expect(() =>
+        loadConfig({
+          INIT_CWD: root,
+          CONTEXTARR_HOST: host
+        })
+      ).toThrow(/CONTEXTARR_API_TOKEN is required/);
+    }
+  });
+
+  it("allows non-loopback binds when token auth is configured", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    const config = loadConfig({
+      INIT_CWD: root,
+      CONTEXTARR_HOST: "0.0.0.0",
+      CONTEXTARR_API_TOKEN: "test-token"
+    });
+
+    expect(config.host).toBe("0.0.0.0");
+    expect(config.apiToken).toBe("test-token");
+  });
+
   it("rejects indexed and draft Context Pack directory overlap", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
 

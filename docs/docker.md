@@ -11,6 +11,8 @@ docker compose up
 
 Open `http://127.0.0.1:3210`.
 
+The local preview uses a fake default token because the container binds Fastify to `0.0.0.0` internally. The host port is still mapped to `127.0.0.1` by default. Override the preview token with `CONTEXTARR_DOCKER_API_TOKEN` when you need a different local value.
+
 If `3210` is already in use, override only the host port:
 
 ```bash
@@ -51,14 +53,28 @@ CONTEXTARR_AGENT_KITS_DIR=/app/agent-kits
 CONTEXTARR_COMPOSED_PACKS_DIR=/app/composed-packs
 CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
-CONTEXTARR_API_TOKEN=
+CONTEXTARR_API_TOKEN=contextarr-local-preview-token
+VITE_CONTEXTARR_API_TOKEN=contextarr-local-preview-token
 ```
 
 `CONTEXTARR_WEB_DIST_DIR` is what enables same-origin web serving in Docker. When it is unset, the server stays API-only for normal local development.
 
 ## Token Auth
 
-Docker quickstart leaves `CONTEXTARR_API_TOKEN` empty because the browser app has no token-entry UI. If you enable token auth in Docker, the web build must be configured to send that token through `VITE_CONTEXTARR_API_TOKEN`, which is not the default public-preview path.
+Docker quickstart sets a fake local-preview token by default because non-loopback server binds fail closed without `CONTEXTARR_API_TOKEN`. The Compose file also passes the same value to the Vite build through `VITE_CONTEXTARR_API_TOKEN` so the browser dashboard can call protected local API routes.
+
+To use a different token for a local Docker smoke:
+
+```bash
+CONTEXTARR_DOCKER_API_TOKEN=replace-with-local-token docker compose build
+CONTEXTARR_DOCKER_API_TOKEN=replace-with-local-token docker compose up
+```
+
+PowerShell:
+
+```powershell
+$env:CONTEXTARR_DOCKER_API_TOKEN="replace-with-local-token"; docker compose build; docker compose up
+```
 
 ## Stop
 

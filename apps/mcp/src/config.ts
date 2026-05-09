@@ -4,6 +4,7 @@ export interface ContextarrMcpConfig extends ServerConfig {
   rescanOnStart: boolean;
   maxResults: number;
   maxRecordChars: number;
+  maxPreviewChars: number;
   allowPrivate: boolean;
 }
 
@@ -15,6 +16,7 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): ContextarrM
     rescanOnStart: parseBoolean(env.CONTEXTARR_MCP_RESCAN_ON_START, true),
     maxResults: parsePositiveInteger(env.CONTEXTARR_MCP_MAX_RESULTS, 8),
     maxRecordChars: parsePositiveInteger(env.CONTEXTARR_MCP_MAX_RECORD_CHARS, 12000),
+    maxPreviewChars: parsePositiveInteger(env.CONTEXTARR_MCP_MAX_PREVIEW_CHARS, 24000),
     allowPrivate: parseBoolean(env.CONTEXTARR_MCP_ALLOW_PRIVATE, false)
   };
 }

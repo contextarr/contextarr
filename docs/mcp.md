@@ -50,9 +50,10 @@ Skill tools return data-only Skill metadata plus privacy-aware instruction and e
 - `CONTEXTARR_MCP_RESCAN_ON_START=true`
 - `CONTEXTARR_MCP_MAX_RESULTS=8`
 - `CONTEXTARR_MCP_MAX_RECORD_CHARS=12000`
+- `CONTEXTARR_MCP_MAX_PREVIEW_CHARS=24000`
 - `CONTEXTARR_MCP_ALLOW_PRIVATE=false`
 
-Private, internal, and sensitive record or Skill document bodies are omitted unless `CONTEXTARR_MCP_ALLOW_PRIVATE=true`. Secret record and Skill document bodies are never returned.
+Private, internal, and sensitive record or Skill document bodies are omitted unless `CONTEXTARR_MCP_ALLOW_PRIVATE=true`. Secret record and Skill document bodies are never returned. Export previews are deterministically capped by `CONTEXTARR_MCP_MAX_PREVIEW_CHARS`.
 
 ## Claude Desktop Example
 
