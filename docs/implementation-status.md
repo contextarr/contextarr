@@ -27,13 +27,13 @@ Before claiming a command, API route, export target, safety gate, or product sur
 | Docker Compose preview | Current | `Dockerfile`; `docker-compose.yml`; `tools/launch/verify-docker.mjs` | Local preview only. Serves the built web app and API from one Fastify origin with demo objects mounted locally. |
 | Composer preview and draft-pack save | Current | `packages/export-profiles/src/index.ts`; `apps/server/src/composed-pack-writer.ts`; `apps/web/src/composer.ts` | Builds temporary previews and can save private unreviewed draft Context Packs under the configured local output root. |
 | Read-only stdio MCP | Current | `apps/mcp/src/server.ts`; `apps/mcp/src/tools.ts` | Optional local MCP for read-only Context Pack, Skill, Agent Kit, query, and preview tools. No mutating MCP tools. |
-| Non-executable Skills | Current advanced-preview | `packages/skill-validator/src/index.ts`; `demo-skills/`; `apps/server/src/indexer.ts` | Implemented in this checkout but frozen behind the v1 bridge boundary for new expansion decisions. |
-| Non-executable Agent Kits | Current advanced-preview | `packages/agent-kit-validator/src/index.ts`; `demo-agent-kits/`; `agent-kit-templates/` | Implemented as local data-only objects and templates. Contextarr does not run Agent Kits. |
+| Non-executable Skills | Current | `packages/skill-validator/src/index.ts`; `demo-skills/`; `apps/server/src/indexer.ts` | Implemented advanced-preview surface in this checkout but frozen behind the v1 bridge boundary for new expansion decisions. |
+| Non-executable Agent Kits | Current | `packages/agent-kit-validator/src/index.ts`; `demo-agent-kits/`; `agent-kit-templates/` | Implemented advanced-preview surface for local data-only objects and templates. Contextarr does not run Agent Kits. |
 | Backup/restore v0 | Current | `packages/backups/src/index.ts`; `tools/launch/verify-backups.mjs` | Local Context Pack backups and quarantine-only restore flows. |
 | Security scanner foundation | Current | `packages/security-scanner/src/index.ts`; `tools/launch/verify-scanner.mjs` | Deterministic local text scanner and `contextarr scan`; not a hosted registry scanner. |
-| Public Astro site from PR #2 | Not current | none on `origin/main` | `apps/site/` is not part of current mainline and is not reintroduced in this stabilization PR. |
-| G3/G4 benchmark package from PR #2 | Not current | none on `origin/main` | `packages/context-quality/`, `demo-evals/`, and `quality:verify` are not part of current mainline. |
-| Public registry or marketplace | Rejected for this pass | `docs/non-goals.md`; `docs/registry-readiness.md` | Planning docs may describe trust foundations, but no public registry or marketplace runtime is shipped. |
+| Public Astro site from PR #2 | Planned | none on `origin/main` | `apps/site/` is not part of current mainline and is not reintroduced in this stabilization PR. |
+| G3/G4 benchmark package from PR #2 | Planned | none on `origin/main` | `packages/context-quality/`, `demo-evals/`, and `quality:verify` are not part of current mainline. |
+| Public registry or marketplace | Rejected | `docs/non-goals.md`; `docs/marketplace-non-goals.md` | Planning docs may describe trust foundations, but no public registry or marketplace runtime is shipped. |
 
 ## CLI Status
 
@@ -81,4 +81,4 @@ Before claiming a command, API route, export target, safety gate, or product sur
 | Public registry trust foundation implementation | Planned | Docs exist; registry runtime, remote install, signing implementation, and marketplace behavior remain out of scope. |
 | Hosted sync or telemetry | Rejected | Not part of Contextarr v1 core. |
 | Executable packs, executable Skills, Agent Kit runtime | Rejected | Contextarr remains data-only and local-first. |
-| Public site, benchmark fixtures, and context-quality package from PR #2 | Future separate decision | Useful historical work from commit `165f641`, but not part of this first fresh mainline stabilization PR. |
+| Public site, benchmark fixtures, and context-quality package from PR #2 | Future | Useful historical work from commit `165f641`, but not part of this first fresh mainline stabilization PR. |

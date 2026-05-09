@@ -61,7 +61,7 @@ VITE_CONTEXTARR_API_TOKEN=contextarr-local-preview-token
 
 ## Token Auth
 
-Docker quickstart sets a fake local-preview token by default because non-loopback server binds fail closed without `CONTEXTARR_API_TOKEN`. The Compose file also passes the same value to the Vite build through `VITE_CONTEXTARR_API_TOKEN` so the browser dashboard can call protected local API routes.
+Docker quickstart sets a fake local-preview token by default because non-loopback server binds fail closed without `CONTEXTARR_API_TOKEN`. The Compose file also passes the same value to the Vite build through `VITE_CONTEXTARR_API_TOKEN` so the browser dashboard can call protected local API routes. Treat this Docker token as local wiring, not a secret: anything passed through `VITE_CONTEXTARR_API_TOKEN` is visible to the browser bundle and image metadata.
 
 To use a different token for a local Docker smoke:
 

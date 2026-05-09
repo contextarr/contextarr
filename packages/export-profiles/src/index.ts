@@ -674,7 +674,7 @@ function selectComposedRecords(
       const reason = composedExclusionReason(record.metadata, privacyMode, excludeTags, pack.redactionRules);
 
       if (reason) {
-        excluded.push({ ...summarizeRecord(record), reason });
+        excluded.push(summarizeExcludedRecord(record, reason, pack.redactionRules));
         continue;
       }
 
@@ -1678,7 +1678,7 @@ function summarizeExcludedRecord(record: LoadedRecord, reason: string, rules: Re
   return {
     id: record.metadata.id,
     title: "[redacted]",
-    type: record.metadata.type,
+    type: "[redacted]",
     privacy: record.metadata.privacy,
     tags: [],
     sources: [],
@@ -1703,7 +1703,7 @@ function shouldRedactExcludedRecordMetadata(metadata: RecordFrontmatter, reason:
 }
 
 function safeRecordExclusionReason(reason: string): string {
-  if (/tag|redaction|export safety/i.test(reason)) {
+  if (/tag|redaction|export safety|privacy mode/i.test(reason)) {
     return "Excluded by export safety policy.";
   }
 

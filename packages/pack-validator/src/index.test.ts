@@ -224,6 +224,25 @@ describe("validatePack", () => {
     });
   });
 
+  it("reports unknown validation policy checks", () => {
+    withTempValidPack("contextarr-pack-policy-unknown-", (packPath) => {
+      declareValidationChecks(packPath, ["approved_content_only_typo"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "rules.validation.unknown_check",
+          file: "rules/validation.yaml",
+          path: "checks",
+          message: expect.stringContaining("approved_content_only_typo")
+        })
+      );
+    });
+  });
+
   it("enforces public_safe_only when declared", () => {
     withTempValidPack("contextarr-pack-policy-public-safe-", (packPath) => {
       updateOverviewRecord(packPath, (content) => content.replace("privacy: public_safe", "privacy: sensitive"));

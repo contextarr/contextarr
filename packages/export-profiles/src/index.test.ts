@@ -386,6 +386,7 @@ describe("export profile engine", () => {
     expect(excluded).toEqual(
       expect.objectContaining({
         title: "[redacted]",
+        type: "[redacted]",
         tags: [],
         sources: [],
         reason: "Excluded by export safety policy."
@@ -605,7 +606,16 @@ describe("export profile engine", () => {
 
     expect(artifact.includedRecords).toHaveLength(0);
     expect(artifact.excludedRecords).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "valid.overview", reason: expect.stringContaining("secret") })])
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.overview",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
+      ])
     );
   });
 
@@ -644,8 +654,22 @@ describe("export profile engine", () => {
     expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
     expect(artifact.excludedRecords).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "valid.private", reason: expect.stringContaining("private") }),
-        expect.objectContaining({ id: "valid.sensitive", reason: expect.stringContaining("sensitive") })
+        expect.objectContaining({
+          id: "valid.private",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        }),
+        expect.objectContaining({
+          id: "valid.sensitive",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
       ])
     );
   });
@@ -717,6 +741,7 @@ describe("export profile engine", () => {
     expect(excluded).toEqual(
       expect.objectContaining({
         title: "[redacted]",
+        type: "[redacted]",
         tags: [],
         sources: [],
         reason: "Excluded by export safety policy."
@@ -827,8 +852,19 @@ describe("export profile engine", () => {
 
     expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
     expect(artifact.excludedRecords).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("imported_draft") })])
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.draft",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
+      ])
     );
+    expect(JSON.stringify(artifact.excludedRecords)).not.toContain("Draft Import");
+    expect(JSON.stringify(artifact.excludedRecords)).not.toContain("imported_draft");
     expect(artifact.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "token_budget.exceeded" })]));
   });
 

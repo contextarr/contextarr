@@ -199,6 +199,19 @@ const exportTargetFormats: Record<string, string> = {
   claude_md: "markdown",
   llms_txt: "text"
 };
+const supportedValidationChecks = new Set([
+  "no_executable_code",
+  "no_shell_commands",
+  "no_api_keys",
+  "source_ids_exist",
+  "last_reviewed_present",
+  "export_profiles_valid",
+  "preserve_composition_provenance",
+  "approved_content_only",
+  "public_safe_only",
+  "draft_records_require_review",
+  "no_secret_tags"
+]);
 const secretPolicyTags = new Set(["secret", "never_export", "private", "sensitive", "customer_private", "health", "financial"]);
 
 export function validatePack(packPath: string, options: ValidatePackOptions = {}): ValidationResult {
@@ -410,6 +423,19 @@ function validateRecordPolicyChecks(
   const checks = new Set(validationRules?.checks ?? []);
   if (checks.size === 0) {
     return;
+  }
+
+  for (const check of checks) {
+    if (!supportedValidationChecks.has(check)) {
+      addIssue(
+        issues,
+        "error",
+        "rules.validation.unknown_check",
+        `Validation check "${check}" is not recognized by this validator.`,
+        "rules/validation.yaml",
+        "checks"
+      );
+    }
   }
 
   for (const { metadata: record, file } of records) {
