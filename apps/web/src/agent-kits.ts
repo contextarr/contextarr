@@ -112,7 +112,7 @@ function compareAgentKits(left: AgentKitSummary, right: AgentKitSummary, sortBy:
 }
 
 function sanitizeAccentColor(value: string | null | undefined): string {
-  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#22d3e8";
+  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#2563EB";
 }
 
 function sanitizeLocalCoverImage(value: string | null | undefined): string | null {

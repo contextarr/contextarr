@@ -1,87 +1,256 @@
 {
   "source": "tools/brand-kit/generate-brand-kit.mjs",
-  "font": {
-    "wordmarkFamily": "Sora",
-    "taglineFamily": "Chakra Petch",
-    "packages": [
-      "typeface-sora",
-      "typeface-chakra-petch"
-    ],
-    "license": "MIT packages, bundled Google Fonts under OFL-1.1",
-    "note": "Wordmark and tagline are converted to SVG paths for portable rendering. Sora carries the product name; Chakra Petch is used only as a compact technical accent."
-  },
+  "sourceBoard": "assets/brand/source/contextarr-brand-system-v0.1.png",
+  "sourceBoardOriginal": "D:/Downloads/Screenshot 2026-05-09 161142.png",
+  "sourceImages": [
+    {
+      "id": "primary-horizontal-dark",
+      "path": "assets/brand/source/individual/primary-horizontal-dark.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 162903.png",
+      "sha256": "3bf531e0ee4c75aa5e7099d16a0890fbcafc004b349a71e3d654b291dd5421cc",
+      "description": "High-resolution dark-background primary horizontal lockup."
+    },
+    {
+      "id": "primary-horizontal-light",
+      "path": "assets/brand/source/individual/primary-horizontal-light.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 163018.png",
+      "sha256": "d8a2da31603363b3ef41a7a53c0edbfe307b41e8490e686014ef011ffd590b49",
+      "description": "High-resolution light-background primary horizontal lockup."
+    },
+    {
+      "id": "icon-mark",
+      "path": "assets/brand/source/individual/icon-mark.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 163006.png",
+      "sha256": "aa6fbd84b065a56dc56fb9ab25c49d0f2a6c990d54d63f3c4c8686c516c95c54",
+      "description": "High-resolution standalone Contextarr mark."
+    },
+    {
+      "id": "app-icon-square",
+      "path": "assets/brand/source/individual/app-icon-square.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 162950.png",
+      "sha256": "3b95a9c61f57682ed8b975957c7c0f227afaf09df422799790ffa94708e0dc24",
+      "description": "High-resolution rounded-square application icon."
+    },
+    {
+      "id": "app-icon-circle",
+      "path": "assets/brand/source/individual/app-icon-circle.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 162958.png",
+      "sha256": "5cde70eca525690711d56bc854e22272cdd2341b0d136176f10c3904b691b87a",
+      "description": "High-resolution circular application icon."
+    },
+    {
+      "id": "monochrome-white",
+      "path": "assets/brand/source/individual/monochrome-white.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 163028.png",
+      "sha256": "d9134478f9506f0bff1700b39b898b396c0e84a285137fccabcda428c84e016e",
+      "description": "High-resolution white monochrome lockup on dark background."
+    },
+    {
+      "id": "monochrome-dark",
+      "path": "assets/brand/source/individual/monochrome-dark.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 163042.png",
+      "sha256": "77af6df0d1ca962da458ec4d0c16cb41ae2b014e8afb9869f1d0cb55e68236cd",
+      "description": "High-resolution dark monochrome lockup on light background."
+    },
+    {
+      "id": "single-color-green",
+      "path": "assets/brand/source/individual/single-color-green.png",
+      "original": "D:/Downloads/Screenshot 2026-05-09 163050.png",
+      "sha256": "f962a2f06c4665b43400456dd9d3b180a878b2fc47fdd3cafef2217b0131d955",
+      "description": "High-resolution single-color green lockup."
+    }
+  ],
+  "mode": "individual-source-raster-svg-wrappers",
   "palette": {
-    "deepNavy": "#0B1020",
-    "deepNavy2": "#050A16",
-    "indigo": "#1A2340",
-    "electricBlue": "#276BFF",
-    "blue": "#4F8BFF",
-    "violet": "#7B5CFF",
-    "cyan": "#22D3E8",
-    "slate": "#9AA3B2",
-    "white": "#F7FAFF",
-    "ink": "#07101F"
+    "primary": {
+      "green": "#22C55E",
+      "blue": "#2563EB",
+      "navy": "#0B1220",
+      "slate": "#111827",
+      "white": "#FFFFFF"
+    },
+    "semanticUiOnly": {
+      "warningOrange": "#F59E0B",
+      "errorRed": "#EF4444"
+    }
+  },
+  "usage": {
+    "positioning": "Contextarr is the context layer. Validated. Source-backed. Ready for agents. Not an agent runner.",
+    "note": "These SVG files intentionally embed the approved high-resolution PNG renders so the logos preserve the supplied art exactly. They are SVG containers, not pure vector redraws."
   },
   "assets": [
     {
+      "name": "primary-horizontal",
+      "title": "Contextarr primary horizontal logo lockup",
+      "width": 1696,
+      "height": 588,
+      "surface": "dark",
+      "source": "primary-horizontal-dark",
       "svg": "assets/brand/svg/primary-horizontal.svg",
       "pngPreview": "assets/brand/png/primary-horizontal.png"
     },
     {
+      "name": "primary-horizontal-flat",
+      "title": "Contextarr primary horizontal logo lockup",
+      "width": 1696,
+      "height": 588,
+      "surface": "dark",
+      "source": "primary-horizontal-dark",
       "svg": "assets/brand/svg/primary-horizontal-flat.svg",
-      "pngPreview": "assets/brand/png/primary-horizontal-flat.png"
+      "pngPreview": "assets/brand/png/primary-horizontal-flat.png",
+      "note": "Alias of the approved dark primary lockup kept for existing consumers."
     },
     {
+      "name": "primary-horizontal-light",
+      "title": "Contextarr light background horizontal logo lockup",
+      "width": 1745,
+      "height": 767,
+      "surface": "light",
+      "source": "primary-horizontal-light",
       "svg": "assets/brand/svg/primary-horizontal-light.svg",
       "pngPreview": "assets/brand/png/primary-horizontal-light.png"
     },
     {
+      "name": "wordmark-only",
+      "title": "Contextarr wordmark and tagline",
+      "width": 1165,
+      "height": 332,
+      "surface": "dark",
+      "source": "primary-horizontal-dark",
       "svg": "assets/brand/svg/wordmark-only.svg",
       "pngPreview": "assets/brand/png/wordmark-only.png"
     },
     {
+      "name": "wordmark-only-light",
+      "title": "Contextarr wordmark and tagline on light background",
+      "width": 1180,
+      "height": 354,
+      "surface": "light",
+      "source": "primary-horizontal-light",
       "svg": "assets/brand/svg/wordmark-only-light.svg",
       "pngPreview": "assets/brand/png/wordmark-only-light.png"
     },
     {
+      "name": "icon-only",
+      "title": "Contextarr icon mark",
+      "width": 944,
+      "height": 940,
+      "surface": "dark",
+      "source": "icon-mark",
       "svg": "assets/brand/svg/icon-only.svg",
       "pngPreview": "assets/brand/png/icon-only.png"
     },
     {
+      "name": "icon-only-flat",
+      "title": "Contextarr icon mark",
+      "width": 944,
+      "height": 940,
+      "surface": "dark",
+      "source": "icon-mark",
       "svg": "assets/brand/svg/icon-only-flat.svg",
-      "pngPreview": "assets/brand/png/icon-only-flat.png"
+      "pngPreview": "assets/brand/png/icon-only-flat.png",
+      "note": "Alias of the approved standalone mark kept for existing consumers."
     },
     {
+      "name": "mini-mark",
+      "title": "Contextarr mini mark",
+      "width": 512,
+      "height": 512,
+      "surface": "dark",
+      "source": "icon-mark",
       "svg": "assets/brand/svg/mini-mark.svg",
       "pngPreview": "assets/brand/png/mini-mark.png"
     },
     {
+      "name": "favicon-mark",
+      "title": "Contextarr favicon mark",
+      "width": 256,
+      "height": 256,
+      "surface": "dark",
+      "source": "icon-mark",
       "svg": "assets/brand/svg/favicon-mark.svg",
       "pngPreview": "assets/brand/png/favicon-mark.png"
     },
     {
+      "name": "app-icon",
+      "title": "Contextarr app icon",
+      "width": 973,
+      "height": 978,
+      "surface": "dark",
+      "source": "app-icon-square",
       "svg": "assets/brand/svg/app-icon.svg",
       "pngPreview": "assets/brand/png/app-icon.png"
     },
     {
+      "name": "app-icon-circle",
+      "title": "Contextarr circular app icon",
+      "width": 960,
+      "height": 958,
+      "surface": "dark",
+      "source": "app-icon-circle",
+      "svg": "assets/brand/svg/app-icon-circle.svg",
+      "pngPreview": "assets/brand/png/app-icon-circle.png"
+    },
+    {
+      "name": "monochrome-white",
+      "title": "Contextarr monochrome white logo",
+      "width": 1694,
+      "height": 699,
+      "surface": "dark",
+      "source": "monochrome-white",
       "svg": "assets/brand/svg/monochrome-white.svg",
       "pngPreview": "assets/brand/png/monochrome-white.png"
     },
     {
+      "name": "monochrome-dark",
+      "title": "Contextarr monochrome dark logo",
+      "width": 1689,
+      "height": 716,
+      "surface": "light",
+      "source": "monochrome-dark",
       "svg": "assets/brand/svg/monochrome-dark.svg",
       "pngPreview": "assets/brand/png/monochrome-dark.png"
     },
     {
+      "name": "single-color-green",
+      "title": "Contextarr single color green logo",
+      "width": 1610,
+      "height": 642,
+      "surface": "dark",
+      "source": "single-color-green",
+      "svg": "assets/brand/svg/single-color-green.svg",
+      "pngPreview": "assets/brand/png/single-color-green.png"
+    },
+    {
+      "name": "stacked-lockup",
+      "title": "Contextarr compact horizontal lockup",
+      "width": 1696,
+      "height": 588,
+      "surface": "dark",
+      "source": "primary-horizontal-dark",
       "svg": "assets/brand/svg/stacked-lockup.svg",
-      "pngPreview": "assets/brand/png/stacked-lockup.png"
+      "pngPreview": "assets/brand/png/stacked-lockup.png",
+      "note": "Uses the full approved primary render to avoid clipping the wordmark."
     },
     {
-      "svg": "assets/brand/svg/brand-sheet.svg",
-      "pngPreview": "assets/brand/png/brand-sheet.png"
-    },
-    {
+      "name": "small-size-check",
+      "title": "Contextarr generated minimum size check",
+      "width": 980,
+      "height": 260,
+      "surface": "dark",
+      "source": "icon-mark",
       "svg": "assets/brand/svg/small-size-check.svg",
       "pngPreview": "assets/brand/png/small-size-check.png"
+    },
+    {
+      "name": "brand-sheet",
+      "title": "Contextarr brand system board",
+      "width": 2368,
+      "height": 1587,
+      "surface": "dark",
+      "source": "brand-sheet",
+      "svg": "assets/brand/svg/brand-sheet.svg",
+      "pngPreview": "assets/brand/png/brand-sheet.png"
     }
   ]
 }

@@ -1,19 +1,23 @@
 # Contextarr Brand Assets
 
-Generated SVG brand set for Contextarr.
+Brand assets generated from the approved individual high-resolution Contextarr renders.
 
 ## Build
 
 ```bash
 pnpm brand:build
+pnpm --filter @contextarr/brand-kit base64
 ```
 
 ## Output
 
-- `assets/brand/svg/`: production SVGs
-- `assets/brand/png/`: PNG previews rendered from the SVGs
-- `assets/brand/png/small/`: small-size checks for favicon and tray usage
+- `assets/brand/source/contextarr-brand-system-v0.1.png`: approved reference board
+- `assets/brand/source/individual/`: approved individual source renders
+- `assets/brand/svg/`: SVG containers with exact embedded PNG artwork
+- `assets/brand/png/`: PNG previews generated from the same source artwork
+- `assets/brand/png/small/`: generated small-size PNG exports
+- `assets/brand/base64/`: generated base64 and data URI exports
 - `assets/brand/preview.html`: browser review page
-- `assets/brand/manifest.json`: palette, font, and asset index
+- `assets/brand/manifest.json`: palette, source images, and asset index
 
-The wordmark uses path outlines generated from open-source Sora and Chakra Petch font packages so the SVGs do not depend on a viewer having fonts installed.
+These files intentionally preserve the supplied renders. Do not redraw, reinterpret, or retrace these assets unless a future pass explicitly asks for a pure-vector rebuild.

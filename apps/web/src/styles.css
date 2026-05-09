@@ -1,20 +1,20 @@
 :root {
   color-scheme: dark;
-  --bg: #050a16;
-  --panel: #0b1020;
+  --bg: #0b1220;
+  --panel: #0b1220;
   --panel-2: #111827;
-  --panel-3: #1a2340;
+  --panel-3: #172033;
   --line: #253451;
   --line-soft: rgba(148, 163, 184, 0.16);
   --text: #f5f7fb;
   --muted: #a8b3c4;
   --faint: #6e7a8d;
-  --blue: #276bff;
-  --cyan: #22d3e8;
-  --green: #55d987;
-  --amber: #f2a23a;
-  --red: #ff6b7a;
-  --violet: #7b5cff;
+  --blue: #2563eb;
+  --cyan: #2563eb;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --violet: #22c55e;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
   --radius: 8px;
   font-family:
@@ -38,9 +38,9 @@ body,
 body {
   min-width: 320px;
   background:
-    linear-gradient(90deg, rgba(79, 124, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(40, 212, 215, 0.035) 1px, transparent 1px),
-    linear-gradient(135deg, #06080d 0%, #0b1118 48%, #08110f 100%);
+    linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(34, 197, 94, 0.035) 1px, transparent 1px),
+    linear-gradient(135deg, #0b1220 0%, #111827 54%, #08120e 100%);
   background-size:
     72px 72px,
     72px 72px,
@@ -96,10 +96,10 @@ button:disabled {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(34, 211, 232, 0.52);
+  border: 1px solid rgba(34, 197, 94, 0.52);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(39, 107, 255, 0.22), rgba(34, 211, 232, 0.12));
-  box-shadow: 0 10px 28px rgba(39, 107, 255, 0.18);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(34, 197, 94, 0.12));
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18);
 }
 
 .brand-mark img {
@@ -130,8 +130,8 @@ button:disabled {
 }
 
 .nav-item.is-active {
-  border-color: rgba(79, 124, 255, 0.68);
-  background: linear-gradient(135deg, rgba(79, 124, 255, 0.24), rgba(155, 123, 255, 0.1));
+  border-color: rgba(37, 99, 235, 0.68);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.24), rgba(34, 197, 94, 0.1));
   color: var(--text);
 }
 
@@ -345,7 +345,7 @@ h1 {
 }
 
 .segmented button.is-selected {
-  background: rgba(79, 124, 255, 0.24);
+  background: rgba(37, 99, 235, 0.24);
   color: var(--text);
 }
 
@@ -379,8 +379,8 @@ h1 {
 }
 
 .primary-action {
-  border-color: rgba(79, 124, 255, 0.68);
-  background: linear-gradient(135deg, rgba(79, 124, 255, 0.85), rgba(86, 105, 255, 0.78));
+  border-color: rgba(37, 99, 235, 0.68);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.85), rgba(34, 197, 94, 0.52));
 }
 
 .nav-item:disabled:not(.is-active),
@@ -392,7 +392,7 @@ h1 {
 
 .primary-action:disabled {
   border-color: var(--line);
-  background: rgba(79, 124, 255, 0.18);
+  background: rgba(37, 99, 235, 0.18);
   color: var(--muted);
 }
 
@@ -493,9 +493,9 @@ h1 {
   width: fit-content;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgba(85, 217, 135, 0.24);
+  border: 1px solid rgba(34, 197, 94, 0.24);
   border-radius: 999px;
-  background: rgba(85, 217, 135, 0.12);
+  background: rgba(34, 197, 94, 0.12);
   color: var(--green);
   font-size: 13px;
   font-weight: 700;
@@ -511,9 +511,9 @@ h1 {
 }
 
 .trust-badge {
-  border-color: rgba(79, 124, 255, 0.28);
-  background: rgba(79, 124, 255, 0.13);
-  color: #8fb0ff;
+  border-color: rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.13);
+  color: #93b7ff;
 }
 
 .pack-cover {
@@ -780,8 +780,8 @@ h1 {
 }
 
 .detail-tabs button.is-selected {
-  border-color: rgba(79, 124, 255, 0.6);
-  background: rgba(79, 124, 255, 0.18);
+  border-color: rgba(37, 99, 235, 0.6);
+  background: rgba(37, 99, 235, 0.18);
   color: var(--text);
 }
 
@@ -822,9 +822,9 @@ h1 {
 }
 
 .tag-chip {
-  border-color: rgba(79, 124, 255, 0.28);
-  background: rgba(79, 124, 255, 0.13);
-  color: #a9c0ff;
+  border-color: rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.13);
+  color: #a8c4ff;
 }
 
 .fact-grid {
@@ -1003,7 +1003,7 @@ h1 {
 }
 
 .composer-mode-strip a.is-selected {
-  background: rgba(79, 124, 255, 0.24);
+  background: rgba(37, 99, 235, 0.24);
   color: var(--text);
 }
 
@@ -1057,8 +1057,8 @@ h1 {
 }
 
 .composer-pack.is-active {
-  border-color: rgba(34, 211, 232, 0.45);
-  background: rgba(39, 107, 255, 0.12);
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .composer-pack small,
@@ -1189,16 +1189,16 @@ h1 {
 }
 
 .composer-error.info {
-  border-color: rgba(34, 211, 232, 0.32);
-  background: rgba(34, 211, 232, 0.08);
-  color: #c8f8ff;
+  border-color: rgba(37, 99, 235, 0.32);
+  background: rgba(37, 99, 235, 0.08);
+  color: #d8e7ff;
 }
 
 .composer-success,
 .composer-success-card {
-  border: 1px solid rgba(85, 217, 135, 0.34);
+  border: 1px solid rgba(34, 197, 94, 0.34);
   border-radius: 8px;
-  background: rgba(85, 217, 135, 0.1);
+  background: rgba(34, 197, 94, 0.1);
   color: #d8ffe5;
 }
 
@@ -1320,10 +1320,10 @@ h1 {
 }
 
 .boundary-list span {
-  border: 1px solid rgba(34, 211, 232, 0.24);
+  border: 1px solid rgba(37, 99, 235, 0.24);
   border-radius: 999px;
-  background: rgba(34, 211, 232, 0.08);
-  color: #c8f8ff;
+  background: rgba(37, 99, 235, 0.08);
+  color: #d8e7ff;
   font-size: 12px;
   padding: 5px 9px;
 }
@@ -1594,9 +1594,9 @@ h1 {
 }
 
 .status-pill.info {
-  background: rgba(40, 212, 215, 0.12);
-  border-color: rgba(40, 212, 215, 0.34);
-  color: #a7f8fb;
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.34);
+  color: #d8e7ff;
 }
 
 .health-check-grid {
@@ -1616,7 +1616,7 @@ h1 {
 }
 
 .health-check.pass {
-  border-color: rgba(85, 217, 135, 0.22);
+  border-color: rgba(34, 197, 94, 0.22);
 }
 
 .health-check.warning {
@@ -1669,8 +1669,8 @@ h1 {
 }
 
 .record-list-item.is-selected {
-  border-color: rgba(79, 124, 255, 0.6);
-  background: rgba(79, 124, 255, 0.15);
+  border-color: rgba(37, 99, 235, 0.6);
+  background: rgba(37, 99, 235, 0.15);
 }
 
 .record-list-item strong,
@@ -1723,7 +1723,7 @@ h1 {
 }
 
 .markdown-body a {
-  color: #8fb0ff;
+  color: #93b7ff;
 }
 
 .markdown-body pre {

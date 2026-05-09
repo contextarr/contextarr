@@ -18,7 +18,7 @@ const skills: SkillSummary[] = [
     name: "Homelab Troubleshooting Skill",
     type: "operations",
     inputs: ["incident_notes"],
-    accentColor: "#22d3e8"
+    accentColor: "#2563EB"
   })
 ];
 
@@ -55,7 +55,7 @@ describe("Skill library utilities", () => {
 
   it("creates deterministic fallback cover metadata", () => {
     expect(createSkillCoverVisual(skills[2])).toMatchObject({
-      accentColor: "#22d3e8",
+      accentColor: "#2563EB",
       coverImage: null,
       icon: "monitor",
       initials: "HT"

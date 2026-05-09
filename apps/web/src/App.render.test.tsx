@@ -1158,7 +1158,7 @@ function agentKitDetailFixture() {
     contextPackCount: 1,
     skillCount: 1,
     exportProfileCount: 1,
-    accentColor: "#22d3e8",
+    accentColor: "#2563EB",
     coverImage: null,
     reviewQueueCount: 0,
     lastReviewedAt: "2026-05-08T00:00:00.000Z",

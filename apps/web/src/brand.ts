@@ -14,7 +14,7 @@ export function installBrandMetadata(documentRef: Document = document): void {
 
   const theme = documentRef.querySelector<HTMLMetaElement>('meta[name="theme-color"]') ?? documentRef.createElement("meta");
   theme.name = "theme-color";
-  theme.content = "#0B1020";
+  theme.content = "#0B1220";
 
   if (!theme.parentElement) {
     documentRef.head.appendChild(theme);

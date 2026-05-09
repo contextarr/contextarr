@@ -53,7 +53,7 @@ Current scope:
 - Local stdio MCP server with read-only pack, record, search, and export-preview tools.
 - Local CLI/core importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
 - `contextarr import <path> --kind <kind> --out <path>` draft pack command.
-- Deterministic SVG brand kit and web app brand mark.
+- Deterministic brand kit, web app brand mark, and approved green/blue brand direction.
 - Composer page for selecting packs/records, building temporary custom exports, and saving private unreviewed draft Context Packs from approved `public_safe` records under `composed-packs/`.
 - `POST /api/compose/preview` local API endpoint for composed export previews.
 - `POST /api/compose/save-pack` local API endpoint for validated Composer draft-pack writes.
@@ -153,7 +153,7 @@ demo-skills/           Fake public-safe non-executable demo Skills
 demo-agent-kits/       Fake public-safe non-executable Agent Kits
 agent-kit-templates/   Fake public-safe data-only Agent Kit templates
 docs/                  Product, architecture, security, and roadmap docs
-assets/brand/          Deterministic SVG brand kit
+assets/brand/          Deterministic brand kit
 tools/brand-kit/       Private pnpm brand asset generator
 ```
 
@@ -189,7 +189,7 @@ See [docs/security-model.md](docs/security-model.md) for the full security postu
 
 ## Brand Assets
 
-The public SVG brand kit lives in [assets/brand](assets/brand). PNG previews and base64 exports are generated locally and ignored by Git.
+The public brand kit lives in [assets/brand](assets/brand). SVG delivery files preserve the approved high-resolution logo renders, while PNG previews and base64 exports are generated locally and ignored by Git.
 
 ## Quickstart
 

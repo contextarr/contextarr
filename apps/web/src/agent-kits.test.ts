@@ -42,7 +42,7 @@ describe("Agent Kit library helpers", () => {
       targets: ["chatgpt", "codex"]
     });
     expect(createAgentKitCoverVisual(agentKits[0])).toMatchObject({
-      accentColor: "#22d3e8",
+      accentColor: "#2563EB",
       initials: "IS"
     });
   });
@@ -85,7 +85,7 @@ function agentKit(overrides: Partial<AgentKitSummary> = {}): AgentKitSummary {
     contextPackCount: 2,
     skillCount: 1,
     exportProfileCount: 1,
-    accentColor: "#22d3e8",
+    accentColor: "#2563EB",
     coverImage: null,
     reviewQueueCount: 0,
     lastReviewedAt: "2026-05-08T00:00:00.000Z",
