@@ -20,6 +20,7 @@ Contextarr currently supports:
 - Read-only MCP tools for Skills and Agent Kits, including scoped Agent Kit context search and Agent Kit export previews.
 - Local Skill importers for draft Skill folders, gated local API writes, and a dashboard Collector flow.
 - Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
+- Phase 28 signing and trust model research docs for future checksums, signatures, private registry requirements, and marketplace non-goals.
 
 ## Second PRD Direction
 
@@ -36,6 +37,8 @@ When Agent Kits are implemented later, self-description fields and validation mu
 ## Draft v1.0 Bridge PRD
 
 [contextarr_phase_by_phase_prd_to_v1.md](contextarr_phase_by_phase_prd_to_v1.md) is a draft bridge PRD and core-stabilization gate. It does not replace this roadmap or roll back the completed Skills and Agent Kit work. The intended direction is to keep the implemented path, while using the bridge PRD to freeze further Skills and Agent Kit expansion until the Context Pack core is v1.0-ready. Any sequencing conflict should be handled as a follow-up roadmap decision.
+
+Phase 28 follows that gate as research only. Further Skills or Agent Kit expansion and any registry prototype remain frozen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
 
 ## Near-Term
 
@@ -55,6 +58,7 @@ When Agent Kits are implemented later, self-description fields and validation mu
 - Phase 25: Read-only MCP for Skills and Agent Kits. Complete.
 - Phase 26: Local Skill importers. Complete.
 - Phase 27: Agent Kit templates. Complete.
+- Phase 28: Signing and trust model research. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -62,8 +66,7 @@ When Agent Kits are implemented later, self-description fields and validation mu
 
 ## Deferred
 
-- Phase 28: Signing and trust model research.
-- Phase 29: Private team registry prototype.
+- Phase 29: Private team registry prototype. Frozen behind the v1.0 core-stabilization gate.
 - Web importer UI.
 - API import endpoints.
 - Saving Composer output as a new pack.

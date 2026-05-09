@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 27: Agent Kit Templates. Phase 26: Local Skill Importers remains complete.
+This repository is in Phase 28: Signing and Trust Model Research. Phase 27: Agent Kit Templates remains complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -85,6 +85,7 @@ Current scope:
 - Phase 27 public-safe Agent Kit templates under `agent-kit-templates/`.
 - Read-only Agent Kit template API endpoints and Composer template prefill flow.
 - Template-generated Agent Kits write only as unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`.
+- Phase 28 signing and trust model research docs for checksums, signatures, private registry requirements, and marketplace non-goals.
 
 Not included yet:
 
@@ -92,6 +93,7 @@ Not included yet:
 - Pack file editing from review actions.
 - Saving composed exports as new packs.
 - Skill execution or Agent Kit runtime behavior.
+- Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
 
 ## Product Positioning
 
@@ -199,6 +201,9 @@ Open the Docker preview at `http://127.0.0.1:3210`. Docker serves the built web 
 Useful launch docs:
 
 - [docs/contextarr_phase_by_phase_prd_to_v1.md](docs/contextarr_phase_by_phase_prd_to_v1.md)
+- [docs/signing-and-trust-model.md](docs/signing-and-trust-model.md)
+- [docs/private-registry-requirements.md](docs/private-registry-requirements.md)
+- [docs/marketplace-non-goals.md](docs/marketplace-non-goals.md)
 - [docs/terminology.md](docs/terminology.md)
 - [docs/skills.md](docs/skills.md)
 - [docs/agent-kits.md](docs/agent-kits.md)
