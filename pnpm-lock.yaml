@@ -62,6 +62,9 @@ importers:
       '@contextarr/security-scanner':
         specifier: workspace:*
         version: link:../../packages/security-scanner
+      '@contextarr/server':
+        specifier: workspace:*
+        version: link:../server
       '@contextarr/skill-validator':
         specifier: workspace:*
         version: link:../../packages/skill-validator

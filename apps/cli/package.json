@@ -19,6 +19,7 @@
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/renderer": "workspace:*",
     "@contextarr/security-scanner": "workspace:*",
+    "@contextarr/server": "workspace:*",
     "@contextarr/skill-validator": "workspace:*",
     "commander": "^12.1.0"
   }
