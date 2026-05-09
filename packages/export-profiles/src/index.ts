@@ -107,6 +107,18 @@ export interface ListPackExportProfilesOptions {
   packPath: string;
 }
 
+export interface TrustedExposureInput {
+  privacy: string;
+  reviewStatus?: string;
+  review_status?: string;
+  tags: string[];
+}
+
+export interface TrustedExposureOptions {
+  privacyMode?: "redacted" | "public_safe" | "full";
+  excludeTags?: string[];
+}
+
 interface LoadedRecord {
   file: string;
   metadata: RecordFrontmatter;
@@ -133,6 +145,7 @@ interface PreparedComposedRecord extends PreparedRecord {
 
 const supportedTargets = new Set(["chatgpt", "claude", "codex", "markdown", "generic_markdown", "json", "json_records"]);
 const defaultComposedExcludeTags = ["secret", "never_export", "imported_draft"];
+const defaultTrustedBlockedTags = ["secret", "sensitive", "private", "never_export", "imported_draft"];
 
 export class ExportError extends Error {
   constructor(
@@ -150,6 +163,37 @@ export function listPackExportProfiles(options: ListPackExportProfilesOptions): 
     packId: pack.manifest.id,
     profile
   }));
+}
+
+export function trustedExposureExclusionReason(
+  input: TrustedExposureInput,
+  options: TrustedExposureOptions = {}
+): string | undefined {
+  const reviewStatus = input.reviewStatus ?? input.review_status;
+  if (reviewStatus !== "approved") {
+    return `Excluded by trusted visibility: review_status is ${reviewStatus ?? "unknown"}`;
+  }
+
+  const privacyMode = options.privacyMode ?? "redacted";
+  if (privacyMode === "public_safe" && input.privacy !== "public_safe") {
+    return `Excluded by public-safe privacy mode: ${input.privacy}`;
+  }
+
+  const blockedTags = new Set(defaultTrustedBlockedTags);
+  const blockedTag = input.tags.find((tag) => blockedTags.has(tag));
+  if (blockedTag) {
+    return `Excluded by trusted visibility tag: ${blockedTag}`;
+  }
+
+  if (input.privacy === "secret") {
+    return `Excluded by trusted visibility: privacy is ${input.privacy}`;
+  }
+
+  if (privacyMode !== "full" && ["private", "sensitive"].includes(input.privacy)) {
+    return `Excluded by trusted visibility: privacy is ${input.privacy}`;
+  }
+
+  return undefined;
 }
 
 export function buildPackExports(options: BuildPackExportsOptions): ExportArtifact[] {
@@ -288,7 +332,7 @@ function selectRecords(
     const reason = exclusionReason(record.metadata, profile, pack.redactionRules);
 
     if (reason) {
-      excluded.push({ ...summarizeRecord(record), reason });
+      excluded.push(summarizeExcludedRecord(record, reason));
       continue;
     }
 
@@ -322,7 +366,7 @@ function selectComposedRecords(
       const reason = composedExclusionReason(record.metadata, privacyMode, excludeTags, pack.redactionRules);
 
       if (reason) {
-        excluded.push({ ...summarizeRecord(record), reason });
+        excluded.push(summarizeExcludedRecord(record, reason));
         continue;
       }
 
@@ -338,6 +382,13 @@ function selectComposedRecords(
 }
 
 function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, rules: RedactionRules): string | undefined {
+  const trustedReason = trustedExposureExclusionReason(metadata, {
+    privacyMode: profile.privacy_mode ?? "redacted"
+  });
+  if (trustedReason) {
+    return trustedReason;
+  }
+
   const profileExcludedTag = metadata.tags.find((tag) => profile.exclude_tags.includes(tag));
   if (profileExcludedTag) {
     return `Excluded by profile tag: ${profileExcludedTag}`;
@@ -367,6 +418,11 @@ function composedExclusionReason(
   excludeTags: string[],
   rules: RedactionRules
 ): string | undefined {
+  const trustedReason = trustedExposureExclusionReason(metadata, { privacyMode, excludeTags });
+  if (trustedReason) {
+    return trustedReason;
+  }
+
   const blockedTags = new Set([...excludeTags, ...rules.redact_tags]);
   const blockedTag = metadata.tags.find((tag) => blockedTags.has(tag));
   if (blockedTag) {
@@ -682,6 +738,22 @@ function summarizeRecord(record: LoadedRecord): ExportRecordSummary {
     privacy: record.metadata.privacy,
     tags: record.metadata.tags,
     sources: record.metadata.sources
+  };
+}
+
+function summarizeExcludedRecord(record: LoadedRecord, reason: string): ExcludedExportRecord {
+  if (!reason.startsWith("Excluded by trusted visibility") && !reason.startsWith("Excluded by public-safe privacy mode")) {
+    return { ...summarizeRecord(record), reason };
+  }
+
+  return {
+    id: record.metadata.id,
+    title: "[redacted]",
+    type: record.metadata.type,
+    privacy: record.metadata.privacy,
+    tags: [],
+    sources: [],
+    reason
   };
 }
 

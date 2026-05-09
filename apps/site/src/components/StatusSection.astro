@@ -1,0 +1,35 @@
+---
+import { implementedFeatures, notIncludedYet } from "../content/status";
+---
+
+<section class="section status-section" id="status">
+  <div class="container status-layout">
+    <div class="section-heading status-intro">
+      <p class="eyebrow">Current build status</p>
+      <h2>Early software, real implementation.</h2>
+      <p>
+        Contextarr is not production ready. The public repo now has the local Context Pack workflow implemented through
+        Phase 11, while Phase 12 is documentation and terminology planning for future Skills and Agent Kits only.
+      </p>
+      <div class="phase-callout">
+        <span>Current status</span>
+        <strong>Phase 12: terminology planning</strong>
+        <p>No Skill schema code, Agent Kit runtime, cloud sync, marketplace, or agent runner.</p>
+      </div>
+    </div>
+    <div class="status-grid">
+      <article class="status-card">
+        <h3>Implemented</h3>
+        <ul class="check-list">
+          {implementedFeatures.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+      <article class="status-card status-card-muted">
+        <h3>Not included yet</h3>
+        <ul class="dash-list">
+          {notIncludedYet.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>

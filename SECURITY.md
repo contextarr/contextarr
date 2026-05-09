@@ -6,6 +6,8 @@ Please report security issues to security@contextarr.com.
 
 Do not include public exploit details, private data, credentials, or secret material in GitHub issues. A short description, affected version or commit, reproduction outline, and impact summary are enough to start.
 
+Use public issues only for general security boundary questions that do not disclose vulnerabilities or private data.
+
 ## Security Boundaries
 
 Contextarr is local-first, data-only, and human-review centered.
@@ -22,6 +24,8 @@ Context Packs must not contain:
 The MCP server is read-only in v0/v1. It must not mutate files, run commands, call external services, or expose private record bodies unless an explicit local-only private access mode is enabled.
 
 AI-drafted records require human review before they become approved pack content or are exported.
+
+See `docs/security-model.md` and `docs/threat-model.md` for the current security model and public alpha threat model.
 
 ## Supported Versions
 

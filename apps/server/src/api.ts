@@ -41,16 +41,13 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return reply.code(401).send({ error: "unauthorized", message: "API token required." });
   });
 
-  app.get("/api/health", async () => {
+  app.get("/api/health", async (request) => {
     const stats = getIndexStats(db);
+    const canShowDetails = !config.apiToken || getRequestToken(request) === config.apiToken;
 
-    return {
+    const base = {
       status: "ok",
       authRequired: Boolean(config.apiToken),
-      host: config.host,
-      port: config.port,
-      packsDir: config.packsDir,
-      databasePath: config.databasePath,
       lastIndexedAt: stats.lastIndexedAt,
       counts: {
         packs: stats.packs,
@@ -60,6 +57,21 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
         reviewItems: stats.reviewItems,
         openReviewItems: stats.openReviewItems
       }
+    };
+
+    if (!canShowDetails) {
+      return {
+        status: base.status,
+        authRequired: base.authRequired
+      };
+    }
+
+    return {
+      ...base,
+      host: config.host,
+      port: config.port,
+      packsDir: config.packsDir,
+      databasePath: config.databasePath
     };
   });
 

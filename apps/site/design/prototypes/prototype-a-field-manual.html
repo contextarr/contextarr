@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contextarr Prototype A</title>
+    <link rel="stylesheet" href="./prototype.css" />
+  </head>
+  <body class="proto-a">
+    <header class="topbar">
+      <a class="brand" href="#">Contextarr</a>
+      <nav>
+        <a href="#">GitHub</a>
+        <a href="#">Security</a>
+        <a href="#">Roadmap</a>
+        <a href="#">Docs</a>
+      </nav>
+      <a class="top-cta" href="#">View on GitHub</a>
+    </header>
+
+    <main>
+      <section class="hero-manual">
+        <div class="hero-copy">
+          <p class="kicker">Open source / self-hosted / Phase 12 terminology planning</p>
+          <h1>Stop re-explaining your systems to AI.</h1>
+          <p class="subhead">
+            Contextarr turns local files, records, source maps, validation rules, and export profiles into validated Context Packs for AI assistants and agents.
+          </p>
+          <div class="actions">
+            <a class="primary" href="#">View the repo</a>
+            <a class="secondary" href="#">Run locally</a>
+          </div>
+        </div>
+
+        <aside class="artifact-card">
+          <p class="mono">CONTEXT PACK</p>
+          <h2>source-backed bundle</h2>
+          <dl>
+            <div><dt>records</dt><dd>25 indexed</dd></div>
+            <div><dt>sources</dt><dd>local files</dd></div>
+            <div><dt>review</dt><dd>human gate</dd></div>
+            <div><dt>mcp</dt><dd>read-only</dd></div>
+          </dl>
+        </aside>
+      </section>
+
+      <figure class="screenshot-plate">
+        <div class="plate-label">Real dashboard proof</div>
+        <img src="../../public/screenshots/contextarr-dashboard.png" alt="Contextarr Pack Library dashboard screenshot" />
+        <figcaption>A local dashboard for reviewing packs, records, health, exports, and source-backed context.</figcaption>
+      </figure>
+
+      <section class="anatomy">
+        <div>
+          <p class="kicker">Pack anatomy</p>
+          <h2>A Context Pack is a structured, versioned, source-backed bundle of reusable context.</h2>
+        </div>
+        <pre><code>id: ai-workstation-pack
+version: 0.7.0
+records: 5
+sources: 5
+exports:
+  - chatgpt / markdown / redacted
+  - claude / markdown / redacted
+  - codex / markdown / redacted
+review:
+  trusted: official
+  status: human-reviewed</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

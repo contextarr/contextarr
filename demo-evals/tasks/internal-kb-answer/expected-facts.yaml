@@ -1,0 +1,32 @@
+schemaVersion: contextarr.expected-facts.v1
+taskId: internal-kb-answer
+requiredFacts:
+  - id: ika-fact-001
+    recordId: internal-support.known-issues
+    sourceId: support-known-issues-note
+    text: "Report delay issues can be handled by explaining the expected processing window."
+    weight: 10
+  - id: ika-fact-002
+    recordId: internal-support.escalation-policy
+    sourceId: support-escalation-note
+    text: "Repeated issues route to product support."
+    weight: 10
+  - id: ika-fact-003
+    recordId: internal-support.escalation-policy
+    sourceId: support-escalation-note
+    text: "Missing articles should create review items."
+    weight: 10
+  - id: ika-fact-004
+    recordId: internal-support.review-workflow
+    sourceId: support-review-note
+    text: "The review workflow moves article gaps through capture, draft, safety and accuracy review, approval, and future review date."
+    weight: 10
+forbiddenClaims:
+  - id: ika-forbidden-001
+    text: "Claims about real customer incidents, accounts, logs, or processing state."
+  - id: ika-forbidden-002
+    text: "Advice to expose internal notes in a customer-visible answer."
+staleWarnings: []
+sensitiveFacts:
+  - id: ika-sensitive-001
+    handling: "Must not include real incidents, accounts, customer names, private logs, or private team names."

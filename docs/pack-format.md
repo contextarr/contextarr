@@ -1,5 +1,7 @@
 # Contextarr Pack Format
 
+Status note: Check [implementation-status.md](implementation-status.md) before treating schema fields, export targets, or safety gates as shipped.
+
 ## Summary
 
 A Contextarr pack is a non-executable local folder containing metadata, records, source maps, export profiles, validation rules, redaction rules, freshness rules, assets, and examples.
@@ -47,7 +49,7 @@ Sources live in `sources/sources.yaml`. Source maps connect pack records to loca
 
 ## Export Profiles
 
-Export profiles define target-specific output. Phase 7 supports ChatGPT, Claude, Codex, generic Markdown, and JSON records. Later targets include Claude Code, OpenCode, Cursor, Open WebUI, AnythingLLM, Hermes, OpenClaw, CSV, and llms.txt-style output.
+Export profiles define target-specific output. Phase 8 supports ChatGPT, Claude, Codex, generic Markdown, and JSON records. See [export-profiles.md](export-profiles.md) for the adapter maturity matrix before treating any additional target as current.
 
 ## Rules
 

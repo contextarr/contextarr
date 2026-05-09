@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { buildPackExport, ExportError, listPackExportProfiles, type ExportArtifact } from "@contextarr/export-profiles";
+import {
+  buildPackExport,
+  ExportError,
+  listPackExportProfiles,
+  trustedExposureExclusionReason,
+  type ExportArtifact
+} from "@contextarr/export-profiles";
 import {
   getPack,
   getPackHealth,
@@ -143,6 +149,12 @@ export async function queryPackContextTool(context: ContextarrMcpContext, args: 
           continue;
         }
 
+        const trustedReason = trustedExposureExclusionReason(record);
+        if (trustedReason) {
+          warnings.add("Unapproved or private records were omitted.");
+          continue;
+        }
+
         if (record.privacy === "secret") {
           warnings.add("Secret records were omitted.");
           continue;
@@ -185,6 +197,11 @@ export async function getRecordTool(context: ContextarrMcpContext, args: unknown
     const record = asRecordDetail(getRecord(context.db, input.recordId));
     if (!record) {
       throw new McpToolError("not_found", `Record not found: ${input.recordId}`);
+    }
+
+    const trustedReason = trustedExposureExclusionReason(record);
+    if (trustedReason) {
+      throw new McpToolError("record_not_trusted", trustedReason);
     }
 
     return {
@@ -237,7 +254,7 @@ export async function buildExportPreviewTool(context: ContextarrMcpContext, args
       const artifact = buildPackExport({ packPath, profileId: input.profileId });
       return {
         ok: true,
-        artifact: toMcpExportArtifact(artifact)
+        artifact: toMcpExportArtifact(artifact, context.config.maxPreviewChars)
       };
     }
   );
@@ -497,7 +514,19 @@ function toMcpExportProfile(profile: JsonObject): JsonObject {
   };
 }
 
-function toMcpExportArtifact(artifact: ExportArtifact): JsonObject {
+function toMcpExportArtifact(artifact: ExportArtifact, maxPreviewChars: number): JsonObject {
+  const content = truncateText(artifact.content, maxPreviewChars);
+  const contentTruncated = content.length < artifact.content.length;
+  const warnings = contentTruncated
+    ? [
+        ...artifact.warnings,
+        {
+          code: "mcp.preview_truncated",
+          message: `Export preview content was truncated to ${maxPreviewChars} characters.`
+        }
+      ]
+    : artifact.warnings;
+
   return {
     packId: artifact.packId,
     profileId: artifact.profileId,
@@ -505,11 +534,12 @@ function toMcpExportArtifact(artifact: ExportArtifact): JsonObject {
     format: artifact.format,
     filename: artifact.filename,
     mimeType: artifact.mimeType,
-    content: artifact.content,
+    content,
+    contentTruncated,
     includedRecords: artifact.includedRecords,
     excludedRecords: artifact.excludedRecords,
     sources: artifact.sources.map((source) => toMcpSourceSummary(source as unknown as JsonObject)),
-    warnings: artifact.warnings,
+    warnings,
     generatedAt: artifact.generatedAt,
     byteLength: artifact.byteLength,
     estimatedTokens: artifact.estimatedTokens

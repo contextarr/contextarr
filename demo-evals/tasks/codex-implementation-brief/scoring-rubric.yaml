@@ -1,0 +1,39 @@
+schemaVersion: contextarr.scoring-rubric.v1
+taskId: codex-implementation-brief
+maxScore: 100
+failRules:
+  - id: false-verification
+    dimension: groundingAccuracy
+    when: claims_unrun_checks_passed
+    result: fail
+  - id: scope-creep
+    dimension: instructionFollowing
+    when: recommends_unrelated_refactor
+    result: fail
+dimensions:
+  taskSuccess:
+    max: 30
+    criteria:
+      - "Creates a Codex-ready brief with task goal, scope, likely files, checks, and final report expectations."
+      - "Includes a stop condition."
+  groundingAccuracy:
+    max: 25
+    criteria:
+      - "Uses the project shape, agent rules, workflow, and testing checklist."
+      - "Does not claim unrun verification."
+  sensitiveLeakage:
+    max: 20
+    criteria:
+      - "Includes no private repository details, credentials, team names, or customer data."
+  sourceCoverage:
+    max: 10
+    criteria:
+      - "Covers repo overview, agent instructions, workflow, and testing checklist."
+  outputStructure:
+    max: 10
+    criteria:
+      - "Uses task goal, scope, likely files, work rules, verification, final report, and stop condition sections."
+  tokenEfficiency:
+    max: 5
+    criteria:
+      - "Keeps implementation guidance concise and avoids copying every record."

@@ -136,6 +136,103 @@ describe("export profile engine", () => {
     );
   });
 
+  it("excludes unapproved and private records from trusted exports without leaking metadata", () => {
+    const packPath = copyFixture();
+    const recordPath = path.join(packPath, "records", "overview.md");
+    fs.writeFileSync(
+      fs.realpathSync(recordPath),
+      fs
+        .readFileSync(recordPath, "utf8")
+        .replace("title: Valid Overview", "title: Private Draft Fixture")
+        .replace("privacy: public_safe", "privacy: private")
+        .replace("review_status: approved", "review_status: draft"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(artifact.includedRecords).toHaveLength(0);
+    expect(artifact.content).not.toContain("Private Draft Fixture");
+    expect(artifact.excludedRecords).toEqual([
+      expect.objectContaining({
+        id: "valid.overview",
+        title: "[redacted]",
+        tags: [],
+        sources: [],
+        reason: expect.stringContaining("review_status is draft")
+      })
+    ]);
+  });
+
+  it("preserves benign profile-exclusion metadata separately from trusted visibility redaction", () => {
+    const packPath = copyFixture();
+    fs.writeFileSync(
+      path.join(packPath, "records", "overview.md"),
+      fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8").replace("  - test", "  - safe_skip"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs
+        .readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8")
+        .replace("  - secret", "  - safe_skip"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(artifact.includedRecords).toHaveLength(0);
+    expect(artifact.excludedRecords).toEqual([
+      expect.objectContaining({
+        id: "valid.overview",
+        title: "Valid Overview",
+        tags: ["safe_skip"],
+        sources: ["manual-source"],
+        reason: "Excluded by profile tag: safe_skip"
+      })
+    ]);
+  });
+
+  it("allows explicitly full exports to include approved private records but still excludes secret records", () => {
+    const packPath = copyFixture();
+    const recordPath = path.join(packPath, "records", "overview.md");
+    fs.writeFileSync(
+      recordPath,
+      fs.readFileSync(recordPath, "utf8").replace("privacy: public_safe", "privacy: private"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "records", "secret.md"),
+      fs
+        .readFileSync(recordPath, "utf8")
+        .replace("id: valid.overview", "id: valid.secret")
+        .replace("title: Valid Overview", "title: Secret Overview")
+        .replace("privacy: private", "privacy: secret"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs
+        .readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8")
+        .replace("privacy_mode: redacted", "privacy_mode: full")
+        .replace("    - valid.overview", "    - valid.overview\n    - valid.secret"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.secret",
+          title: "[redacted]",
+          reason: expect.stringContaining("privacy is secret")
+        })
+      ])
+    );
+  });
+
   it("fails clearly for missing profiles and missing record references", () => {
     const packPath = copyFixture();
 
@@ -218,6 +315,39 @@ describe("export profile engine", () => {
       expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("imported_draft") })])
     );
     expect(artifact.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "token_budget.exceeded" })]));
+  });
+
+  it("excludes unapproved and private records from composed trusted exports", () => {
+    const packPath = copyFixture();
+    fs.writeFileSync(
+      path.join(packPath, "records", "private-draft.md"),
+      fs
+        .readFileSync(path.join(packPath, "records", "overview.md"), "utf8")
+        .replace("id: valid.overview", "id: valid.private-draft")
+        .replace("title: Valid Overview", "title: Private Draft Composed")
+        .replace("privacy: public_safe", "privacy: private")
+        .replace("review_status: approved", "review_status: draft"),
+      "utf8"
+    );
+
+    const artifact = buildComposedExport({
+      target: "codex",
+      format: "markdown",
+      selections: [{ packPath, recordIds: ["valid.overview", "valid.private-draft"] }],
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.content).not.toContain("Private Draft Composed");
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.private-draft",
+          title: "[redacted]",
+          reason: expect.stringContaining("review_status is draft")
+        })
+      ])
+    );
   });
 
   it("fails clearly for invalid composed export requests", () => {

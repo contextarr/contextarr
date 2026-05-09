@@ -84,7 +84,7 @@ describe("Contextarr MCP tools", () => {
     );
   });
 
-  it("omits secret and private record bodies unless private access is enabled", async () => {
+  it("omits untrusted records and does not allow private record bodies", async () => {
     context = createTestContext();
     insertSyntheticRecord(context.db, {
       id: "ai-workstation.secret-note",
@@ -102,14 +102,29 @@ describe("Contextarr MCP tools", () => {
     const secretResult = await getRecordTool(context, { recordId: "ai-workstation.secret-note" });
     const privateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
 
-    expect(secretResult.record).toEqual(expect.objectContaining({ bodyIncluded: false, body: null }));
-    expect(privateResult.record).toEqual(expect.objectContaining({ bodyIncluded: false, body: null }));
+    expect(secretResult).toEqual(expect.objectContaining({ ok: false, error: "record_not_trusted" }));
+    expect(privateResult).toEqual(expect.objectContaining({ ok: false, error: "record_not_trusted" }));
 
     context.config.allowPrivate = true;
     const allowedPrivateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
-    expect(allowedPrivateResult.record).toEqual(
-      expect.objectContaining({ bodyIncluded: true, body: "private fixture body" })
-    );
+    expect(allowedPrivateResult).toEqual(expect.objectContaining({ ok: false, error: "record_not_trusted" }));
+  });
+
+  it("omits draft records from MCP query results", async () => {
+    context = createTestContext();
+    insertSyntheticRecord(context.db, {
+      id: "ai-workstation.draft-note",
+      title: "Draft Note",
+      privacy: "public_safe",
+      body: "draft fixture body",
+      reviewStatus: "draft"
+    });
+
+    const result = await queryPackContextTool(context, { query: "draft fixture" });
+
+    expect(result.ok).toBe(true);
+    expect(JSON.stringify(result.results)).not.toContain("ai-workstation.draft-note");
+    expect(result.warnings).toEqual(expect.arrayContaining(["Unapproved or private records were omitted."]));
   });
 
   it("lists export profiles and builds export previews", async () => {
@@ -132,6 +147,23 @@ describe("Contextarr MCP tools", () => {
       })
     );
     expect(JSON.stringify(preview.artifact)).not.toContain("\"path\"");
+  });
+
+  it("truncates export preview content deterministically", async () => {
+    context = createTestContext({ maxPreviewChars: 120 });
+    const preview = await buildExportPreviewTool(context, {
+      packId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex"
+    });
+
+    expect(preview.ok).toBe(true);
+    expect(preview.artifact).toEqual(
+      expect.objectContaining({
+        contentTruncated: true,
+        content: expect.stringContaining("[truncated]")
+      })
+    );
+    expect(JSON.stringify(preview.artifact)).toContain("mcp.preview_truncated");
   });
 
   it("logs query metadata without raw query text or returned content", async () => {
@@ -160,6 +192,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     rescanOnStart: true,
     maxResults: 8,
     maxRecordChars: 12000,
+    maxPreviewChars: 24000,
     allowPrivate: false,
     ...overrides
   };
@@ -170,7 +203,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
 
 function insertSyntheticRecord(
   db: ContextarrDatabase,
-  record: { id: string; title: string; privacy: string; body: string }
+  record: { id: string; title: string; privacy: string; body: string; reviewStatus?: string }
 ): void {
   const metadata = {
     id: record.id,
@@ -184,7 +217,7 @@ function insertSyntheticRecord(
     privacy: record.privacy,
     last_reviewed: "2026-05-07",
     sources: [],
-    review_status: "approved"
+    review_status: record.reviewStatus ?? "approved"
   };
 
   db.prepare(

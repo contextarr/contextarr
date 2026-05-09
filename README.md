@@ -8,150 +8,82 @@
 
 # Contextarr
 
-Contextarr is a self-hosted context automation and agent preparation system for AI assistants and agents.
+Local-first context, skills, and agent kit infrastructure for AI tools and agent workflows.
 
-It is designed to help power users and teams build, validate, review, render, compose, and export local-first context packs for tools like ChatGPT, Claude, Codex, Claude Code, OpenCode, Cursor, local agents, and read-only MCP clients.
+[![CI](https://github.com/contextarr/contextarr/actions/workflows/ci.yml/badge.svg)](https://github.com/contextarr/contextarr/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/contextarr/contextarr)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/contextarr/contextarr)](https://github.com/contextarr/contextarr/commits/main)
+[![Issues](https://img.shields.io/github/issues/contextarr/contextarr)](https://github.com/contextarr/contextarr/issues)
+[![Pull requests](https://img.shields.io/github/issues-pr/contextarr/contextarr)](https://github.com/contextarr/contextarr/pulls)
 
-## Status
+Contextarr helps operators maintain reusable, validated context assets that can be reviewed, rendered, composed, and exported for tools such as ChatGPT, Claude, Codex, Claude Code, Cursor, local agents, and MCP clients.
 
-Contextarr is an early public preview and is not production ready.
+AI tools are getting better at using context, but useful project facts, workflow rules, prompts, and preferences still get scattered across chats, Markdown files, docs, and private memory systems. Contextarr provides a local, inspectable way to prepare that context without turning private knowledge into a hosted memory vault.
 
-This repository is in Phase 12: Skills and Agent Kits terminology planning.
+The product position is context quality, not generic memory: source-backed facts, review state, freshness, redaction, deterministic exports, and agent-safe boundaries should make a Contextarr brief visibly better than a loose manual prompt.
 
-The original PRD through Phase 11 is implemented locally. Phase 12 begins the second PRD track with documentation only: no schema code, app functionality, runtime behavior, or execution capability is added.
+## Project Maturity
 
-Current scope:
+Contextarr is early alpha software. It is useful for local experimentation, public-safe demo packs, validation, export workflows, the local dashboard, and read-only MCP testing.
 
-- Monorepo skeleton.
-- Project documentation.
-- Package manager metadata.
-- Local-first architecture decisions.
-- Security and non-goal guardrails.
-- Zod schemas for pack manifests, records, sources, export profiles, and rules.
-- Deterministic read-only pack validator.
-- `contextarr validate <path>` CLI command.
-- Test fixture packs for validator coverage.
-- Five public-safe demo packs under `demo-packs/`.
-- Rebuildable SQLite index for local pack folders.
-- Local Fastify API for pack, record, health, search, and rescan data.
-- Hardened local search for UI input.
-- UI-ready pack summary fields for cover metadata and review queue counts.
-- Optional local API token auth.
-- React and Vite local dashboard shell.
-- API-backed Pack Library with Cover Grid, Compact Cards, and Dense Table views.
-- Read-only library search, sort, and filter controls.
-- Pack detail and record detail views.
-- Shared sanitized Markdown renderer.
-- `contextarr render <path> --out <path>` static HTML command.
-- Deterministic Pack Health v0.
-- SQLite-backed review items and review status actions.
-- Review Queue and Pack Health dashboard pages.
-- Profile-driven export generation for ChatGPT, Claude, Codex, generic Markdown, and JSON records.
-- `contextarr export <path> --profile <id> --out <path>` and `contextarr export <path> --all --out <path>` CLI commands.
-- Local API export preview endpoint.
-- Export Center and pack-level export preview, copy, and download UI.
-- Local stdio MCP server with read-only pack, record, search, and export-preview tools.
-- Local CLI/core importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
-- `contextarr import <path> --kind <kind> --out <path>` draft pack command.
-- Deterministic SVG brand kit and web app brand mark.
-- Read-only Composer page for selecting packs/records and building temporary custom exports.
-- `POST /api/compose/preview` local API endpoint for composed export previews.
-- Docker Compose local preview stack serving the built web app and API from one local origin.
-- Public-preview docs, release checklist, and screenshot placeholders.
-- Second PRD appendix for future Skills and Agent Kits.
-- Phase 12 terminology docs for Context Packs, Skills, Agent Kits, Export Briefs, and non-executable Skill boundaries.
+Do not treat it as production stable yet. Do not use it for regulated data, unattended automation, private company memory, or exposed network services without your own review.
 
-Not included yet:
+The current repo includes Phase 11 local preview work and Phase 12 terminology planning. Phase 12 is documentation only: it defines future Skills, Agent Kits, Export Briefs, and non-executable boundaries without adding schema code, app behavior, runtime execution, or marketplace behavior.
 
-- Web importer UI.
-- API import endpoints.
-- Pack file editing from review actions.
-- Saving composed exports as new packs.
-- Skill schema and Skill validator.
-- Demo Skills or demo Agent Kits.
-- Skill Library or Agent Kit UI/API/MCP extensions.
-- Skill execution or Agent Kit runtime behavior.
+For shipped versus planned behavior, check [docs/implementation-status.md](docs/implementation-status.md) before relying on roadmap language, future command examples, safety gates, export targets, registry behavior, Skills, or Agent Kits.
 
-## Product Positioning
+## What Works Today
 
-Contextarr is not a chatbot, hosted memory vault, marketplace, RAG app, or agent runner. The first product shape is:
+Current implemented surfaces include:
 
-```text
-Local sources in.
-Validated context packs out.
-Human-readable dashboard.
-Profile-driven AI exports.
-Read-only local MCP.
-```
+- TypeScript and pnpm monorepo.
+- Public-safe demo packs under [demo-packs](demo-packs).
+- Zod schemas and deterministic pack validation.
+- CLI commands for `validate`, `render`, `export`, and `import`.
+- Stable `--json` and `--agent` envelopes for implemented CLI commands.
+- Local Fastify API backed by rebuildable SQLite derived state.
+- React and Vite local dashboard for Library, pack details, records, Pack Health, Review Queue, Exports, and Composer.
+- Sanitized Markdown rendering and static HTML generation.
+- Profile-driven exports for ChatGPT, Claude, Codex, Markdown, and JSON records.
+- Local draft importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
+- Read-only stdio MCP server.
+- Docker Compose local preview for the built web app and API.
+- G2 public-safe Context Quality Benchmark fixture data under [demo-evals](demo-evals), with no harness or model calls.
+- G3 local deterministic Context Quality Benchmark harness for fixture scoring and local report generation.
+- G4 local deterministic Context Quality Benchmark gate for accepted demo fixtures and G3 reports.
 
-The second PRD keeps Context Packs as the core source-backed knowledge object and adds planning language for future Skills and Agent Kits:
-
-```text
-Context Packs tell agents what to know.
-Skills tell agents how to work.
-Agent Kits tell agents how this specific bundle should be used for this specific task.
-Export Briefs are generated from those ingredients.
-```
-
-Every Agent Kit must be self-describing. It carries its own usage instructions, task goal, output contract, and safety boundary. Contextarr prepares Agent Kits. It does not run them.
+The npm workspace packages are private. Contextarr packages are not published to npm yet.
 
 ## Repository Layout
 
-```text
-apps/
-  web/                 React and Vite local dashboard
-  server/              Node.js Fastify API
-  cli/                 Contextarr CLI
-  mcp/                 Read-only stdio MCP server
+- [demo-packs](demo-packs): fake public-safe Context Pack examples.
+- [demo-evals](demo-evals): public-safe benchmark fixtures consumed by the local deterministic G3 harness.
+- [docs](docs): product, safety, roadmap, and implementation-status docs.
+- [apps](apps): current CLI, API, web, and MCP packages.
+- [packages](packages): shared schemas, validator, renderer, exporters, importers, and utilities.
 
-packages/
-  schema/              Zod schemas
-  renderer/            Sanitized Markdown and static HTML renderer
-  pack-validator/      Pack validation engine
-  export-profiles/     Profile-driven export engine
-  importers/           Local draft pack importers
+## What Contextarr Is Not
 
-demo-packs/            Fake public-safe demo packs
-docs/                  Product, architecture, security, and roadmap docs
-assets/brand/          Deterministic SVG brand kit
-tools/brand-kit/       Private pnpm brand asset generator
-```
+Contextarr is not:
 
-## Planned Stack
+- A chatbot.
+- A hosted memory service.
+- A generic RAG app.
+- An agent runner.
+- A workflow automation engine.
+- A marketplace.
+- A system for executing arbitrary scripts inside packs.
+- A replacement for a personal knowledge management system.
 
-- TypeScript monorepo.
-- pnpm workspace.
-- Node.js backend.
-- Fastify API server.
-- React + Vite frontend.
-- SQLite as rebuildable derived index.
-- Zod for schemas and validation.
-- Sanitized Markdown rendering.
-- Docker Compose for local operation.
-- Read-only MCP SDK integration over stdio.
+Packs are treated as data, not executable code. Demo packs must use fake or public-safe sample data only.
 
-## Safety Boundaries
+## Quick Start
 
-Contextarr v0 must stay local-first and data-only:
+Requirements:
 
-- No hosted cloud.
-- No marketplace.
-- No executable packs.
-- No executable Skills.
-- No Agent Kit runner.
-- No scripts inside packs.
-- No direct Gmail, bank, or brokerage connectors.
-- No managed AI dependency.
-- No telemetry.
-- No real private data in this repository.
-
-See [docs/security-model.md](docs/security-model.md) for the full security posture.
-
-## Brand Assets
-
-The public SVG brand kit lives in [assets/brand](assets/brand). PNG previews and base64 exports are generated locally and ignored by Git.
-
-## Quickstart
+- Node.js 20 or newer.
+- pnpm 10.
+- Docker Desktop only if you want to test the Compose preview.
 
 Install dependencies and run the local dev stack:
 
@@ -162,115 +94,96 @@ pnpm dev
 
 Open the dashboard at `http://127.0.0.1:5173`.
 
-Docker local preview:
+The dev stack runs the API on `http://127.0.0.1:3210` and the Vite web app on `http://127.0.0.1:5173`.
+
+## Common Commands
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm docs:verify
+pnpm benchmark:demo
+pnpm benchmark:report
+pnpm phase11:verify
+pnpm phase12:verify
+```
+
+Useful CLI examples:
+
+```bash
+pnpm --filter @contextarr/cli contextarr validate demo-packs
+pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/ai-workstation
+pnpm --filter @contextarr/cli contextarr export demo-packs/ai-workstation-pack --target codex --out generated-exports/ai-workstation
+pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/manual --pack-id manual-markdown-draft
+pnpm --filter @contextarr/cli contextarr benchmark run support-ticket-drafting --sample-only --json
+pnpm --filter @contextarr/cli contextarr benchmark gate --all --sample-only --json
+pnpm contextarr-mcp
+```
+
+Generated output belongs in ignored local folders such as `rendered/`, `generated-exports/`, `imported-packs/`, `benchmark-reports/`, and `data/`.
+
+Benchmark reports are local derived artifacts. G3 reports are useful diagnostics for fixture coverage, source-backed facts, safety, and export coverage. G4 adds a local deterministic gate for demo/export quality, available through `contextarr benchmark gate`, `pnpm benchmark:demo`, and `pnpm benchmark:report`; it does not add CI enforcement, public release automation, external AI calls, network fetches, telemetry, cloud services, registry behavior, marketplace behavior, Skills, or Agent Kits.
+
+## Docker Preview
+
+Docker Compose is a local preview path, not a hosted deployment recipe.
 
 ```bash
 docker compose build
 docker compose up
 ```
 
-Open the Docker preview at `http://127.0.0.1:3210`. Docker serves the built web app and local API from the same Fastify server. See [docs/quickstart.md](docs/quickstart.md) and [docs/docker.md](docs/docker.md).
+Open `http://127.0.0.1:3210`.
 
-Useful launch docs:
+The Compose stack serves the built web app and local API from one Fastify process, mounts `demo-packs` read-only, and stores derived SQLite state in a Docker volume. See [docs/docker.md](docs/docker.md).
 
-- [docs/terminology.md](docs/terminology.md)
-- [docs/skills.md](docs/skills.md)
-- [docs/agent-kits.md](docs/agent-kits.md)
-- [docs/non-executable-skills.md](docs/non-executable-skills.md)
-- [docs/security.md](docs/security.md)
-- [docs/pack-authoring.md](docs/pack-authoring.md)
-- [docs/export-profiles.md](docs/export-profiles.md)
-- [docs/mcp.md](docs/mcp.md)
-- [docs/roadmap.md](docs/roadmap.md)
-- [docs/release-checklist.md](docs/release-checklist.md)
+## Preview
 
-## Verification
+No reviewed README screenshot is tracked yet. Screenshot guidance lives in [docs/assets/screenshots/README.md](docs/assets/screenshots/README.md), and the launch checklist tracks the remaining screenshot and social preview work.
 
-```bash
-pnpm install
-pnpm phase11:verify
-pnpm phase12:verify
-pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
-pnpm --filter @contextarr/cli contextarr validate demo-packs
-```
+## Documentation
 
-The validator is read-only. It does not rewrite packs, fetch URLs, call APIs, run scripts, or execute pack content.
+Start with [docs/index.md](docs/index.md).
 
-Render static HTML locally:
+Key docs:
 
-```bash
-pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/ai-workstation
-pnpm --filter @contextarr/cli contextarr render demo-packs --out rendered/demo-packs
-```
+- [Quickstart](docs/quickstart.md)
+- [Configuration](docs/configuration.md)
+- [Implementation status](docs/implementation-status.md)
+- [Architecture](docs/architecture.md)
+- [Pack format](docs/pack-format.md)
+- [Pack authoring](docs/pack-authoring.md)
+- [Export profiles](docs/export-profiles.md)
+- [API](docs/api.md)
+- [MCP](docs/mcp.md)
+- [Security notes](docs/security.md)
+- [Security model](docs/security-model.md)
+- [Threat model](docs/threat-model.md)
+- [Non-goals](docs/non-goals.md)
+- [Context quality](docs/context-quality.md)
+- [Context quality benchmark](docs/context-quality-benchmark.md)
+- [Roadmap](docs/roadmap.md)
+- [Release checklist](docs/release-checklist.md)
+- [Repository publication checklist](docs/repo-publication-checklist.md)
 
-Static HTML output is generated under ignored local folders such as `rendered/`.
+## Security
 
-Generate local export files:
+Contextarr is local-first, data-only, and human-review centered.
 
-```bash
-pnpm --filter @contextarr/cli contextarr export demo-packs/ai-workstation-pack --profile ai-workstation-codex --out generated-exports/ai-workstation
-pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated-exports/demo-packs
-```
+- Do not commit secrets, tokens, private keys, credentials, or real private data.
+- Do not put real customer, company, medical, financial, or personal data in public demo packs.
+- Do not expose local services publicly without explicit authentication and threat review.
+- The MCP server is read-only and stdio-only in the current implementation.
+- Contextarr does not add telemetry.
 
-Generated export files are derived artifacts and are ignored under `generated-exports/`.
+Report vulnerabilities using [SECURITY.md](SECURITY.md). Do not open public issues that include exploit details, credentials, or private data.
 
-Import local files into a generated draft pack:
+## Contributing
 
-```bash
-pnpm --filter @contextarr/cli contextarr import packages/importers/test/fixtures/markdown-folder --kind markdown --out imported-packs/manual --pack-id manual-markdown-draft
-```
+Small, scoped issues and pull requests are welcome while the project is early.
 
-Imported packs are drafts under ignored local folders such as `imported-packs/`. Imported records are private, unapproved, and tagged to avoid accidental export.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md), keep changes inside the product boundaries, update docs with user-facing changes, and run the relevant checks before opening a pull request.
 
-Run the read-only MCP server:
+## License
 
-```bash
-pnpm contextarr-mcp
-```
-
-Use `pnpm --silent contextarr-mcp` for pnpm-launched MCP client smoke checks so pnpm's script banner does not write to stdout. The MCP server uses stdio only. It exposes `list_packs`, `get_pack_summary`, `query_pack_context`, `get_record`, `list_export_profiles`, and `build_export_preview`. See [docs/mcp.md](docs/mcp.md).
-
-## Local API
-
-Start the local API after installing dependencies:
-
-```bash
-pnpm --filter @contextarr/server dev
-```
-
-Start the local web dashboard in another shell:
-
-```bash
-pnpm --filter @contextarr/web dev
-```
-
-Default API settings come from `.env.example`:
-
-- `CONTEXTARR_HOST=127.0.0.1`
-- `CONTEXTARR_PORT=3210`
-- `CONTEXTARR_PACKS_DIR=./demo-packs`
-- `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
-- `CONTEXTARR_WEB_DIST_DIR=` optional built web app directory for same-origin serving
-- `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
-- `VITE_CONTEXTARR_API_BASE=` optional web override; leave empty to use the Vite `/api` proxy
-- `VITE_CONTEXTARR_API_TOKEN=` optional web token for protected local APIs
-- `CONTEXTARR_MCP_RESCAN_ON_START=true`
-- `CONTEXTARR_MCP_MAX_RESULTS=8`
-- `CONTEXTARR_MCP_MAX_RECORD_CHARS=12000`
-- `CONTEXTARR_MCP_ALLOW_PRIVATE=false`
-
-When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
-
-Available local API endpoints:
-
-- `GET /api/health`
-- `GET /api/packs`
-- `GET /api/packs/:id`
-- `GET /api/packs/:id/health`
-- `GET /api/packs/:id/exports/:profileId/preview`
-- `GET /api/packs/:id/records`
-- `GET /api/records/:id`
-- `GET /api/review-items`
-- `POST /api/review-items/:id/status`
-- `GET /api/search?q=`
-- `POST /api/rescan`
+Contextarr is licensed under the [Apache License 2.0](LICENSE).

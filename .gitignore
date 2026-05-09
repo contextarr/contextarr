@@ -7,9 +7,11 @@ dist/
 build/
 coverage/
 out/
+.astro/
 rendered/
 generated-exports/
 imported-packs/
+benchmark-reports/
 mockup-images/
 assets/brand/png/
 assets/brand/base64/

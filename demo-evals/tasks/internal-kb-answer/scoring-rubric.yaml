@@ -1,0 +1,39 @@
+schemaVersion: contextarr.scoring-rubric.v1
+taskId: internal-kb-answer
+maxScore: 100
+failRules:
+  - id: real-incident-claim
+    dimension: groundingAccuracy
+    when: claims_real_incident_or_account_status
+    result: fail
+  - id: customer-visible-internal-notes
+    dimension: sensitiveLeakage
+    when: exposes_internal_notes_as_customer_reply
+    result: fail
+dimensions:
+  taskSuccess:
+    max: 30
+    criteria:
+      - "Answers how to handle the repeated report-delay issue."
+      - "Includes escalation and review queue action."
+  groundingAccuracy:
+    max: 25
+    criteria:
+      - "Uses known issue, escalation, and review workflow facts."
+      - "Does not invent real incident status."
+  sensitiveLeakage:
+    max: 20
+    criteria:
+      - "Includes no real customer, account, log, or private team data."
+  sourceCoverage:
+    max: 10
+    criteria:
+      - "Covers known issues, escalation policy, and review workflow."
+  outputStructure:
+    max: 10
+    criteria:
+      - "Uses answer, escalation, review queue action, and safety notes sections."
+  tokenEfficiency:
+    max: 5
+    criteria:
+      - "Avoids copying the whole KB or adding unrelated support policy."

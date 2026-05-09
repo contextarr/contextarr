@@ -1,5 +1,7 @@
 # Contextarr Security Notes
 
+Status note: Check [implementation-status.md](implementation-status.md) before treating security gates, CLI modes, MCP visibility rules, quarantine, registry, Skill, or Agent Kit behavior as shipped.
+
 Contextarr v0.1 is local-first, data-only, and human-review centered.
 
 ## Hard Boundaries
@@ -9,6 +11,8 @@ Contextarr v0.1 is local-first, data-only, and human-review centered.
 - No executable packs.
 - No executable Skills.
 - No Agent Kit runner.
+- No CLI agent runner or workflow automation engine.
+- No CLI execution of pack instructions.
 - No scripts inside packs.
 - No hidden network calls from pack content.
 - No hosted cloud.
@@ -31,6 +35,8 @@ Exports and Composer previews are temporary derived artifacts. They apply profil
 ## MCP
 
 The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, run tools, call external APIs, or log raw returned context.
+
+MCP is optional. The CLI is the primary deterministic automation surface for agents and power users, and it must call shared core functions rather than shelling out to MCP.
 
 ## Skills And Agent Kits
 

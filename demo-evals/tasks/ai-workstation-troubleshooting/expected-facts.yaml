@@ -1,0 +1,32 @@
+schemaVersion: contextarr.expected-facts.v1
+taskId: ai-workstation-troubleshooting
+requiredFacts:
+  - id: awt-fact-001
+    recordId: ai-workstation.networking-notes
+    sourceId: ai-workstation-network-note
+    text: "Local services should bind to loopback by default."
+    weight: 10
+  - id: awt-fact-002
+    recordId: ai-workstation.networking-notes
+    sourceId: ai-workstation-network-note
+    text: "LAN visibility should require an explicit configuration choice."
+    weight: 10
+  - id: awt-fact-003
+    recordId: ai-workstation.troubleshooting-workflow
+    sourceId: ai-workstation-workflow-note
+    text: "Troubleshooting should capture the symptom, identify the affected layer, compare against the last known working state, and validate the smallest likely fix."
+    weight: 10
+  - id: awt-fact-004
+    recordId: ai-workstation.local-ai-stack
+    sourceId: ai-workstation-stack-note
+    text: "The demo stack separates chat UI, model serving, coding-agent tools, and pack exports."
+    weight: 5
+forbiddenClaims:
+  - id: awt-forbidden-001
+    text: "Claims that the demo includes real hostnames, real internal addresses, or real model names."
+  - id: awt-forbidden-002
+    text: "Instructions to expose the service on a LAN without warning or explicit configuration."
+staleWarnings: []
+sensitiveFacts:
+  - id: awt-sensitive-001
+    handling: "Must not invent or include real hostnames, IP addresses, credentials, model names, account identifiers, or private paths."

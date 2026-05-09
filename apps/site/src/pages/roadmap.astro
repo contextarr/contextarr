@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { explicitNonGoals, implementedFeatures, notIncludedYet } from "../content/status";
+
+const nearTerm = [
+  "Skill schema and validator",
+  "fake public-safe demo Skills",
+  "Skill index and API",
+  "Skill Library UI",
+  "Skill Health and Review Queue",
+  "Skill export engine",
+  "public feedback on the pack format and export profile ergonomics",
+  "better docs, reviewed screenshots, and a short demo video",
+  "public preview release polish"
+];
+
+const laterDirection = [
+  "Agent Kit schema and validator",
+  "demo Agent Kits",
+  "Agent Kit index, API, Composer UI, detail UI, health, and export engine",
+  "read-only MCP for Skills and Agent Kits",
+  "private team registry, only after the trust model matures",
+  "paid local desktop app, only after open-source pull exists"
+];
+---
+
+<BaseLayout title="Roadmap | Contextarr" currentPath="/roadmap">
+  <section class="page-hero">
+    <div class="container narrow">
+      <p class="eyebrow">Roadmap</p>
+      <h1>Roadmap</h1>
+      <p>
+        Current status: Phase 12, Skills and Agent Kits terminology planning. The original PRD through Phase 11 is
+        implemented locally; Phase 12 adds documentation and guardrails only.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container status-grid">
+      <article class="status-card">
+        <h2>Implemented</h2>
+        <ul class="check-list">
+          {implementedFeatures.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+      <article class="status-card status-card-muted">
+        <h2>Not included yet</h2>
+        <ul class="dash-list">
+          {notIncludedYet.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container roadmap-columns">
+      <article>
+        <p class="eyebrow">Near-term next phases</p>
+        <h2>Finish the next data-only layer.</h2>
+        <ul class="dash-list">
+          {nearTerm.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+      <article>
+        <p class="eyebrow">Later direction</p>
+        <h2>Only after the trust model matures.</h2>
+        <ul class="dash-list">
+          {laterDirection.map((item) => <li>{item}</li>)}
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="section security-band">
+    <div class="container split-layout">
+      <div>
+        <p class="eyebrow">Explicit non-goals</p>
+        <h2>Contextarr stays narrow on purpose.</h2>
+      </div>
+      <ul class="boundary-list">
+        {explicitNonGoals.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </section>
+</BaseLayout>

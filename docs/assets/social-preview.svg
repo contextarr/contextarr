@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Contextarr social preview</title>
+  <desc id="desc">Contextarr, local-first context, skills, and agent kit infrastructure for AI workflows.</desc>
+  <rect width="1280" height="640" fill="#0f172a"/>
+  <rect x="64" y="64" width="1152" height="512" rx="28" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <rect x="96" y="96" width="1088" height="448" rx="18" fill="#0b1120" stroke="#1f2937" stroke-width="1"/>
+  <g transform="translate(116 124)">
+    <rect x="0" y="0" width="104" height="104" rx="24" fill="#38bdf8"/>
+    <path d="M30 30h44v14H46v16h28v14H30z" fill="#0f172a"/>
+    <path d="M30 74h44v14H30z" fill="#0f172a" opacity="0.82"/>
+  </g>
+  <text x="252" y="188" fill="#f8fafc" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="84" font-weight="750" letter-spacing="0">Contextarr</text>
+  <text x="252" y="256" fill="#bae6fd" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="520" letter-spacing="0">Local-first context infrastructure for AI workflows</text>
+  <g fill="none" stroke="#334155" stroke-width="2">
+    <rect x="252" y="318" width="214" height="58" rx="12"/>
+    <rect x="490" y="318" width="248" height="58" rx="12"/>
+    <rect x="762" y="318" width="196" height="58" rx="12"/>
+  </g>
+  <text x="280" y="356" fill="#e2e8f0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" letter-spacing="0">Context Packs</text>
+  <text x="518" y="356" fill="#e2e8f0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" letter-spacing="0">Validated Exports</text>
+  <text x="790" y="356" fill="#e2e8f0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" letter-spacing="0">Read-only MCP</text>
+  <text x="252" y="456" fill="#cbd5e1" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" letter-spacing="0">Inspectable files. Public-safe demos. Data-only packs.</text>
+  <text x="252" y="504" fill="#94a3b8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" letter-spacing="0">Early alpha open-source project</text>
+</svg>

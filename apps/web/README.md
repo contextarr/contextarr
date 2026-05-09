@@ -25,4 +25,4 @@ pnpm --filter @contextarr/web dev
 
 The Vite dev server proxies `/api` to `http://127.0.0.1:3210` by default.
 
-For Docker preview, the Vite build output is served by the Fastify server from the same local origin. The browser token UI is intentionally absent; leave Docker `CONTEXTARR_API_TOKEN` empty for the default preview.
+For Docker preview, the Vite build output is served by the Fastify server from the same local origin. Docker passes the local preview API token into the Vite build with `VITE_CONTEXTARR_API_TOKEN`.

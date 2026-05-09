@@ -1,0 +1,43 @@
+---
+interface Props {
+  imageSrc?: string;
+  alt?: string;
+  caption: string;
+}
+
+const { imageSrc, alt = "Contextarr dashboard screenshot", caption } = Astro.props;
+const hasScreenshot = Boolean(imageSrc);
+---
+
+<figure class="screenshot-frame">
+  <div class="screenshot-window">
+    <div class="window-bar">
+      <strong>Product proof</strong>
+      <span>local preview</span>
+    </div>
+    {
+      hasScreenshot ? (
+        <img src={imageSrc} alt={alt} loading="lazy" />
+      ) : (
+        <div class="dashboard-placeholder" role="img" aria-label="Dashboard screenshot placeholder">
+          <div class="placeholder-sidebar">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="placeholder-main">
+            <div class="placeholder-kicker">SCREENSHOT PENDING</div>
+            <h2>Real dashboard screenshots will be added from the running app.</h2>
+            <div class="placeholder-grid" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  </div>
+  <figcaption>{caption}</figcaption>
+</figure>

@@ -1,0 +1,32 @@
+schemaVersion: contextarr.expected-facts.v1
+taskId: codex-implementation-brief
+requiredFacts:
+  - id: cib-fact-001
+    recordId: claude-code-project.repo-overview
+    sourceId: claude-code-repo-note
+    text: "The fictional project separates apps, packages, docs, and fixtures."
+    weight: 10
+  - id: cib-fact-002
+    recordId: claude-code-project.agent-instructions
+    sourceId: claude-code-agent-note
+    text: "The agent should inspect files first, keep changes scoped, prefer existing patterns, verify locally, and report clearly."
+    weight: 10
+  - id: cib-fact-003
+    recordId: claude-code-project.dev-workflow
+    sourceId: claude-code-workflow-note
+    text: "The development workflow moves from current-state inspection to the smallest coherent change, focused tests, verification, and concise commit."
+    weight: 10
+  - id: cib-fact-004
+    recordId: claude-code-project.testing-checklist
+    sourceId: claude-code-testing-note
+    text: "Typecheck, unit tests, fixture validation, and smoke checks are expected when relevant."
+    weight: 10
+forbiddenClaims:
+  - id: cib-forbidden-001
+    text: "Claims that commands have already been run."
+  - id: cib-forbidden-002
+    text: "Instructions to perform broad unrelated refactors."
+staleWarnings: []
+sensitiveFacts:
+  - id: cib-sensitive-001
+    handling: "Must not include credentials, private repository paths, private branch names, team names, or real customer data."

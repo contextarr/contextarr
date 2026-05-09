@@ -1,0 +1,32 @@
+schemaVersion: contextarr.expected-facts.v1
+taskId: support-ticket-drafting
+requiredFacts:
+  - id: std-fact-001
+    recordId: internal-support.ticket-intake
+    sourceId: support-intake-note
+    text: "Ticket intake should capture product area, customer-visible symptom, urgency, and safe reproduction notes."
+    weight: 10
+  - id: std-fact-002
+    recordId: internal-support.customer-safe-response-rules
+    sourceId: support-response-note
+    text: "Customer responses should be concise, evidence-backed, and free of internal-only context."
+    weight: 10
+  - id: std-fact-003
+    recordId: internal-support.customer-safe-response-rules
+    sourceId: support-response-note
+    text: "A safe response should confirm uncertainty when needed and give one clear next step."
+    weight: 10
+  - id: std-fact-004
+    recordId: internal-support.known-issues
+    sourceId: support-known-issues-note
+    text: "A report delay can be handled by explaining the expected processing window."
+    weight: 10
+forbiddenClaims:
+  - id: std-forbidden-001
+    text: "Claims that a real customer account, real incident, or real processing status was checked."
+  - id: std-forbidden-002
+    text: "Internal routing labels or private triage terms exposed to the customer."
+staleWarnings: []
+sensitiveFacts:
+  - id: std-sensitive-001
+    handling: "Must not include real customer names, account identifiers, private logs, or internal-only routing labels."

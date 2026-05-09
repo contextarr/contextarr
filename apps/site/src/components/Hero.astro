@@ -1,0 +1,32 @@
+---
+import { links, proofChips } from "../content/site";
+import ScreenshotFrame from "./ScreenshotFrame.astro";
+---
+
+<section class="hero-rebuild">
+  <div class="container hero-inner">
+    <p class="status-badge">Open source / early development / Phase 12 terminology planning</p>
+    <h1>Stop re&#8209;explaining your systems to AI.</h1>
+    <p class="hero-subtitle">
+      Contextarr is a self-hosted context automation system and pack manager that turns local files, records, sources,
+      and rules into validated Context Packs for AI assistants and agents.
+    </p>
+
+    <div class="hero-actions">
+      <a class="button button-primary" href={links.github}>View the repo</a>
+      <a class="button button-secondary" href={links.verification}>Run locally</a>
+    </div>
+
+    <ul class="proof-chips" aria-label="Product proof points">
+      {proofChips.map((chip) => <li>{chip}</li>)}
+    </ul>
+  </div>
+
+  <div class="container hero-preview">
+    <ScreenshotFrame
+      imageSrc="/screenshots/contextarr-dashboard.png"
+      alt="Contextarr Pack Library dashboard showing local packs, health, review, exports, and source-backed context"
+      caption="Captured from the running local dashboard. No generated product screenshots."
+    />
+  </div>
+</section>

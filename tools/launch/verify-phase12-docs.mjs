@@ -73,7 +73,21 @@ if (!failed) {
   }
 }
 
-const schemaChanges = execFileSync("git", ["diff", "--name-only", "HEAD", "--", "packages/schema", "apps/server/src", "apps/web/src", "apps/mcp/src"], {
+const runtimePaths = [
+  "apps/cli/src",
+  "apps/mcp/src",
+  "apps/server/src",
+  "apps/web/src",
+  "apps/site/src",
+  "packages/context-quality/src",
+  "packages/export-profiles/src",
+  "packages/importers/src",
+  "packages/pack-validator/src",
+  "packages/renderer/src",
+  "packages/schema",
+];
+
+const schemaChanges = execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...runtimePaths], {
   cwd: repoRoot,
   encoding: "utf8",
 })

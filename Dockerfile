@@ -16,6 +16,8 @@ COPY assets ./assets
 COPY demo-packs ./demo-packs
 
 RUN pnpm install --frozen-lockfile
+ARG CONTEXTARR_API_TOKEN=local-preview-token
+ENV VITE_CONTEXTARR_API_TOKEN=$CONTEXTARR_API_TOKEN
 RUN pnpm --filter @contextarr/web build
 
 ENV NODE_ENV=production
@@ -24,6 +26,7 @@ ENV CONTEXTARR_PORT=3210
 ENV CONTEXTARR_PACKS_DIR=/app/demo-packs
 ENV CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 ENV CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
+ENV CONTEXTARR_API_TOKEN=$CONTEXTARR_API_TOKEN
 
 EXPOSE 3210
 

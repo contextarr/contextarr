@@ -384,10 +384,36 @@ describe("Contextarr API", () => {
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
     const response = await app.inject({ method: "GET", url: "/api/health" });
+    const body = response.json();
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ authRequired: true });
-    expect(JSON.stringify(response.json())).not.toContain("test-token");
+    expect(body).toEqual({ status: "ok", authRequired: true });
+    expect(JSON.stringify(body)).not.toContain("test-token");
+    expect(JSON.stringify(body)).not.toContain("demo-packs");
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("returns detailed health only with token auth when a token is configured", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/health",
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      authRequired: true,
+      packsDir: authedContext.config.packsDir,
+      databasePath: ":memory:",
+      counts: {
+        packs: 5,
+        records: 25
+      }
+    });
     await app.close();
     authedContext.db.close();
   });

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Phase 9 importers convert local inputs into generated draft pack folders. They are local-only and CLI/core-only.
+Phase 10 importers convert local inputs into generated draft pack folders. They are local-only and CLI/core-only.
 
 ## Command
 

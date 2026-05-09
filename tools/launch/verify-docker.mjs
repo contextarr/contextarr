@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import http from "node:http";
+import path from "node:path";
 
 const projectName = "contextarr-phase11-smoke";
 const hostPort = process.env.CONTEXTARR_DOCKER_VERIFY_PORT ?? "33210";
@@ -8,6 +10,29 @@ const composeEnv = {
   ...process.env,
   CONTEXTARR_DOCKER_PORT: hostPort,
 };
+const apiToken = "local-preview-token";
+const demoPacksDir = path.resolve("demo-packs");
+
+function getDemoInventory() {
+  const packDirs = fs
+    .readdirSync(demoPacksDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(demoPacksDir, entry.name))
+    .filter((packDir) => fs.existsSync(path.join(packDir, "contextarr-pack.json")));
+
+  const records = packDirs.flatMap((packDir) => {
+    const recordsDir = path.join(packDir, "records");
+    if (!fs.existsSync(recordsDir)) {
+      return [];
+    }
+    return fs
+      .readdirSync(recordsDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => path.join(recordsDir, entry.name));
+  });
+
+  return { packs: packDirs.length, records: records.length };
+}
 
 function run(args) {
   const result = spawnSync("docker", ["compose", "-p", projectName, ...args], {
@@ -22,7 +47,7 @@ function run(args) {
 }
 
 async function getJson(path) {
-  const { statusCode, body } = await request(path);
+  const { statusCode, body } = await request(path, { auth: true });
   if (statusCode < 200 || statusCode >= 300) {
     throw new Error(`${path} returned HTTP ${statusCode}`);
   }
@@ -35,6 +60,7 @@ async function postJson(path, body) {
     method: "POST",
     headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload).toString() },
     body: payload,
+    auth: true
   });
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(`${path} returned HTTP ${response.statusCode}: ${response.body}`);
@@ -59,7 +85,10 @@ function request(path, options = {}) {
       url,
       {
         method: options.method ?? "GET",
-        headers: options.headers,
+        headers: {
+          ...(options.auth ? { Authorization: `Bearer ${apiToken}` } : {}),
+          ...(options.headers ?? {})
+        },
         timeout: 5000,
       },
       (res) => {
@@ -100,12 +129,13 @@ async function waitForHealth() {
 }
 
 async function verify() {
+  const expected = getDemoInventory();
   run(["down"]);
   run(["build"]);
   run(["up", "-d"]);
 
   const health = await waitForHealth();
-  if (health.status !== "ok" || health.counts?.packs !== 5 || health.counts?.records !== 25) {
+  if (health.status !== "ok" || health.counts?.packs < expected.packs || health.counts?.records < expected.records) {
     throw new Error(`Unexpected Docker health response: ${JSON.stringify(health)}`);
   }
 

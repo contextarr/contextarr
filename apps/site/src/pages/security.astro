@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { links } from "../content/site";
+import { exactSecurityBoundaryBullets } from "../content/status";
+
+const sections = [
+  {
+    title: "Local-first by default",
+    text: "Contextarr keeps source context in local files and uses local services for validation, indexing, review, rendering, exports, and MCP access."
+  },
+  {
+    title: "Data-only Context Packs",
+    text: "Packs are metadata, Markdown records, source maps, validation rules, redaction rules, and export profiles. Pack content is read and validated, not executed."
+  },
+  {
+    title: "Read-only MCP",
+    text: "The local stdio MCP server exposes read-only pack, record, search, and export-preview tools. It must not mutate files, run commands, call network services, or access secrets."
+  },
+  {
+    title: "Human review required",
+    text: "AI-drafted content and imported draft records require review before they become trusted context, exports, or MCP-visible content by default."
+  },
+  {
+    title: "No telemetry",
+    text: "Telemetry is out of scope. Contextarr should not phone home by default, and this static website does not add analytics or tracking scripts."
+  },
+  {
+    title: "No marketplace in v0",
+    text: "Contextarr is not a public marketplace or cloud registry. Any future registry model must wait until the trust model matures."
+  }
+];
+---
+
+<BaseLayout title="Security model | Contextarr" currentPath="/security">
+  <section class="page-hero">
+    <div class="container narrow">
+      <p class="eyebrow">Security</p>
+      <h1>Security model</h1>
+      <p>
+        Contextarr handles operational and personal context, so the default posture is local-first, data-only, and
+        review-first.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container content-grid">
+      {sections.map((section) => (
+        <article class="content-card">
+          <h2>{section.title}</h2>
+          <p>{section.text}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container split-layout">
+      <div>
+        <p class="eyebrow">What Contextarr does not do</p>
+        <h2>Explicit boundaries.</h2>
+        <p>
+          These boundaries are part of the product model, not a temporary marketing promise.
+        </p>
+      </div>
+      <ul class="boundary-list">
+        {exactSecurityBoundaryBullets.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section final-cta">
+    <div class="container cta-panel">
+      <p class="eyebrow">Responsible disclosure</p>
+      <h2>Report security issues privately.</h2>
+      <p>
+        Please do not include public exploit details, private data, credentials, or secret material in GitHub issues.
+      </p>
+      <p class="contact-line">
+        Security contact: <a href={`mailto:${links.securityEmail}`}>{links.securityEmail}</a>
+      </p>
+    </div>
+  </section>
+</BaseLayout>

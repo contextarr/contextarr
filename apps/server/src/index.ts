@@ -23,6 +23,9 @@ export type {
   RebuildIndexResult,
   ReviewItem,
   ReviewItemFilters,
+  ReviewItemSeverity,
+  ReviewItemStatus,
+  ReviewItemType,
   ServerConfig,
   SkippedPack
 } from "./types";

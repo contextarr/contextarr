@@ -1,5 +1,7 @@
 # Contextarr Product Requirements Document and Build Plan
 
+Status note: This PRD defines requirements and build direction. Check [implementation-status.md](implementation-status.md) before treating any requirement, command, export target, registry behavior, Skill, Agent Kit, or marketplace behavior as shipped.
+
 ## 1. Executive Summary
 
 ### 1.1 Product Name
@@ -159,6 +161,14 @@ Users should not be trapped inside the Contextarr UI.
 
 No public marketplace until the pack format, permission model, signing model, review process, and abuse controls are mature.
 
+### 2.11 CLI-First Agent Interface Principle
+
+Contextarr must be fully useful to agents through deterministic CLI commands without requiring MCP.
+
+MCP remains a supported optional transport for live local querying, but the CLI is the primary automation surface for validation, inspection, export, health, import dry-runs, quarantine review, and agent brief generation.
+
+CLI, API, Web UI, MCP, and exports must call shared core functions. No surface should shell out to another surface.
+
 ---
 
 ## 3. Non-Goals
@@ -178,6 +188,9 @@ Do not build these in the initial product:
 11. Deep codebase AST indexer competing with Graphify, Claude Code, Cursor, or Codex.
 12. General chatbot UI.
 13. Managed AI subscription.
+14. CLI agent runner or workflow automation engine.
+15. CLI execution of pack instructions.
+16. MCP-only agent access model.
 14. Hosted sync.
 15. Multi-user real-time collaboration.
 16. Marketplace payments.
@@ -1049,9 +1062,10 @@ Recommended:
 7. Lucide or similar icon set.
 8. Zod for schema validation.
 9. Docker Compose.
-10. MCP SDK for local MCP server.
-11. Markdown parser with sanitization.
-12. Full-text search with SQLite FTS5.
+10. CLI as the primary deterministic automation interface.
+11. MCP SDK for local MCP server.
+12. Markdown parser with sanitization.
+13. Full-text search with SQLite FTS5.
 
 Do not use Postgres in v0.
 Do not use vector database in v0.
@@ -1177,7 +1191,8 @@ Deliverables:
 2. README.
 3. Docker Compose stub.
 4. Docs.
-5. No app functionality required yet.
+5. CLI-first agent interface docs and AGENTS.md guardrails.
+6. No app functionality required yet.
 
 ### Phase 1: Pack Schema and Validator
 
@@ -1193,7 +1208,7 @@ Goals:
 Deliverables:
 
 1. `contextarr validate ./demo-packs`
-2. JSON output.
+2. Deterministic JSON output.
 3. Human-readable validation report.
 4. Tests.
 
@@ -1217,6 +1232,7 @@ Deliverables:
 4. Export profiles.
 5. Validation rules.
 6. Covers or generated cover metadata.
+7. Demo validation command works from the CLI.
 
 ### Phase 3: Local Index and API
 
@@ -1226,6 +1242,7 @@ Goals:
 2. Build SQLite index.
 3. Expose API endpoints.
 4. Search packs and records.
+5. Support CLI index, rescan, inspect, and list commands as the index exists.
 
 API endpoints:
 
@@ -1248,6 +1265,7 @@ Goals:
 5. Build dense table.
 6. Build pack detail page.
 7. Build record detail view.
+8. Keep pack metadata inspectable through CLI as well as the Web UI.
 
 Deliverables:
 
@@ -1302,6 +1320,7 @@ Goals:
 4. Build generic Markdown export.
 5. Build JSON records export.
 6. Build redacted export.
+7. Build task-specific agent briefs.
 
 Deliverables:
 
@@ -1320,6 +1339,7 @@ Goals:
 4. Add `query_pack_context`.
 5. Add `get_record`.
 6. Add setup docs for Claude Desktop or Claude Code where applicable.
+7. Keep CLI fully useful without MCP.
 
 Deliverables:
 

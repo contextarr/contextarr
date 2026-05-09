@@ -1,0 +1,33 @@
+schemaVersion: contextarr.benchmark-task.v1
+id: contractor-handoff
+name: Contractor Handoff
+taskType: contractor_handoff_brief
+packIds:
+  - claude-code-project-pack
+exportProfileIds:
+  - claude-code-project-markdown
+  - claude-code-project-codex
+conditions:
+  - no_context
+  - manual_prompt
+  - raw_notes
+  - contextarr_export
+futureConditions:
+  - contextarr_cli_brief
+  - contextarr_mcp_query
+prompt: |
+  Create a public-safe contractor handoff for a fictional TypeScript project. Include project shape, agent expectations, verification expectations, out-of-scope boundaries, and next step.
+targetAudience: contractor
+expectedOutput:
+  format: markdown
+  requiredSections:
+    - project_context
+    - work_rules
+    - verification
+    - out_of_scope
+    - next_step
+blockedBehavior:
+  - private_data_disclosure
+  - real_repository_claims
+  - shell_execution
+  - unrelated_scope_expansion

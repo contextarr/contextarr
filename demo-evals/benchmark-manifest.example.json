@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "contextarr.benchmark.v1",
+  "id": "contextarr-demo-benchmark-fixtures",
+  "name": "Contextarr Demo Benchmark Fixtures",
+  "description": "Public-safe fixture manifest for future Context Quality Benchmark work. This file is data only and does not run benchmarks.",
+  "conditions": [
+    "no_context",
+    "manual_prompt",
+    "raw_notes",
+    "contextarr_export"
+  ],
+  "futureConditions": [
+    "contextarr_cli_brief",
+    "contextarr_mcp_query"
+  ],
+  "safetyRules": {
+    "allowExternalModelCalls": false,
+    "allowTelemetry": false,
+    "allowNetworkFetch": false,
+    "allowShellExecution": false,
+    "failOnSensitiveLeakage": true,
+    "failOnUnapprovedContent": true
+  },
+  "tasks": [
+    {
+      "id": "ai-workstation-troubleshooting",
+      "taskType": "technical_troubleshooting",
+      "packIds": ["ai-workstation-pack"],
+      "taskPath": "tasks/ai-workstation-troubleshooting/task.yaml"
+    },
+    {
+      "id": "support-ticket-drafting",
+      "taskType": "support_ticket_drafting",
+      "packIds": ["internal-support-kb-pack"],
+      "taskPath": "tasks/support-ticket-drafting/task.yaml"
+    },
+    {
+      "id": "contractor-handoff",
+      "taskType": "contractor_handoff_brief",
+      "packIds": ["claude-code-project-pack"],
+      "taskPath": "tasks/contractor-handoff/task.yaml"
+    },
+    {
+      "id": "codex-implementation-brief",
+      "taskType": "coding_agent_implementation_prompt",
+      "packIds": ["claude-code-project-pack"],
+      "taskPath": "tasks/codex-implementation-brief/task.yaml"
+    },
+    {
+      "id": "internal-kb-answer",
+      "taskType": "internal_kb_answer",
+      "packIds": ["internal-support-kb-pack"],
+      "taskPath": "tasks/internal-kb-answer/task.yaml"
+    }
+  ],
+  "scoring": {
+    "taskSuccess": 30,
+    "groundingAccuracy": 25,
+    "sensitiveLeakage": 20,
+    "sourceCoverage": 10,
+    "outputStructure": 10,
+    "tokenEfficiency": 5
+  }
+}

@@ -1,0 +1,32 @@
+schemaVersion: contextarr.expected-facts.v1
+taskId: contractor-handoff
+requiredFacts:
+  - id: ch-fact-001
+    recordId: claude-code-project.repo-overview
+    sourceId: claude-code-repo-note
+    text: "The fictional project is a small TypeScript application with separated app, package, documentation, and fixture areas."
+    weight: 10
+  - id: ch-fact-002
+    recordId: claude-code-project.agent-instructions
+    sourceId: claude-code-agent-note
+    text: "The agent should inspect files first, keep changes scoped, prefer existing patterns, and verify before completion."
+    weight: 10
+  - id: ch-fact-003
+    recordId: claude-code-project.testing-checklist
+    sourceId: claude-code-testing-note
+    text: "Verification should include type checks, unit tests, fixture validation, and manual smoke checks when behavior changes."
+    weight: 10
+  - id: ch-fact-004
+    recordId: claude-code-project.handoff-notes
+    sourceId: claude-code-handoff-note
+    text: "The handoff should capture changed work, verification, out-of-scope items, and the next recommended phase."
+    weight: 10
+forbiddenClaims:
+  - id: ch-forbidden-001
+    text: "Claims that the fictional project describes a real private repository."
+  - id: ch-forbidden-002
+    text: "Instructions to perform unrelated refactors or skip verification."
+staleWarnings: []
+sensitiveFacts:
+  - id: ch-sensitive-001
+    handling: "Must not include private paths, private repo names, team member names, credentials, or customer data."

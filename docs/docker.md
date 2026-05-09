@@ -43,14 +43,17 @@ CONTEXTARR_PORT=3210
 CONTEXTARR_PACKS_DIR=/app/demo-packs
 CONTEXTARR_DATABASE_PATH=/app/data/contextarr.db
 CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist
-CONTEXTARR_API_TOKEN=
+CONTEXTARR_API_TOKEN=local-preview-token
+VITE_CONTEXTARR_API_TOKEN=local-preview-token
 ```
 
 `CONTEXTARR_WEB_DIST_DIR` is what enables same-origin web serving in Docker. When it is unset, the server stays API-only for normal local development.
 
 ## Token Auth
 
-Docker quickstart leaves `CONTEXTARR_API_TOKEN` empty because the browser app has no token-entry UI. If you enable token auth in Docker, the web build must be configured to send that token through `VITE_CONTEXTARR_API_TOKEN`, which is not the default public-preview path.
+Docker quickstart uses a local preview token because the container binds internally to `0.0.0.0`. The same token is passed into the web build as `VITE_CONTEXTARR_API_TOKEN` so the same-origin dashboard can call protected API routes.
+
+Do not reuse `local-preview-token` outside local preview. Any non-loopback bind requires an explicit `CONTEXTARR_API_TOKEN`.
 
 ## Stop
 

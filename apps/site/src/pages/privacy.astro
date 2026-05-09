@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const sections = [
+  {
+    title: "Local files as source of truth",
+    text: "Contextarr is designed so your source context lives in local files you control."
+  },
+  {
+    title: "SQLite as rebuildable local index",
+    text: "SQLite is derived state for search, health, review, and preview flows. It can be rebuilt from local pack files."
+  },
+  {
+    title: "No telemetry",
+    text: "Telemetry is out of scope. Contextarr should not phone home by default."
+  },
+  {
+    title: "No hosted sync",
+    text: "Contextarr is not a hosted cloud vault or cloud sync product."
+  },
+  {
+    title: "No managed AI dependency",
+    text: "Contextarr prepares context for AI tools. It does not require a managed AI subscription and does not call AI APIs by default."
+  },
+  {
+    title: "Exports are explicit user actions",
+    text: "Exports and Composer previews are generated artifacts created from validated local context and redaction rules."
+  },
+  {
+    title: "MCP is local and read-only",
+    text: "The MCP server is a local stdio process with read-only tools for validated context and export previews."
+  },
+  {
+    title: "Website privacy",
+    text: "This marketing site should not use analytics, ad pixels, tracking scripts, cookies, or third-party embeds in this version."
+  }
+];
+---
+
+<BaseLayout title="Privacy | Contextarr" currentPath="/privacy">
+  <section class="page-hero">
+    <div class="container narrow">
+      <p class="eyebrow">Privacy</p>
+      <h1>Privacy</h1>
+      <p>Contextarr is designed so your source context lives in local files you control.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container content-grid">
+      {sections.map((section) => (
+        <article class="content-card">
+          <h2>{section.title}</h2>
+          <p>{section.text}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

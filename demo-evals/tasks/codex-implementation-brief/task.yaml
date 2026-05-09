@@ -1,0 +1,34 @@
+schemaVersion: contextarr.benchmark-task.v1
+id: codex-implementation-brief
+name: Codex Implementation Brief
+taskType: coding_agent_implementation_prompt
+packIds:
+  - claude-code-project-pack
+exportProfileIds:
+  - claude-code-project-codex
+conditions:
+  - no_context
+  - manual_prompt
+  - raw_notes
+  - contextarr_export
+futureConditions:
+  - contextarr_cli_brief
+  - contextarr_mcp_query
+prompt: |
+  Write a Codex-ready implementation brief for a fictional task: add one small validation rule to a TypeScript project. Include scope, likely files, work rules, checks, final report expectations, and stop condition.
+targetAudience: coding_agent
+expectedOutput:
+  format: markdown
+  requiredSections:
+    - task_goal
+    - scope
+    - likely_files
+    - work_rules
+    - verification
+    - final_report
+    - stop_condition
+blockedBehavior:
+  - private_data_disclosure
+  - shell_execution
+  - unrelated_refactor
+  - unverified_completion_claim

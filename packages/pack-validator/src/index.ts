@@ -13,7 +13,8 @@ import {
   validationRulesSchema,
   type ContextPackManifest,
   type RecordFrontmatter,
-  type SourceMap
+  type SourceMap,
+  type ValidationRules
 } from "@contextarr/schema";
 
 export type ValidationSeverity = "error" | "warning" | "info";
@@ -127,7 +128,8 @@ export function validatePack(packPath: string, options: ValidatePackOptions = {}
   const records = validateRecords(resolvedPackPath, manifest, issues);
   validateSourceMap(resolvedPackPath, manifest, records, issues);
   validateExportProfiles(resolvedPackPath, manifest, issues);
-  validateRules(resolvedPackPath, manifest, issues);
+  const validationRules = validateRules(resolvedPackPath, manifest, issues);
+  validatePolicyChecks(resolvedPackPath, manifest, records, validationRules, issues);
   scanTextFiles(resolvedPackPath, allFiles, issues, options.scanText ?? true);
 
   return finish(resolvedPackPath, issues);
@@ -333,7 +335,7 @@ function validateExportProfiles(packPath: string, manifest: ContextPackManifest,
   }
 }
 
-function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): void {
+function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): ValidationRules | undefined {
   const rulesDir = path.join(packPath, manifest.rulesPath);
 
   if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
@@ -344,9 +346,10 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
       `Rules folder does not exist: ${manifest.rulesPath}.`,
       manifest.rulesPath
     );
-    return;
+    return undefined;
   }
 
+  let validationRules: ValidationRules | undefined;
   const rules = [
     ["validation.yaml", validationRulesSchema, "rules.validation"],
     ["redaction.yaml", redactionRulesSchema, "rules.redaction"],
@@ -356,7 +359,74 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
   for (const [fileName, schema, code] of rules) {
     const file = path.join(rulesDir, fileName);
     if (fs.existsSync(file)) {
-      readYamlSchemaFile(packPath, file, schema, issues, code);
+      const parsed = readYamlSchemaFile(packPath, file, schema, issues, code);
+      if (fileName === "validation.yaml") {
+        validationRules = parsed as ValidationRules | undefined;
+      }
+    }
+  }
+
+  return validationRules;
+}
+
+function validatePolicyChecks(
+  packPath: string,
+  manifest: ContextPackManifest,
+  records: RecordFrontmatter[],
+  validationRules: ValidationRules | undefined,
+  issues: ValidationIssue[]
+): void {
+  const checks = new Set(validationRules?.checks ?? []);
+  const blockedTags = new Set(["secret", "sensitive", "private", "never_export"]);
+
+  for (const record of records) {
+    const recordFile = recordFilePath(packPath, manifest, record.id);
+
+    if (checks.has("approved_content_only") && record.review_status !== "approved") {
+      addIssue(
+        issues,
+        "error",
+        "policy.approved_content_only",
+        `Record "${record.id}" is ${record.review_status}; approved_content_only requires approved records.`,
+        recordFile,
+        "review_status"
+      );
+    }
+
+    if (checks.has("public_safe_only") && record.privacy !== "public_safe") {
+      addIssue(
+        issues,
+        "error",
+        "policy.public_safe_only",
+        `Record "${record.id}" is ${record.privacy}; public_safe_only requires public_safe privacy.`,
+        recordFile,
+        "privacy"
+      );
+    }
+
+    if (checks.has("draft_records_require_review") && record.source_status === "draft" && record.review_status === "approved") {
+      addIssue(
+        issues,
+        "error",
+        "policy.draft_records_require_review",
+        `Record "${record.id}" is source_status draft but is already approved.`,
+        recordFile,
+        "review_status"
+      );
+    }
+
+    if (checks.has("no_secret_tags")) {
+      const blockedTag = record.tags.find((tag) => blockedTags.has(tag));
+      if (blockedTag) {
+        addIssue(
+          issues,
+          "error",
+          "policy.no_secret_tags",
+          `Record "${record.id}" uses blocked tag "${blockedTag}".`,
+          recordFile,
+          "tags"
+        );
+      }
     }
   }
 }
@@ -539,6 +609,23 @@ function addIssue(
 
 function relativePath(root: string, file: string): string {
   return normalizePath(path.relative(root, file));
+}
+
+function recordFilePath(packPath: string, manifest: ContextPackManifest, recordId: string): string {
+  const recordsDir = path.join(packPath, manifest.recordsPath);
+  const match = listFiles(recordsDir, []).find((file) => {
+    if (!file.toLowerCase().endsWith(".md")) {
+      return false;
+    }
+
+    try {
+      return matter(fs.readFileSync(file, "utf8")).data.id === recordId;
+    } catch {
+      return false;
+    }
+  });
+
+  return match ? relativePath(packPath, match) : manifest.recordsPath;
 }
 
 function normalizePath(value: string): string {

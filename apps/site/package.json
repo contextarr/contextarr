@@ -1,0 +1,21 @@
+{
+  "name": "@contextarr/site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "astro": "astro",
+    "check": "astro check",
+    "cf:local": "pnpm build && wrangler pages dev dist --local-protocol=http --compatibility-date=2026-05-08"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@fontsource-variable/ibm-plex-sans": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "astro": "^6.3.1",
+    "wrangler": "^4.90.0"
+  }
+}

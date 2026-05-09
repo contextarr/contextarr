@@ -16,6 +16,7 @@
     "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/renderer": "workspace:*",
+    "@contextarr/server": "workspace:*",
     "commander": "^12.1.0"
   }
 }

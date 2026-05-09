@@ -9,7 +9,7 @@ Implemented through Phase 11:
 - expose pack, record, health, search, and rescan API endpoints
 - return UI-ready pack summary fields for cover metadata and review queue counts
 - harden search against punctuation-heavy UI input
-- support optional local API token auth via `CONTEXTARR_API_TOKEN`
+- support optional loopback API token auth and required non-loopback API token auth via `CONTEXTARR_API_TOKEN`
 - calculate deterministic Pack Health v0
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue and pack health API endpoints
@@ -31,7 +31,7 @@ pnpm --filter @contextarr/server rescan
 
 The server binds to `127.0.0.1` by default and does not mutate pack files.
 
-Docker Compose sets `CONTEXTARR_HOST=0.0.0.0` and `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist` so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
+Docker Compose sets `CONTEXTARR_HOST=0.0.0.0`, `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist`, and a local preview token so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
 
 Export previews are generated from validated local pack files. The server does not write generated export files, fetch source URLs, call AI APIs, or upload data.
 
@@ -42,4 +42,6 @@ When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 - `Authorization: Bearer <token>`
 - `X-Contextarr-Token: <token>`
 
-`GET /api/health` remains unauthenticated and reports whether auth is required.
+`GET /api/health` remains unauthenticated and reports whether auth is required. When token auth is enabled, detailed paths and counts are returned only when the request includes the configured token.
+
+The server refuses non-loopback binds such as `0.0.0.0` unless `CONTEXTARR_API_TOKEN` is set.
