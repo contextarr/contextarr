@@ -219,6 +219,7 @@ Useful launch docs:
 - [docs/compatibility.md](docs/compatibility.md)
 - [docs/security-review-v1.md](docs/security-review-v1.md)
 - [docs/abuse-cases.md](docs/abuse-cases.md)
+- [docs/decision-records/README.md](docs/decision-records/README.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/export-profiles.md](docs/export-profiles.md)
 - [docs/mcp.md](docs/mcp.md)
