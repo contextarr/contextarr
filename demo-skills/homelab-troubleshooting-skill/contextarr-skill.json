@@ -44,7 +44,7 @@
     "checklist"
   ],
   "assets": {
-    "accentColor": "#14b8a6"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.2.0"

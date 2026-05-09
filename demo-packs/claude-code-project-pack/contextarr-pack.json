@@ -25,7 +25,7 @@
   "exportsPath": "exports",
   "rulesPath": "rules",
   "assets": {
-    "accentColor": "#8b5cf6"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.1.0"

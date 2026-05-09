@@ -1,0 +1,42 @@
+---
+import { links } from "../content/site";
+
+interface Props {
+  currentPath?: string;
+}
+
+const { currentPath = "/" } = Astro.props;
+const navItems = [
+  { label: "GitHub", href: links.github },
+  { label: "Security", href: "/security" },
+  { label: "Roadmap", href: "/roadmap" },
+  { label: "Docs", href: links.docs }
+];
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="wordmark" href="/" aria-label="Contextarr home">
+      <span class="wordmark-mark" aria-hidden="true">
+        <img src="/brand-mark.svg" alt="" />
+      </span>
+      <span class="wordmark-text">Context<span>arr</span></span>
+    </a>
+    <nav class="header-nav" aria-label="Primary navigation">
+      {
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class:list={["nav-link", currentPath === item.href && "is-active"]}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+    <div class="header-actions">
+      <a class="button button-quiet header-secondary" href="/security">Security model</a>
+      <a class="button button-primary" href={links.github}>View on GitHub</a>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "contextarr",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-05-08",
+  "send_metrics": false,
+  "vars": {
+    "DEPLOYMENT_STAGE": "preview",
+    "PUBLIC_SITE_URL": "https://contextarr.com"
+  }
+}

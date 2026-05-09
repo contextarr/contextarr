@@ -1,0 +1,15 @@
+---
+interface Props {
+  title: string;
+  text: string;
+  label?: string;
+}
+
+const { title, text, label } = Astro.props;
+---
+
+<article class="feature-card">
+  {label && <p class="card-label">{label}</p>}
+  <h3>{title}</h3>
+  <p>{text}</p>
+</article>

@@ -152,7 +152,7 @@ function iconForPack(pack: PackSummary): CoverVisual["icon"] {
 }
 
 function sanitizeAccentColor(value: string | null | undefined): string {
-  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#38bdf8";
+  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#2563EB";
 }
 
 function sanitizeLocalCoverImage(value: string | null | undefined): string | null {

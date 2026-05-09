@@ -1,0 +1,55 @@
+---
+const steps = [
+  {
+    title: "Local files",
+    text: "Markdown, JSON, source maps, rules, and profiles stay on disk."
+  },
+  {
+    title: "Validate",
+    text: "Schemas and deterministic checks catch missing or unsafe context."
+  },
+  {
+    title: "Index",
+    text: "SQLite is rebuilt from packs and remains derived local state."
+  },
+  {
+    title: "Review",
+    text: "Health and review queues keep draft context visible."
+  },
+  {
+    title: "Render",
+    text: "Records become sanitized Markdown or static HTML."
+  },
+  {
+    title: "Export",
+    text: "Profiles generate target-ready artifacts with redaction rules."
+  },
+  {
+    title: "Read-only MCP",
+    text: "Clients can inspect approved context without mutating files."
+  }
+];
+---
+
+<section class="section pipeline-section">
+  <div class="container pipeline-layout">
+    <div class="section-heading pipeline-heading">
+      <p class="eyebrow">How it works</p>
+      <h2>One local pipeline from source material to AI-ready context.</h2>
+      <p>
+        Your source files stay local. SQLite is a rebuildable index. Exports are generated artifacts. MCP is read-only.
+      </p>
+    </div>
+    <ol class="pipeline" aria-label="Contextarr workflow">
+      {
+        steps.map((step, index) => (
+          <li>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{step.title}</strong>
+            <p>{step.text}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>

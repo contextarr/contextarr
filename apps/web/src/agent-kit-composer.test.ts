@@ -165,7 +165,7 @@ const template: AgentKitTemplateSummary = {
   description: "Demo template.",
   category: "support",
   trustLevel: "official",
-  accentColor: "#f97316",
+  accentColor: "#2563EB",
   suggestedAgentKit: {
     id: "support-ticket-kit-draft",
     name: "Support Ticket Kit Draft",

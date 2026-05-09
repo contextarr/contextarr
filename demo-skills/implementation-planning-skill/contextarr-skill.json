@@ -44,7 +44,7 @@
     "acceptance_checks"
   ],
   "assets": {
-    "accentColor": "#a78bfa"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.2.0"

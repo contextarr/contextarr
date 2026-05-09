@@ -44,7 +44,7 @@
     "ticket_update"
   ],
   "assets": {
-    "accentColor": "#38bdf8"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.2.0"

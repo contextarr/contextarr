@@ -44,7 +44,7 @@
     "triage_summary"
   ],
   "assets": {
-    "accentColor": "#f97316"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.2.0"

@@ -126,7 +126,7 @@ function iconForSkill(skill: SkillSummary): SkillCoverVisual["icon"] {
 }
 
 function sanitizeAccentColor(value: string | null | undefined): string {
-  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#38bdf8";
+  return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : "#2563EB";
 }
 
 function normalize(value: string): string {

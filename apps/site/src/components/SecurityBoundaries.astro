@@ -1,0 +1,19 @@
+---
+import { homepageSecurityBoundaries } from "../content/status";
+---
+
+<section class="section security-band">
+  <div class="container security-grid">
+    <div>
+      <p class="eyebrow">Security boundaries</p>
+      <h2>Built around hard boundaries.</h2>
+      <p>
+        Contextarr prepares local, reviewable context. It does not host a cloud vault, phone home, execute pack content,
+        or run agents.
+      </p>
+    </div>
+    <ul class="boundary-list">
+      {homepageSecurityBoundaries.map((item) => <li>{item}</li>)}
+    </ul>
+  </div>
+</section>

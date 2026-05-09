@@ -44,7 +44,7 @@
     "risk_summary"
   ],
   "assets": {
-    "accentColor": "#ef4444"
+    "accentColor": "#22C55E"
   },
   "compatibility": {
     "contextarr": ">=0.2.0"

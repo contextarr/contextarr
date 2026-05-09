@@ -433,7 +433,9 @@ function Sidebar({ health, route }: { health: HealthResponse | null; route: Rout
         <div className="brand-mark">
           <img src={brandMarkUrl} alt="" aria-hidden="true" />
         </div>
-        <span>Contextarr</span>
+        <span className="brand-wordmark">
+          Context<span>arr</span>
+        </span>
       </a>
 
       <nav className="nav-list" aria-label="Primary">

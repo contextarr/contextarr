@@ -38,7 +38,7 @@
   "exportsPath": "exports",
   "examplesPath": "examples",
   "assets": {
-    "accentColor": "#38bdf8"
+    "accentColor": "#2563EB"
   },
   "compatibility": {
     "contextarr": ">=0.3.0"

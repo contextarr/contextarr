@@ -1,0 +1,48 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/Hero.astro";
+import PackAnatomy from "../components/PackAnatomy.astro";
+import Pipeline from "../components/Pipeline.astro";
+import StatusSection from "../components/StatusSection.astro";
+import SecurityBoundaries from "../components/SecurityBoundaries.astro";
+import { futureDirectionLines, links } from "../content/site";
+---
+
+<BaseLayout currentPath="/">
+  <Hero />
+  <PackAnatomy />
+  <Pipeline />
+  <StatusSection />
+  <SecurityBoundaries />
+
+  <section class="section future-section" id="future">
+    <div class="container split-layout">
+      <div>
+        <p class="eyebrow">Future direction</p>
+        <h2>Skills and Agent Kits come after the pack system is stable.</h2>
+        <p>
+          This is planned after the core Context Pack system is stable. Contextarr will prepare Agent Kits, not run them.
+        </p>
+      </div>
+      <div class="future-lines">
+        {futureDirectionLines.map((line) => <p>{line}</p>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section final-cta">
+    <div class="container cta-panel">
+      <p class="eyebrow">Built in public</p>
+      <h2>Built in public.</h2>
+      <p>
+        Contextarr is being developed as an open-source, self-hosted project. Inspect the source, run the demo packs,
+        and give feedback on the pack format.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href={links.github}>GitHub</a>
+        <a class="button button-secondary" href="/security">Security</a>
+        <a class="button button-quiet" href="/roadmap">Roadmap</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
