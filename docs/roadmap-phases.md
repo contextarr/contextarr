@@ -29,6 +29,26 @@
 - Add local API endpoints.
 - Add search and rescan.
 
+## Phase 3A: Registry Trust Foundation
+
+- Define trusted registry architecture.
+- Define registry artifact format.
+- Define scanner policy.
+- Define deterministic scanner report format.
+- Define signing model.
+- Define encryption model.
+- Define quarantine install flow.
+- Define revocation model.
+- Define trust labels.
+- Define safe public registry gates.
+- Define private registry gates.
+- Define marketplace launch gates.
+- Define scanner limitations.
+- Define local re-scan before activation.
+- Define strict no-execution policy for registry content.
+- Optional code deliverables only if separately scoped: `packages/security-scanner` placeholder types, scanner fixture docs, and deterministic report contracts.
+- Hard boundaries: no public registry server, marketplace UI, payments, creator accounts, remote install, auto-activation, executable packs, executable Skills, Agent Kit runtime, hidden network calls, or telemetry.
+
 ## Phase 4: Web UI Shell and Library
 
 - Build local dashboard shell.
@@ -206,5 +226,7 @@
 
 ## Later Only
 
-- Signing and trust model research.
-- Private team registry prototype.
+- Official Pack Gallery: official/demo/starter artifacts only, public preview pages, validation and scanner reports visible, manual import only.
+- Verified Registry Prototype: curated publishers only, signed artifacts, encrypted artifact storage, revocation, quarantine install, no payments.
+- Private Team Registry: authenticated team registry, signed artifacts, optional client-side encryption research, private data allowed only inside private registry policy, no public discovery.
+- Marketplace: paid artifacts, creator accounts, refunds/support policies, abuse handling, only after marketplace gates pass.

@@ -28,11 +28,18 @@ Contextarr v0 must not include:
 
 - Hosted cloud storage.
 - Public marketplace or registry.
+- Public marketplace before registry trust model is implemented.
+- Anonymous public uploads.
 - Marketplace payments.
 - Executable packs.
+- Executable registry artifacts.
 - Script packs.
 - Shell commands inside packs.
+- Remote install with auto-activation.
 - Hidden network calls.
+- Claims of perfect prompt-injection detection.
+- Registry items bypassing local validation.
+- Encrypted artifacts bypassing scanner review.
 - Telemetry.
 - Direct Gmail connector.
 - Direct banking or brokerage connector.

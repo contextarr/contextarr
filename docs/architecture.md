@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only.
+Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only. Phase 3A planning defines the future Registry Trust Foundation as architecture only: registry artifacts, scanner reports, signing, encryption, quarantine, revocation, and marketplace gates without a live public registry.
 
 ## Core Decisions
 
@@ -100,6 +100,18 @@ MCP is implemented as a local stdio process in `apps/mcp`. It uses the official 
 ## Importer Direction
 
 Phase 9 importers read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. Phase 26 extends importer support to local draft Skills through CLI plus gated local API/dashboard flows. Skill importers support folder, Markdown, prompt-template, Claude Skill, and ChatGPT prompt inputs. Phase 27 adds Agent Kit template loading from `CONTEXTARR_AGENT_KIT_TEMPLATES_DIR`, defaulting to committed `agent-kit-templates/`, and writes generated kits only under `CONTEXTARR_AGENT_KITS_DIR`. They must not add MCP mutation, live connectors, cloud sync, external API calls, execution, or approval behavior.
+
+## Registry Trust Direction
+
+Contextarr is evolving toward a trusted package manager for AI-ready context, but shared context needs a trust layer before any public registry or marketplace can exist.
+
+Future registry artifacts are structured bundles containing metadata, an encrypted artifact payload, hashes, validation reports, scanner reports, human review records, license/source summaries, signatures, and revocation metadata. A listed artifact is not trusted merely because it appears in a registry.
+
+A scanner is a gate, not a guarantee. The future `packages/security-scanner` package may provide deterministic local scanner report types, policy checks, fixtures, and eventually text-only scanner primitives. It must not call external APIs, fetch networks, execute files, or copy third-party scanner rules. Scanner status can block known bad patterns and enforce Contextarr policy, but it cannot prove arbitrary natural-language instructions are safe in every downstream agent runtime.
+
+Every imported registry item must enter quarantine first. Activation requires signature and hash verification, local re-scan, local validation, human review, and approval. Unreviewed or quarantined artifacts must not be exposed through exports or MCP by default. Revoked artifacts remain local but are blocked from export and MCP exposure by default.
+
+Public registry, private registry, and marketplace behavior remain post-v1 gated tracks. The current architecture includes registry-readiness documentation only; it does not add public uploads, remote install, hosted cloud, marketplace payments, creator accounts, or auto-activation.
 
 ## Composer Direction
 

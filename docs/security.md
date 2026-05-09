@@ -6,6 +6,7 @@ Contextarr v0.1 is local-first, data-only, and human-review centered.
 
 - No telemetry.
 - No marketplace.
+- No public registry or remote install with auto-activation.
 - No executable packs.
 - No executable Skills.
 - No Agent Kit runner.
@@ -31,6 +32,14 @@ Exports and Composer previews are temporary derived artifacts. They apply profil
 ## MCP
 
 The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, Skills, or Agent Kits, run tools, execute Skills, run Agent Kits, call external APIs, or log raw returned context. Phase 25 extends MCP to Skills and Agent Kits with privacy-aware bodies, scoped Agent Kit context search, local export previews, and path-free responses.
+
+## Future Registry Trust
+
+Future shared Context Packs, Skills, Agent Kits, templates, and rule sets require a trust layer before public distribution. Registry artifacts are not trusted merely because they are listed. Every imported registry item must enter quarantine first, then pass signature/hash verification, local re-scan, local validation, and human review before activation.
+
+A scanner is a gate, not a guarantee. It can block known bad patterns, detect suspicious content, and enforce Contextarr policy, but it cannot prove arbitrary natural-language instructions are safe in all downstream agent runtimes. Encryption protects artifact storage and transport, but encrypted artifacts still need scanner review, validation, signatures, license checks, revocation checks, and human approval.
+
+The future public marketplace remains out of scope until the registry trust model, signing, encryption, quarantine, revocation, abuse reporting, manual review, and public policy gates are proven.
 
 ## Skills And Agent Kits
 

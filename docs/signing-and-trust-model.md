@@ -6,6 +6,8 @@ Contextarr is local-first and file-backed. This document researches a future tru
 
 This document is not an implementation plan for signing code, registry behavior, public marketplace behavior, package publishing, remote installation, or runtime execution.
 
+See also [registry-trust-model.md](registry-trust-model.md), [registry-artifact-format.md](registry-artifact-format.md), [security-scanner.md](security-scanner.md), [signing-model.md](signing-model.md), [encryption-model.md](encryption-model.md), [quarantine-install-flow.md](quarantine-install-flow.md), and [revocation-model.md](revocation-model.md) for the expanded Registry Trust Foundation planning layer.
+
 ## v1.0 Gate
 
 The draft v1.0 bridge PRD keeps Context Packs as the core stabilization target. Further Skills or Agent Kit expansion and any registry prototype are frozen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
@@ -151,6 +153,8 @@ The trust model must preserve these boundaries:
 - No public marketplace.
 - No automatic activation of imported or registry-provided content.
 
+A scanner is a gate, not a guarantee. A future registry pass means an artifact passed the current Contextarr policy checks; it does not prove that arbitrary natural-language instructions are safe in all downstream agent runtimes.
+
 ## Future Decision Points
 
 Before implementing signing or registry behavior, Contextarr needs explicit decisions on:
@@ -161,4 +165,3 @@ Before implementing signing or registry behavior, Contextarr needs explicit deci
 4. How local trust decisions are stored.
 5. How revocation lists are represented.
 6. Whether registry-like behavior is still blocked by the v1.0 bridge PRD.
-

@@ -12,8 +12,11 @@ Contextarr v0 must not include:
 - Public registry.
 - Marketplace.
 - Marketplace payments.
+- Anonymous public uploads.
+- Remote install with auto-activation.
 - Executable packs.
 - Executable Skills.
+- Executable registry artifacts.
 - Agent Kit runtime execution.
 - Agent Kit runner.
 - Scripts inside packs.
@@ -24,6 +27,9 @@ Contextarr v0 must not include:
 - Telemetry.
 - Passive always-on capture.
 - Real private data in the repository.
+- Claims of perfect prompt-injection detection.
+- Registry items bypassing local validation.
+- Encrypted artifacts bypassing scanner review.
 
 ## Pack Safety Rules
 
@@ -104,6 +110,32 @@ Phase 23 health/detail output remains read-only and local-only. It may surface r
 Phase 24 Agent Kit export output remains read-only and local-only. It may merge Context Pack records and Skill documents into generated previews, but it must not execute Skills, run Agent Kits, fetch URLs, call AI APIs, leak local source paths, or include secret or `never_export` content.
 
 Skill and Agent Kit manifest paths must stay inside their source folders. Skill and Agent Kit API responses must not expose local filesystem paths. Skill instructions and examples rendered in the web app must pass through the shared sanitized Markdown renderer. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
+
+## Trusted Registry Foundation
+
+Future registry behavior must preserve Contextarr's local-first, data-only, non-executing posture.
+
+A scanner is a gate, not a guarantee. A registry pass means the artifact passed the current Contextarr policy checks. It does not mean perfect safety, and it does not remove the need for quarantine, local re-scan, validation, and human review.
+
+Registry security requirements:
+
+- No executable registry artifacts.
+- No auto-trust from listing status.
+- Every imported registry item enters quarantine first.
+- Local re-scan is required before activation.
+- Local validation is required before activation.
+- Human review is required before export or MCP exposure by default.
+- Signed artifacts are required for verified or official status.
+- Signature mismatch blocks activation.
+- Revoked artifacts are blocked from export and MCP by default.
+- Encryption protects storage and transport but does not prove safety.
+- Scanning must happen before encryption or inside a trusted private review pipeline.
+- Encrypted artifacts must not bypass scanner review.
+- Read-only MCP remains unchanged: no mutation, no execution, no hidden network calls, no shell commands.
+
+Registry status language must use conservative terms such as `policy_clean`, `no known critical findings`, `verified`, `signed and verified`, `registry approved`, `blocked`, `quarantined`, and `revoked`.
+
+The public marketplace remains out of scope until the registry trust model, scanner policy, signing, revocation, abuse reporting, and quarantine install process are mature.
 
 ## Telemetry
 

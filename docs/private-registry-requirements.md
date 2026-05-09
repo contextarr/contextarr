@@ -4,6 +4,8 @@ Status: Phase 28 research document.
 
 This document describes requirements for a possible private team registry after Contextarr core v1.0 readiness. It does not implement a registry, API, UI, upload flow, package publish flow, hosted service, marketplace, or sync system.
 
+See [private-registry-policy.md](private-registry-policy.md), [registry-trust-model.md](registry-trust-model.md), [registry-artifact-format.md](registry-artifact-format.md), [security-scanner.md](security-scanner.md), [quarantine-install-flow.md](quarantine-install-flow.md), and [revocation-model.md](revocation-model.md) for the expanded Registry Trust Foundation.
+
 ## v1.0 Gate
 
 The draft v1.0 bridge PRD freezes further Skills and Agent Kit expansion, and any registry prototype, until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
@@ -116,6 +118,8 @@ A future private registry must preserve these rules:
 - No anonymous access.
 - No automatic trust inheritance.
 
+A scanner is a gate, not a guarantee. Private registry artifacts still require quarantine, local re-scan, validation, and human review before activation.
+
 ## Phase 29 Entry Criteria
 
 Phase 29 should remain blocked until:
@@ -126,4 +130,3 @@ Phase 29 should remain blocked until:
 4. Quarantine behavior is designed.
 5. Validation-before-activation remains mandatory.
 6. Marketplace behavior remains explicitly out of scope.
-

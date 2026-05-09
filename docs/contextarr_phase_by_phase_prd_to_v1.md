@@ -685,6 +685,92 @@ pnpm --filter @contextarr/server test
 pnpm phase3:verify
 ```
 
+# Phase 3A: Registry Trust Foundation
+
+## Version target
+
+Planning and architecture gate after Phase 3. Do not include in v0.1 or v1.0 as a live registry.
+
+## Goal
+
+Define the future trusted registry architecture before any registry, remote install, public upload, or marketplace behavior exists.
+
+## User value
+
+Contextarr can evolve toward a trusted package manager for AI-ready context without treating public sharing as automatic trust.
+
+## Build
+
+Planning docs only unless a separate scoped implementation phase approves local scanner primitives.
+
+1. Trusted registry architecture.
+2. Registry artifact format.
+3. Scanner policy.
+4. Deterministic scanner report format.
+5. Signing model.
+6. Encryption model.
+7. Quarantine install flow.
+8. Revocation model.
+9. Trust labels.
+10. Safe public registry gates.
+11. Private registry gates.
+12. Marketplace launch gates.
+13. Scanner limitations.
+14. Local re-scan before activation.
+15. Strict no-execution policy for registry content.
+
+## Principle
+
+A scanner is a gate, not a guarantee. Registry verification reduces risk, but it does not prove arbitrary natural-language instructions are safe in every downstream agent runtime.
+
+## Do not build
+
+1. Public registry server.
+2. Marketplace UI.
+3. Payments.
+4. Creator accounts.
+5. Remote install.
+6. Auto-activation.
+7. Executable packs.
+8. Executable Skills.
+9. Agent Kit runtime.
+10. Hidden network calls.
+11. Telemetry.
+
+## Deliverables
+
+```text
+docs/registry-trust-model.md
+docs/registry-artifact-format.md
+docs/security-scanner.md
+docs/scanner-policy.md
+docs/signing-model.md
+docs/encryption-model.md
+docs/quarantine-install-flow.md
+docs/revocation-model.md
+docs/public-registry-policy.md
+docs/private-registry-policy.md
+docs/marketplace-gates.md
+```
+
+Optional later code deliverables only if explicitly scoped:
+
+```text
+packages/security-scanner placeholder package
+scanner report TypeScript types
+scanner fixture docs
+```
+
+## Acceptance criteria
+
+1. Public marketplace remains outside v0.1 and v1.0.
+2. Public registry remains outside v0.1 and v1.0 implementation.
+3. Docs define quarantine before activation.
+4. Docs define local re-scan before use.
+5. Docs define human review before export or MCP exposure.
+6. Docs define signed artifacts, encrypted storage, scanner limitations, and revocation.
+7. Docs state that registry artifacts are not trusted merely because they are listed.
+
 # Phase 4: Web Dashboard Shell and Pack Library
 
 ## Version target
@@ -2872,6 +2958,15 @@ Start with research, signing, checksums, trust levels, and review workflows.
 
 Do not build a public marketplace.
 
+Registry readiness has four post-v1 tracks:
+
+1. Official Pack Gallery: official/demo/starter artifacts only, public preview pages, validation and scanner reports visible, manual import only.
+2. Verified Registry Prototype: curated publishers only, signed artifacts, encrypted artifact storage, revocation, quarantine install, no payments.
+3. Private Team Registry: authenticated team registry, signed artifacts, optional client-side encryption research, private data allowed only inside private registry policy, no public discovery.
+4. Marketplace: paid artifacts, creator accounts, refunds/support policies, abuse handling, only after marketplace gates pass.
+
+Registry before marketplace. Trust model before public uploads. Scanner before remote install. Quarantine before activation.
+
 # 13. Recommended Next Implementation Order
 
 Use this order without skipping:
@@ -2880,30 +2975,31 @@ Use this order without skipping:
 2. Phase 1 schema and validator.
 3. Phase 2 demo packs.
 4. Phase 3 local index and API.
-5. Phase 4 web dashboard shell.
-6. Phase 5 pack detail and record rendering.
-7. Phase 6 static renderer.
-8. Phase 7 Pack Health and Review Queue.
-9. Phase 8 export engine.
-10. Phase 9 read-only MCP.
-11. Phase 12 v0.1 public preview if you want early feedback.
-12. Phase 10 importers v0.
-13. Phase 11 Composer v0.
-14. Phase 14 importers v1.
-15. Phase 15 collectors v0.
-16. Phase 16 Composer v1.
-17. Phase 17 maintenance engine.
-18. Phase 18 export profiles v1.
-19. Phase 19 API and MCP hardening.
-20. Phase 20 security, redaction, backup, and trust hardening.
-21. Phase 21 packaging.
-22. Phase 22 alpha gate.
-23. Phase 23 schema freeze.
-24. Phase 24 UI hardening.
-25. Phase 25 security review.
-26. Phase 26 docs and demo assets.
-27. Phase 27 release candidate.
-28. Phase 28 v1.0 stable release.
+5. Phase 3A registry trust foundation docs.
+6. Phase 4 web dashboard shell.
+7. Phase 5 pack detail and record rendering.
+8. Phase 6 static renderer.
+9. Phase 7 Pack Health and Review Queue.
+10. Phase 8 export engine.
+11. Phase 9 read-only MCP.
+12. Phase 12 v0.1 public preview if you want early feedback.
+13. Phase 10 importers v0.
+14. Phase 11 Composer v0.
+15. Phase 14 importers v1.
+16. Phase 15 collectors v0.
+17. Phase 16 Composer v1.
+18. Phase 17 maintenance engine.
+19. Phase 18 export profiles v1.
+20. Phase 19 API and MCP hardening.
+21. Phase 20 security, redaction, backup, and trust hardening.
+22. Phase 21 packaging.
+23. Phase 22 alpha gate.
+24. Phase 23 schema freeze.
+25. Phase 24 UI hardening.
+26. Phase 25 security review.
+27. Phase 26 docs and demo assets.
+28. Phase 27 release candidate.
+29. Phase 28 v1.0 stable release.
 
 Note: Phase 10 and Phase 11 are listed after Phase 12 in this recommended order only if you want an earlier v0.1 public preview after the core export and MCP loop. If you want to follow the original PRD order exactly, complete Phase 10 and Phase 11 before Phase 12.
 

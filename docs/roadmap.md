@@ -22,6 +22,7 @@ Contextarr currently supports:
 - Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
 - Phase 28 signing and trust model research docs for future checksums, signatures, private registry requirements, and marketplace non-goals.
 - Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
+- Registry Trust Foundation planning docs for future trusted registry architecture, scanner policy, signed artifacts, encrypted storage, quarantine install, revocation, public/private registry policy, and marketplace gates. This is planning only; no public registry or marketplace exists today.
 
 ## Second PRD Direction
 
@@ -45,6 +46,8 @@ The current v1 hardening lane adds release verification, backup/restore, and use
 
 Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It creates local checksum-backed backup directories and restores packs into quarantine/review only, with validation-before-activation and no cloud, registry, signing, marketplace, or runtime behavior.
 
+Phase 3A: Registry Trust Foundation is a planning and architecture phase. It defines how a future trusted registry should work, including scanner limitations, registry artifacts, signing, encryption, quarantine, revocation, and launch gates. It does not move public marketplace, remote install, public uploads, hosted cloud, or registry implementation into v0.1 or v1.0.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.
@@ -64,6 +67,7 @@ Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It cre
 - Phase 26: Local Skill importers. Complete.
 - Phase 27: Agent Kit templates. Complete.
 - Phase 28: Signing and trust model research. Complete.
+- Phase 3A: Registry Trust Foundation. Planning/architecture added; implementation remains deferred.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
@@ -73,6 +77,7 @@ Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It cre
 ## Deferred
 
 - Phase 29: Private team registry prototype. Frozen behind the v1.0 core-stabilization gate.
+- Official Pack Gallery, Verified Registry Prototype, Private Team Registry, and Marketplace remain post-v1 gated tracks.
 - Web importer UI.
 - API import endpoints.
 - Saving Composer output as a new pack.

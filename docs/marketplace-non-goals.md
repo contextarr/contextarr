@@ -4,6 +4,8 @@ Status: Phase 28 research document.
 
 Contextarr is not a marketplace. This document keeps that boundary visible before any private sharing or registry research continues.
 
+See [marketplace-gates.md](marketplace-gates.md), [public-registry-policy.md](public-registry-policy.md), [registry-trust-model.md](registry-trust-model.md), and [scanner-policy.md](scanner-policy.md) for the expanded Registry Trust Foundation.
+
 ## Product Boundary
 
 Contextarr is a local-first Context Pack system for building, validating, reviewing, rendering, composing, exporting, and exposing source-backed AI context through local files, a rebuildable SQLite index, a dashboard, CLI workflows, and read-only MCP.
@@ -43,6 +45,8 @@ Marketplace behavior introduces risk before the core product is mature:
 
 Contextarr should prove local pack creation, validation, review, export, and read-only MCP value before any public sharing lane is reconsidered.
 
+Registry before marketplace. Trust model before public uploads. Scanner before remote install. Quarantine before activation.
+
 ## Skills and Agent Kits
 
 Completed Skills and Agent Kit work remains in the repository. The draft v1.0 bridge PRD does not require rollback.
@@ -70,4 +74,3 @@ Even that private registry prototype remains blocked until the v1.0 core-stabili
 ## Public Sharing Rule
 
 If a future roadmap proposes public sharing, it must start as a new PRD or decision record. It must not quietly enter through registry implementation, demo content, template work, MCP tools, importer flows, or export profiles.
-

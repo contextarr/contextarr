@@ -87,6 +87,7 @@ Current scope:
 - Template-generated Agent Kits write only as unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`.
 - Phase 28 signing and trust model research docs for checksums, signatures, private registry requirements, and marketplace non-goals.
 - Context Pack Backup/Restore v0 with local backup directories, checksum manifests, validation-before-activation restore, and quarantine-only restore reports.
+- Registry Trust Foundation planning docs for future validation, scanner reports, signing, encryption, quarantine import, local re-scan, revocation, and public/private registry gates.
 
 Not included yet:
 
@@ -96,6 +97,7 @@ Not included yet:
 - Skill execution or Agent Kit runtime behavior.
 - Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
 - Cloud backup or automatic restore activation.
+- Public registry, public marketplace, remote install, or paid artifacts.
 
 ## Product Positioning
 
@@ -119,6 +121,12 @@ Export Briefs are generated from those ingredients.
 ```
 
 Every Agent Kit must be self-describing. It carries its own usage instructions, task goal, output contract, and safety boundary. Contextarr prepares Agent Kits. It does not run them.
+
+## Future Trusted Registry
+
+Contextarr is being designed with future registry safety in mind. Shared Context Packs, Skills, and Agent Kits will require validation, scanner reports, signing, encryption, quarantine import, local re-scan, and human approval before activation. A scanner is a gate, not a guarantee: it can block known bad patterns and enforce current Contextarr policy, but it cannot prove that arbitrary natural-language instructions are safe in every downstream agent runtime.
+
+The public marketplace is not part of the current core release. Registry before marketplace. Trust model before public uploads. Scanner before remote install. Quarantine before activation.
 
 ## Repository Layout
 
@@ -205,6 +213,17 @@ Useful launch docs:
 
 - [docs/contextarr_phase_by_phase_prd_to_v1.md](docs/contextarr_phase_by_phase_prd_to_v1.md)
 - [docs/signing-and-trust-model.md](docs/signing-and-trust-model.md)
+- [docs/registry-trust-model.md](docs/registry-trust-model.md)
+- [docs/registry-artifact-format.md](docs/registry-artifact-format.md)
+- [docs/security-scanner.md](docs/security-scanner.md)
+- [docs/scanner-policy.md](docs/scanner-policy.md)
+- [docs/signing-model.md](docs/signing-model.md)
+- [docs/encryption-model.md](docs/encryption-model.md)
+- [docs/quarantine-install-flow.md](docs/quarantine-install-flow.md)
+- [docs/revocation-model.md](docs/revocation-model.md)
+- [docs/public-registry-policy.md](docs/public-registry-policy.md)
+- [docs/private-registry-policy.md](docs/private-registry-policy.md)
+- [docs/marketplace-gates.md](docs/marketplace-gates.md)
 - [docs/private-registry-requirements.md](docs/private-registry-requirements.md)
 - [docs/marketplace-non-goals.md](docs/marketplace-non-goals.md)
 - [docs/terminology.md](docs/terminology.md)
