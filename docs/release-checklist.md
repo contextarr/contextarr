@@ -7,6 +7,10 @@ Phase 11 prepares for a public preview. It does not publish, tag, deploy, or cre
 ```bash
 pnpm install
 pnpm phase11:verify
+pnpm v1-core:verify
+pnpm compatibility:verify
+pnpm security:verify
+pnpm release:verify
 ```
 
 Manual smoke:
@@ -37,3 +41,4 @@ Manual smoke:
 - Confirm SECURITY and CONTRIBUTING are current.
 - Confirm MCP docs use `pnpm contextarr-mcp`.
 - Confirm Docker quickstart works from a fresh clone.
+- Confirm Skills, Agent Kits, signing implementation, and registry behavior remain frozen behind the v1 bridge PRD gate unless explicitly superseded.

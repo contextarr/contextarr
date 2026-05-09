@@ -40,6 +40,8 @@ When Agent Kits are implemented later, self-description fields and validation mu
 
 Phase 28 follows that gate as research only. Further Skills or Agent Kit expansion and any registry prototype remain frozen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
 
+The current v1 hardening lane adds release verification and user docs for install, upgrade, troubleshooting, pack migrations, known issues, and release process. These docs support Context Pack core readiness; they do not unfreeze Phase 29 or expand Skills/Agent Kits.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.
@@ -62,6 +64,7 @@ Phase 28 follows that gate as research only. Further Skills or Agent Kit expansi
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.
+- Complete v1 core release-hardening gates before any frozen expansion resumes.
 - Usability polish around pack authoring.
 
 ## Deferred

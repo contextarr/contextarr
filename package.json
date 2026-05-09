@@ -58,7 +58,10 @@
     "v1-core:verify": "pnpm docs:verify && pnpm typecheck && pnpm test && pnpm demo:validate && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && node tools/launch/verify-v1-core.mjs && pnpm --filter @contextarr/web build",
     "compatibility:verify": "pnpm v1-core:verify && vitest run packages/pack-validator/src/compatibility.test.ts",
     "security:verify": "pnpm v1-core:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts && node tools/launch/verify-security.mjs",
-    "workflow-scope:verify": "pnpm v1-core:verify && node tools/launch/verify-v1-decisions.mjs"
+    "workflow-scope:verify": "pnpm v1-core:verify && node tools/launch/verify-v1-decisions.mjs",
+    "demo:verify": "pnpm demo:validate && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && node tools/launch/verify-v1-core.mjs",
+    "ui:verify": "pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
+    "release:verify": "pnpm v1-core:verify && pnpm compatibility:verify && pnpm security:verify && pnpm workflow-scope:verify && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && node tools/launch/verify-release-docs.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
