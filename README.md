@@ -217,6 +217,8 @@ Useful launch docs:
 - [docs/schema-v1.md](docs/schema-v1.md)
 - [docs/migration-to-v1.md](docs/migration-to-v1.md)
 - [docs/compatibility.md](docs/compatibility.md)
+- [docs/security-review-v1.md](docs/security-review-v1.md)
+- [docs/abuse-cases.md](docs/abuse-cases.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/export-profiles.md](docs/export-profiles.md)
 - [docs/mcp.md](docs/mcp.md)
