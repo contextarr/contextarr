@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase, rebuildIndex, type ContextarrDatabase } from "@contextarr/server";
-import type { ContextarrMcpConfig } from "./config";
+import { loadMcpConfig, type ContextarrMcpConfig } from "./config";
 import type { ContextarrMcpContext } from "./context";
 import {
   buildAgentKitExportPreviewTool,
@@ -31,6 +31,15 @@ describe("Contextarr MCP tools", () => {
   afterEach(() => {
     context?.db.close();
     context = undefined;
+  });
+
+  it("loads the configured export preview character limit", () => {
+    const config = loadMcpConfig({
+      INIT_CWD: repoRoot,
+      CONTEXTARR_MCP_MAX_PREVIEW_CHARS: "321"
+    });
+
+    expect(config.maxPreviewChars).toBe(321);
   });
 
   it("lists all demo packs", async () => {
@@ -165,6 +174,37 @@ describe("Contextarr MCP tools", () => {
       })
     );
     expect(JSON.stringify(preview.artifact)).not.toContain("\"path\"");
+  });
+
+  it("truncates pack and Agent Kit export previews deterministically", async () => {
+    context = createTestContext({ maxPreviewChars: 120 });
+    const packPreview = await buildExportPreviewTool(context, {
+      packId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex"
+    });
+    const agentKitPreview = await buildAgentKitExportPreviewTool(context, {
+      agentKitId: "support-ticket-writing-kit",
+      profileId: "support-ticket-writing-kit-codex"
+    });
+
+    for (const preview of [packPreview, agentKitPreview]) {
+      const artifact = preview.artifact as Record<string, unknown>;
+
+      expect(preview.ok).toBe(true);
+      expect(artifact.contentTruncated).toBe(true);
+      expect(String(artifact.content).length).toBeLessThanOrEqual(120);
+      expect(String(artifact.content)).toContain("[truncated]");
+      expect(artifact.contentOriginalLength).toEqual(expect.any(Number));
+      expect(Number(artifact.contentOriginalLength)).toBeGreaterThan(120);
+      expect(artifact.warnings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "mcp.preview_truncated",
+            message: "Export preview content was truncated to 120 characters."
+          })
+        ])
+      );
+    }
   });
 
   it("logs query metadata without raw query text or returned content", async () => {
@@ -315,6 +355,42 @@ describe("Contextarr MCP tools", () => {
     expect(JSON.stringify(privateSkill.results)).not.toContain("phase25privateskilltoken");
   });
 
+  it("omits non-approved records and Skill documents from Agent Kit scoped context", async () => {
+    context = createTestContext();
+    insertSyntheticRecord(context.db, {
+      id: "internal-support.draft-mcp-note",
+      packId: "internal-support-kb-pack",
+      title: "Draft MCP Note",
+      privacy: "public_safe",
+      body: "phase25draftrecordtoken",
+      reviewStatus: "draft"
+    });
+    insertSyntheticSkillDocument(context.db, {
+      id: "support-ticket-writing.draft-mcp-instruction",
+      skillId: "support-ticket-writing-skill",
+      title: "Draft MCP Instruction",
+      privacy: "public_safe",
+      body: "phase25draftskilltoken",
+      reviewStatus: "draft"
+    });
+
+    const draftRecord = await queryAgentKitContextTool(context, {
+      agentKitId: "support-ticket-writing-kit",
+      query: "phase25draftrecordtoken"
+    });
+    const draftSkill = await queryAgentKitContextTool(context, {
+      agentKitId: "support-ticket-writing-kit",
+      query: "phase25draftskilltoken"
+    });
+
+    expect(draftRecord.results).toEqual([]);
+    expect(draftRecord.warnings).toEqual(expect.arrayContaining(["Non-approved records were omitted."]));
+    expect(draftSkill.results).toEqual([]);
+    expect(draftSkill.warnings).toEqual(expect.arrayContaining(["Non-approved Skill documents were omitted."]));
+    expect(JSON.stringify(draftRecord.results)).not.toContain("phase25draftrecordtoken");
+    expect(JSON.stringify(draftSkill.results)).not.toContain("phase25draftskilltoken");
+  });
+
   it("omits private and secret Skill documents unless private access is enabled", async () => {
     context = createTestContext();
     insertSyntheticSkillDocument(context.db, {
@@ -359,6 +435,24 @@ describe("Contextarr MCP tools", () => {
     expect(privateAllowedInstructions.some((instruction) => instruction.id === "support-ticket-writing.secret-body-instruction")).toBe(false);
   });
 
+  it("omits non-approved Skill documents from Skill detail with warnings", async () => {
+    context = createTestContext();
+    insertSyntheticSkillDocument(context.db, {
+      id: "support-ticket-writing.draft-body-instruction",
+      skillId: "support-ticket-writing-skill",
+      title: "Draft Body Instruction",
+      privacy: "public_safe",
+      body: "draft skill fixture body",
+      reviewStatus: "draft"
+    });
+
+    const result = await getSkillTool(context, { skillId: "support-ticket-writing-skill" });
+    const instructions = result.instructions as Array<Record<string, unknown>>;
+
+    expect(instructions.some((instruction) => instruction.id === "support-ticket-writing.draft-body-instruction")).toBe(false);
+    expect(result.warnings).toEqual(expect.arrayContaining(["Non-approved Skill documents were omitted."]));
+  });
+
   it("builds Agent Kit export previews through the MCP tool layer", async () => {
     context = createTestContext();
     const preview = await buildAgentKitExportPreviewTool(context, {
@@ -396,6 +490,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     rescanOnStart: true,
     maxResults: 8,
     maxRecordChars: 12000,
+    maxPreviewChars: 24000,
     allowPrivate: false,
     ...overrides
   };
@@ -459,7 +554,7 @@ function insertSyntheticRecord(
 
 function insertSyntheticSkillDocument(
   db: ContextarrDatabase,
-  document: { id: string; skillId: string; title: string; privacy: string; body: string }
+  document: { id: string; skillId: string; title: string; privacy: string; body: string; reviewStatus?: string }
 ): void {
   const metadata = {
     id: document.id,
@@ -473,7 +568,7 @@ function insertSyntheticSkillDocument(
     privacy: document.privacy,
     last_reviewed: "2026-05-07",
     sources: [],
-    review_status: "approved"
+    review_status: document.reviewStatus ?? "approved"
   };
 
   db.prepare(

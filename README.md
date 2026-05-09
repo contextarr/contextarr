@@ -18,6 +18,8 @@ Contextarr is an early public preview and is not production ready.
 
 This repository is in v1 core stabilization with Backup/Restore v0 implemented for Context Packs. Phase 28: Signing and Trust Model Research remains docs-only and complete; Phase 27: Agent Kit Templates remains complete.
 
+For the current shipped-versus-planned map, see [docs/implementation-status.md](docs/implementation-status.md). That file is the review anchor when roadmap language and implemented behavior differ.
+
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
 Current scope:
@@ -373,15 +375,16 @@ Default API settings come from `.env.example`:
 - `CONTEXTARR_AGENT_KITS_DIR=./agent-kits`
 - `CONTEXTARR_DATABASE_PATH=./data/contextarr.db`
 - `CONTEXTARR_WEB_DIST_DIR=` optional built web app directory for same-origin serving
-- `CONTEXTARR_API_TOKEN=` optional; leave empty for local dev, set to require API tokens
+- `CONTEXTARR_API_TOKEN=` optional for loopback local dev; required when binding `CONTEXTARR_HOST` to a non-loopback address
 - `VITE_CONTEXTARR_API_BASE=` optional web override; leave empty to use the Vite `/api` proxy
 - `VITE_CONTEXTARR_API_TOKEN=` optional web token for protected local APIs
 - `CONTEXTARR_MCP_RESCAN_ON_START=true`
 - `CONTEXTARR_MCP_MAX_RESULTS=8`
 - `CONTEXTARR_MCP_MAX_RECORD_CHARS=12000`
+- `CONTEXTARR_MCP_MAX_PREVIEW_CHARS=24000`
 - `CONTEXTARR_MCP_ALLOW_PRIVATE=false`
 
-When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`.
+When `CONTEXTARR_API_TOKEN` is set, all `/api/*` routes except `GET /api/health` require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. `GET /api/health` stays unauthenticated and path-redacted.
 
 Available local API endpoints:
 

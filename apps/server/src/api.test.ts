@@ -327,7 +327,7 @@ describe("Contextarr API", () => {
     expect(response.json().manifest).not.toHaveProperty("sourcesPath");
     expect(response.json().manifest).not.toHaveProperty("exportsPath");
     expect(response.json().manifest).not.toHaveProperty("rulesPath");
-    expect(response.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    expect(response.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     await app.close();
     db.close();
   });
@@ -453,7 +453,7 @@ describe("Contextarr API", () => {
     expect(detail.statusCode).toBe(200);
     expect(detail.json().manifest).not.toHaveProperty("localPath");
     expect(detail.json().manifest).not.toHaveProperty("secretToken");
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
     expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
     expect(instructions.statusCode).toBe(200);
@@ -1752,7 +1752,7 @@ describe("Contextarr API", () => {
     expect(detail.statusCode).toBe(200);
     expect(detail.json().manifest).not.toHaveProperty("localPath");
     expect(detail.json().manifest).not.toHaveProperty("secretToken");
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
     expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
     expect(list.statusCode).toBe(200);
@@ -1783,7 +1783,7 @@ describe("Contextarr API", () => {
 
     expect(detail.statusCode).toBe(200);
     expect(detail.json().coverImage).toBeNull();
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(list.statusCode).toBe(200);
     expect(list.json().agentKits.find((kit: { id: string }) => kit.id === agentKitId).coverImage).toBeNull();
     expect(JSON.stringify(detail.json())).not.toContain("example.invalid");

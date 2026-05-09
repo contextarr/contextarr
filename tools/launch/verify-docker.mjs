@@ -8,12 +8,14 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const projectName = "contextarr-phase11-smoke";
 const hostPort = process.env.CONTEXTARR_DOCKER_VERIFY_PORT ?? "33210";
 const baseUrl = `http://127.0.0.1:${hostPort}`;
+const apiToken = process.env.CONTEXTARR_DOCKER_API_TOKEN ?? "contextarr-local-preview-token";
 const smokeAgentKitId = `docker-smoke-agent-kit-${process.pid}-${Date.now()}`;
 const smokeAgentKitsRoot = path.join(repoRoot, "agent-kits");
 const smokeAgentKitPath = path.join(smokeAgentKitsRoot, smokeAgentKitId);
 const composeEnv = {
   ...process.env,
   CONTEXTARR_DOCKER_PORT: hostPort,
+  CONTEXTARR_DOCKER_API_TOKEN: apiToken,
 };
 
 function run(args) {
@@ -69,7 +71,7 @@ function request(path, options = {}) {
       url,
       {
         method: options.method ?? "GET",
-        headers: options.headers,
+        headers: { Authorization: `Bearer ${apiToken}`, ...(options.headers ?? {}) },
         timeout: timeoutMs,
       },
       (res) => {

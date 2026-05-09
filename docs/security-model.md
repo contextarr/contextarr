@@ -58,7 +58,7 @@ Packs must not run code in v0 or v1.
 
 The local API binds to `127.0.0.1` by default. LAN mode must be explicit and warning-gated later.
 
-Local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only status, auth requirement, aggregate counts, and last indexed time; it must never return the configured token or local filesystem paths.
+Loopback local development can run without API auth while `CONTEXTARR_API_TOKEN` is empty or unset. Non-loopback binds require `CONTEXTARR_API_TOKEN` at startup. When `CONTEXTARR_API_TOKEN` is set, all protected `/api/*` routes require either `Authorization: Bearer <token>` or `X-Contextarr-Token: <token>`. The health endpoint remains unauthenticated and reports only path-redacted status, auth requirement, aggregate counts, and last indexed time; it must never return the configured token or local filesystem paths.
 
 ## Rendering Security
 

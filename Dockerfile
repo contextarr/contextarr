@@ -18,11 +18,14 @@ COPY demo-skills ./demo-skills
 COPY demo-agent-kits ./demo-agent-kits
 
 RUN pnpm install --frozen-lockfile
+ARG VITE_CONTEXTARR_API_TOKEN=contextarr-local-preview-token
+ENV VITE_CONTEXTARR_API_TOKEN=$VITE_CONTEXTARR_API_TOKEN
 RUN pnpm --filter @contextarr/web build
 
 ENV NODE_ENV=production
 ENV CONTEXTARR_HOST=0.0.0.0
 ENV CONTEXTARR_PORT=3210
+ENV CONTEXTARR_API_TOKEN=$VITE_CONTEXTARR_API_TOKEN
 ENV CONTEXTARR_PACKS_DIR=/app/demo-packs
 ENV CONTEXTARR_SKILLS_DIR=/app/demo-skills
 ENV CONTEXTARR_DEMO_AGENT_KITS_DIR=/app/demo-agent-kits

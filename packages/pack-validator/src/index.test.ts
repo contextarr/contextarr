@@ -11,6 +11,31 @@ function fixture(name: string): string {
   return path.join(fixturesDir, name);
 }
 
+function withTempValidPack(prefix: string, callback: (packPath: string) => void): void {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const packPath = path.join(tempRoot, "valid-minimal-pack");
+
+  try {
+    fs.cpSync(fixture("valid-minimal-pack"), packPath, { recursive: true });
+    callback(packPath);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function updateOverviewRecord(packPath: string, update: (content: string) => string): void {
+  const recordPath = path.join(packPath, "records", "overview.md");
+  fs.writeFileSync(recordPath, update(fs.readFileSync(recordPath, "utf8")), "utf8");
+}
+
+function declareValidationChecks(packPath: string, checks: string[]): void {
+  fs.writeFileSync(
+    path.join(packPath, "rules", "validation.yaml"),
+    `checks:\n${checks.map((check) => `  - ${check}`).join("\n")}\n`,
+    "utf8"
+  );
+}
+
 describe("validatePack", () => {
   it("validates a minimal valid pack", () => {
     const result = validatePack(fixture("valid-minimal-pack"));
@@ -161,6 +186,126 @@ describe("validatePack", () => {
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
+  });
+
+  it("does not enforce record policy checks unless they are declared", () => {
+    withTempValidPack("contextarr-pack-policy-undeclared-", (packPath) => {
+      updateOverviewRecord(packPath, (content) =>
+        content
+          .replace("  - test", "  - test\n  - secret")
+          .replace("source_status: source_backed", "source_status: draft")
+          .replace("privacy: public_safe", "privacy: private")
+          .replace("review_status: approved", "review_status: draft")
+      );
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(true);
+      expect(result.issues.some((issue) => issue.code.startsWith("record_policy."))).toBe(false);
+    });
+  });
+
+  it("enforces approved_content_only when declared", () => {
+    withTempValidPack("contextarr-pack-policy-approved-", (packPath) => {
+      updateOverviewRecord(packPath, (content) => content.replace("review_status: approved", "review_status: needs_review"));
+      declareValidationChecks(packPath, ["approved_content_only"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "record_policy.approved_content_only",
+          file: "records/overview.md",
+          path: "review_status"
+        })
+      );
+    });
+  });
+
+  it("reports unknown validation policy checks", () => {
+    withTempValidPack("contextarr-pack-policy-unknown-", (packPath) => {
+      declareValidationChecks(packPath, ["approved_content_only_typo"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "rules.validation.unknown_check",
+          file: "rules/validation.yaml",
+          path: "checks",
+          message: expect.stringContaining("approved_content_only_typo")
+        })
+      );
+    });
+  });
+
+  it("enforces public_safe_only when declared", () => {
+    withTempValidPack("contextarr-pack-policy-public-safe-", (packPath) => {
+      updateOverviewRecord(packPath, (content) => content.replace("privacy: public_safe", "privacy: sensitive"));
+      declareValidationChecks(packPath, ["public_safe_only"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "record_policy.public_safe_only",
+          file: "records/overview.md",
+          path: "privacy"
+        })
+      );
+    });
+  });
+
+  it("enforces draft_records_require_review when declared", () => {
+    withTempValidPack("contextarr-pack-policy-draft-review-", (packPath) => {
+      updateOverviewRecord(packPath, (content) => content.replace("source_status: source_backed", "source_status: draft"));
+      declareValidationChecks(packPath, ["draft_records_require_review"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "record_policy.draft_records_require_review",
+          file: "records/overview.md",
+          path: "review_status"
+        })
+      );
+    });
+  });
+
+  it("enforces no_secret_tags when declared", () => {
+    const forbiddenTags = ["secret", "never_export", "private", "sensitive", "customer_private", "health", "financial"];
+
+    withTempValidPack("contextarr-pack-policy-secret-tags-", (packPath) => {
+      updateOverviewRecord(packPath, (content) =>
+        content.replace("  - test", forbiddenTags.map((tag) => `  - ${tag}`).join("\n"))
+      );
+      declareValidationChecks(packPath, ["no_secret_tags"]);
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.summary.errors).toBe(forbiddenTags.length);
+      for (const tag of forbiddenTags) {
+        expect(result.issues).toContainEqual(
+          expect.objectContaining({
+            severity: "error",
+            code: "record_policy.no_secret_tags",
+            file: "records/overview.md",
+            path: "tags",
+            message: expect.stringContaining(tag)
+          })
+        );
+      }
+    });
   });
 
   it("emits deterministic validation report v1", () => {

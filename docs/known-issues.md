@@ -15,4 +15,4 @@ This list tracks known v1 core readiness gaps. It is not a roadmap expansion req
 
 - SQLite can be deleted and rebuilt.
 - Ignored generated exports, rendered output, local databases, imported drafts, and local Agent Kits should not appear in Git.
-- API token auth is optional in local development and disabled when `CONTEXTARR_API_TOKEN` is empty.
+- API token auth is optional for loopback local development and required for non-loopback binds.
