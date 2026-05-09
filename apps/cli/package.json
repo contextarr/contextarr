@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@contextarr/agent-kit-validator": "workspace:*",
+    "@contextarr/backups": "workspace:*",
     "@contextarr/export-profiles": "workspace:*",
     "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",

@@ -21,6 +21,8 @@ const requiredFiles = [
   "docs/upgrade.md",
   "docs/release-process.md",
   "docs/pack-migrations.md",
+  "docs/backups.md",
+  "docs/restore.md",
   "docs/troubleshooting.md",
   "docs/faq.md",
   "docs/known-issues.md",
@@ -46,6 +48,8 @@ if (!failed) {
     "docs/upgrade.md",
     "docs/release-process.md",
     "docs/pack-migrations.md",
+    "docs/backups.md",
+    "docs/restore.md",
     "docs/troubleshooting.md",
     "docs/faq.md",
     "docs/known-issues.md",
@@ -57,7 +61,7 @@ if (!failed) {
     }
   }
 
-  const requiredScripts = ["demo:verify", "ui:verify", "release:verify"];
+  const requiredScripts = ["demo:verify", "ui:verify", "backup:verify", "release:verify"];
   for (const script of requiredScripts) {
     if (!packageJson.scripts?.[script]) {
       fail(`Root package scripts must include ${script}.`);
@@ -73,6 +77,7 @@ if (!failed) {
     "pnpm docker:verify",
     "pnpm demo:verify",
     "pnpm ui:verify",
+    "pnpm backup:verify",
     "verify-release-docs.mjs"
   ]) {
     if (!releaseScript.includes(required)) {

@@ -4,7 +4,7 @@ This list tracks known v1 core readiness gaps. It is not a roadmap expansion req
 
 ## Current Gaps
 
-- Backup/restore is planned by decision record but not implemented.
+- Backup/restore v0 is CLI/core only. It creates local backup directories and restores to quarantine; it does not include a web UI, cloud sync, signing, compression, or automatic activation.
 - Context Pack collectors are planned by decision record but not implemented.
 - Composer save-as-pack for Context Packs is planned by decision record but not implemented.
 - Screenshots are placeholders only.
@@ -16,4 +16,3 @@ This list tracks known v1 core readiness gaps. It is not a roadmap expansion req
 - SQLite can be deleted and rebuilt.
 - Ignored generated exports, rendered output, local databases, imported drafts, and local Agent Kits should not appear in Git.
 - API token auth is optional in local development and disabled when `CONTEXTARR_API_TOKEN` is empty.
-

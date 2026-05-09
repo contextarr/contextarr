@@ -376,6 +376,88 @@ describe("contextarr CLI", () => {
     expect(existingOutput.stderr).toContain("Draft Skill already exists");
   });
 
+  it("creates and restores local Context Pack backups through the CLI", async () => {
+    const backupOutput = createIo();
+    const restoreOutput = createIo();
+    const backupOutDir = tempDir();
+    const restoreOutDir = tempDir();
+
+    const backupCode = await runCli(
+      [
+        "backup",
+        demoPacksDir,
+        "--out",
+        backupOutDir,
+        "--backup-id",
+        "cli-backup",
+        "--format",
+        "json"
+      ],
+      backupOutput.io
+    );
+    const backupJson = JSON.parse(backupOutput.stdout);
+
+    expect(backupCode).toBe(0);
+    expect(backupJson).toMatchObject({
+      backupId: "cli-backup",
+      packCount: 5,
+      validationErrors: 0,
+      validationWarnings: 0
+    });
+    expect(fs.existsSync(path.join(backupOutDir, "cli-backup", "contextarr-backup.json"))).toBe(true);
+
+    const restoreCode = await runCli(
+      ["restore", path.join(backupOutDir, "cli-backup"), "--out", restoreOutDir, "--format", "json"],
+      restoreOutput.io
+    );
+    const restoreJson = JSON.parse(restoreOutput.stdout);
+
+    expect(restoreCode).toBe(0);
+    expect(restoreJson).toMatchObject({
+      backupId: "cli-backup",
+      status: "restored_to_quarantine",
+      packCount: 5,
+      validationErrors: 0
+    });
+    expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "restore-report.json"))).toBe(true);
+    expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "ai-workstation-pack", "contextarr-pack.json"))).toBe(true);
+  });
+
+  it("returns expected codes for backup and restore failures", async () => {
+    const readOutput = createIo();
+    const invalidOutput = createIo();
+    const restoreReadOutput = createIo();
+    const existingOutput = createIo();
+    const backupOutDir = tempDir();
+    const restoreOutDir = tempDir();
+
+    expect(await runCli(["backup", "does-not-exist", "--out", tempDir()], readOutput.io)).toBe(2);
+    expect(readOutput.stderr).toContain("Backup source is not a readable directory");
+
+    expect(await runCli(["backup", fixture("invalid-permissions-pack"), "--out", tempDir()], invalidOutput.io)).toBe(1);
+    expect(invalidOutput.stderr).toContain("invalid Context Pack");
+
+    expect(await runCli(["restore", "does-not-exist", "--out", tempDir()], restoreReadOutput.io)).toBe(2);
+    expect(restoreReadOutput.stderr).toContain("Restore source is not a readable backup directory");
+
+    expect(
+      await runCli(
+        [
+          "backup",
+          path.join(demoPacksDir, "ai-workstation-pack"),
+          "--out",
+          backupOutDir,
+          "--backup-id",
+          "already-restored"
+        ],
+        existingOutput.io
+      )
+    ).toBe(0);
+    expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(0);
+    expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(1);
+    expect(existingOutput.stderr).toContain("Restore output already exists");
+  });
+
   it("renders a valid pack to static HTML", async () => {
     const output = createIo();
     const outDir = tempDir();

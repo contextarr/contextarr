@@ -1,6 +1,6 @@
 # 0001: Backup And Restore Format
 
-Status: Accepted for v1 planning, not implemented.
+Status: Implemented for v1 Backup/Restore v0.
 
 ## Context
 
@@ -10,7 +10,7 @@ The v1 bridge PRD requires Context Pack core to be recoverable before further Sk
 
 - Backup/restore is local only.
 - Backup artifacts are explicit user-created files, not cloud sync.
-- Backup format is a portable archive containing Context Pack folders, metadata, manifest checksums, and a restore report.
+- Backup format is an inspectable local directory containing Context Pack folders, metadata, manifest checksums, and per-file checksums.
 - SQLite databases are not authoritative backup content; they may be excluded or treated as disposable cache.
 - Restore validates every pack before activation.
 - Restored packs enter review or quarantine when validation, freshness, license, or security checks require it.
@@ -19,7 +19,7 @@ The v1 bridge PRD requires Context Pack core to be recoverable before further Sk
 
 ## Consequences
 
-- A future implementation must add a validation-before-activation restore path.
+- Backup/Restore v0 adds a validation-before-activation restore path through `contextarr restore`.
 - Restored pack review state must be deterministic and explainable.
 - Backup artifacts can be inspected without Contextarr running.
 - Registry, signing, and marketplace decisions remain separate.
@@ -31,4 +31,3 @@ The v1 bridge PRD requires Context Pack core to be recoverable before further Sk
 - No automatic restore activation.
 - No signing implementation in this decision.
 - No registry behavior.
-

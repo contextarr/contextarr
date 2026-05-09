@@ -33,7 +33,7 @@ Docker serves the built web app and the API from the same local Fastify server. 
 ## Verify
 
 ```bash
-pnpm phase11:verify
+pnpm release:verify
 ```
 
 For the latest second-PRD verification chain, run:
@@ -43,6 +43,22 @@ pnpm phase21:verify
 ```
 
 This runs the original launch verification chain plus Skill validation, demo Skill validation, Skill API checks, Skill Library web checks, and deterministic Skill Health/Review Queue checks.
+
+## Backup And Restore
+
+Create a local Context Pack backup:
+
+```bash
+pnpm --filter @contextarr/cli contextarr backup demo-packs --out data/backups
+```
+
+Restore into quarantine:
+
+```bash
+pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out data/restored-packs
+```
+
+Restore validates copied packs and writes `restore-report.json`. It does not activate packs automatically.
 
 ## Safety
 

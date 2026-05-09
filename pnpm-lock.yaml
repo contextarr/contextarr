@@ -44,6 +44,9 @@ importers:
       '@contextarr/agent-kit-validator':
         specifier: workspace:*
         version: link:../../packages/agent-kit-validator
+      '@contextarr/backups':
+        specifier: workspace:*
+        version: link:../../packages/backups
       '@contextarr/export-profiles':
         specifier: workspace:*
         version: link:../../packages/export-profiles
@@ -162,6 +165,12 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/backups:
+    dependencies:
+      '@contextarr/pack-validator':
+        specifier: workspace:*
+        version: link:../pack-validator
 
   packages/export-profiles:
     dependencies:

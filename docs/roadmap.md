@@ -21,6 +21,7 @@ Contextarr currently supports:
 - Local Skill importers for draft Skill folders, gated local API writes, and a dashboard Collector flow.
 - Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
 - Phase 28 signing and trust model research docs for future checksums, signatures, private registry requirements, and marketplace non-goals.
+- Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
 
 ## Second PRD Direction
 
@@ -40,7 +41,9 @@ When Agent Kits are implemented later, self-description fields and validation mu
 
 Phase 28 follows that gate as research only. Further Skills or Agent Kit expansion and any registry prototype remain frozen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
 
-The current v1 hardening lane adds release verification and user docs for install, upgrade, troubleshooting, pack migrations, known issues, and release process. These docs support Context Pack core readiness; they do not unfreeze Phase 29 or expand Skills/Agent Kits.
+The current v1 hardening lane adds release verification, backup/restore, and user docs for install, upgrade, troubleshooting, pack migrations, known issues, and release process. These docs support Context Pack core readiness; they do not unfreeze Phase 29 or expand Skills/Agent Kits.
+
+Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It creates local checksum-backed backup directories and restores packs into quarantine/review only, with validation-before-activation and no cloud, registry, signing, marketplace, or runtime behavior.
 
 ## Near-Term
 

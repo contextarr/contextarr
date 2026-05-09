@@ -15,6 +15,7 @@
     "baseUrl": ".",
     "paths": {
       "@contextarr/schema": ["packages/schema/src/index.ts"],
+      "@contextarr/backups": ["packages/backups/src/index.ts"],
       "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"],
       "@contextarr/skill-validator": ["packages/skill-validator/src/index.ts"],
       "@contextarr/agent-kit-validator": ["packages/agent-kit-validator/src/index.ts"],

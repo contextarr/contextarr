@@ -10,6 +10,7 @@ pnpm phase11:verify
 pnpm v1-core:verify
 pnpm compatibility:verify
 pnpm security:verify
+pnpm backup:verify
 pnpm release:verify
 ```
 
@@ -23,6 +24,7 @@ Manual smoke:
 - Build a Composer preview.
 - Open Pack Health and Review Queue.
 - Confirm all demo packs validate with zero errors.
+- Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 
 ## Public Safety
 
@@ -41,4 +43,5 @@ Manual smoke:
 - Confirm SECURITY and CONTRIBUTING are current.
 - Confirm MCP docs use `pnpm contextarr-mcp`.
 - Confirm Docker quickstart works from a fresh clone.
+- Confirm backup/restore docs describe quarantine-only restore and validation-before-activation.
 - Confirm Skills, Agent Kits, signing implementation, and registry behavior remain frozen behind the v1 bridge PRD gate unless explicitly superseded.

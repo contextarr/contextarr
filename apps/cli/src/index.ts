@@ -9,6 +9,13 @@ import {
   type AgentKitValidationResult
 } from "@contextarr/agent-kit-validator";
 import {
+  BackupError,
+  createContextPackBackup,
+  restoreContextPackBackup,
+  type BackupResult,
+  type RestoreResult
+} from "@contextarr/backups";
+import {
   buildAgentKitExport,
   buildAgentKitExports,
   buildPackExport,
@@ -65,6 +72,64 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .configureOutput({
       writeOut: (value) => io.stdout.write(value),
       writeErr: (value) => io.stderr.write(value)
+    });
+
+  program
+    .command("backup")
+    .argument("<path>", "Context Pack directory or directory of child Context Packs to back up")
+    .requiredOption("--out <path>", "output directory for local backup artifacts")
+    .option("--backup-id <id>", "deterministic backup id")
+    .option("--format <format>", "output format: text or json", "text")
+    .action((targetPath: string, options: { out: string; backupId?: string; format: string }) => {
+      const format = parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = createContextPackBackup({
+          packsDir: resolveUserPath(targetPath),
+          outputDir: resolveUserPath(options.out),
+          backupId: options.backupId
+        });
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatBackupJson(result), null, 2)}\n` : formatBackupText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        exitCode = error instanceof BackupError && isBackupUsageError(error.code) ? 2 : 1;
+      }
+    });
+
+  program
+    .command("restore")
+    .argument("<path>", "Contextarr local backup directory to restore")
+    .requiredOption("--out <path>", "output directory for quarantined restored packs")
+    .option("--format <format>", "output format: text or json", "text")
+    .action((targetPath: string, options: { out: string; format: string }) => {
+      const format = parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = restoreContextPackBackup({
+          backupPath: resolveUserPath(targetPath),
+          outputDir: resolveUserPath(options.out)
+        });
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatRestoreJson(result), null, 2)}\n` : formatRestoreText(result));
+        exitCode = result.validationErrors > 0 ? 1 : 0;
+      } catch (error) {
+        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        exitCode = error instanceof BackupError && isRestoreUsageError(error.code) ? 2 : 1;
+      }
     });
 
   program
@@ -440,6 +505,14 @@ function parsePositiveInteger(value: string): number | undefined {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+function isBackupUsageError(code: string): boolean {
+  return code === "backup.input_unreadable" || code === "backup.no_packs" || code === "path.unsafe" || code === "path.escape";
+}
+
+function isRestoreUsageError(code: string): boolean {
+  return code === "restore.input_unreadable" || code === "restore.manifest_missing" || code === "path.unsafe" || code === "path.escape";
+}
+
 function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
 }
@@ -722,6 +795,39 @@ function formatSkillImportJson(result: DraftSkillImportResult): {
       ...result.validation.summary
     }
   };
+}
+
+function formatBackupText(result: BackupResult): string {
+  return [
+    `Created Context Pack backup: ${result.backupPath}`,
+    `Backup: ${result.backupId}`,
+    `Packs: ${result.packCount}`,
+    `Files: ${result.fileCount}`,
+    `Bytes: ${result.byteLength}`,
+    `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
+    `Manifest: ${result.manifestPath}`,
+    `Manifest checksum: ${result.manifestSha256}`
+  ].join("\n") + "\n";
+}
+
+function formatBackupJson(result: BackupResult): BackupResult {
+  return result;
+}
+
+function formatRestoreText(result: RestoreResult): string {
+  return [
+    `Restored Context Pack backup to quarantine: ${result.outputPath}`,
+    `Backup: ${result.backupId}`,
+    `Status: ${result.status}`,
+    `Packs: ${result.packCount}`,
+    `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
+    `Restore report: ${result.reportPath}`,
+    "Activation: manual review required; no packs were activated automatically."
+  ].join("\n") + "\n";
+}
+
+function formatRestoreJson(result: RestoreResult): RestoreResult {
+  return result;
 }
 
 function errorMessage(error: unknown): string {

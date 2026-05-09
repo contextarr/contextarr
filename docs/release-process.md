@@ -8,6 +8,7 @@ This repository is preparing for v1.0 core readiness. These steps describe local
 pnpm v1-core:verify
 pnpm compatibility:verify
 pnpm security:verify
+pnpm backup:verify
 pnpm docker:verify
 pnpm release:verify
 git status --short --branch

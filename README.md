@@ -16,7 +16,7 @@ It is designed to help power users and teams build, validate, review, render, co
 
 Contextarr is an early public preview and is not production ready.
 
-This repository is in Phase 28: Signing and Trust Model Research. Phase 27: Agent Kit Templates remains complete.
+This repository is in v1 core stabilization with Backup/Restore v0 implemented for Context Packs. Phase 28: Signing and Trust Model Research remains docs-only and complete; Phase 27: Agent Kit Templates remains complete.
 
 The original PRD through Phase 11 is implemented locally. The second PRD track now includes non-executable Skill schemas, validation, public-safe demo Skills, read-only local API indexing, a read-only Skill Library/detail UI, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas and validation, public-safe demo Agent Kits, and read-only Agent Kit indexing/API/search.
 
@@ -86,6 +86,7 @@ Current scope:
 - Read-only Agent Kit template API endpoints and Composer template prefill flow.
 - Template-generated Agent Kits write only as unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`.
 - Phase 28 signing and trust model research docs for checksums, signatures, private registry requirements, and marketplace non-goals.
+- Context Pack Backup/Restore v0 with local backup directories, checksum manifests, validation-before-activation restore, and quarantine-only restore reports.
 
 Not included yet:
 
@@ -94,6 +95,7 @@ Not included yet:
 - Saving composed exports as new packs.
 - Skill execution or Agent Kit runtime behavior.
 - Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
+- Cloud backup or automatic restore activation.
 
 ## Product Positioning
 
@@ -134,6 +136,7 @@ packages/
   skill-validator/     Skill validation engine
   export-profiles/     Profile-driven export engine
   importers/           Local draft pack and draft Skill importers
+  backups/             Local Context Pack backup and quarantine restore
 
 demo-packs/            Fake public-safe demo packs
 demo-skills/           Fake public-safe non-executable demo Skills
@@ -209,6 +212,8 @@ Useful launch docs:
 - [docs/agent-kits.md](docs/agent-kits.md)
 - [docs/non-executable-skills.md](docs/non-executable-skills.md)
 - [docs/security.md](docs/security.md)
+- [docs/backups.md](docs/backups.md)
+- [docs/restore.md](docs/restore.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -248,6 +253,8 @@ pnpm research-delta:verify
 pnpm phase25:verify
 pnpm phase26:verify
 pnpm phase27:verify
+pnpm backup:verify
+pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
 pnpm --filter @contextarr/cli contextarr validate-skill demo-skills/support-ticket-writing-skill
@@ -297,6 +304,15 @@ pnpm --filter @contextarr/cli contextarr import-skill packages/importers/test/fi
 ```
 
 Imported Skills are drafts under ignored local folders such as `imported-skills/`. Imported Skill documents are private, unapproved, and tagged `imported_draft` and `never_export`.
+
+Back up and restore Context Packs locally:
+
+```bash
+pnpm --filter @contextarr/cli contextarr backup demo-packs --out data/backups
+pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out data/restored-packs
+```
+
+Restored packs land in quarantine/review output only. Contextarr validates restored packs and writes a restore report, but it does not activate packs automatically. See [docs/backups.md](docs/backups.md) and [docs/restore.md](docs/restore.md).
 
 Run the read-only MCP server:
 

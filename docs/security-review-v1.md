@@ -41,7 +41,7 @@ pnpm security:verify
 | MCP mutation attempts | `apps/mcp/src/protocol.test.ts` and `apps/mcp/src/tools.test.ts` cover read-only tool exposure. |
 | Broad API binding | `apps/server/src/config.test.ts` covers local default host behavior; Docker binding remains explicit launch-preview configuration. |
 | Unsafe import artifacts | `pnpm v1-core:verify` removes legacy smoke output and checks clean rescans with no skipped packs, Skills, Agent Kits, or verifier-generated review items. |
-| Backup/restore bypass | Not implemented in v1 core yet; must be designed before implementation and must validate before activation. |
+| Backup/restore bypass | `packages/backups/src/index.test.ts`, CLI tests, and `pnpm backup:verify` cover checksum verification, no overwrite, quarantine restore, and validation-before-activation. |
 
 ## Pass Criteria
 
