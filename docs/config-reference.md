@@ -13,6 +13,7 @@ Contextarr reads configuration from environment variables and local defaults. Pa
 | `CONTEXTARR_DATA_DIR` | `./data` | Local data root. |
 | `CONTEXTARR_DATABASE_PATH` | `./data/contextarr.db` | Rebuildable SQLite path. |
 | `CONTEXTARR_PACKS_DIR` | `./demo-packs` | Context Pack directory. |
+| `CONTEXTARR_DRAFT_PACKS_DIR` | `./draft-packs` | Local draft Context Pack output root for collectors. Not indexed as active packs automatically. |
 | `CONTEXTARR_WEB_DIST_DIR` | empty | Optional built web asset directory for same-origin serving. |
 | `CONTEXTARR_API_TOKEN` | empty | Optional local API token. |
 | `CONTEXTARR_LAN_MODE` | `false` | Local network mode flag. |
@@ -53,4 +54,3 @@ These exist because the advanced checkout already includes Skills and Agent Kits
 - Use `.env.example` only for empty or fake values.
 - Do not put API tokens, private data, credentials, or real exports in committed files.
 - Do not use config to enable marketplace, registry, telemetry, hosted sync, shell execution, or runtime agent behavior.
-

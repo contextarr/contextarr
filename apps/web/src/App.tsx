@@ -119,6 +119,10 @@ import type {
   HealthCheck,
   HealthResponse,
   LibraryViewMode,
+  ContextPackCollectorDefinition,
+  ContextPackCollectorId,
+  ContextPackCollectorPreview,
+  ContextPackCollectorResult,
   PackDetail,
   PackHealthResponse,
   PackSummary,
@@ -950,6 +954,231 @@ function SkillCards({ skills }: { skills: SkillSummary[] }) {
 const skillImportKinds: SkillImportKind[] = ["auto", "folder", "markdown", "prompt-template", "claude-skill", "chatgpt-prompts"];
 
 function CollectorsPage({ health, onImported }: { health: HealthResponse | null; onImported(): void }) {
+  const [collectors, setCollectors] = useState<ContextPackCollectorDefinition[]>([]);
+  const [collectorId, setCollectorId] = useState<ContextPackCollectorId>("blank-pack-starter");
+  const [inputPath, setInputPath] = useState("");
+  const [packId, setPackId] = useState("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [maxRecords, setMaxRecords] = useState("50");
+  const [overwrite, setOverwrite] = useState(false);
+  const [preview, setPreview] = useState<ContextPackCollectorPreview | null>(null);
+  const [result, setResult] = useState<ContextPackCollectorResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loadingCollectors, setLoadingCollectors] = useState(true);
+  const selectedCollector = collectors.find((collector) => collector.id === collectorId);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCollectors() {
+      setLoadingCollectors(true);
+      setError(null);
+      try {
+        const response = await apiClient.getContextPackCollectors();
+        if (cancelled) {
+          return;
+        }
+        setCollectors(response);
+        if (response.length > 0 && !response.some((collector) => collector.id === collectorId)) {
+          setCollectorId(response[0].id);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load Context Pack collectors.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingCollectors(false);
+        }
+      }
+    }
+
+    void loadCollectors();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const request = useMemo(
+    () => ({
+      inputPath: inputPath.trim() || undefined,
+      packId: packId.trim() || undefined,
+      name: name.trim() || undefined,
+      description: description.trim() || undefined,
+      maxRecords: parsePositiveUiInteger(maxRecords),
+      overwrite
+    }),
+    [description, inputPath, maxRecords, name, overwrite, packId]
+  );
+  const canSubmit =
+    Boolean(selectedCollector) &&
+    Boolean(request.maxRecords) &&
+    (selectedCollector?.inputMode !== "local_path" || Boolean(request.inputPath)) &&
+    !busy;
+
+  async function previewCollector() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      setPreview(await apiClient.previewContextPackCollector(collectorId, request));
+    } catch (loadError) {
+      setPreview(null);
+      setError(loadError instanceof Error ? loadError.message : "Unable to preview Context Pack collector output.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runCollector() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await apiClient.runContextPackCollector(collectorId, request);
+      setResult(response);
+      onImported();
+    } catch (loadError) {
+      setResult(null);
+      setError(loadError instanceof Error ? loadError.message : "Unable to create draft Context Pack.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="library-panel collector-page" aria-labelledby="collectors-title">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">
+            <Layers3 size={16} aria-hidden="true" />
+            <span>Collectors</span>
+          </div>
+          <h1 id="collectors-title">Context Pack Collectors</h1>
+          <p>Create private draft Context Packs from local, reviewable inputs.</p>
+        </div>
+        <div className="summary-strip">
+          <Stat value={collectors.length} label="Collectors" />
+          <Stat value={health?.counts.packs ?? 0} label="Active Packs" />
+          <Stat value={health?.counts.openReviewItems ?? 0} label="Open Review" />
+        </div>
+      </div>
+
+      {loadingCollectors ? (
+        <div className="state-card">
+          <Layers3 size={34} aria-hidden="true" />
+          <h2>Loading collectors</h2>
+        </div>
+      ) : collectors.length === 0 ? (
+        <div className="state-card warning-card">
+          <ShieldAlert size={34} aria-hidden="true" />
+          <h2>No collectors available</h2>
+          <p>The local API did not return any Context Pack collectors.</p>
+        </div>
+      ) : (
+        <div className="collector-grid">
+          <div className="composer-panel collector-form">
+            <h2>Collector</h2>
+            <label className="field-label">
+              Type
+              <select value={collectorId} onChange={(event) => setCollectorId(event.target.value as ContextPackCollectorId)}>
+                {collectors.map((collector) => (
+                  <option value={collector.id} key={collector.id}>
+                    {collector.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="muted-note">{selectedCollector?.description}</p>
+            {selectedCollector?.inputMode === "local_path" ? (
+              <label className="field-label">
+                Local path
+                <input value={inputPath} onChange={(event) => setInputPath(event.target.value)} placeholder="D:/local/project-notes" />
+              </label>
+            ) : null}
+            <label className="field-label">
+              Pack ID
+              <input value={packId} onChange={(event) => setPackId(event.target.value)} placeholder="optional-draft-pack-id" />
+            </label>
+            <label className="field-label">
+              Name
+              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Optional display name" />
+            </label>
+            <label className="field-label">
+              Description
+              <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional draft description" />
+            </label>
+            <label className="field-label">
+              Max records
+              <input value={maxRecords} onChange={(event) => setMaxRecords(event.target.value)} inputMode="numeric" />
+            </label>
+            <label className="composer-record collector-checkbox">
+              <input checked={overwrite} type="checkbox" onChange={(event) => setOverwrite(event.target.checked)} />
+              <span>
+                <strong>Overwrite existing draft</strong>
+                <small>Only inside the configured draft Context Packs directory.</small>
+              </span>
+            </label>
+            <div className="inline-actions">
+              <button className="secondary-action" type="button" disabled={!canSubmit} onClick={previewCollector}>
+                Preview Draft Pack
+              </button>
+              <button className="primary-action" type="button" disabled={!canSubmit} onClick={runCollector}>
+                <Import size={18} aria-hidden="true" />
+                <span>Create Draft Pack</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="composer-panel collector-preview">
+            <h2>Preview</h2>
+            {error ? <p className="composer-error">{error}</p> : null}
+            {preview ? (
+              <CollectorResultPanel
+                title={`${preview.packName} (${preview.packId})`}
+                counts={{ records: preview.records.length, sources: preview.sourceCount, warnings: preview.warnings.length }}
+                warnings={preview.warnings}
+                records={preview.records}
+              />
+            ) : (
+              <p className="muted-note">Preview reads local input or starter templates before writing draft pack files.</p>
+            )}
+          </div>
+
+          <div className="composer-panel collector-preview">
+            <h2>Draft Output</h2>
+            {result ? (
+              <CollectorResultPanel
+                title={`${result.packName} (${result.packId})`}
+                counts={result.counts}
+                warnings={result.warnings}
+                validation={result.validation}
+              />
+            ) : (
+              <p className="muted-note">Draft packs are private, unreviewed, and tagged never_export until reviewed.</p>
+            )}
+            <button className="secondary-action" type="button" disabled>
+              Activate after review later
+            </button>
+          </div>
+        </div>
+      )}
+
+      <SkillImportPanel health={health} onImported={onImported} />
+    </section>
+  );
+}
+
+function SkillImportPanel({ health, onImported }: { health: HealthResponse | null; onImported(): void }) {
   const [inputPath, setInputPath] = useState("");
   const [kind, setKind] = useState<SkillImportKind>("auto");
   const [skillId, setSkillId] = useState("");
@@ -1013,14 +1242,14 @@ function CollectorsPage({ health, onImported }: { health: HealthResponse | null;
   }
 
   return (
-    <section className="library-panel collector-page" aria-labelledby="collectors-title">
-      <div className="page-heading">
+    <div className="collector-skill-import" aria-labelledby="skill-import-title">
+      <div className="page-heading compact-heading">
         <div>
           <div className="eyebrow">
-            <Layers3 size={16} aria-hidden="true" />
-            <span>Collectors</span>
+            <BookOpen size={16} aria-hidden="true" />
+            <span>Skill Imports</span>
           </div>
-          <h1 id="collectors-title">Local Skill Import</h1>
+          <h2 id="skill-import-title">Local Skill Import</h2>
           <p>Generate private draft Skills from local files for human review.</p>
         </div>
         <div className="summary-strip">
@@ -1117,7 +1346,7 @@ function CollectorsPage({ health, onImported }: { health: HealthResponse | null;
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -1149,6 +1378,51 @@ function ImportResultPanel({
             <li key={document.id}>
               <span>{document.title}</span>
               <em>{formatPackType(document.type)}</em>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {warnings.length > 0 ? (
+        <ul className="export-warning-list">
+          {warnings.slice(0, 6).map((warning) => (
+            <li key={`${warning.code}-${warning.file ?? warning.message}`}>
+              {warning.code}{warning.file ? ` ${warning.file}` : ""}: {warning.message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function CollectorResultPanel({
+  title,
+  counts,
+  warnings,
+  records = [],
+  validation
+}: {
+  title: string;
+  counts: { records: number; sources: number; warnings: number };
+  warnings: Array<{ code: string; message: string; file?: string }>;
+  records?: Array<{ id: string; title: string; type: string; tags: string[]; sourceId: string }>;
+  validation?: { valid: boolean; errors: number; warnings: number; infos: number };
+}) {
+  return (
+    <div className="import-result">
+      <strong>{title}</strong>
+      <dl className="fact-grid">
+        <Fact label="Records" value={counts.records} />
+        <Fact label="Sources" value={counts.sources} />
+        <Fact label="Warnings" value={counts.warnings} />
+        {validation ? <Fact label="Validation" value={`${validation.errors} errors`} /> : null}
+      </dl>
+      {records.length > 0 ? (
+        <ul className="simple-list">
+          {records.slice(0, 6).map((record) => (
+            <li key={record.id}>
+              <span>{record.title}</span>
+              <em>{formatPackType(record.type)}</em>
             </li>
           ))}
         </ul>

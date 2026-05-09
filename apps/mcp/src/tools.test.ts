@@ -121,6 +121,30 @@ describe("Contextarr MCP tools", () => {
     );
   });
 
+  it("omits non-approved records from MCP query and detail tools", async () => {
+    context = createTestContext();
+    insertSyntheticRecord(context.db, {
+      id: "ai-workstation.draft-note",
+      title: "Draft Note",
+      privacy: "public_safe",
+      body: "draft fixture body",
+      reviewStatus: "draft"
+    });
+
+    const query = await queryPackContextTool(context, { query: "draft fixture", limit: 10 });
+    const detail = await getRecordTool(context, { recordId: "ai-workstation.draft-note" });
+
+    expect(query.ok).toBe(true);
+    expect(query.results).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: "ai-workstation.draft-note" })]));
+    expect(query.warnings).toEqual(expect.arrayContaining(["Non-approved records were omitted."]));
+    expect(detail).toEqual(
+      expect.objectContaining({
+        ok: false,
+        error: "record_not_approved"
+      })
+    );
+  });
+
   it("lists export profiles and builds export previews", async () => {
     context = createTestContext();
     const profiles = await listExportProfilesTool(context, { packId: "ai-workstation-pack" });
@@ -361,6 +385,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     host: "127.0.0.1",
     port: 0,
     packsDir: demoPacksDir,
+    draftPacksDir: path.join(repoRoot, "draft-packs"),
     skillsDir: demoSkillsDir,
     importedSkillsDir: path.join(repoRoot, "imported-skills"),
     agentKitsDir: demoAgentKitsDir,
@@ -380,7 +405,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
 
 function insertSyntheticRecord(
   db: ContextarrDatabase,
-  record: { id: string; title: string; privacy: string; body: string; packId?: string }
+  record: { id: string; title: string; privacy: string; body: string; packId?: string; reviewStatus?: string }
 ): void {
   const metadata = {
     id: record.id,
@@ -394,7 +419,7 @@ function insertSyntheticRecord(
     privacy: record.privacy,
     last_reviewed: "2026-05-07",
     sources: [],
-    review_status: "approved"
+    review_status: record.reviewStatus ?? "approved"
   };
 
   db.prepare(

@@ -511,6 +511,72 @@ export interface SkillImportResult {
   skill?: SkillDetail | SkillSummary | null;
 }
 
+export type ContextPackCollectorId = "blank-pack-starter" | "markdown-folder" | "project-notes" | "support-kb-starter";
+
+export interface ContextPackCollectorDefinition {
+  id: ContextPackCollectorId;
+  name: string;
+  description: string;
+  inputMode: "none" | "local_path";
+  defaultPackId: string;
+  defaultName: string;
+  defaultMaxRecords: number;
+}
+
+export interface ContextPackCollectorRequest {
+  inputPath?: string;
+  packId?: string;
+  name?: string;
+  description?: string;
+  maxRecords?: number;
+  overwrite?: boolean;
+}
+
+export interface ContextPackCollectorWarning {
+  code: string;
+  message: string;
+  file?: string;
+}
+
+export interface ContextPackCollectorPreview {
+  ok: boolean;
+  collectorId: ContextPackCollectorId;
+  packId: string;
+  packName: string;
+  records: Array<{
+    id: string;
+    title: string;
+    type: string;
+    tags: string[];
+    sourceId: string;
+  }>;
+  sourceCount: number;
+  warnings: ContextPackCollectorWarning[];
+}
+
+export interface ContextPackCollectorResult {
+  ok: boolean;
+  collectorId: ContextPackCollectorId;
+  packId: string;
+  packName: string;
+  counts: {
+    records: number;
+    sources: number;
+    warnings: number;
+  };
+  warnings: ContextPackCollectorWarning[];
+  validation: {
+    valid: boolean;
+    errors: number;
+    warnings: number;
+    infos: number;
+  };
+  draft: {
+    status: string;
+    indexed: boolean;
+  };
+}
+
 export type ReviewItemSeverity = "error" | "warning" | "info";
 export type ReviewItemStatus = "open" | "ignored" | "accepted" | "reviewed" | "resolved";
 export type ReviewObjectType = "pack" | "skill" | "agent_kit";

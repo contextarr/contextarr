@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertAgentKitDirectorySeparation,
+  assertDraftPackDirectorySeparation,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
   getSkillIndexDirs,
@@ -19,7 +20,27 @@ describe("server config", () => {
     expect(config.demoAgentKitsDir).toBe(path.join(root, "demo-agent-kits"));
     expect(config.agentKitTemplatesDir).toBe(path.join(root, "agent-kit-templates"));
     expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
+    expect(config.draftPacksDir).toBe(path.join(root, "draft-packs"));
     expect(config.localImportsEnabled).toBe(false);
+  });
+
+  it("rejects indexed and draft Context Pack directory overlap", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_PACKS_DIR: "./demo-packs",
+        CONTEXTARR_DRAFT_PACKS_DIR: "./demo-packs"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      assertDraftPackDirectorySeparation({
+        packsDir: path.join(root, "demo-packs"),
+        draftPacksDir: path.join(root, "demo-packs", "drafts")
+      })
+    ).toThrow(/must not overlap/);
   });
 
   it("indexes configured Skills and existing imported Skills without duplicate directories", () => {

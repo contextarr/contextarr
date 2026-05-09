@@ -3,6 +3,14 @@ import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import staticPlugin from "@fastify/static";
 import {
+  CollectorError,
+  isContextPackCollectorId,
+  listContextPackCollectors,
+  previewContextPackCollector,
+  runContextPackCollector,
+  type ContextPackCollectorId
+} from "@contextarr/collectors";
+import {
   buildAgentKitExport,
   buildComposedExport,
   buildPackExport,
@@ -14,6 +22,7 @@ import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImport
 import type { AgentKitTemplate } from "@contextarr/schema";
 import {
   assertAgentKitDirectorySeparation,
+  assertDraftPacksDirectory,
   assertImportedSkillsDirectory,
   getAgentKitIndexDirs,
   getSkillIndexDirs
@@ -114,6 +123,111 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       }
     };
   });
+
+  app.get("/api/context-pack-collectors", async () => {
+    return {
+      collectors: listContextPackCollectors()
+    };
+  });
+
+  app.post<{ Params: { id: string }; Body: ContextPackCollectorBody }>(
+    "/api/context-pack-collectors/:id/preview",
+    async (request, reply) => {
+      const collectorId = parseContextPackCollectorId(request.params.id);
+      if (!collectorId) {
+        return reply.code(404).send({ error: "not_found", message: `Context Pack collector not found: ${request.params.id}` });
+      }
+
+      const parsed = parseContextPackCollectorBody(request.body ?? {}, false);
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_collector_request", message: parsed.message });
+      }
+
+      try {
+        return {
+          ok: true,
+          ...previewContextPackCollector({
+            collectorId,
+            ...parsed.value
+          })
+        };
+      } catch (error) {
+        if (error instanceof CollectorError) {
+          return reply
+            .code(statusForCollectorError(error))
+            .send({ error: error.code, message: messageForCollectorError(error) });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  app.post<{ Params: { id: string }; Body: ContextPackCollectorBody }>(
+    "/api/context-pack-collectors/:id/run",
+    async (request, reply) => {
+      const collectorId = parseContextPackCollectorId(request.params.id);
+      if (!collectorId) {
+        return reply.code(404).send({ error: "not_found", message: `Context Pack collector not found: ${request.params.id}` });
+      }
+
+      const parsed = parseContextPackCollectorBody(request.body ?? {}, true);
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_collector_request", message: parsed.message });
+      }
+
+      try {
+        const candidate = previewContextPackCollector({
+          collectorId,
+          ...parsed.value
+        });
+        if (getPack(db, candidate.packId)) {
+          return reply
+            .code(409)
+            .send({ error: "output.pack_id_conflict", message: "Pack ID is already indexed as an active Context Pack." });
+        }
+
+        assertDraftPacksDirectory(config);
+        const result = runContextPackCollector({
+          collectorId,
+          outputDir: config.draftPacksDir,
+          ...parsed.value,
+          overwrite: parsed.overwrite
+        });
+
+        return reply.code(201).send({
+          ok: true,
+          collectorId: result.collectorId,
+          packId: result.packId,
+          packName: result.packName,
+          counts: {
+            records: result.recordCount,
+            sources: result.sourceCount,
+            warnings: result.warnings.length
+          },
+          warnings: result.warnings,
+          validation: {
+            valid: result.validation.valid,
+            errors: result.validation.summary.errors,
+            warnings: result.validation.summary.warnings,
+            infos: result.validation.summary.infos
+          },
+          draft: {
+            status: "review_required",
+            indexed: false
+          }
+        });
+      } catch (error) {
+        if (error instanceof CollectorError) {
+          return reply
+            .code(statusForCollectorError(error))
+            .send({ error: error.code, message: messageForCollectorError(error) });
+        }
+
+        throw error;
+      }
+    }
+  );
 
   app.get("/api/agent-kits", async () => {
     return {
@@ -808,12 +922,44 @@ function statusForImporterError(error: ImporterError): 400 | 409 | 422 {
   return 422;
 }
 
+function statusForCollectorError(error: CollectorError): 400 | 409 | 422 {
+  if (error.code.startsWith("input.") || error.code === "collector.input_required") {
+    return 400;
+  }
+  if (error.code === "output.exists" || error.code === "output.pack_id_conflict") {
+    return 409;
+  }
+  return 422;
+}
+
 function messageForImporterError(error: ImporterError): string {
   if (error.code === "output.exists") {
     return "Draft Skill already exists for that Skill ID.";
   }
   if (error.code === "output.skill_id_conflict") {
     return "Skill ID is already indexed outside imported Skills.";
+  }
+  return error.message;
+}
+
+function messageForCollectorError(error: CollectorError): string {
+  if (error.code.startsWith("input.")) {
+    return "Collector input path is not available or cannot be read.";
+  }
+  if (error.code === "import.no_records") {
+    return "Collector input did not contain importable Context Pack records.";
+  }
+  if (error.code === "output.invalid_path") {
+    return "Collector output path is outside the configured draft Context Pack directory.";
+  }
+  if (error.code === "collector.failed") {
+    return "Collector could not read or process the requested local input.";
+  }
+  if (error.code === "output.exists") {
+    return "Draft Context Pack already exists for that Pack ID.";
+  }
+  if (error.code === "output.pack_id_conflict") {
+    return "Pack ID is already indexed as an active Context Pack.";
   }
   return error.message;
 }
@@ -998,6 +1144,15 @@ interface SkillImportBody {
   overwrite?: unknown;
 }
 
+interface ContextPackCollectorBody {
+  inputPath?: unknown;
+  packId?: unknown;
+  name?: unknown;
+  description?: unknown;
+  maxRecords?: unknown;
+  overwrite?: unknown;
+}
+
 interface SaveAgentKitBody {
   id?: unknown;
   name?: unknown;
@@ -1055,6 +1210,67 @@ function assertLocalSkillImportsEnabled(config: ServerConfig): { ok: true } | { 
   return {
     ok: false,
     message: "Local Skill imports are disabled. Set CONTEXTARR_ENABLE_LOCAL_IMPORTS=true to enable this local-only workflow."
+  };
+}
+
+function parseContextPackCollectorId(value: string): ContextPackCollectorId | undefined {
+  return isContextPackCollectorId(value) ? value : undefined;
+}
+
+function parseContextPackCollectorBody(
+  body: ContextPackCollectorBody,
+  includeOverwrite: boolean
+):
+  | {
+      ok: true;
+      value: {
+        inputPath?: string;
+        packId?: string;
+        name?: string;
+        description?: string;
+        maxRecords?: number;
+      };
+      overwrite?: boolean;
+    }
+  | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Context Pack collector request body must be an object." };
+  }
+
+  const allowedKeys = new Set(["inputPath", "packId", "name", "description", "maxRecords", "overwrite"]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Context Pack collector field is not allowed: ${unknownKey}.` };
+  }
+
+  for (const key of ["inputPath", "packId", "name", "description"] as const) {
+    if (body[key] !== undefined && (typeof body[key] !== "string" || !body[key].trim())) {
+      return { ok: false, message: `Context Pack collector ${key} is invalid.` };
+    }
+  }
+
+  let maxRecords: number | undefined;
+  if (body.maxRecords !== undefined) {
+    if (!Number.isInteger(body.maxRecords) || Number(body.maxRecords) <= 0) {
+      return { ok: false, message: "Context Pack collector maxRecords must be a positive integer." };
+    }
+    maxRecords = Number(body.maxRecords);
+  }
+
+  if (includeOverwrite && body.overwrite !== undefined && typeof body.overwrite !== "boolean") {
+    return { ok: false, message: "Context Pack collector overwrite must be boolean." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      inputPath: trimOptional(body.inputPath),
+      packId: trimOptional(body.packId),
+      name: trimOptional(body.name),
+      description: trimOptional(body.description),
+      maxRecords
+    },
+    overwrite: includeOverwrite ? Boolean(body.overwrite) : false
   };
 }
 

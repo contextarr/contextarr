@@ -10,6 +10,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     host: env.CONTEXTARR_HOST ?? "127.0.0.1",
     port: Number.parseInt(env.CONTEXTARR_PORT ?? "3210", 10),
     packsDir: resolveFrom(invocationRoot, env.CONTEXTARR_PACKS_DIR ?? "./demo-packs"),
+    draftPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_DRAFT_PACKS_DIR ?? "./draft-packs"),
     skillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_SKILLS_DIR ?? "./demo-skills"),
     importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
     agentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KITS_DIR ?? "./agent-kits"),
@@ -23,6 +24,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
 
   assertSkillDirectorySeparation(config);
   assertAgentKitDirectorySeparation(config);
+  assertDraftPackDirectorySeparation(config);
   return config;
 }
 
@@ -61,6 +63,22 @@ export function assertImportedSkillsDirectory(config: Pick<ServerConfig, "import
   const parent = path.dirname(resolved);
   if (!fs.existsSync(parent) || !fs.statSync(parent).isDirectory()) {
     fs.mkdirSync(parent, { recursive: true });
+  }
+}
+
+export function assertDraftPackDirectorySeparation(config: Pick<ServerConfig, "packsDir" | "draftPacksDir">): void {
+  const indexed = path.resolve(config.packsDir);
+  const drafts = path.resolve(config.draftPacksDir);
+  if (pathsOverlap(indexed, drafts)) {
+    throw new Error("CONTEXTARR_DRAFT_PACKS_DIR must not overlap CONTEXTARR_PACKS_DIR.");
+  }
+}
+
+export function assertDraftPacksDirectory(config: Pick<ServerConfig, "draftPacksDir">): void {
+  const resolved = path.resolve(config.draftPacksDir);
+  fs.mkdirSync(resolved, { recursive: true });
+  if (!fs.statSync(resolved).isDirectory()) {
+    throw new Error("CONTEXTARR_DRAFT_PACKS_DIR must be a directory.");
   }
 }
 

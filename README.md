@@ -78,7 +78,7 @@ Current scope:
 - Phase 24 Agent Kit Export Engine with profile-driven generation that merges selected Context Pack records and Skill documents without execution.
 - Research Delta foundation fields for Context Pack source provenance, source license status, source hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets (`AGENTS.md`, `CLAUDE.md`, and `llms.txt`).
 - Phase 25 read-only MCP tools for Skills and Agent Kits, including privacy-aware Skill retrieval, Agent Kit context search, and Agent Kit export previews.
-- Phase 26 local Skill importers, CLI command, gated local API endpoints, and gated dashboard Collector flow.
+- Phase 26 local Skill importers, CLI command, and gated local API endpoints.
 - Phase 26 local Skill importers for folder, Markdown, prompt template, Claude Skill, and ChatGPT prompt inputs.
 - `contextarr import-skill <path> --kind <kind> --out <path>` draft Skill command.
 - Gated local API and dashboard importer flow enabled only by `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
@@ -234,6 +234,7 @@ Useful launch docs:
 - [docs/security.md](docs/security.md)
 - [docs/backups.md](docs/backups.md)
 - [docs/restore.md](docs/restore.md)
+- [docs/collectors.md](docs/collectors.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -274,6 +275,7 @@ pnpm phase25:verify
 pnpm phase26:verify
 pnpm phase27:verify
 pnpm backup:verify
+pnpm collectors:verify
 pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs

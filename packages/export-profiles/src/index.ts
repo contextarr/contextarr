@@ -775,6 +775,10 @@ function agentKitProfileToSkillProfile(profile: AgentKitExportProfile, skill: Lo
 }
 
 function exclusionReason(metadata: RecordFrontmatter, profile: ExportProfile, rules: RedactionRules): string | undefined {
+  if (metadata.review_status !== "approved") {
+    return `Excluded because review status is ${metadata.review_status}`;
+  }
+
   const profileExcludedTag = metadata.tags.find((tag) => profile.exclude_tags.includes(tag));
   if (profileExcludedTag) {
     return `Excluded by profile tag: ${profileExcludedTag}`;
@@ -803,6 +807,10 @@ function agentKitRecordExclusionReason(
   profile: AgentKitExportProfile,
   rules: RedactionRules
 ): string | undefined {
+  if (metadata.review_status !== "approved") {
+    return `Excluded because review status is ${metadata.review_status}`;
+  }
+
   const hardBlockedTags = new Set([...profile.exclude_tags, "secret", "never_export", "imported_draft"]);
   const hardBlockedTag = metadata.tags.find((tag) => hardBlockedTags.has(tag));
   if (hardBlockedTag) {
@@ -864,6 +872,10 @@ function composedExclusionReason(
   excludeTags: string[],
   rules: RedactionRules
 ): string | undefined {
+  if (metadata.review_status !== "approved") {
+    return `Excluded because review status is ${metadata.review_status}`;
+  }
+
   const blockedTags = new Set([...excludeTags, ...rules.redact_tags]);
   const blockedTag = metadata.tags.find((tag) => blockedTags.has(tag));
   if (blockedTag) {

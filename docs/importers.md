@@ -56,7 +56,7 @@ Pack imports write a draft pack at `<out>/<pack-id>/`. Imported records are priv
 
 Skill imports write a draft Skill at `<out>/<skill-id>/`. Imported Skill documents are private drafts with `review_status: draft`, `trustLevel: unreviewed`, and tags `imported_draft` and `never_export`.
 
-The local web/API Skill import flow is disabled by default. Set `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true` to enable `POST /api/import-skills/preview`, `POST /api/import-skills`, and the dashboard Collectors page. The API never accepts an output path; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`, default `./imported-skills`.
+The local API Skill import flow is disabled by default. Set `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true` to enable `POST /api/import-skills/preview` and `POST /api/import-skills`. The API never accepts an output path; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`, default `./imported-skills`.
 
 ## Safety
 

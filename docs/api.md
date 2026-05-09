@@ -38,6 +38,14 @@ Review item status changes are SQLite app state. They must not rewrite pack file
 
 This creates a temporary local export artifact for preview/copy/download. It does not save a pack and does not call AI services.
 
+## Context Pack Collector Endpoints
+
+- `GET /api/context-pack-collectors`: lists local draft Context Pack collector definitions.
+- `POST /api/context-pack-collectors/:id/preview`: previews draft output for a collector without writing files.
+- `POST /api/context-pack-collectors/:id/run`: writes a private draft Context Pack under `CONTEXTARR_DRAFT_PACKS_DIR`, defaulting to ignored `draft-packs/`.
+
+Collector endpoints never accept an output path from the browser. Draft packs remain unindexed, unreviewed, private, and excluded from exports by default until a later review/activation workflow exists. Error responses must not expose submitted local input paths.
+
 ## Advanced Preview Endpoints
 
 The current repository includes completed advanced-preview Skills and Agent Kit surfaces. They are frozen behind the v1 bridge gate and are not the Context Pack v1 core expansion target.
@@ -77,4 +85,3 @@ Expected controlled errors:
 - `409` for duplicate local write targets.
 
 API responses must not expose local filesystem paths unless explicitly intended for local diagnostics.
-

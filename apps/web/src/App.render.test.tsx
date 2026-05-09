@@ -41,6 +41,9 @@ const mocks = vi.hoisted(() => {
       getSkillHealth: vi.fn(),
       previewSkillImport: vi.fn(),
       importSkill: vi.fn(),
+      getContextPackCollectors: vi.fn(),
+      previewContextPackCollector: vi.fn(),
+      runContextPackCollector: vi.fn(),
       getAgentKits: vi.fn(),
       getAgentKit: vi.fn(),
       getAgentKitContextPacks: vi.fn(),
@@ -84,6 +87,12 @@ describe("App Skill UI routes", () => {
     });
     URL.createObjectURL = vi.fn(() => "blob:contextarr-export");
     URL.revokeObjectURL = vi.fn();
+    vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      throw new Error(`Unexpected console.error during render test: ${args.map(String).join(" ")}`);
+    });
+    vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => {
+      throw new Error(`Unexpected console.warn during render test: ${args.map(String).join(" ")}`);
+    });
     const originalCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tagName: string, options?: ElementCreationOptions) => {
       const element = originalCreateElement(tagName, options);
@@ -133,6 +142,62 @@ describe("App Skill UI routes", () => {
       warnings: [],
       validation: { valid: true, errors: 0, warnings: 1, infos: 0 },
       skill: { ...skillFixture(), id: "imported-skill", name: "Imported Skill", trustLevel: "unreviewed" }
+    });
+    mocks.apiClient.getContextPackCollectors.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve([
+                {
+                  id: "blank-pack-starter",
+                  name: "Blank Pack Starter",
+                  description: "Create a private draft Context Pack with one overview record.",
+                  inputMode: "none",
+                  defaultPackId: "blank-pack-draft",
+                  defaultName: "Blank Draft Pack",
+                  defaultMaxRecords: 1
+                },
+                {
+                  id: "markdown-folder",
+                  name: "Markdown Folder",
+                  description: "Convert a local Markdown folder into private draft Context Pack records.",
+                  inputMode: "local_path",
+                  defaultPackId: "markdown-folder-draft",
+                  defaultName: "Markdown Folder Draft Pack",
+                  defaultMaxRecords: 50
+                }
+              ]),
+            0
+          );
+        })
+    );
+    mocks.apiClient.previewContextPackCollector.mockResolvedValue({
+      ok: true,
+      collectorId: "markdown-folder",
+      packId: "draft-pack",
+      packName: "Markdown Draft Pack",
+      sourceCount: 1,
+      records: [
+        {
+          id: "draft-pack.note-a",
+          title: "Note A",
+          type: "imported_note",
+          tags: ["imported_draft", "never_export"],
+          sourceId: "draft-pack.source.note-a"
+        }
+      ],
+      warnings: []
+    });
+    mocks.apiClient.runContextPackCollector.mockResolvedValue({
+      ok: true,
+      collectorId: "markdown-folder",
+      packId: "draft-pack",
+      packName: "Markdown Draft Pack",
+      counts: { records: 1, sources: 1, warnings: 0 },
+      warnings: [],
+      validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
+      draft: { status: "review_required", indexed: false }
     });
     mocks.apiClient.getAgentKits.mockResolvedValue([agentKitSummaryFixture()]);
     mocks.apiClient.getAgentKit.mockResolvedValue(agentKitDetailFixture());
@@ -469,20 +534,66 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("1 skills");
   });
 
-  it("renders the local Skill import wizard only when enabled and submits preview/import requests", async () => {
+  it("renders Context Pack collectors and submits preview/create requests", async () => {
+    mountApp("#/collectors");
+
+    await waitForText("Context Pack Collectors");
+    await waitForText("Blank Pack Starter");
+    selectOption("Blank Pack Starter", "markdown-folder");
+    await waitForText("Convert a local Markdown folder into private draft Context Pack records.");
+    setInputValue("D:/local/project-notes", "D:/local/project-notes");
+    setInputValue("optional-draft-pack-id", "draft-pack");
+    await flushPendingUpdates();
+    clickButton("Preview Draft Pack");
+    await waitForMockResult(mocks.apiClient.previewContextPackCollector, 0);
+    await waitForText("Markdown Draft Pack");
+    clickButton("Create Draft Pack");
+    await waitForMockResult(mocks.apiClient.runContextPackCollector, 0);
+    await waitForText("Validation");
+
+    expect(mocks.apiClient.previewContextPackCollector).toHaveBeenCalledWith(
+      "markdown-folder",
+      expect.objectContaining({
+        inputPath: "D:/local/project-notes",
+        packId: "draft-pack"
+      })
+    );
+    expect(mocks.apiClient.runContextPackCollector).toHaveBeenCalledWith(
+      "markdown-folder",
+      expect.objectContaining({ overwrite: false })
+    );
+  });
+
+  it("shows Context Pack collector API errors", async () => {
+    mocks.apiClient.previewContextPackCollector.mockRejectedValueOnce(new Error("Preview collector failed safely."));
+
+    mountApp("#/collectors");
+
+    await waitForText("Blank Pack Starter");
+    await flushPendingUpdates();
+    clickButton("Preview Draft Pack");
+    await waitForMockResult(mocks.apiClient.previewContextPackCollector, 0);
+    await waitForText("Preview collector failed safely.");
+
+    expect(mocks.apiClient.previewContextPackCollector).toHaveBeenCalled();
+    expect(mocks.apiClient.runContextPackCollector).not.toHaveBeenCalled();
+  });
+
+  it("keeps the local Skill import lane available when enabled", async () => {
     mocks.apiClient.getHealth.mockResolvedValue({ ...healthFixture(), localImportsEnabled: true });
 
     mountApp("#/collectors");
 
-    await waitForText("Local Skill Import");
     await waitForText("Import Source");
     setInputValue("D:/local/fake-prompts", "D:/local/fake-prompts");
     selectOption("Auto", "markdown");
     setInputValue("optional-draft-skill-id", "imported-skill");
     await flushPendingUpdates();
     clickButton("Preview");
+    await waitForMockResult(mocks.apiClient.previewSkillImport, 0);
     await waitForText("Imported Skill");
     clickButton("Import Draft Skill");
+    await waitForMockResult(mocks.apiClient.importSkill, 0);
     await waitForText("Validation");
 
     expect(mocks.apiClient.previewSkillImport).toHaveBeenCalledWith(
@@ -513,6 +624,7 @@ describe("App Skill UI routes", () => {
     setInputValue("D:/local/fake-prompts", "D:/local/fake-prompts");
     await flushPendingUpdates();
     clickButton("Preview");
+    await waitForMockResult(mocks.apiClient.previewSkillImport, 0);
     await waitForText("Preview import failed safely.");
 
     expect(mocks.apiClient.previewSkillImport).toHaveBeenCalled();
@@ -632,7 +744,17 @@ async function clickButtonAndFlush(label: string): Promise<void> {
   await act(async () => {
     button?.click();
     await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await Promise.resolve();
+  });
+}
+
+async function waitForMockResult(mock: { mock: { results: Array<{ value: unknown }> } }, index: number): Promise<void> {
+  await act(async () => {
+    await Promise.resolve(mock.mock.results[index]?.value).catch(() => undefined);
+    await Promise.resolve();
     await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
   });
 }
 

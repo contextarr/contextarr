@@ -10,6 +10,11 @@ import type {
   CreateAgentKitRequest,
   HealthResponse,
   ComposePreviewRequest,
+  ContextPackCollectorDefinition,
+  ContextPackCollectorId,
+  ContextPackCollectorPreview,
+  ContextPackCollectorRequest,
+  ContextPackCollectorResult,
   ExportArtifact,
   PackDetail,
   PackHealthResponse,
@@ -60,6 +65,9 @@ export interface ApiClient {
   getSkillHealth(id: string): Promise<SkillHealthResponse>;
   previewSkillImport(request: SkillImportRequest): Promise<SkillImportPreview>;
   importSkill(request: SkillImportRequest): Promise<SkillImportResult>;
+  getContextPackCollectors(): Promise<ContextPackCollectorDefinition[]>;
+  previewContextPackCollector(id: ContextPackCollectorId, request: ContextPackCollectorRequest): Promise<ContextPackCollectorPreview>;
+  runContextPackCollector(id: ContextPackCollectorId, request: ContextPackCollectorRequest): Promise<ContextPackCollectorResult>;
   getAgentKits(): Promise<AgentKitSummary[]>;
   getAgentKit(id: string): Promise<AgentKitDetail>;
   getAgentKitContextPacks(id: string): Promise<AgentKitContextPackSummary[]>;
@@ -151,6 +159,22 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       }),
     importSkill: (body: SkillImportRequest) =>
       requestJson<SkillImportResult>("/api/import-skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    getContextPackCollectors: async () => {
+      const response = await requestJson<{ collectors: ContextPackCollectorDefinition[] }>("/api/context-pack-collectors");
+      return response.collectors;
+    },
+    previewContextPackCollector: (id: ContextPackCollectorId, body: ContextPackCollectorRequest) =>
+      requestJson<ContextPackCollectorPreview>(`/api/context-pack-collectors/${encodeURIComponent(id)}/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    runContextPackCollector: (id: ContextPackCollectorId, body: ContextPackCollectorRequest) =>
+      requestJson<ContextPackCollectorResult>(`/api/context-pack-collectors/${encodeURIComponent(id)}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

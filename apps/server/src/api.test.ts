@@ -24,6 +24,7 @@ function createTestContext(
 ): { db: ContextarrDatabase; config: ServerConfig } {
   const db = openDatabase(":memory:");
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
+  const draftPacksDir = overrides.draftPacksDir ?? path.join(os.tmpdir(), "contextarr-no-draft-packs");
   const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
   const resolvedDemoAgentKitsDir =
@@ -32,6 +33,7 @@ function createTestContext(
     host: "127.0.0.1",
     port: 0,
     packsDir,
+    draftPacksDir,
     skillsDir,
     importedSkillsDir,
     agentKitsDir,
@@ -662,6 +664,134 @@ describe("Contextarr API", () => {
       await app.close();
       fixtureContext.db.close();
       fs.rmSync(importedSkillsDir, { recursive: true, force: true });
+    }
+  });
+
+  it("lists, previews, and writes local Context Pack collector drafts without indexing them as active packs", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-packs-"));
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { draftPacksDir });
+    const app = createApp(fixtureContext);
+
+    try {
+      const list = await app.inject({ method: "GET", url: "/api/context-pack-collectors" });
+      const preview = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/markdown-folder/preview",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+          packId: "api-collector-pack",
+          maxRecords: 1
+        }
+      });
+      const write = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/markdown-folder/run",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+          packId: "api-collector-pack",
+          name: "API Collector Pack",
+          overwrite: true
+        }
+      });
+      const activePack = await app.inject({ method: "GET", url: "/api/packs/api-collector-pack" });
+
+      expect(list.statusCode).toBe(200);
+      expect(list.json().collectors.map((collector: { id: string }) => collector.id)).toEqual([
+        "blank-pack-starter",
+        "markdown-folder",
+        "project-notes",
+        "support-kb-starter"
+      ]);
+      expect(list.body).not.toContain(draftPacksDir);
+      expect(preview.statusCode).toBe(200);
+      expect(preview.json()).toMatchObject({
+        ok: true,
+        collectorId: "markdown-folder",
+        packId: "api-collector-pack",
+        sourceCount: 1
+      });
+      expect(write.statusCode).toBe(201);
+      expect(write.json()).toMatchObject({
+        ok: true,
+        packId: "api-collector-pack",
+        validation: {
+          valid: true,
+          errors: 0
+        },
+        draft: {
+          status: "review_required",
+          indexed: false
+        }
+      });
+      expect(write.body).not.toContain(draftPacksDir);
+      expect(fs.existsSync(path.join(draftPacksDir, "api-collector-pack", "contextarr-pack.json"))).toBe(true);
+      expect(activePack.statusCode).toBe(404);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    }
+  });
+
+  it("protects Context Pack collector writes with token auth and rejects invalid requests", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-packs-auth-"));
+    const fixtureContext = createTestContext("collector-token", demoPacksDir, { draftPacksDir });
+    const app = createApp(fixtureContext);
+
+    try {
+      const unauthorized = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/blank-pack-starter/run",
+        payload: { packId: "unauthorized-pack" }
+      });
+      const invalidCollector = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/not-real/run",
+        headers: { Authorization: "Bearer collector-token" },
+        payload: {}
+      });
+      const invalidBody = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/blank-pack-starter/run",
+        headers: { Authorization: "Bearer collector-token" },
+        payload: { telemetry: true }
+      });
+      const activeConflict = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/blank-pack-starter/run",
+        headers: { Authorization: "Bearer collector-token" },
+        payload: { packId: "ai-workstation-pack", overwrite: true }
+      });
+      const missingInputPath = path.join(os.tmpdir(), "contextarr-private-input-does-not-exist");
+      const missingInput = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/markdown-folder/preview",
+        headers: { Authorization: "Bearer collector-token" },
+        payload: { inputPath: missingInputPath }
+      });
+      const authorized = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/blank-pack-starter/run",
+        headers: { Authorization: "Bearer collector-token" },
+        payload: { packId: "authorized-collector-pack" }
+      });
+
+      expect(unauthorized.statusCode).toBe(401);
+      expect(invalidCollector.statusCode).toBe(404);
+      expect(invalidBody.statusCode).toBe(400);
+      expect(activeConflict.statusCode).toBe(409);
+      expect(activeConflict.json()).toMatchObject({ error: "output.pack_id_conflict" });
+      expect(missingInput.statusCode).toBe(400);
+      expect(missingInput.json()).toMatchObject({
+        error: "input.not_found",
+        message: "Collector input path is not available or cannot be read."
+      });
+      expect(missingInput.body).not.toContain(missingInputPath);
+      expect(authorized.statusCode).toBe(201);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(draftPacksDir, { recursive: true, force: true });
     }
   });
 

@@ -23,6 +23,8 @@ Manual smoke:
 - Preview a Codex export.
 - Build a Composer preview.
 - Open Pack Health and Review Queue.
+- Open Collectors, preview a Context Pack collector draft, and confirm a created draft lands under `draft-packs/` without appearing in the active Pack Library.
+- If `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`, confirm the preserved local Skill import lane still previews/imports only private draft Skills under `imported-skills/`.
 - Confirm all demo packs validate with zero errors.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 

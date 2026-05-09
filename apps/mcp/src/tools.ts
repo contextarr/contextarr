@@ -214,6 +214,11 @@ export async function queryPackContextTool(context: ContextarrMcpContext, args: 
           continue;
         }
 
+        if (!isApprovedRecord(record)) {
+          warnings.add("Non-approved records were omitted.");
+          continue;
+        }
+
         if (record.privacy === "secret") {
           warnings.add("Secret records were omitted.");
           continue;
@@ -256,6 +261,9 @@ export async function getRecordTool(context: ContextarrMcpContext, args: unknown
     const record = asRecordDetail(getRecord(context.db, input.recordId));
     if (!record) {
       throw new McpToolError("not_found", `Record not found: ${input.recordId}`);
+    }
+    if (!isApprovedRecord(record)) {
+      throw new McpToolError("record_not_approved", "Record is not approved for MCP exposure.");
     }
 
     return {
@@ -1261,6 +1269,10 @@ function toMcpRecordDetail(record: RecordDetail, includeBody: boolean, allowPriv
     body,
     warnings
   };
+}
+
+function isApprovedRecord(record: RecordDetail): boolean {
+  return record.reviewStatus === "approved";
 }
 
 function toMcpSourceSummary(source: JsonObject): JsonObject {

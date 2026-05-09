@@ -93,7 +93,7 @@ Composer previews reuse the same export engine and redaction rules. They are rea
 
 ## Import Security
 
-Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. Phase 26 Skill importers produce draft Skills under `imported-skills/` or the configured `CONTEXTARR_IMPORTED_SKILLS_DIR`. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
+Phase 9 importers are local-only and produce draft packs under explicit ignored output folders. Context Pack collectors produce draft packs under `draft-packs/` or the configured `CONTEXTARR_DRAFT_PACKS_DIR` and do not index or activate them automatically. Phase 26 Skill importers produce draft Skills under `imported-skills/` or the configured `CONTEXTARR_IMPORTED_SKILLS_DIR`. They must not fetch URLs, execute files, call AI APIs, upload data, or approve imported content.
 
 Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use. Composer excludes `imported_draft` and `never_export` records by default.
 

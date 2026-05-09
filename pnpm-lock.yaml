@@ -89,6 +89,9 @@ importers:
       '@contextarr/agent-kit-validator':
         specifier: workspace:*
         version: link:../../packages/agent-kit-validator
+      '@contextarr/collectors':
+        specifier: workspace:*
+        version: link:../../packages/collectors
       '@contextarr/export-profiles':
         specifier: workspace:*
         version: link:../../packages/export-profiles
@@ -177,6 +180,21 @@ importers:
       '@contextarr/security-scanner':
         specifier: workspace:*
         version: link:../security-scanner
+
+  packages/collectors:
+    dependencies:
+      '@contextarr/importers':
+        specifier: workspace:*
+        version: link:../importers
+      '@contextarr/pack-validator':
+        specifier: workspace:*
+        version: link:../pack-validator
+      '@contextarr/schema':
+        specifier: workspace:*
+        version: link:../schema
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.4
 
   packages/export-profiles:
     dependencies:

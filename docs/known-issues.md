@@ -5,7 +5,7 @@ This list tracks known v1 core readiness gaps. It is not a roadmap expansion req
 ## Current Gaps
 
 - Backup/restore v0 is CLI/core only. It creates local backup directories and restores to quarantine; it does not include a web UI, cloud sync, signing, compression, or automatic activation.
-- Context Pack collectors are planned by decision record but not implemented.
+- Context Pack collectors v0 create local draft packs only. They do not activate packs, approve review status, or move drafts into the active pack directory.
 - Composer save-as-pack for Context Packs is planned by decision record but not implemented.
 - Screenshots are placeholders only.
 - Docker Compose is a local preview path, not a hardened production deployment.

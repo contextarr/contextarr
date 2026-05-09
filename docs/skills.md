@@ -10,7 +10,7 @@ Use the CLI for local draft Skill imports:
 pnpm --filter @contextarr/cli contextarr import-skill <path> --kind auto --out imported-skills/manual
 ```
 
-Supported kinds are `folder`, `markdown`, `prompt-template`, `claude-skill`, and `chatgpt-prompts`. The dashboard Collector flow and API endpoints are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
+Supported kinds are `folder`, `markdown`, `prompt-template`, `claude-skill`, and `chatgpt-prompts`. The local Skill import API endpoints are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 
 ## Definition
 

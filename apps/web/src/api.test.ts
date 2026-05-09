@@ -144,6 +144,59 @@ describe("Contextarr API client", () => {
     });
   });
 
+  it("reads and runs Context Pack collector requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/preview")) {
+          return jsonResponse({ ok: true, collectorId: "markdown-folder", packId: "draft-pack", records: [], sourceCount: 0 });
+        }
+        if (String(url).endsWith("/run")) {
+          return jsonResponse({
+            ok: true,
+            collectorId: "markdown-folder",
+            packId: "draft-pack",
+            counts: { records: 1, sources: 1, warnings: 0 },
+            validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
+            draft: { status: "review_required", indexed: false }
+          });
+        }
+        return jsonResponse({ collectors: [{ id: "markdown-folder", name: "Markdown Folder", inputMode: "local_path" }] });
+      }
+    });
+
+    await expect(client.getContextPackCollectors()).resolves.toEqual([
+      expect.objectContaining({ id: "markdown-folder" })
+    ]);
+    await expect(
+      client.previewContextPackCollector("markdown-folder", {
+        inputPath: "D:/local/notes",
+        packId: "draft-pack",
+        maxRecords: 10
+      })
+    ).resolves.toMatchObject({ packId: "draft-pack" });
+    await expect(
+      client.runContextPackCollector("markdown-folder", {
+        inputPath: "D:/local/notes",
+        packId: "draft-pack",
+        overwrite: true
+      })
+    ).resolves.toMatchObject({ draft: { indexed: false } });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/context-pack-collectors",
+      "/api/context-pack-collectors/markdown-folder/preview",
+      "/api/context-pack-collectors/markdown-folder/run"
+    ]);
+    expect(requests[2].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    expect(JSON.parse(String(requests[2].init?.body))).toMatchObject({
+      inputPath: "D:/local/notes",
+      packId: "draft-pack",
+      overwrite: true
+    });
+  });
+
   it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

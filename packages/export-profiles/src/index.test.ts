@@ -372,6 +372,34 @@ describe("export profile engine", () => {
     expect(artifact.excludedRecords.map((record) => record.id)).not.toContain("internal-support.ticket-intake");
   });
 
+  it("excludes non-approved Context Pack records from Agent Kit exports by default", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    const draftRecord = path.join(packsDir, "internal-support-kb-pack", "records", "ticket-intake.md");
+    fs.writeFileSync(
+      draftRecord,
+      `${fs
+        .readFileSync(draftRecord, "utf8")
+        .replace("review_status: approved", "review_status: draft")
+        .trim()}\n\nDRAFT AGENT KIT CONTEXT SHOULD NOT EXPORT.\n`,
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-codex"
+    });
+
+    expect(artifact.content).not.toContain("DRAFT AGENT KIT CONTEXT SHOULD NOT EXPORT");
+    expect(artifact.includedRecords.map((record) => record.id)).not.toContain("internal-support.ticket-intake");
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "internal-support.ticket-intake", reason: expect.stringContaining("review status is draft") })
+      ])
+    );
+  });
+
   it("honors Agent Kit export sections when reporting included records and sources", () => {
     const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
     fs.writeFileSync(
@@ -573,6 +601,33 @@ describe("export profile engine", () => {
     );
   });
 
+  it("excludes non-approved Context Pack records from pack exports by default", () => {
+    const packPath = copyFixture();
+    const draftPath = path.join(packPath, "records", "draft.md");
+    const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
+    fs.writeFileSync(
+      draftPath,
+      baseRecord
+        .replace("id: valid.overview", "id: valid.draft")
+        .replace("title: Valid Overview", "title: Draft Context")
+        .replace("review_status: approved", "review_status: draft"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs.readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8").replace("    - valid.overview", "    - valid.overview\n    - valid.draft"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("review status is draft") })])
+    );
+    expect(artifact.content).not.toContain("Draft Context");
+  });
+
   it("omits local source paths from pack exports", () => {
     const packPath = copyFixture();
     const artifact = buildPackExport({ packPath, profileId: "codex-context" });
@@ -675,6 +730,33 @@ describe("export profile engine", () => {
       expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("imported_draft") })])
     );
     expect(artifact.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "token_budget.exceeded" })]));
+  });
+
+  it("excludes non-approved Context Pack records from composed exports by default", () => {
+    const packPath = copyFixture();
+    const draftPath = path.join(packPath, "records", "review-draft.md");
+    const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
+    fs.writeFileSync(
+      draftPath,
+      baseRecord
+        .replace("id: valid.overview", "id: valid.review-draft")
+        .replace("title: Valid Overview", "title: Review Draft")
+        .replace("review_status: approved", "review_status: draft"),
+      "utf8"
+    );
+
+    const artifact = buildComposedExport({
+      target: "codex",
+      format: "markdown",
+      selections: [{ packPath, recordIds: ["valid.overview", "valid.review-draft"] }],
+      generatedAt: "2026-05-07T00:00:00.000Z"
+    });
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    expect(artifact.excludedRecords).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "valid.review-draft", reason: expect.stringContaining("review status is draft") })])
+    );
+    expect(artifact.content).not.toContain("Review Draft");
   });
 
   it("fails clearly for invalid composed export requests", () => {

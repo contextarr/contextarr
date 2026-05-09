@@ -11,6 +11,8 @@ const requiredFiles = [
   "docs/quickstart.md",
   "docs/docker.md",
   "docs/security.md",
+  "docs/api.md",
+  "docs/collectors.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
@@ -49,6 +51,9 @@ if (!failed) {
   const architecture = read("docs/architecture.md");
   const agentKits = read("docs/agent-kits.md");
   const roadmap = read("docs/roadmap.md");
+  const apiDocs = read("docs/api.md");
+  const collectorsDocs = read("docs/collectors.md");
+  const releaseChecklist = read("docs/release-checklist.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
   const combinedDocs = [readme, mcp, docker].join("\n");
@@ -305,6 +310,42 @@ if (!failed) {
   }
   if (!packageJson.scripts["phase27:verify"]) {
     fail("Root package scripts must include phase27:verify.");
+  }
+
+  const requiredCollectorsText = [
+    "Context Pack Collectors",
+    "Blank Pack Starter",
+    "Markdown Folder",
+    "Project Notes",
+    "Support KB Starter",
+    "CONTEXTARR_DRAFT_PACKS_DIR",
+    "/api/context-pack-collectors",
+    "/api/context-pack-collectors/:id/preview",
+    "/api/context-pack-collectors/:id/run",
+    "draft-packs/",
+    "not activate",
+    "do not index",
+    "must not expose submitted local input paths",
+  ];
+  for (const text of requiredCollectorsText) {
+    if (
+      !readme.includes(text) &&
+      !apiDocs.includes(text) &&
+      !collectorsDocs.includes(text) &&
+      !architecture.includes(text) &&
+      !releaseChecklist.includes(text)
+    ) {
+      fail(`README or docs are missing Context Pack collector text: ${text}`);
+    }
+  }
+  if (!releaseChecklist.includes("Open Collectors") || !releaseChecklist.includes("active Pack Library")) {
+    fail("Release checklist must include a manual Context Pack collector smoke.");
+  }
+  if (!releaseChecklist.includes("local Skill import lane") || !releaseChecklist.includes("imported-skills/")) {
+    fail("Release checklist must include a manual local Skill import coexistence smoke.");
+  }
+  if (!packageJson.scripts["collectors:verify"]) {
+    fail("Root package scripts must include collectors:verify.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

@@ -18,11 +18,12 @@ Contextarr currently supports:
 - Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, Agent Kit Composer save flow, Agent Kit Library/detail/health, and profile-driven Agent Kit exports.
 - Research Delta foundation for Context Packs: source license/hash/freshness metadata, deterministic validation reports, export readiness, redaction warning counts, and assistant handoff profile targets.
 - Read-only MCP tools for Skills and Agent Kits, including scoped Agent Kit context search and Agent Kit export previews.
-- Local Skill importers for draft Skill folders, gated local API writes, and a dashboard Collector flow.
+- Local Skill importers for draft Skill folders and gated local API writes.
 - Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
 - Phase 28 signing and trust model research docs for future checksums, signatures, private registry requirements, and marketplace non-goals.
 - Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
 - Registry Trust Foundation planning docs plus a local scanner foundation for deterministic text-only scanner reports. This is local policy infrastructure only; no public registry or marketplace exists today.
+- Context Pack collector v0 creates private unreviewed draft packs under `draft-packs/` without activating them.
 
 ## Second PRD Direction
 
@@ -48,6 +49,8 @@ Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It cre
 
 Phase 3A: Registry Trust Foundation defines how a future trusted registry should work, including scanner limitations, registry artifacts, signing, encryption, quarantine, revocation, and launch gates. Its first implementation primitive is local-only scanner report generation. It does not move public marketplace, remote install, public uploads, hosted cloud, or registry implementation into v0.1 or v1.0.
 
+Context Pack Collectors v0 is now part of the v1 core hardening lane. It creates local private draft packs from starter templates or local text/Markdown folders under `CONTEXTARR_DRAFT_PACKS_DIR`. It does not activate drafts or expand Skills/Agent Kits.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.
@@ -68,6 +71,7 @@ Phase 3A: Registry Trust Foundation defines how a future trusted registry should
 - Phase 27: Agent Kit templates. Complete.
 - Phase 28: Signing and trust model research. Complete.
 - Phase 3A: Registry Trust Foundation. Planning/architecture added; local scanner foundation added; registry implementation remains deferred.
+- Context Pack Collectors v0: local draft Context Pack creation. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.

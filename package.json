@@ -60,6 +60,7 @@
     "security:verify": "pnpm v1-core:verify && pnpm scanner:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts && node tools/launch/verify-security.mjs",
     "scanner:verify": "pnpm --filter @contextarr/security-scanner typecheck && pnpm --filter @contextarr/security-scanner test && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/clean-context-pack --format json && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/suspicious-but-reviewable-pack --format json && node tools/launch/verify-scanner.mjs",
     "phase3a:verify": "pnpm docs:verify && pnpm scanner:verify",
+    "collectors:verify": "pnpm --filter @contextarr/collectors typecheck && pnpm --filter @contextarr/collectors test && node --import tsx tools/launch/verify-collectors.mjs && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test",
     "workflow-scope:verify": "pnpm v1-core:verify && node tools/launch/verify-v1-decisions.mjs",
     "demo:verify": "pnpm demo:validate && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && node tools/launch/verify-v1-core.mjs",
     "ui:verify": "pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
