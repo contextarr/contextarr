@@ -21,7 +21,7 @@ This addition expands the future product into:
 ```text
 Context Packs provide grounding.
 Skills provide reusable capability instructions.
-Agent Kits combine both for specific AI-assisted work.
+Agent Kits tell agents how each specific bundle should be used for specific AI-assisted work.
 ```
 
 ## 2. Strategic Summary
@@ -47,7 +47,7 @@ The distinction:
 ```text
 Skills tell agents how to work.
 Context Packs tell agents what to know.
-Agent Kits combine both for a specific task.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
 ```
 
 The opportunity is to become the local-first system for maintaining the ingredients that make agent work reliable:
@@ -95,7 +95,7 @@ Contextarr turns local knowledge and reusable agent instructions into validated 
 ```text
 Skills tell agents how to work.
 Context Packs tell agents what to know.
-Agent Kits combine both for a specific task.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
 ```
 
 ### 5.4 Developer Messaging
@@ -162,6 +162,20 @@ A Contextarr Skill teaches the assistant how to respond or structure work. It do
 An Agent Kit is a task-ready pairing of one or more Skills with one or more Context Packs, plus export profile, target tool, redaction rules, and compatibility metadata.
 
 It is the composed working setup for a specific AI task.
+
+#### Agent Kit Self-Description Requirement
+
+Every Agent Kit must be self-describing. An Agent Kit does not require a separate Skill to explain how it should be used. The Agent Kit itself must include usage instructions that tell the target AI assistant or agent how to interpret the kit, what task it is for, which Skills and Context Packs are included, what boundaries apply, and what output is expected.
+
+Product rule:
+
+```text
+Skills tell agents how to work.
+Context Packs tell agents what to know.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
+```
+
+Skills are reusable task capability modules. Agent Kit usage instructions are kit-specific operating instructions. Skills should not be used as bootloaders whose only purpose is explaining how to use Agent Kits.
 
 Examples:
 
@@ -514,6 +528,10 @@ Signals:
 8. Token budget is respected or warned.
 9. Sensitive context warnings are resolved.
 10. Review status is current.
+11. Self-description completeness.
+12. Usage instructions present.
+13. Output contract present.
+14. Safety boundary present.
 
 ## 12. Skill Folder Format
 
@@ -747,6 +765,8 @@ agent-kits/
     README.md
     CHANGELOG.md
     LICENSE
+    instructions/
+      usage.md
     exports/
       chatgpt.yaml
       claude.yaml
@@ -775,6 +795,11 @@ Example:
   "name": "Rep Portal Bug Ticket Agent Kit",
   "version": "1.0.0",
   "description": "Task-ready kit for drafting Rep Portal bug tickets from issue notes and screenshots.",
+  "taskGoal": "Draft a clear support ticket from user notes, screenshots, and relevant support context.",
+  "agentRole": "Support ticket drafting assistant",
+  "usageInstructionsPath": "instructions/usage.md",
+  "outputContract": "Return a ticket draft with title, issue, observed behaviour, expected behaviour, reproduction steps, impact, and notes.",
+  "executionBoundary": "Contextarr prepares this Agent Kit. It does not run agents, execute Skills, call tools, or perform actions.",
   "type": "support_workflow",
   "visibility": "local",
   "trustLevel": "local",
@@ -831,6 +856,7 @@ exclude_tags:
   - never_export
 token_budget: 12000
 sections:
+  - agent_kit_instructions
   - kit_summary
   - task_goal
   - included_skills
@@ -839,6 +865,37 @@ sections:
   - constraints
   - redaction_notice
   - sources
+```
+
+Every Agent Kit export must begin with Agent Kit Instructions before included Skills or Context Pack content.
+
+Required opening section:
+
+```markdown
+# Agent Kit Instructions
+
+You are using the [Agent Kit Name] Agent Kit.
+
+## Task Goal
+...
+
+## Agent Role
+...
+
+## Included Skills
+...
+
+## Included Context Packs
+...
+
+## Usage Rules
+...
+
+## Output Contract
+...
+
+## Safety Boundary
+Contextarr prepared this Agent Kit. Contextarr does not execute it.
 ```
 
 ## 14. Updated App Information Architecture
@@ -1092,6 +1149,14 @@ The validator must check:
 13. Agent Kit does not include unreviewed AI drafts unless explicitly allowed.
 14. Agent Kit does not include sensitive records in public-safe exports.
 15. Agent Kit does not claim executable capabilities.
+16. `taskGoal` exists.
+17. `agentRole` exists.
+18. `usageInstructionsPath` exists.
+19. Usage instruction file exists.
+20. `outputContract` exists.
+21. `executionBoundary` exists and preserves the no-execution boundary.
+22. Export profiles include an Agent Kit Instructions opening section.
+23. Agent Kit does not depend on a Skill whose only purpose is explaining how to use Agent Kits.
 
 ## 17. Updated Health Requirements
 
@@ -1128,6 +1193,10 @@ Agent Kit Health should include:
 10. Sensitive data warning count.
 11. Deprecated dependency count.
 12. Unreviewed dependency count.
+13. Self-description completeness.
+14. Usage instructions present.
+15. Output contract present.
+16. Safety boundary present.
 
 ### 17.3 Health Labels
 
@@ -1167,18 +1236,25 @@ Skill exports should include:
 
 Agent Kit exports should include:
 
-1. Agent Kit summary.
-2. Task goal.
-3. Target AI tool.
-4. Included Skills.
-5. Included Context Packs.
-6. Relevant records.
-7. Output instructions.
-8. Constraints.
-9. Redaction notice.
-10. Source summary.
-11. Review status.
-12. Date generated.
+Every Agent Kit export must begin with an Agent Kit Instructions section before included Skills or Context Pack content.
+
+1. Agent Kit Instructions.
+2. Agent Kit summary.
+3. Task goal.
+4. Agent role.
+5. Target AI tool.
+6. Included Skills.
+7. Included Context Packs.
+8. Usage rules.
+9. Output contract.
+10. Safety boundary.
+11. Relevant records.
+12. Output instructions.
+13. Constraints.
+14. Redaction notice.
+15. Source summary.
+16. Review status.
+17. Date generated.
 
 ### 18.3 Target-Specific Export Rules
 
@@ -1730,14 +1806,17 @@ Goals:
 1. Define Agent Kit manifest schema.
 2. Define Agent Kit export profile schema.
 3. Define Agent Kit compatibility rules.
-4. Implement Agent Kit validator.
+4. Include self-description fields in the first Agent Kit manifest schema.
+5. Implement Agent Kit validator.
 
 Deliverables:
 
 1. Zod schema for `contextarr-agent-kit.json`.
 2. Zod schema for Agent Kit export profiles.
 3. Zod schema for Agent Kit compatibility rules.
-4. CLI validation support:
+4. Required manifest fields for `taskGoal`, `agentRole`, `usageInstructionsPath`, `outputContract`, and `executionBoundary`.
+5. Validation that usage instructions exist and exports begin with Agent Kit Instructions.
+6. CLI validation support:
 
 ```text
 contextarr validate-agent-kit <path>
@@ -1749,7 +1828,7 @@ or unified:
 contextarr validate <path>
 ```
 
-5. Tests with valid and invalid Agent Kit fixtures.
+7. Tests with valid and invalid Agent Kit fixtures.
 
 Acceptance criteria:
 
@@ -1759,6 +1838,9 @@ Acceptance criteria:
 4. Incompatible target fails or warns.
 5. Sensitive context without redaction warns or blocks depending profile.
 6. Agent Kit claiming execution fails.
+7. Missing self-description fields fail or warn according to severity.
+8. A Skill whose only purpose is explaining how to use Agent Kits is flagged.
+9. Self-description is part of Phase 19 and must not be deferred to later polish.
 
 Hard boundaries:
 
@@ -1789,11 +1871,12 @@ Each Agent Kit must include:
 2. README.md
 3. LICENSE
 4. CHANGELOG.md
-5. Export profiles.
-6. Validation rules.
-7. Redaction rules.
-8. Compatibility rules.
-9. Sample export.
+5. `instructions/usage.md`
+6. Export profiles.
+7. Validation rules.
+8. Redaction rules.
+9. Compatibility rules.
+10. Sample export.
 
 Deliverables:
 
@@ -1807,8 +1890,9 @@ Acceptance criteria:
 1. All demo Agent Kits validate.
 2. Each Agent Kit references valid demo Context Packs and demo Skills.
 3. Each Agent Kit has at least one target-specific export profile.
-4. No private data.
-5. No executable content.
+4. Each Agent Kit includes task goal, agent role, usage instructions, output contract, and execution boundary.
+5. No private data.
+6. No executable content.
 
 ### Phase 21: Agent Kit Index and API
 
@@ -1922,6 +2006,7 @@ Goals:
 3. Apply target-specific formatting.
 4. Apply redaction rules.
 5. Generate copyable and downloadable output.
+6. Begin every Agent Kit export with Agent Kit Instructions.
 
 Targets:
 
@@ -1950,10 +2035,11 @@ Deliverables:
 Acceptance criteria:
 
 1. Demo Agent Kits export successfully.
-2. Included Skills appear before or beside relevant context according to profile.
-3. Redaction rules apply.
-4. Export warnings are visible.
-5. CLI and UI produce matching deterministic output.
+2. Every export begins with Agent Kit Instructions.
+3. Included Skills appear after the kit-specific instructions and before or beside relevant context according to profile.
+4. Redaction rules apply.
+5. Export warnings are visible.
+6. CLI and UI produce matching deterministic output.
 
 ### Phase 25: Read-Only MCP for Skills and Agent Kits
 
@@ -2259,7 +2345,7 @@ The key strategic line is:
 ```text
 Skills tell agents how to work.
 Context Packs tell agents what to know.
-Agent Kits combine both for a specific task.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
 ```
 
 The key safety line is:

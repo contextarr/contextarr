@@ -110,11 +110,11 @@ The second PRD keeps Context Packs as the core source-backed knowledge object an
 ```text
 Context Packs tell agents what to know.
 Skills tell agents how to work.
-Agent Kits combine both for a specific task.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
 Export Briefs are generated from those ingredients.
 ```
 
-Contextarr prepares Agent Kits. It does not run them.
+Every Agent Kit must be self-describing. It carries its own usage instructions, task goal, output contract, and safety boundary. Contextarr prepares Agent Kits. It does not run them.
 
 ## Repository Layout
 

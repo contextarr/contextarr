@@ -8,6 +8,8 @@ Contextarr prepares Agent Kits. It does not run them.
 
 Skills may describe how an AI assistant should work, but they must not give Contextarr the ability to perform that work.
 
+Skills should not be used as bootloaders whose only purpose is explaining how to use Agent Kits. Every Agent Kit must carry its own usage instructions, task goal, output contract, and safety boundary.
+
 ## Forbidden In Skills
 
 Skills must not contain or request:

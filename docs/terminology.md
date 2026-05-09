@@ -18,9 +18,11 @@ In Contextarr, a Skill is data-only. It may contain instructions, decision rules
 
 ### Agent Kit
 
-An Agent Kit is a task-ready pairing of one or more Context Packs with one or more Skills, plus target, export profile, redaction rules, and compatibility metadata.
+An Agent Kit is a task-ready pairing of one or more Context Packs with one or more Skills, plus target, export profile, redaction rules, compatibility metadata, and kit-specific usage instructions.
 
 Contextarr prepares Agent Kits. It does not run them.
+
+Every Agent Kit must be self-describing. It does not require a separate Skill to explain how it should be used.
 
 ### Export Brief
 
@@ -33,7 +35,7 @@ An Export Brief is not source of truth. It is derived output.
 ```text
 Context Packs tell agents what to know.
 Skills tell agents how to work.
-Agent Kits combine both for a specific task.
+Agent Kits tell agents how this specific bundle should be used for this specific task.
 Export Briefs are generated from those ingredients.
 ```
 
