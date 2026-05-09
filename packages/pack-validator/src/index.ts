@@ -16,7 +16,8 @@ import {
   type RecordFrontmatter,
   type RedactionRules,
   type Source,
-  type SourceMap
+  type SourceMap,
+  type ValidationRules
 } from "@contextarr/schema";
 
 export type ValidationSeverity = "error" | "warning" | "info";
@@ -105,6 +106,16 @@ interface ExportReadinessProfileInput {
   file: string;
 }
 
+interface ValidatedRecord {
+  metadata: RecordFrontmatter;
+  file: string;
+}
+
+interface PackRules {
+  validationRules?: ValidationRules;
+  redactionRules?: RedactionRules;
+}
+
 export interface ValidationReportV1 {
   schemaVersion: "contextarr.validation-report.v1";
   packPath: string;
@@ -188,6 +199,7 @@ const exportTargetFormats: Record<string, string> = {
   claude_md: "markdown",
   llms_txt: "text"
 };
+const secretPolicyTags = new Set(["secret", "never_export", "private", "sensitive", "customer_private", "health", "financial"]);
 
 export function validatePack(packPath: string, options: ValidatePackOptions = {}): ValidationResult {
   const resolvedPackPath = path.resolve(packPath);
@@ -229,9 +241,10 @@ export function validatePack(packPath: string, options: ValidatePackOptions = {}
   const records = validateRecords(resolvedPackPath, manifest, issues);
   validateSourceMap(resolvedPackPath, manifest, records, issues, currentDate);
   const exportProfiles = validateExportProfiles(resolvedPackPath, manifest, issues);
-  const redactionRules = validateRules(resolvedPackPath, manifest, issues);
+  const rules = validateRules(resolvedPackPath, manifest, issues);
+  validateRecordPolicyChecks(records, rules.validationRules, issues);
   scanTextFiles(resolvedPackPath, allFiles, issues, options.scanText ?? true);
-  scanRedactionWarnHits(resolvedPackPath, allFiles, manifest.recordsPath, records, redactionRules, redactionHits, issues);
+  scanRedactionWarnHits(resolvedPackPath, allFiles, manifest.recordsPath, records, rules.redactionRules, redactionHits, issues);
   applyExportReadinessWarnings(exportProfiles, issues, redactionHits);
 
   return finish(resolvedPackPath, manifest.id, issues, redactionHits, exportProfiles);
@@ -318,7 +331,7 @@ function validateRecords(
   packPath: string,
   manifest: ContextPackManifest,
   issues: ValidationIssue[]
-): RecordFrontmatter[] {
+): ValidatedRecord[] {
   const recordsDir = path.join(packPath, manifest.recordsPath);
 
   if (!fs.existsSync(recordsDir) || !fs.statSync(recordsDir).isDirectory()) {
@@ -338,7 +351,7 @@ function validateRecords(
     addIssue(issues, "warning", "records.empty", "Records folder contains no Markdown records.", manifest.recordsPath);
   }
 
-  const records: RecordFrontmatter[] = [];
+  const records: ValidatedRecord[] = [];
   const seenIds = new Map<string, string>();
 
   for (const file of recordFiles) {
@@ -383,10 +396,75 @@ function validateRecords(
       seenIds.set(record.id, relativeFile);
     }
 
-    records.push(record);
+    records.push({ metadata: record, file: relativeFile });
   }
 
   return records;
+}
+
+function validateRecordPolicyChecks(
+  records: ValidatedRecord[],
+  validationRules: ValidationRules | undefined,
+  issues: ValidationIssue[]
+): void {
+  const checks = new Set(validationRules?.checks ?? []);
+  if (checks.size === 0) {
+    return;
+  }
+
+  for (const { metadata: record, file } of records) {
+    if (checks.has("approved_content_only") && record.review_status !== "approved") {
+      addIssue(
+        issues,
+        "error",
+        "record_policy.approved_content_only",
+        `Record "${record.id}" has review_status "${record.review_status}" but approved_content_only requires approved records.`,
+        file,
+        "review_status"
+      );
+    }
+
+    if (checks.has("public_safe_only") && record.privacy !== "public_safe") {
+      addIssue(
+        issues,
+        "error",
+        "record_policy.public_safe_only",
+        `Record "${record.id}" has privacy "${record.privacy}" but public_safe_only requires public_safe records.`,
+        file,
+        "privacy"
+      );
+    }
+
+    if (checks.has("draft_records_require_review") && record.source_status === "draft" && record.review_status === "approved") {
+      addIssue(
+        issues,
+        "error",
+        "record_policy.draft_records_require_review",
+        `Draft record "${record.id}" is marked approved; draft records require human review.`,
+        file,
+        "review_status"
+      );
+    }
+
+    if (checks.has("no_secret_tags")) {
+      const reportedTags = new Set<string>();
+      for (const tag of record.tags) {
+        const normalizedTag = tag.trim().toLowerCase();
+        if (!secretPolicyTags.has(normalizedTag) || reportedTags.has(normalizedTag)) {
+          continue;
+        }
+        reportedTags.add(normalizedTag);
+        addIssue(
+          issues,
+          "error",
+          "record_policy.no_secret_tags",
+          `Record "${record.id}" uses prohibited tag "${tag}" under no_secret_tags.`,
+          file,
+          "tags"
+        );
+      }
+    }
+  }
 }
 
 function validateSourceMetadata(
@@ -518,7 +596,7 @@ function isSourceStale(source: Source, currentDate: Date): boolean {
 function validateSourceMap(
   packPath: string,
   manifest: ContextPackManifest,
-  records: RecordFrontmatter[],
+  records: ValidatedRecord[],
   issues: ValidationIssue[],
   currentDate: Date
 ): SourceMap | undefined {
@@ -538,7 +616,7 @@ function validateSourceMap(
     validateSourceMetadata(packPath, manifest, source, issues, currentDate);
   }
 
-  for (const record of records) {
+  for (const { metadata: record } of records) {
     for (const sourceId of record.sources) {
       if (!sourceIds.has(sourceId)) {
         addIssue(
@@ -614,7 +692,7 @@ function validateExportProfileMapping(packPath: string, file: string, profile: E
   }
 }
 
-function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): RedactionRules | undefined {
+function validateRules(packPath: string, manifest: ContextPackManifest, issues: ValidationIssue[]): PackRules {
   const rulesDir = path.join(packPath, manifest.rulesPath);
 
   if (!fs.existsSync(rulesDir) || !fs.statSync(rulesDir).isDirectory()) {
@@ -625,7 +703,7 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
       `Rules folder does not exist: ${manifest.rulesPath}.`,
       manifest.rulesPath
     );
-    return undefined;
+    return {};
   }
 
   const rules = [
@@ -634,25 +712,28 @@ function validateRules(packPath: string, manifest: ContextPackManifest, issues: 
     ["freshness.yaml", freshnessRulesSchema, "rules.freshness"]
   ] as const;
 
+  let validationRules: ValidationRules | undefined;
   let redactionRules: RedactionRules | undefined;
   for (const [fileName, schema, code] of rules) {
     const file = path.join(rulesDir, fileName);
     if (fs.existsSync(file)) {
       const parsed = readYamlSchemaFile(packPath, file, schema, issues, code);
-      if (fileName === "redaction.yaml") {
+      if (fileName === "validation.yaml") {
+        validationRules = parsed as ValidationRules | undefined;
+      } else if (fileName === "redaction.yaml") {
         redactionRules = parsed as RedactionRules | undefined;
       }
     }
   }
 
-  return redactionRules;
+  return { validationRules, redactionRules };
 }
 
 function scanRedactionWarnHits(
   packPath: string,
   files: string[],
   recordsPath: string,
-  records: RecordFrontmatter[],
+  records: ValidatedRecord[],
   rules: RedactionRules | undefined,
   redactionHits: RedactionHit[],
   issues: ValidationIssue[]
@@ -662,7 +743,7 @@ function scanRedactionWarnHits(
     return;
   }
 
-  const recordIds = new Set(records.map((record) => record.id));
+  const recordIds = new Set(records.map((record) => record.metadata.id));
   const normalizedRecordsPath = normalizePath(recordsPath).replace(/\/?$/, "/");
 
   for (const file of files.filter(isScannableTextFile)) {
