@@ -33,6 +33,10 @@ Contextarr prepares Agent Kits. It does not run them.
 
 When Agent Kits are implemented later, self-description fields and validation must be part of the Agent Kit schema and validator from the first Agent Kit phase. Do not defer self-description to later polish, and do not move Agent Kits earlier in the roadmap.
 
+## Draft v1.0 Bridge PRD
+
+[contextarr_phase_by_phase_prd_to_v1.md](contextarr_phase_by_phase_prd_to_v1.md) is a draft bridge PRD and core-stabilization gate. It does not replace this roadmap or roll back the completed Skills and Agent Kit work. The intended direction is to keep the implemented path, while using the bridge PRD to freeze further Skills and Agent Kit expansion until the Context Pack core is v1.0-ready. Any sequencing conflict should be handled as a follow-up roadmap decision.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.

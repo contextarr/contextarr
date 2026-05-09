@@ -198,6 +198,7 @@ Open the Docker preview at `http://127.0.0.1:3210`. Docker serves the built web 
 
 Useful launch docs:
 
+- [docs/contextarr_phase_by_phase_prd_to_v1.md](docs/contextarr_phase_by_phase_prd_to_v1.md)
 - [docs/terminology.md](docs/terminology.md)
 - [docs/skills.md](docs/skills.md)
 - [docs/agent-kits.md](docs/agent-kits.md)
