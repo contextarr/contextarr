@@ -433,6 +433,35 @@ describe("Contextarr API client", () => {
     expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({ title: "Handoff", target: "codex" });
   });
 
+  it("posts composed pack save requests", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        return jsonResponse({ ok: true, id: "handoff-draft", name: "Handoff Draft", counts: { records: 1, sources: 1 } });
+      }
+    });
+
+    await expect(
+      client.saveComposedPack({
+        packId: "handoff-draft",
+        name: "Handoff Draft",
+        title: "Handoff",
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        selections: [{ packId: "pack-1", recordIds: ["record-1"] }]
+      })
+    ).resolves.toMatchObject({ id: "handoff-draft" });
+
+    expect(requests[0].url).toBe("/api/compose/save-pack");
+    expect(requests[0].init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({ name: "Handoff Draft", target: "codex" });
+  });
+
   it("throws ApiError for failed responses", async () => {
     const client = createApiClient({
       fetchImpl: async () => jsonResponse({ message: "API token required." }, 401)

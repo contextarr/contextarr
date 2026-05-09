@@ -9,6 +9,8 @@ import type {
   AgentKitTemplateSummary,
   CreateAgentKitRequest,
   HealthResponse,
+  ComposeSavePackRequest,
+  ComposeSavePackResponse,
   ComposePreviewRequest,
   ContextPackCollectorDefinition,
   ContextPackCollectorId,
@@ -81,6 +83,7 @@ export interface ApiClient {
   getExportPreview(packId: string, profileId: string): Promise<ExportArtifact>;
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
+  saveComposedPack(request: ComposeSavePackRequest): Promise<ComposeSavePackResponse>;
   getReviewItems(filters?: {
     status?: string;
     severity?: string;
@@ -229,6 +232,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       ),
     composePreview: (body: ComposePreviewRequest) =>
       requestJson<ExportArtifact>("/api/compose/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }),
+    saveComposedPack: (body: ComposeSavePackRequest) =>
+      requestJson<ComposeSavePackResponse>("/api/compose/save-pack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

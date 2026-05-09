@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
+import { validatePack } from "@contextarr/pack-validator";
 import { createApp } from "./api";
 import { getAgentKitIndexDirs, getSkillIndexDirs } from "./config";
 import { openDatabase, type ContextarrDatabase } from "./db";
@@ -25,6 +26,7 @@ function createTestContext(
   const db = openDatabase(":memory:");
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
   const draftPacksDir = overrides.draftPacksDir ?? path.join(os.tmpdir(), "contextarr-no-draft-packs");
+  const composedPacksDir = overrides.composedPacksDir ?? path.join(os.tmpdir(), "contextarr-no-composed-packs");
   const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
   const resolvedDemoAgentKitsDir =
@@ -34,6 +36,7 @@ function createTestContext(
     port: 0,
     packsDir,
     draftPacksDir,
+    composedPacksDir,
     skillsDir,
     importedSkillsDir,
     agentKitsDir,
@@ -66,6 +69,24 @@ function expectedHealthStatus(score: number): string {
 
 function createTempAgentKitsDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-agent-kit-save-"));
+}
+
+function createTempComposedPacksDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-pack-save-"));
+}
+
+function copyDemoPacksFixture(prefix: string): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  for (const entry of fs.readdirSync(demoPacksDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      fs.cpSync(path.join(demoPacksDir, entry.name), path.join(root, entry.name), { recursive: true });
+    }
+  }
+  return root;
+}
+
+function replaceInFile(filePath: string, search: string | RegExp, replacement: string): void {
+  fs.writeFileSync(filePath, fs.readFileSync(filePath, "utf8").replace(search, replacement), "utf8");
 }
 
 function saveAgentKitPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -2012,6 +2033,285 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("POST /api/compose/save-pack writes a private unindexed draft Context Pack", async () => {
+    db.close();
+    const composedPacksDir = createTempComposedPacksDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { composedPacksDir });
+    const app = createApp(fixtureContext);
+    const sourceRecordPath = path.join(demoPacksDir, "ai-workstation-pack", "records", "local-ai-stack.md");
+    const sourceRecordBefore = fs.readFileSync(sourceRecordPath, "utf8");
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        packId: "phase5-composed-draft",
+        name: "Phase 5 Composed Draft",
+        description: "Draft Context Pack generated from approved demo records.",
+        title: "Phase 5 Composed Draft",
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        selections: [
+          { packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] },
+          { packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }
+        ]
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.body).not.toContain(composedPacksDir);
+    expect(response.json()).toMatchObject({
+      ok: true,
+      id: "phase5-composed-draft",
+      counts: { records: 2, sources: 2 },
+      draft: { status: "review_required", indexed: false }
+    });
+
+    const packPath = path.join(composedPacksDir, "phase5-composed-draft");
+    expect(validatePack(packPath).valid).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(path.join(packPath, "contextarr-pack.json"), "utf8"));
+    expect(manifest).toMatchObject({
+      id: "phase5-composed-draft",
+      visibility: "private",
+      trustLevel: "unreviewed",
+      containsExecutableCode: false,
+      requiresNetwork: false
+    });
+
+    const records = fs.readdirSync(path.join(packPath, "records")).map((file) => fs.readFileSync(path.join(packPath, "records", file), "utf8"));
+    expect(records.join("\n")).toContain("review_status: draft");
+    expect(records.join("\n")).toContain("never_export");
+    expect(records.join("\n")).toContain("sourceRecordId: ai-workstation.local-ai-stack");
+
+    const packsAfterSave = await app.inject({ method: "GET", url: "/api/packs" });
+    expect(JSON.stringify(packsAfterSave.json())).not.toContain("phase5-composed-draft");
+    expect(fs.readFileSync(sourceRecordPath, "utf8")).toBe(sourceRecordBefore);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
+  });
+
+  it("POST /api/compose/save-pack rejects duplicate, missing, and unsafe selections", async () => {
+    db.close();
+    const composedPacksDir = createTempComposedPacksDir();
+    const fixtureContext = createTestContext(undefined, demoPacksDir, { composedPacksDir });
+    const app = createApp(fixtureContext);
+    const payload = {
+      packId: "phase5-composed-duplicate",
+      name: "Phase 5 Composed Duplicate",
+      target: "codex",
+      format: "markdown",
+      selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+    };
+
+    const first = await app.inject({ method: "POST", url: "/api/compose/save-pack", payload });
+    const duplicate = await app.inject({ method: "POST", url: "/api/compose/save-pack", payload });
+    const malformed = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: { ...payload, packId: "phase5-composed-malformed", selections: [] }
+    });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...payload,
+        packId: "phase5-composed-missing",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["missing.record"] }]
+      }
+    });
+    const invalidPackId = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...payload,
+        packId: "...",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+      }
+    });
+    const traversalPackId = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...payload,
+        packId: "../phase5-composed-escape",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+      }
+    });
+    const duplicateRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...payload,
+        packId: "phase5-composed-duplicate-record",
+        selections: [
+          {
+            packId: "ai-workstation-pack",
+            recordIds: ["ai-workstation.local-ai-stack", "ai-workstation.local-ai-stack"]
+          }
+        ]
+      }
+    });
+    const excludedTag = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...payload,
+        packId: "phase5-composed-excluded-tag",
+        excludeTags: ["instructions"],
+        selections: [{ packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }]
+      }
+    });
+
+    expect(first.statusCode).toBe(201);
+    expect(duplicate.statusCode).toBe(409);
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.json()).toMatchObject({ error: "invalid_compose_save_request" });
+    expect(missing.statusCode).toBe(404);
+    expect(invalidPackId.statusCode).toBe(400);
+    expect(invalidPackId.json()).toMatchObject({ error: "invalid_pack_id" });
+    expect(traversalPackId.statusCode).toBe(400);
+    expect(traversalPackId.json()).toMatchObject({ error: "invalid_pack_id" });
+    expect(duplicateRecord.statusCode).toBe(400);
+    expect(duplicateRecord.json()).toMatchObject({ error: "duplicate_record_selection" });
+    expect(excludedTag.statusCode).toBe(400);
+    expect(excludedTag.json()).toMatchObject({ error: "selection_not_saveable" });
+    expect(excludedTag.body).not.toContain(composedPacksDir);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
+  });
+
+  it("POST /api/compose/save-pack enforces server-side review, privacy, and default tag gates", async () => {
+    db.close();
+    const tempPacksDir = copyDemoPacksFixture("contextarr-composed-policy-packs-");
+    const composedPacksDir = createTempComposedPacksDir();
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "hardware-overview.md"),
+      "review_status: approved",
+      "review_status: draft"
+    );
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "storage-layout.md"),
+      "privacy: public_safe",
+      "privacy: private"
+    );
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "networking-notes.md"),
+      "privacy: public_safe",
+      "privacy: secret"
+    );
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "troubleshooting-workflow.md"),
+      /tags:\r?\n  - troubleshooting\r?\n  - workflow/,
+      "tags:\n  - troubleshooting\n  - workflow\n  - never_export"
+    );
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "local-ai-stack.md"),
+      "title: Local AI Stack",
+      "title: Local AI Stack demo@example.test"
+    );
+    replaceInFile(
+      path.join(tempPacksDir, "ai-workstation-pack", "records", "local-ai-stack.md"),
+      "The fictional stack separates chat UI, model serving, coding-agent tools, and pack exports so each layer can be reasoned about independently.",
+      "The fictional stack separates chat UI, model serving, coding-agent tools, and pack exports so each layer can be reasoned about independently. Contact demo@example.test and backup@example.test for public-safe routing."
+    );
+
+    const fixtureContext = createTestContext(undefined, tempPacksDir, {
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    fixtureContext.db
+      .prepare("UPDATE records SET body = body || ? WHERE id = ?")
+      .run("\n\nToken: SECRET123", "ai-workstation.local-ai-stack");
+    const app = createApp(fixtureContext);
+    const basePayload = {
+      name: "Phase 5 Policy Save",
+      target: "codex",
+      format: "markdown"
+    };
+
+    const draftRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...basePayload,
+        packId: "phase5-policy-draft-record",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.hardware-overview"] }]
+      }
+    });
+    const privateRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...basePayload,
+        packId: "phase5-policy-private-record",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.storage-layout"] }]
+      }
+    });
+    const secretRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...basePayload,
+        packId: "phase5-policy-secret-record",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.networking-notes"] }]
+      }
+    });
+    const neverExportRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...basePayload,
+        packId: "phase5-policy-never-export",
+        excludeTags: [],
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.troubleshooting-workflow"] }]
+      }
+    });
+    const redactedRecord = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: {
+        ...basePayload,
+        packId: "phase5-policy-redacted-record",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+      }
+    });
+
+    expect(draftRecord.statusCode).toBe(400);
+    expect(draftRecord.json().rejectedRecords[0].reason).toContain("Review status is draft");
+    expect(privateRecord.statusCode).toBe(400);
+    expect(privateRecord.json().rejectedRecords[0].reason).toContain("requires public_safe source records");
+    expect(secretRecord.statusCode).toBe(400);
+    expect(secretRecord.json().rejectedRecords[0].reason).toContain("Secret records");
+    expect(neverExportRecord.statusCode).toBe(400);
+    expect(neverExportRecord.json().rejectedRecords[0].reason).toContain("never_export");
+    expect(redactedRecord.statusCode).toBe(201);
+    const redactedPackPath = path.join(composedPacksDir, "phase5-policy-redacted-record");
+    const redactedRecordBody = fs
+      .readdirSync(path.join(redactedPackPath, "records"))
+      .map((file) => fs.readFileSync(path.join(redactedPackPath, "records", file), "utf8"))
+      .join("\n");
+    const redactedSources = fs.readFileSync(path.join(redactedPackPath, "sources", "sources.yaml"), "utf8");
+    expect(redactedRecordBody).toContain("[masked]");
+    expect(redactedRecordBody).toContain("[redacted]");
+    expect(redactedRecordBody).not.toContain("demo@example.test");
+    expect(redactedRecordBody).not.toContain("backup@example.test");
+    expect(redactedRecordBody).not.toContain("SECRET123");
+    expect(redactedSources).toContain("[masked]");
+    expect(redactedSources).not.toContain("demo@example.test");
+    expect(fs.readFileSync(path.join(redactedPackPath, "rules", "redaction.yaml"), "utf8")).toContain("email");
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(tempPacksDir, { recursive: true, force: true });
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
+  });
+
   it("GET /api/packs/:id/records returns records and supports filters", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({
@@ -2233,7 +2533,8 @@ describe("Contextarr API", () => {
 
   it("requires token auth on compose preview routes", async () => {
     db.close();
-    const authedContext = createTestContext("test-token");
+    const composedPacksDir = createTempComposedPacksDir();
+    const authedContext = createTestContext("test-token", demoPacksDir, { composedPacksDir });
     const app = createApp(authedContext);
     const payload = {
       target: "codex",
@@ -2251,11 +2552,25 @@ describe("Contextarr API", () => {
       headers: { authorization: "Bearer test-token" },
       payload
     });
+    const blockedSave = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      payload: { ...payload, packId: "phase5-auth-save", name: "Phase 5 Auth Save" }
+    });
+    const allowedSave = await app.inject({
+      method: "POST",
+      url: "/api/compose/save-pack",
+      headers: { authorization: "Bearer test-token" },
+      payload: { ...payload, packId: "phase5-auth-save", name: "Phase 5 Auth Save" }
+    });
 
     expect(blocked.statusCode).toBe(401);
     expect(allowed.statusCode).toBe(200);
+    expect(blockedSave.statusCode).toBe(401);
+    expect(allowedSave.statusCode).toBe(201);
     await app.close();
     authedContext.db.close();
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
   });
 
   it("requires token auth on Skill and Agent Kit API, typed search, and rescan routes", async () => {

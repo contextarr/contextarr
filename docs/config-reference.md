@@ -14,6 +14,7 @@ Contextarr reads configuration from environment variables and local defaults. Pa
 | `CONTEXTARR_DATABASE_PATH` | `./data/contextarr.db` | Rebuildable SQLite path. |
 | `CONTEXTARR_PACKS_DIR` | `./demo-packs` | Context Pack directory. |
 | `CONTEXTARR_DRAFT_PACKS_DIR` | `./draft-packs` | Local draft Context Pack output root for collectors. Not indexed as active packs automatically. |
+| `CONTEXTARR_COMPOSED_PACKS_DIR` | `./composed-packs` | Local draft Context Pack output root for Composer save-as-draft-pack. Not indexed as active packs automatically. |
 | `CONTEXTARR_WEB_DIST_DIR` | empty | Optional built web asset directory for same-origin serving. |
 | `CONTEXTARR_API_TOKEN` | empty | Optional local API token. |
 | `CONTEXTARR_LAN_MODE` | `false` | Local network mode flag. |

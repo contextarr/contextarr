@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import staticPlugin from "@fastify/static";
+import YAML from "yaml";
 import {
   CollectorError,
   isContextPackCollectorId,
@@ -19,9 +20,11 @@ import {
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
-import type { AgentKitTemplate } from "@contextarr/schema";
+import { redactionRulesSchema, type AgentKitTemplate, type RedactionRules } from "@contextarr/schema";
 import {
   assertAgentKitDirectorySeparation,
+  assertComposedPackDirectorySeparation,
+  assertComposedPacksDirectory,
   assertDraftPacksDirectory,
   assertImportedSkillsDirectory,
   getAgentKitIndexDirs,
@@ -35,6 +38,13 @@ import {
   normalizeAgentKitId,
   type CreateAgentKitDraftRequest
 } from "./agent-kit-writer";
+import {
+  ComposedPackWriteError,
+  createComposedPackDraft,
+  normalizeComposedPackId,
+  normalizeComposedPackIdCandidate,
+  type ComposeDraftRecord
+} from "./composed-pack-writer";
 import {
   getAgentKit,
   getAgentKitContextPacks,
@@ -791,6 +801,126 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
+  app.post<{ Body: ComposeSavePackBody }>("/api/compose/save-pack", async (request, reply) => {
+    const parsed = parseComposeSavePackBody(request.body ?? {});
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: "invalid_compose_save_request", message: parsed.message });
+    }
+
+    const resolvedId =
+      parsed.value.packId !== undefined
+        ? normalizeExplicitComposedPackId(parsed.value.packId)
+        : normalizeComposedPackId(`${parsed.value.name ?? parsed.value.title ?? "composed-context"}-draft`);
+    if (!resolvedId) {
+      return reply.code(400).send({ error: "invalid_pack_id", message: "Composed pack name or ID must include letters or numbers." });
+    }
+
+    if (getPack(db, resolvedId)) {
+      return reply.code(409).send({ error: "pack_exists", message: `Pack already exists: ${resolvedId}`, id: resolvedId });
+    }
+
+    const selectedRecords: ComposeDraftRecord[] = [];
+    const rejectedRecords: Array<{ id: string; reason: string }> = [];
+    const seenRecordKeys = new Set<string>();
+    const redactionRulesByPack = new Map<string, RedactionRules>();
+
+    for (const selection of parsed.value.selections) {
+      const packPath = getPackPath(db, selection.packId);
+      if (!packPath) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${selection.packId}` });
+      }
+      const redactionRules = readPackRedactionRules(packPath);
+      redactionRulesByPack.set(selection.packId, redactionRules);
+
+      for (const recordId of selection.recordIds) {
+        const recordKey = `${selection.packId}:${recordId}`;
+        if (seenRecordKeys.has(recordKey)) {
+          return reply.code(400).send({
+            error: "duplicate_record_selection",
+            message: `Record selected more than once: ${recordId}`
+          });
+        }
+        seenRecordKeys.add(recordKey);
+
+        const record = normalizeRecordForComposeSave(getRecord(db, recordId));
+        if (!record || record.packId !== selection.packId) {
+          return reply.code(404).send({ error: "not_found", message: `Record not found: ${recordId}` });
+        }
+
+        const reason = reasonRecordCannotBeSaved(record, parsed.value.excludeTags, redactionRules);
+        if (reason) {
+          rejectedRecords.push({ id: record.id, reason });
+        } else {
+          selectedRecords.push({
+            ...record,
+            title: applyContextPackRedaction(record.title, redactionRules),
+            body: applyContextPackRedaction(record.body, redactionRules)
+          });
+        }
+      }
+    }
+
+    if (rejectedRecords.length > 0) {
+      return reply.code(400).send({
+        error: "selection_not_saveable",
+        message: "Composed draft packs can only be created from approved records that pass privacy and default exclusion rules.",
+        rejectedRecords
+      });
+    }
+
+    try {
+      assertComposedPackDirectorySeparation(config);
+      assertComposedPacksDirectory(config);
+      const saved = createComposedPackDraft({
+        composedPacksDir: config.composedPacksDir,
+        packId: resolvedId,
+        name: parsed.value.name ?? parsed.value.title ?? "Composed Context Draft",
+        description: parsed.value.description,
+        target: parsed.value.target,
+        format: parsed.value.format,
+        privacyMode: parsed.value.privacyMode,
+        excludeTags: parsed.value.excludeTags,
+        redactionRules: mergeRedactionRules(Array.from(redactionRulesByPack.values())),
+        records: selectedRecords
+      });
+
+      return reply.code(201).send({
+        ok: true,
+        id: saved.id,
+        name: saved.name,
+        counts: {
+          records: saved.recordCount,
+          sources: saved.sourceCount
+        },
+        validation: {
+          valid: saved.validation.valid,
+          errors: saved.validation.summary.errors,
+          warnings: saved.validation.summary.warnings,
+          infos: saved.validation.summary.infos
+        },
+        draft: {
+          status: "review_required",
+          indexed: false
+        }
+      });
+    } catch (error) {
+      if (error instanceof ComposedPackWriteError) {
+        return reply.code(error.statusCode).send({
+          error: error.code,
+          message: error.message,
+          validation: error.validation
+            ? {
+                errors: error.validation.summary.errors,
+                warnings: error.validation.summary.warnings
+              }
+            : undefined
+        });
+      }
+
+      throw error;
+    }
+  });
+
   app.get<{
     Params: { id: string };
     Querystring: { q?: string; tag?: string; type?: string };
@@ -1133,6 +1263,12 @@ interface ComposePreviewBody {
   selections?: unknown;
   excludeTags?: unknown;
   tokenBudget?: unknown;
+}
+
+interface ComposeSavePackBody extends ComposePreviewBody {
+  packId?: unknown;
+  name?: unknown;
+  description?: unknown;
 }
 
 interface SkillImportBody {
@@ -1674,6 +1810,215 @@ function parseComposePreviewBody(body: ComposePreviewBody): { ok: true; value: P
       tokenBudget
     }
   };
+}
+
+interface ParsedComposeSavePackBody extends ParsedComposePreviewBody {
+  packId?: string;
+  name?: string;
+  description?: string;
+  privacyMode: "redacted" | "public_safe";
+  excludeTags: string[];
+}
+
+function parseComposeSavePackBody(body: ComposeSavePackBody): { ok: true; value: ParsedComposeSavePackBody } | { ok: false; message: string } {
+  const parsed = parseComposePreviewBody(body);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  if (body.packId !== undefined && (typeof body.packId !== "string" || !body.packId.trim())) {
+    return { ok: false, message: "Composed pack ID is invalid." };
+  }
+
+  if (body.name !== undefined && (typeof body.name !== "string" || !body.name.trim())) {
+    return { ok: false, message: "Composed pack name is invalid." };
+  }
+
+  if (body.description !== undefined && (typeof body.description !== "string" || !body.description.trim())) {
+    return { ok: false, message: "Composed pack description is invalid." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...parsed.value,
+      packId: typeof body.packId === "string" && body.packId.trim() ? body.packId.trim() : undefined,
+      name: typeof body.name === "string" && body.name.trim() ? body.name.trim() : undefined,
+      description: typeof body.description === "string" && body.description.trim() ? body.description.trim() : undefined,
+      privacyMode: parsed.value.privacyMode ?? "redacted",
+      excludeTags: mergeComposeSaveExcludeTags(parsed.value.excludeTags)
+    }
+  };
+}
+
+function mergeComposeSaveExcludeTags(tags: string[] | undefined): string[] {
+  return Array.from(new Set(["secret", "never_export", "imported_draft", ...(tags ?? [])]));
+}
+
+function normalizeExplicitComposedPackId(value: string): string | undefined {
+  if (/[\\/]/.test(value) || value.includes("..")) {
+    return undefined;
+  }
+
+  return normalizeComposedPackIdCandidate(value);
+}
+
+function normalizeRecordForComposeSave(value: unknown): ComposeDraftRecord | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const metadata = isRecord(value.metadata) ? value.metadata : {};
+  const confidence = normalizeRecordConfidence(value.confidence);
+  const freshness = normalizeRecordFreshness(value.freshness);
+  const privacy = normalizeRecordPrivacy(value.privacy);
+  const reviewStatus = normalizeRecordReviewStatus(value.reviewStatus);
+  if (
+    typeof value.id !== "string" ||
+    typeof value.packId !== "string" ||
+    typeof value.title !== "string" ||
+    typeof value.type !== "string" ||
+    !Array.isArray(value.tags) ||
+    !Array.isArray(value.sources) ||
+    !Array.isArray(value.resolvedSources) ||
+    typeof value.body !== "string" ||
+    !confidence ||
+    !freshness ||
+    !privacy ||
+    !reviewStatus
+  ) {
+    return undefined;
+  }
+
+  return {
+    id: value.id,
+    packId: value.packId,
+    title: value.title,
+    type: value.type,
+    tags: value.tags.filter((tag): tag is string => typeof tag === "string"),
+    confidence,
+    sourceStatus: typeof value.sourceStatus === "string" ? value.sourceStatus : String(metadata.source_status ?? "draft"),
+    freshness,
+    privacy,
+    reviewStatus,
+    sources: value.sources.filter((source): source is string => typeof source === "string"),
+    resolvedSources: value.resolvedSources.filter(isRecord).map((source) => ({
+      id: typeof source.id === "string" ? source.id : "",
+      type: typeof source.type === "string" ? source.type : "unknown",
+      title: typeof source.title === "string" ? source.title : "Source",
+      url: typeof source.url === "string" ? source.url : null,
+      path: typeof source.path === "string" ? source.path : null,
+      retrievedAt: typeof source.retrievedAt === "string" ? source.retrievedAt : null,
+      license: typeof source.license === "string" ? source.license : null,
+      licenseStatus: typeof source.licenseStatus === "string" ? source.licenseStatus : null,
+      contentHash: typeof source.contentHash === "string" ? source.contentHash : null,
+      staleReason: typeof source.staleReason === "string" ? source.staleReason : null,
+      trust: typeof source.trust === "string" ? source.trust : null,
+      status: typeof source.status === "string" ? source.status : null
+    })),
+    body: value.body
+  };
+}
+
+function reasonRecordCannotBeSaved(
+  record: ComposeDraftRecord,
+  excludeTags: string[],
+  redactionRules: RedactionRules
+): string | undefined {
+  if (record.reviewStatus !== "approved") {
+    return `Review status is ${record.reviewStatus}`;
+  }
+
+  if (record.privacy === "secret") {
+    return "Secret records cannot be saved into composed draft packs.";
+  }
+
+  if (record.privacy !== "public_safe") {
+    return `Composer save-as-draft requires public_safe source records; ${record.privacy} records can be previewed but not persisted.`;
+  }
+
+  const blockedTags = new Set([...excludeTags, ...redactionRules.redact_tags]);
+  const blockedTag = record.tags.find((tag) => blockedTags.has(tag));
+  if (blockedTag) {
+    return `Excluded by tag: ${blockedTag}`;
+  }
+
+  return undefined;
+}
+
+function readPackRedactionRules(packPath: string): RedactionRules {
+  const rulesPath = path.join(packPath, "rules", "redaction.yaml");
+  if (!fs.existsSync(rulesPath)) {
+    return redactionRulesSchema.parse({});
+  }
+
+  return redactionRulesSchema.parse(YAML.parse(fs.readFileSync(rulesPath, "utf8")));
+}
+
+function mergeRedactionRules(rules: RedactionRules[]): RedactionRules {
+  const tags = new Set<string>(["secret", "never_export", "imported_draft"]);
+  const patterns = new Map<string, RedactionRules["patterns"][number]>();
+
+  for (const ruleSet of rules) {
+    for (const tag of ruleSet.redact_tags) {
+      tags.add(tag);
+    }
+    for (const pattern of ruleSet.patterns) {
+      const key = `${pattern.name}:${pattern.regex}:${pattern.flags ?? ""}:${pattern.action}`;
+      patterns.set(key, pattern);
+    }
+  }
+
+  return {
+    redact_tags: Array.from(tags).sort(),
+    patterns: Array.from(patterns.values()).sort((left, right) =>
+      `${left.name}:${left.action}:${left.regex}`.localeCompare(`${right.name}:${right.action}:${right.regex}`)
+    )
+  };
+}
+
+function applyContextPackRedaction(body: string, rules: RedactionRules): string {
+  let redacted = body;
+
+  for (const pattern of rules.patterns) {
+    const regex = compileContextPackRedactionPattern(pattern);
+    if (!regex || pattern.action === "warn") {
+      continue;
+    }
+
+    redacted = redacted.replace(regex, pattern.action === "mask" ? "[masked]" : "[redacted]");
+  }
+
+  return redacted;
+}
+
+function compileContextPackRedactionPattern(pattern: RedactionRules["patterns"][number]): RegExp | undefined {
+  try {
+    const inlineInsensitive = pattern.regex.startsWith("(?i)");
+    const regexSource = inlineInsensitive ? pattern.regex.slice(4) : pattern.regex;
+    const flags = new Set(`${pattern.flags ?? ""}${inlineInsensitive ? "i" : ""}g`.split(""));
+    return new RegExp(regexSource, Array.from(flags).join(""));
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeRecordConfidence(value: unknown): ComposeDraftRecord["confidence"] | undefined {
+  return value === "low" || value === "medium" || value === "high" || value === "unknown" ? value : undefined;
+}
+
+function normalizeRecordFreshness(value: unknown): ComposeDraftRecord["freshness"] | undefined {
+  return value === "current" || value === "stale" || value === "unknown" ? value : undefined;
+}
+
+function normalizeRecordPrivacy(value: unknown): ComposeDraftRecord["privacy"] | undefined {
+  return value === "public_safe" || value === "internal" || value === "private" || value === "sensitive" || value === "secret"
+    ? value
+    : undefined;
+}
+
+function normalizeRecordReviewStatus(value: unknown): ComposeDraftRecord["reviewStatus"] | undefined {
+  return value === "approved" || value === "needs_review" || value === "draft" || value === "rejected" ? value : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -11,6 +11,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     port: Number.parseInt(env.CONTEXTARR_PORT ?? "3210", 10),
     packsDir: resolveFrom(invocationRoot, env.CONTEXTARR_PACKS_DIR ?? "./demo-packs"),
     draftPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_DRAFT_PACKS_DIR ?? "./draft-packs"),
+    composedPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_COMPOSED_PACKS_DIR ?? "./composed-packs"),
     skillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_SKILLS_DIR ?? "./demo-skills"),
     importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
     agentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KITS_DIR ?? "./agent-kits"),
@@ -25,6 +26,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   assertSkillDirectorySeparation(config);
   assertAgentKitDirectorySeparation(config);
   assertDraftPackDirectorySeparation(config);
+  assertComposedPackDirectorySeparation(config);
   return config;
 }
 
@@ -79,6 +81,28 @@ export function assertDraftPacksDirectory(config: Pick<ServerConfig, "draftPacks
   fs.mkdirSync(resolved, { recursive: true });
   if (!fs.statSync(resolved).isDirectory()) {
     throw new Error("CONTEXTARR_DRAFT_PACKS_DIR must be a directory.");
+  }
+}
+
+export function assertComposedPackDirectorySeparation(
+  config: Pick<ServerConfig, "packsDir" | "composedPacksDir" | "draftPacksDir">
+): void {
+  const indexed = path.resolve(config.packsDir);
+  const composed = path.resolve(config.composedPacksDir);
+  const drafts = path.resolve(config.draftPacksDir);
+  if (pathsOverlap(indexed, composed)) {
+    throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must not overlap CONTEXTARR_PACKS_DIR.");
+  }
+  if (pathsOverlap(drafts, composed)) {
+    throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must not overlap CONTEXTARR_DRAFT_PACKS_DIR.");
+  }
+}
+
+export function assertComposedPacksDirectory(config: Pick<ServerConfig, "composedPacksDir">): void {
+  const resolved = path.resolve(config.composedPacksDir);
+  fs.mkdirSync(resolved, { recursive: true });
+  if (!fs.statSync(resolved).isDirectory()) {
+    throw new Error("CONTEXTARR_COMPOSED_PACKS_DIR must be a directory.");
   }
 }
 

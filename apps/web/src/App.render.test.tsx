@@ -57,6 +57,7 @@ const mocks = vi.hoisted(() => {
       getExportPreview: vi.fn(),
       getSkillExportPreview: vi.fn(),
       composePreview: vi.fn(),
+      saveComposedPack: vi.fn(),
       getReviewItems: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
@@ -232,6 +233,14 @@ describe("App Skill UI routes", () => {
       generatedAt: "2026-05-07T00:00:00.000Z",
       byteLength: 27,
       estimatedTokens: 7
+    });
+    mocks.apiClient.saveComposedPack.mockResolvedValue({
+      ok: true,
+      id: "composed-context-export-draft",
+      name: "Composed Context Export",
+      counts: { records: 1, sources: 1 },
+      validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
+      draft: { status: "review_required", indexed: false }
     });
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
@@ -697,9 +706,67 @@ describe("App Skill UI routes", () => {
 
     mountApp("#/composer/record-export");
 
-    await waitForText("Build temporary, redacted context exports from selected local records.");
+    await waitForText("Build temporary exports or save a private draft Context Pack from selected approved public-safe records.");
     await waitForText("Local AI Stack");
-    expect(document.body.textContent).toContain("Save as pack later");
+    expect(document.body.textContent).toContain("Save as Draft Pack");
+
+    const checkbox = Array.from(document.querySelectorAll<HTMLInputElement>(".composer-record input[type='checkbox']")).find(
+      (item) => !item.checked
+    );
+    expect(checkbox).toBeTruthy();
+    await act(async () => {
+      checkbox?.click();
+      await Promise.resolve();
+    });
+    await clickButtonAndFlush("Save as Draft Pack");
+
+    expect(mocks.apiClient.saveComposedPack).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Composed Context Export",
+        target: "codex",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation-pack.local-ai-stack"] }]
+      })
+    );
+    await waitForText("Draft pack saved for review");
+  });
+
+  it("shows Composer save-as-draft errors", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        type: "runbook",
+        confidence: "high",
+        sourceStatus: "verified",
+        freshness: "current",
+        privacy: "public_safe",
+        lastReviewed: "2026-05-07T00:00:00.000Z",
+        reviewStatus: "approved",
+        tags: ["local"],
+        sources: [],
+        filePath: "records/local-ai-stack.md"
+      }
+    ]);
+    mocks.apiClient.saveComposedPack.mockRejectedValueOnce(
+      new mocks.ApiError(400, "Composer save-as-draft requires public_safe source records.")
+    );
+
+    mountApp("#/composer/record-export");
+
+    await waitForText("Local AI Stack");
+    const checkbox = Array.from(document.querySelectorAll<HTMLInputElement>(".composer-record input[type='checkbox']")).find(
+      (item) => !item.checked
+    );
+    expect(checkbox).toBeTruthy();
+    await act(async () => {
+      checkbox?.click();
+      await Promise.resolve();
+    });
+    await clickButtonAndFlush("Save as Draft Pack");
+
+    await waitForText("Composer save-as-draft requires public_safe source records.");
+    expect(document.body.textContent).not.toContain("Draft pack saved for review");
   });
 });
 

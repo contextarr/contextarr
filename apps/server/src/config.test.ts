@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertAgentKitDirectorySeparation,
+  assertComposedPackDirectorySeparation,
   assertDraftPackDirectorySeparation,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
@@ -21,6 +22,7 @@ describe("server config", () => {
     expect(config.agentKitTemplatesDir).toBe(path.join(root, "agent-kit-templates"));
     expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
     expect(config.draftPacksDir).toBe(path.join(root, "draft-packs"));
+    expect(config.composedPacksDir).toBe(path.join(root, "composed-packs"));
     expect(config.localImportsEnabled).toBe(false);
   });
 
@@ -39,6 +41,34 @@ describe("server config", () => {
       assertDraftPackDirectorySeparation({
         packsDir: path.join(root, "demo-packs"),
         draftPacksDir: path.join(root, "demo-packs", "drafts")
+      })
+    ).toThrow(/must not overlap/);
+  });
+
+  it("rejects indexed, draft, and composed Context Pack directory overlap", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_PACKS_DIR: "./demo-packs",
+        CONTEXTARR_COMPOSED_PACKS_DIR: "./demo-packs"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_DRAFT_PACKS_DIR: "./draft-packs",
+        CONTEXTARR_COMPOSED_PACKS_DIR: "./draft-packs/composed"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      assertComposedPackDirectorySeparation({
+        packsDir: path.join(root, "demo-packs"),
+        draftPacksDir: path.join(root, "draft-packs"),
+        composedPacksDir: path.join(root, "demo-packs", "composed")
       })
     ).toThrow(/must not overlap/);
   });

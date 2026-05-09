@@ -18,6 +18,7 @@ export interface ServerConfig {
   port: number;
   packsDir: string;
   draftPacksDir: string;
+  composedPacksDir: string;
   skillsDir: string;
   importedSkillsDir: string;
   agentKitsDir: string;

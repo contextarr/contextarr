@@ -119,6 +119,7 @@ import type {
   HealthCheck,
   HealthResponse,
   LibraryViewMode,
+  ComposeSavePackResponse,
   ContextPackCollectorDefinition,
   ContextPackCollectorId,
   ContextPackCollectorPreview,
@@ -2834,6 +2835,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [artifact, setArtifact] = useState<ExportArtifact | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [saveResult, setSaveResult] = useState<ComposeSavePackResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -2903,6 +2906,7 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
       return { ...current, [packId]: [] };
     });
     setArtifact(null);
+    setSaveResult(null);
   }
 
   function toggleRecord(packId: string, recordId: string) {
@@ -2917,6 +2921,7 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
       return { ...current, [packId]: Array.from(selected) };
     });
     setArtifact(null);
+    setSaveResult(null);
   }
 
   function selectVisibleRecords() {
@@ -2929,11 +2934,13 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
       return { ...current, [activePackId]: Array.from(selected) };
     });
     setArtifact(null);
+    setSaveResult(null);
   }
 
   function clearActivePackRecords() {
     setSelectedByPack((current) => ({ ...current, [activePackId]: [] }));
     setArtifact(null);
+    setSaveResult(null);
   }
 
   async function previewComposition() {
@@ -2964,6 +2971,38 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     }
   }
 
+  async function saveDraftPack() {
+    if (selectedCount === 0) {
+      setError("Select at least one approved record before saving a draft pack.");
+      return;
+    }
+
+    setSavingDraft(true);
+    setError(null);
+    setSaveResult(null);
+    try {
+      const request = buildComposePreviewRequest({
+        title,
+        target,
+        format: selectedTarget.format,
+        privacyMode,
+        selectedByPack,
+        excludeTags: defaultComposerExcludeTags,
+        tokenBudget: tokenBudgetValue
+      });
+      setSaveResult(
+        await apiClient.saveComposedPack({
+          ...request,
+          name: title || "Composed Context Draft"
+        })
+      );
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save composed draft pack.");
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function copyComposition() {
     if (!artifact) {
       return;
@@ -2985,10 +3024,10 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
             <span>Composer</span>
           </div>
           <h1 id="composer-title">Composer</h1>
-          <p>Build temporary, redacted context exports from selected local records.</p>
+          <p>Build temporary exports or save a private draft Context Pack from selected approved public-safe records.</p>
         </div>
-        <button className="secondary-action" type="button" disabled>
-          Save as pack later
+        <button className="secondary-action" type="button" onClick={saveDraftPack} disabled={selectedCount === 0 || savingDraft}>
+          {savingDraft ? "Saving..." : "Save as Draft Pack"}
         </button>
       </div>
 
@@ -3147,6 +3186,18 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
               <ShieldAlert size={15} aria-hidden="true" />
               <span>{error}</span>
             </p>
+          ) : null}
+          {saveResult ? (
+            <div className="composer-success-card">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <div>
+                <strong>{saveResult.name}</strong>
+                <p>
+                  Draft pack saved for review with {saveResult.counts.records} records. It is private, unindexed, and excluded
+                  from exports until approved.
+                </p>
+              </div>
+            </div>
           ) : null}
         </aside>
       </div>

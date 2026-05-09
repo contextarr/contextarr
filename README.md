@@ -54,8 +54,9 @@ Current scope:
 - Local CLI/core importers for folders, Markdown, Obsidian, ChatGPT exports, and Claude exports.
 - `contextarr import <path> --kind <kind> --out <path>` draft pack command.
 - Deterministic SVG brand kit and web app brand mark.
-- Read-only Composer page for selecting packs/records and building temporary custom exports.
+- Composer page for selecting packs/records, building temporary custom exports, and saving private unreviewed draft Context Packs from approved `public_safe` records under `composed-packs/`.
 - `POST /api/compose/preview` local API endpoint for composed export previews.
+- `POST /api/compose/save-pack` local API endpoint for validated Composer draft-pack writes.
 - Docker Compose local preview stack serving the built web app and API from one local origin.
 - Public-preview docs, release checklist, and screenshot placeholders.
 - Second PRD appendix for future Skills and Agent Kits.
@@ -94,7 +95,7 @@ Not included yet:
 
 - Always-on web/API import endpoints.
 - Pack file editing from review actions.
-- Saving composed exports as new packs.
+- Activating or approving composed draft packs automatically.
 - Skill execution or Agent Kit runtime behavior.
 - Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
 - Cloud backup or automatic restore activation.
@@ -235,6 +236,7 @@ Useful launch docs:
 - [docs/backups.md](docs/backups.md)
 - [docs/restore.md](docs/restore.md)
 - [docs/collectors.md](docs/collectors.md)
+- [docs/composed-packs.md](docs/composed-packs.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -276,6 +278,7 @@ pnpm phase26:verify
 pnpm phase27:verify
 pnpm backup:verify
 pnpm collectors:verify
+pnpm composer:verify
 pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs

@@ -18,7 +18,7 @@ Implemented through Phase 17:
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue, pack health, and Skill health API endpoints
 - expose local export preview API endpoints
-- expose read-only Composer preview API endpoint
+- expose Composer preview and Context Pack save-as-draft-pack API endpoints
 - optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`
 
 Run locally:
@@ -41,7 +41,9 @@ Export previews are generated from validated local pack files. The server does n
 
 Skill Health review items cover validation, safety rules, disallowed pattern scans, examples, sources, review status, freshness, target compatibility, and export readiness. Review status actions remain SQLite-only local app state.
 
-`POST /api/compose/preview` builds a temporary export artifact from selected pack records. It reuses local pack validation, redaction rules, and the shared export engine. It does not write composed packs or mutate source pack files.
+`POST /api/compose/preview` builds a temporary export artifact from selected pack records. It reuses local pack validation, redaction rules, and the shared export engine.
+
+`POST /api/compose/save-pack` writes selected approved `public_safe` records to a private unreviewed draft Context Pack under `CONTEXTARR_COMPOSED_PACKS_DIR`, defaulting to ignored `composed-packs/`. It applies source pack redaction rules to persisted drafts, validates before success, returns no local filesystem path, does not index drafts automatically, and does not mutate source pack files.
 
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 

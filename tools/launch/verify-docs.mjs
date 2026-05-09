@@ -13,6 +13,7 @@ const requiredFiles = [
   "docs/security.md",
   "docs/api.md",
   "docs/collectors.md",
+  "docs/composed-packs.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
@@ -53,6 +54,10 @@ if (!failed) {
   const roadmap = read("docs/roadmap.md");
   const apiDocs = read("docs/api.md");
   const collectorsDocs = read("docs/collectors.md");
+  const composedPacksDocs = read("docs/composed-packs.md");
+  const configReference = read("docs/config-reference.md");
+  const serverReadme = read("apps/server/README.md");
+  const envExample = read(".env.example");
   const releaseChecklist = read("docs/release-checklist.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
@@ -346,6 +351,41 @@ if (!failed) {
   }
   if (!packageJson.scripts["collectors:verify"]) {
     fail("Root package scripts must include collectors:verify.");
+  }
+
+  const requiredComposerSaveText = [
+    "CONTEXTARR_COMPOSED_PACKS_DIR",
+    "/api/compose/save-pack",
+    "composed-packs/",
+    "private",
+    "unreviewed",
+    "review_status: draft",
+    "never_export",
+    "does not index",
+    "no local filesystem path"
+  ];
+  for (const text of requiredComposerSaveText) {
+    if (
+      !readme.includes(text) &&
+      !apiDocs.includes(text) &&
+      !composedPacksDocs.includes(text) &&
+      !architecture.includes(text) &&
+      !releaseChecklist.includes(text)
+    ) {
+      fail(`README or docs are missing Composer save text: ${text}`);
+    }
+  }
+  if (!packageJson.scripts["composer:verify"]) {
+    fail("Root package scripts must include composer:verify.");
+  }
+  if (!envExample.includes("CONTEXTARR_COMPOSED_PACKS_DIR=./composed-packs")) {
+    fail(".env.example must include CONTEXTARR_COMPOSED_PACKS_DIR.");
+  }
+  if (!configReference.includes("CONTEXTARR_COMPOSED_PACKS_DIR") || !configReference.includes("./composed-packs")) {
+    fail("Config reference must document CONTEXTARR_COMPOSED_PACKS_DIR.");
+  }
+  if (!serverReadme.includes("POST /api/compose/save-pack") || !serverReadme.includes("does not index drafts automatically")) {
+    fail("Server README must document Composer save-as-draft-pack behavior.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

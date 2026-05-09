@@ -1,6 +1,6 @@
 # 0003: Composer Save As Pack
 
-Status: Accepted for v1 planning, not implemented.
+Status: Implemented as v1 local draft workflow.
 
 ## Context
 
@@ -30,4 +30,3 @@ Composer currently previews, copies, and downloads generated export artifacts. v
 - No registry submission.
 - No marketplace behavior.
 - No execution runtime.
-

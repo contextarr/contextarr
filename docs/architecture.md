@@ -4,7 +4,7 @@
 
 Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
 
-Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only. Phase 3A planning defines the future Registry Trust Foundation as architecture only: registry artifacts, scanner reports, signing, encryption, quarantine, revocation, and marketplace gates without a live public registry. The v1 core hardening lane now includes local Context Pack collectors that create private unreviewed draft packs without activating them.
+Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only. Phase 3A planning defines the future Registry Trust Foundation as architecture only: registry artifacts, scanner reports, signing, encryption, quarantine, revocation, and marketplace gates without a live public registry. The v1 core hardening lane now includes local Context Pack collectors and Composer save-as-draft-pack, both of which create private unreviewed draft packs without activating them.
 
 ## Core Decisions
 
@@ -50,7 +50,7 @@ docs
 6. Export profiles produce target-specific context files.
 7. The MCP server exposes selected context through read-only local stdio tools.
 8. Importers and collectors can generate local draft pack folders from selected local inputs.
-9. Composer builds temporary custom exports from selected local records.
+9. Composer builds temporary custom exports from selected local records and can save selected approved `public_safe` records as private draft Context Packs.
 10. Docker Compose can serve the built web app and local API from one Fastify origin.
 11. Agent Kit Library/detail/health views render from indexed relationships and local health state.
 
@@ -82,17 +82,17 @@ MCP query metadata is local SQLite app state. It records tool name, related ids,
 
 Imported draft packs and imported draft Skills are generated local files under explicit ignored output directories such as `imported-packs/` and `imported-skills/`. They are not approved by default; imported records and Skill documents are private drafts tagged `imported_draft` and `never_export`.
 
-Composed exports are temporary derived artifacts. The web UI can preview, copy, and browser-download them, but Phase 10 does not save composed packs or mutate pack files.
+Composed previews are temporary derived artifacts. The web UI can preview, copy, and browser-download them. Composer save-as-draft-pack writes selected approved `public_safe` records to ignored `composed-packs/` as private unreviewed draft Context Packs with provenance back to source packs and records. It applies source pack redaction rules to persisted drafts and rejects non-public records for durable saves. It does not mutate source packs, index drafts as active packs, or approve them for export/MCP exposure.
 
 ## Local API Direction
 
-The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`. Phase 22 adds `POST /api/agent-kits` for validated local Agent Kit saves under `CONTEXTARR_AGENT_KITS_DIR`; the API never accepts an arbitrary output path. Phase 23 adds read-only Agent Kit `detail` endpoints and `GET /api/agent-kits/:id/health` for Agent Kit health. Phase 24 makes `GET /api/agent-kits/:id/exports/:profileId/preview` return generated local export content. Phase 26 adds local Skill import preview/write endpoints only when `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`. Context Pack collectors use `/api/context-pack-collectors`, write only under `CONTEXTARR_DRAFT_PACKS_DIR`, and do not index drafts as active packs automatically.
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`. Phase 22 adds `POST /api/agent-kits` for validated local Agent Kit saves under `CONTEXTARR_AGENT_KITS_DIR`; the API never accepts an arbitrary output path. Phase 23 adds read-only Agent Kit `detail` endpoints and `GET /api/agent-kits/:id/health` for Agent Kit health. Phase 24 makes `GET /api/agent-kits/:id/exports/:profileId/preview` return generated local export content. Phase 26 adds local Skill import preview/write endpoints only when `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`. Context Pack collectors use `/api/context-pack-collectors`, write only under `CONTEXTARR_DRAFT_PACKS_DIR`, and do not index drafts as active packs automatically. Composer save uses `POST /api/compose/save-pack`, writes only under `CONTEXTARR_COMPOSED_PACKS_DIR`, validates before success, and does not index drafts as active packs automatically.
 
 When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
 
 ## Docker Direction
 
-Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs`, `demo-skills`, and `demo-agent-kits` read-only, mounts ignored local `agent-kits` for Composer saves, and stores derived SQLite state in a Docker volume.
+Docker Compose is a local preview path for v0.1, not a hosted deployment recipe. It builds the Vite app, runs the Fastify server on `0.0.0.0:3210`, mounts `demo-packs`, `demo-skills`, and `demo-agent-kits` read-only, mounts ignored local `agent-kits` and `composed-packs` for local draft saves, and stores derived SQLite state in a Docker volume.
 
 ## MCP Direction
 
@@ -116,7 +116,7 @@ Public registry, private registry, and marketplace behavior remain post-v1 gated
 
 ## Composer Direction
 
-Phase 10 Composer v0 selects indexed packs and records, filters by local metadata, chooses a target and privacy mode, and calls the local compose preview API. It reuses the export engine and redaction rules. Saving composed packs is deferred.
+Phase 10 Composer v0 selects indexed packs and records, filters by local metadata, chooses a target and privacy mode, and calls the local compose preview API. The v1 core hardening lane adds save-as-draft-pack for Context Packs only: selected approved `public_safe` records can be written under `composed-packs/` as private unreviewed draft packs with source provenance and `never_export` defaults. Agent Kit save behavior remains separate and unchanged.
 
 ## Skills and Agent Kits Direction
 

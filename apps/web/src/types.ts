@@ -386,6 +386,32 @@ export interface ComposePreviewRequest {
   tokenBudget?: number;
 }
 
+export interface ComposeSavePackRequest extends ComposePreviewRequest {
+  packId?: string;
+  name?: string;
+  description?: string;
+}
+
+export interface ComposeSavePackResponse {
+  ok: boolean;
+  id: string;
+  name: string;
+  counts: {
+    records: number;
+    sources: number;
+  };
+  validation: {
+    valid: boolean;
+    errors: number;
+    warnings: number;
+    infos?: number;
+  };
+  draft: {
+    status: string;
+    indexed: boolean;
+  };
+}
+
 export interface PackDetail extends PackSummary {
   author: string;
   license: string;

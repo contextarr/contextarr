@@ -35,8 +35,11 @@ Review item status changes are SQLite app state. They must not rewrite pack file
 ## Composer Endpoint
 
 - `POST /api/compose/preview`
+- `POST /api/compose/save-pack`
 
-This creates a temporary local export artifact for preview/copy/download. It does not save a pack and does not call AI services.
+`POST /api/compose/preview` creates a temporary local export artifact for preview/copy/download. It does not save a pack and does not call AI services.
+
+`POST /api/compose/save-pack` writes a private, unreviewed draft Context Pack under `CONTEXTARR_COMPOSED_PACKS_DIR`, defaulting to ignored `composed-packs/`. It accepts selected approved `public_safe` records only, applies source pack redaction rules to persisted drafts, validates the generated pack before returning success, does not index the draft automatically, and never accepts an output path from the browser.
 
 ## Context Pack Collector Endpoints
 
