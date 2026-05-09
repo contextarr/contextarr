@@ -849,6 +849,82 @@ export interface PackReviewStatusResponse {
   records: RecordReviewCandidate[];
 }
 
+export interface ExposureIssue {
+  code: string;
+  severity: "blocker" | "warning";
+  message: string;
+}
+
+export interface ExposureRecordReadiness {
+  id: string;
+  packId: string;
+  title: string;
+  type: string;
+  privacy: string;
+  reviewStatus: string;
+  freshness: string;
+  sourceStatus: string;
+  tags: string[];
+  exportEligible: boolean;
+  mcpEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface ExposureProfileReadiness {
+  id: string;
+  name: string;
+  target: string;
+  format: string;
+  privacyMode: string | null;
+  tokenBudget: number | null;
+  status: string;
+  exportEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface PackExposureReadinessResponse {
+  packId: string;
+  packName: string;
+  policies: {
+    export: {
+      defaultPrivacyMode: string;
+      recordPolicy: string;
+    };
+    mcp: {
+      transport: string;
+      defaultBodyPolicy: string;
+      allowPrivateByDefault: boolean;
+    };
+  };
+  validation: {
+    valid: boolean;
+    errors: number;
+    warnings: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocked: boolean;
+  };
+  summary: {
+    recordCount: number;
+    exportEligibleRecords: number;
+    mcpEligibleRecords: number;
+    blockedRecords: number;
+    warningRecords: number;
+    exportProfileCount: number;
+    exportEligibleProfiles: number;
+    blockedProfiles: number;
+    warningProfiles: number;
+  };
+  exportProfiles: ExposureProfileReadiness[];
+  records: ExposureRecordReadiness[];
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
 export interface RecordReviewPromotionResponse {
   ok: true;
   packId: string;

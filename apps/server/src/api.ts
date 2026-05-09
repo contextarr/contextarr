@@ -59,6 +59,7 @@ import {
   recordReviewPromotionStatuses,
   type PromoteRecordReviewStatusRequest
 } from "./record-review";
+import { ExposureReadinessError, getPackExposureReadiness } from "./exposure-readiness";
 import {
   getAgentKit,
   getAgentKitContextPacks,
@@ -841,6 +842,23 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       return reviewStatus;
     } catch (error) {
       if (error instanceof RecordReviewError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
+      }
+
+      throw error;
+    }
+  });
+
+  app.get<{ Params: { id: string } }>("/api/packs/:id/exposure-readiness", async (request, reply) => {
+    try {
+      const readiness = getPackExposureReadiness(db, config, request.params.id);
+      if (!readiness) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+      }
+
+      return readiness;
+    } catch (error) {
+      if (error instanceof ExposureReadinessError) {
         return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
       }
 

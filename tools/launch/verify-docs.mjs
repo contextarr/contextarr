@@ -16,6 +16,7 @@ const requiredFiles = [
   "docs/composed-packs.md",
   "docs/draft-review.md",
   "docs/approval-workflow.md",
+  "docs/exposure-readiness.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
@@ -59,6 +60,7 @@ if (!failed) {
   const composedPacksDocs = read("docs/composed-packs.md");
   const draftReviewDocs = read("docs/draft-review.md");
   const approvalWorkflowDocs = read("docs/approval-workflow.md");
+  const exposureReadinessDocs = read("docs/exposure-readiness.md");
   const configReference = read("docs/config-reference.md");
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
@@ -453,6 +455,37 @@ if (!failed) {
   }
   if (!packageJson.scripts["approval:verify"]?.includes("verify-approval.mjs")) {
     fail("approval:verify must run the approval smoke verifier.");
+  }
+
+  const requiredExposureText = [
+    "/api/packs/:packId/exposure-readiness",
+    "exposure:verify",
+    "Exposure Readiness",
+    "export/MCP eligibility",
+    "does not mutate pack files",
+    "does not approve records",
+    "does not remove `never_export`",
+    "does not remove `imported_draft`",
+    "does not generate exports",
+    "does not expose MCP content"
+  ];
+  for (const text of requiredExposureText) {
+    if (
+      !readme.includes(text) &&
+      !apiDocs.includes(text) &&
+      !exposureReadinessDocs.includes(text) &&
+      !architecture.includes(text) &&
+      !securityModel.includes(text) &&
+      !serverReadme.includes(text)
+    ) {
+      fail(`README or docs are missing Exposure Readiness text: ${text}`);
+    }
+  }
+  if (!packageJson.scripts["exposure:verify"]) {
+    fail("Root package scripts must include exposure:verify.");
+  }
+  if (!packageJson.scripts["exposure:verify"]?.includes("verify-exposure.mjs")) {
+    fail("exposure:verify must run the exposure smoke verifier.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

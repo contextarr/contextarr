@@ -803,6 +803,10 @@ h1 {
   grid-row: span 2;
 }
 
+.wide-card {
+  grid-column: 1 / -1;
+}
+
 .detail-card h2 {
   gap: 9px;
   margin: 0 0 14px;
@@ -836,6 +840,30 @@ h1 {
 
 .fact-grid.single-column {
   grid-template-columns: 1fr;
+}
+
+.exposure-readiness-grid .record-meta-strip {
+  margin-top: 14px;
+}
+
+.issue-list-block {
+  margin-top: 14px;
+}
+
+.issue-list-block > strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.exposure-table td strong,
+.exposure-table td span:not(.status-pill) {
+  display: block;
+}
+
+.exposure-table td span:not(.status-pill) {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .fact-grid div,

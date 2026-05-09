@@ -12,6 +12,7 @@ pnpm compatibility:verify
 pnpm security:verify
 pnpm backup:verify
 pnpm composer:verify
+pnpm exposure:verify
 pnpm release:verify
 ```
 
@@ -25,6 +26,7 @@ Manual smoke:
 - Build a Composer preview.
 - Save a Composer draft pack and confirm it lands under `composed-packs/` without appearing in the active Pack Library.
 - Open Pack Health and Review Queue.
+- Open the Pack Detail Exposure tab and confirm it reports export/MCP eligibility without changing files.
 - Open Collectors, preview a Context Pack collector draft, and confirm a created draft lands under `draft-packs/` without appearing in the active Pack Library.
 - If `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`, confirm the preserved local Skill import lane still previews/imports only private draft Skills under `imported-skills/`.
 - Confirm all demo packs validate with zero errors.

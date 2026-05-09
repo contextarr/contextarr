@@ -61,6 +61,14 @@ export {
   type RecordReviewCandidate,
   type RecordReviewPromotionStatus
 } from "./record-review";
+export {
+  ExposureReadinessError,
+  getPackExposureReadiness,
+  type ExposureIssue,
+  type ExposureProfileReadiness,
+  type ExposureRecordReadiness,
+  type PackExposureReadiness
+} from "./exposure-readiness";
 export { loadSkills } from "./skill-loader";
 export type {
   AgentKitSummary,

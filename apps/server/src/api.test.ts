@@ -235,6 +235,78 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/packs/:id/exposure-readiness reports export and MCP eligibility", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toMatchObject({
+      packId: "ai-workstation-pack",
+      packName: "AI Workstation Pack",
+      validation: { valid: true, errors: 0 },
+      security: { status: "policy_clean", blocked: false },
+      summary: {
+        recordCount: 5,
+        exportEligibleRecords: 5,
+        mcpEligibleRecords: 5,
+        blockedRecords: 0
+      }
+    });
+    expect(body.exportProfiles).toHaveLength(8);
+    expect(JSON.stringify(body)).not.toContain(demoPacksDir);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exposure-readiness reports draft/private blockers without mutating files", async () => {
+    const activeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-exposure-active-"));
+    const packPath = createMarkdownDraftPack(activeRoot, "exposure-draft-pack", "Exposure Draft Pack");
+    const recordFile = listFilesRecursive(path.join(packPath, "records")).find((file) => file.endsWith(".md"));
+    expect(recordFile).toBeTruthy();
+    const beforeText = fs.readFileSync(recordFile!, "utf8");
+    const context = createTestContext(undefined, activeRoot);
+    const app = createApp({ config: context.config, db: context.db });
+
+    const response = await app.inject({ method: "GET", url: "/api/packs/exposure-draft-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    const record = body.records[0];
+    expect(body.summary).toMatchObject({
+      recordCount: 1,
+      exportEligibleRecords: 0,
+      mcpEligibleRecords: 0,
+      blockedRecords: 1
+    });
+    expect(record.blockers.map((issue: { code: string }) => issue.code)).toEqual(
+      expect.arrayContaining(["record.review_status", "record.privacy.not_public_safe", "record.tag.never_export", "record.tag.imported_draft"])
+    );
+    expect(fs.readFileSync(recordFile!, "utf8")).toBe(beforeText);
+    expect(JSON.stringify(body)).not.toContain(activeRoot);
+    await app.close();
+    context.db.close();
+    db.close();
+  });
+
+  it("protects exposure readiness with the optional API token", async () => {
+    const context = createTestContext("secret-token");
+    const app = createApp({ config: context.config, db: context.db });
+
+    const unauthorized = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+    const authorized = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exposure-readiness",
+      headers: { authorization: "Bearer secret-token" }
+    });
+
+    expect(unauthorized.statusCode).toBe(401);
+    expect(authorized.statusCode).toBe(200);
+    await app.close();
+    context.db.close();
+    db.close();
+  });
+
   it("GET /api/packs returns demo pack summaries", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/packs" });

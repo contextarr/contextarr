@@ -91,12 +91,14 @@ Current scope:
 - Registry Trust Foundation planning docs for future validation, scanner reports, signing, encryption, quarantine import, local re-scan, revocation, and public/private registry gates.
 - Local Security Scanner foundation with deterministic text-only reports and a `contextarr scan` CLI command.
 - Context Pack Draft Review v0 for `draft-packs/`, `imported-packs/`, and `composed-packs/`, with validation/scanner-gated activation-for-review into the active packs root.
+- Context Pack Exposure Readiness v0 with read-only export/MCP eligibility reporting for active Context Packs.
 
 Not included yet:
 
 - Always-on web/API import endpoints.
 - Pack file editing from review actions.
 - Approving draft packs automatically, exposing draft packs to exports/MCP automatically, or activating drafts without validation/scanner gates.
+- Mutating pack files from exposure readiness reports.
 - Skill execution or Agent Kit runtime behavior.
 - Signing implementation, registry behavior, public marketplace behavior, package publishing, or remote install flows.
 - Cloud backup or automatic restore activation.
@@ -240,6 +242,7 @@ Useful launch docs:
 - [docs/composed-packs.md](docs/composed-packs.md)
 - [docs/draft-review.md](docs/draft-review.md)
 - [docs/approval-workflow.md](docs/approval-workflow.md)
+- [docs/exposure-readiness.md](docs/exposure-readiness.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -284,6 +287,7 @@ pnpm collectors:verify
 pnpm composer:verify
 pnpm drafts:verify
 pnpm approval:verify
+pnpm exposure:verify
 pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
@@ -359,6 +363,14 @@ pnpm approval:verify
 ```
 
 The Pack Detail Records tab can promote a record to `approved`, `needs_review`, or `rejected` after validation and scanner gates pass. Promotion updates only `review_status` and `last_reviewed`, rebuilds the derived index, and keeps privacy, tags, exports, and MCP boundaries governed by existing gates. See [docs/approval-workflow.md](docs/approval-workflow.md).
+
+Report active Context Pack export/MCP exposure readiness:
+
+```bash
+pnpm exposure:verify
+```
+
+The Pack Detail Exposure tab and `GET /api/packs/:packId/exposure-readiness` report default export and read-only MCP eligibility without mutating files, approving records, removing tags, generating exports, or exposing MCP content. See [docs/exposure-readiness.md](docs/exposure-readiness.md).
 
 Run the read-only MCP server:
 

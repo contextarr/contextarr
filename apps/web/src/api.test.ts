@@ -318,6 +318,28 @@ describe("Contextarr API client", () => {
     });
   });
 
+  it("reads Context Pack exposure readiness", async () => {
+    const requests: string[] = [];
+    const client = createApiClient({
+      fetchImpl: async (url) => {
+        requests.push(String(url));
+        return jsonResponse({
+          packId: "pack-1",
+          packName: "Pack One",
+          summary: { exportEligibleRecords: 1, mcpEligibleRecords: 1 },
+          records: [],
+          exportProfiles: []
+        });
+      }
+    });
+
+    await expect(client.getPackExposureReadiness("pack-1")).resolves.toMatchObject({
+      packId: "pack-1",
+      summary: { exportEligibleRecords: 1 }
+    });
+    expect(requests).toEqual(["/api/packs/pack-1/exposure-readiness"]);
+  });
+
   it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

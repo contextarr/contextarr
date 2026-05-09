@@ -20,6 +20,7 @@ Implemented through Phase 17:
 - expose local export preview API endpoints
 - expose Composer preview and Context Pack save-as-draft-pack API endpoints
 - expose Context Pack draft inventory, validation, and activation-for-review API endpoints
+- expose read-only Context Pack exposure readiness reporting
 - optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`
 
 Run locally:
@@ -49,6 +50,8 @@ Skill Health review items cover validation, safety rules, disallowed pattern sca
 `GET /api/context-pack-drafts` inventories draft Context Packs from collector, importer, and composed draft roots. `POST /api/context-pack-drafts/:id/activate` copies a passing draft into the active packs root for review only. Activation is not approval: it does not rewrite metadata, rebuild the index automatically, expose exports, or expose MCP.
 
 `GET /api/packs/:packId/review-status` returns active-pack validation/scanner status plus per-record content hashes and promotion gates. `POST /api/packs/:packId/records/:recordId/review-status` can promote a record to `approved`, `needs_review`, or `rejected` by updating only `review_status` and `last_reviewed` after a matching content hash, validation, and scanner checks. Approval is explicit; it does not change privacy, remove `never_export`, expose exports, expose MCP, or run pack content.
+
+`GET /api/packs/:packId/exposure-readiness` reports active-pack export/MCP eligibility from validation, scanner, export profile readiness, and indexed record metadata. It is read-only: it does not mutate files, approve records, remove tags, create exports, expose MCP content, or return local absolute paths.
 
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 

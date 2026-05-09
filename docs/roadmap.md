@@ -27,6 +27,7 @@ Contextarr currently supports:
 - Composer save-as-draft-pack creates private unreviewed draft Context Packs under `composed-packs/`.
 - Draft Review v0 inventories `draft-packs/`, `imported-packs/`, and `composed-packs/`, then copies passing drafts into the active packs root for review without approval or exposure.
 - Explicit Approval v0 promotes active Context Pack record `review_status` only through validation/scanner-gated, content-hash-guarded file-backed updates. Approval is not activation and does not remove `never_export`, change privacy, or expose exports/MCP by itself.
+- Exposure Readiness v0 reports active Context Pack export/MCP eligibility without mutating pack files, approving records, removing tags, generating exports, or exposing MCP content.
 
 ## Second PRD Direction
 
@@ -58,6 +59,8 @@ Composer Save-As-Pack v0 is now part of the v1 core hardening lane. It saves sel
 
 Context Pack Draft Review v0 is now part of the v1 core hardening lane. It inventories collector, importer, and composed draft roots, runs validation/scanner gates, and can copy a passing draft into `CONTEXTARR_PACKS_DIR` for review. Activation is not approval and does not rebuild the index, expose exports, or expose MCP.
 
+Context Pack Exposure Readiness v0 is now part of the v1 core hardening lane. It adds `GET /api/packs/:id/exposure-readiness`, a Pack Detail Exposure tab, and `pnpm exposure:verify` for read-only export/MCP eligibility reporting.
+
 ## Near-Term
 
 - Phase 13: Skill schema and validator. Complete.
@@ -82,6 +85,7 @@ Context Pack Draft Review v0 is now part of the v1 core hardening lane. It inven
 - Composer Save-As-Pack v0: durable private draft pack output from selected approved records. Complete.
 - Draft Review v0: validation/scanner-gated activation-for-review from draft roots. Complete.
 - Explicit Approval v0: active Context Pack record review status promotion. Complete.
+- Exposure Readiness v0: active Context Pack export/MCP eligibility reporting. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.

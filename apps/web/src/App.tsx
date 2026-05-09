@@ -127,7 +127,9 @@ import type {
   ContextPackCollectorResult,
   ContextPackDraftDetail,
   ContextPackDraftSummary,
+  ExposureIssue,
   PackDetail,
+  PackExposureReadinessResponse,
   PackHealthResponse,
   PackReviewStatusResponse,
   PackSummary,
@@ -181,7 +183,7 @@ const coverIconMap = {
   sparkles: Sparkles
 };
 
-const detailTabs = ["overview", "records", "sources", "exports", "health", "activity", "changelog"] as const;
+const detailTabs = ["overview", "records", "sources", "exports", "health", "exposure", "activity", "changelog"] as const;
 type DetailTab = (typeof detailTabs)[number];
 const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exports", "health"] as const;
 type SkillDetailTab = (typeof skillDetailTabs)[number];
@@ -2332,6 +2334,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
       {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
+      {activeTab === "exposure" ? <ExposureReadinessTab pack={pack} /> : null}
       {activeTab === "activity" ? <PlaceholderTab title="Activity" detail="Activity timelines arrive after pack health and review workflows are implemented." /> : null}
       {activeTab === "changelog" ? <PlaceholderTab title="Changelog" detail="Static HTML can render CHANGELOG.md; API-backed changelog content remains a later read endpoint." /> : null}
     </section>
@@ -3977,6 +3980,203 @@ function HealthTab({ pack }: { pack: PackDetail }) {
       <ReviewItemList items={health.items} packs={[pack]} compact />
     </article>
   );
+}
+
+function ExposureReadinessTab({ pack }: { pack: PackDetail }) {
+  const [readiness, setReadiness] = useState<PackExposureReadinessResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReadiness(null);
+    setError(null);
+
+    async function loadReadiness() {
+      try {
+        const response = await apiClient.getPackExposureReadiness(pack.id);
+        if (!cancelled) {
+          setReadiness(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load exposure readiness.");
+        }
+      }
+    }
+
+    void loadReadiness();
+    return () => {
+      cancelled = true;
+    };
+  }, [pack.id]);
+
+  if (error) {
+    return <StateCard title="Exposure readiness unavailable" detail={error} />;
+  }
+
+  if (!readiness) {
+    return <div className="detail-card skeleton-detail" />;
+  }
+
+  const hasBlockingIssues = readiness.blockers.length > 0;
+
+  return (
+    <div className="detail-grid exposure-readiness-grid">
+      <article className="detail-card">
+        <h2>
+          <ShieldCheck size={19} aria-hidden="true" />
+          Exposure Readiness
+        </h2>
+        <p>
+          Read-only report for whether approved active Context Pack records are eligible for default exports and read-only MCP
+          body exposure.
+        </p>
+        <div className="stat-grid">
+          <Stat value={readiness.summary.exportEligibleRecords} label="Export eligible" />
+          <Stat value={readiness.summary.mcpEligibleRecords} label="MCP eligible" />
+          <Stat value={readiness.summary.blockedRecords} label="Blocked records" />
+          <Stat value={readiness.summary.warningRecords} label="Warning records" />
+        </div>
+        <div className="record-meta-strip">
+          <span className={hasBlockingIssues ? "status-pill error" : "status-pill healthy"}>
+            {hasBlockingIssues ? "Blocked" : "Eligible"}
+          </span>
+          <span>{readiness.validation.errors} validation errors</span>
+          <span>{formatPackType(readiness.security.status)}</span>
+        </div>
+        <IssueList title="Pack blockers" issues={readiness.blockers} empty="No pack-level exposure blockers." />
+        <IssueList title="Pack warnings" issues={readiness.warnings} empty="No pack-level exposure warnings." />
+      </article>
+
+      <article className="detail-card">
+        <h2>
+          <CloudDownload size={19} aria-hidden="true" />
+          Exposure Policy
+        </h2>
+        <dl className="fact-grid">
+          <Fact label="Export mode" value={formatPackType(readiness.policies.export.defaultPrivacyMode)} />
+          <Fact label="MCP transport" value={formatPackType(readiness.policies.mcp.transport)} />
+          <Fact label="Private MCP bodies" value={readiness.policies.mcp.allowPrivateByDefault ? "Allowed" : "Off by default"} />
+        </dl>
+        <p>{readiness.policies.export.recordPolicy}</p>
+        <p>{readiness.policies.mcp.defaultBodyPolicy}</p>
+      </article>
+
+      <article className="detail-card wide-card">
+        <h2>
+          <CloudDownload size={19} aria-hidden="true" />
+          Export Profiles
+        </h2>
+        <div className="table-wrap">
+          <table className="pack-table exposure-table">
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Target</th>
+                <th>Status</th>
+                <th>Eligibility</th>
+                <th>Issues</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readiness.exportProfiles.map((profile) => (
+                <tr key={profile.id}>
+                  <td>
+                    <strong>{profile.name}</strong>
+                    <span>{profile.id}</span>
+                  </td>
+                  <td>{formatPackType(profile.target)}</td>
+                  <td>{formatPackType(profile.status)}</td>
+                  <td>
+                    <span className={profile.exportEligible ? "status-pill healthy" : "status-pill error"}>
+                      {profile.exportEligible ? "Eligible" : "Blocked"}
+                    </span>
+                  </td>
+                  <td>{summarizeIssues(profile.blockers, profile.warnings)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article className="detail-card wide-card">
+        <h2>
+          <Rows3 size={19} aria-hidden="true" />
+          Record Eligibility
+        </h2>
+        <div className="table-wrap">
+          <table className="pack-table exposure-table">
+            <thead>
+              <tr>
+                <th>Record</th>
+                <th>Review</th>
+                <th>Privacy</th>
+                <th>Export</th>
+                <th>MCP</th>
+                <th>Issues</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readiness.records.map((record) => (
+                <tr key={record.id}>
+                  <td>
+                    <strong>{record.title}</strong>
+                    <span>{record.id}</span>
+                  </td>
+                  <td>{formatPackType(record.reviewStatus)}</td>
+                  <td>{formatPackType(record.privacy)}</td>
+                  <td>
+                    <span className={record.exportEligible ? "status-pill healthy" : "status-pill error"}>
+                      {record.exportEligible ? "Ready" : "Blocked"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={record.mcpEligible ? "status-pill healthy" : "status-pill error"}>
+                      {record.mcpEligible ? "Ready" : "Blocked"}
+                    </span>
+                  </td>
+                  <td>{summarizeIssues(record.blockers, record.warnings)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function IssueList({ title, issues, empty }: { title: string; issues: ExposureIssue[]; empty: string }) {
+  return (
+    <div className="issue-list-block">
+      <strong>{title}</strong>
+      {issues.length === 0 ? (
+        <p className="muted-note">{empty}</p>
+      ) : (
+        <ul className="export-warning-list">
+          {issues.map((issue) => (
+            <li key={`${issue.code}-${issue.message}`}>{issue.message}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function summarizeIssues(blockers: ExposureIssue[], warnings: ExposureIssue[]): string {
+  if (blockers.length === 0 && warnings.length === 0) {
+    return "No issues";
+  }
+
+  const parts = [];
+  if (blockers.length > 0) {
+    parts.push(`${blockers.length} blocker${blockers.length === 1 ? "" : "s"}`);
+  }
+  if (warnings.length > 0) {
+    parts.push(`${warnings.length} warning${warnings.length === 1 ? "" : "s"}`);
+  }
+  return parts.join(", ");
 }
 
 function ReviewQueuePage({

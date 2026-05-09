@@ -21,6 +21,7 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN`. When set, all `/api
 - `GET /api/packs/:id/records`: record summaries with optional `q`, `tag`, and `type` filters.
 - `GET /api/records/:id`: full record body, metadata, source ids, and resolved source summaries.
 - `GET /api/packs/:id/health`: deterministic pack health and review items.
+- `GET /api/packs/:id/exposure-readiness`: read-only export/MCP eligibility report for an active Context Pack.
 - `GET /api/packs/:id/exports/:profileId/preview`: local export preview only; no files are written.
 - `GET /api/search?q=`: local search across pack and record data; supports `type=pack`, `record`, `skill`, `agent-kit`, or `all`.
 - `POST /api/rescan`: rebuilds the derived index from configured local directories only.
@@ -83,6 +84,14 @@ Controlled responses:
 - `401` missing API token when token auth is enabled.
 - `404` unknown pack or record.
 - `409` content hash mismatch.
+
+## Context Pack Exposure Readiness Endpoint
+
+- `GET /api/packs/:packId/exposure-readiness`: returns validation/scanner status, export policy, default MCP policy, per-profile readiness, and per-record export/MCP eligibility blockers.
+
+Exposure Readiness is read-only. It does not mutate pack files, approve records, remove `never_export` or `imported_draft`, generate exports, expose MCP content, or rebuild the index. Default eligibility requires an active record to be `approved`, `public_safe`, and free of `secret`, `never_export`, and `imported_draft` tags. Responses must not expose local absolute filesystem paths.
+
+Run `pnpm exposure:verify` to exercise the API, dashboard tab, smoke verifier, and web build.
 
 ## Advanced Preview Endpoints
 

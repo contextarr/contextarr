@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => {
       getPack: vi.fn(),
       getPackRecords: vi.fn(),
       getPackReviewStatus: vi.fn(),
+      getPackExposureReadiness: vi.fn(),
       updateRecordReviewStatus: vi.fn(),
       getRecord: vi.fn(),
       getSkills: vi.fn(),
@@ -219,6 +220,7 @@ describe("App Skill UI routes", () => {
         })
     );
     mocks.apiClient.getPackReviewStatus.mockResolvedValue(packReviewStatusFixture());
+    mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessFixture());
     mocks.apiClient.updateRecordReviewStatus.mockResolvedValue({
       ok: true,
       packId: "ai-workstation-pack",
@@ -656,6 +658,22 @@ describe("App Skill UI routes", () => {
       reviewStatus: "approved",
       expectedHash: "a".repeat(64)
     });
+  });
+
+  it("renders Context Pack exposure readiness from the pack detail tab", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([recordFixture()]);
+
+    mountApp("#/packs/ai-workstation-pack");
+
+    await waitForText("AI Workstation Pack");
+    clickButton("Exposure");
+    await waitForText("Exposure Readiness");
+    await waitForText("Export eligible");
+
+    expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(document.body.textContent).toContain("Codex Markdown");
+    expect(document.body.textContent).toContain("Local AI Stack");
+    expect(document.body.textContent).toContain("approved public_safe records");
   });
 
   it("renders Draft Review and activates a draft through the supported API path", async () => {
@@ -1115,6 +1133,70 @@ function packReviewStatusFixture() {
         }
       }
     ]
+  };
+}
+
+function packExposureReadinessFixture() {
+  return {
+    packId: "ai-workstation-pack",
+    packName: "AI Workstation Pack",
+    policies: {
+      export: {
+        defaultPrivacyMode: "redacted",
+        recordPolicy: "approved public_safe records without secret, never_export, or imported_draft tags"
+      },
+      mcp: {
+        transport: "stdio",
+        defaultBodyPolicy: "approved public_safe records only; secret bodies are never returned",
+        allowPrivateByDefault: false
+      }
+    },
+    validation: { valid: true, errors: 0, warnings: 0 },
+    security: { status: "policy_clean", recommendedAction: "activate", blocked: false },
+    summary: {
+      recordCount: 1,
+      exportEligibleRecords: 1,
+      mcpEligibleRecords: 1,
+      blockedRecords: 0,
+      warningRecords: 0,
+      exportProfileCount: 1,
+      exportEligibleProfiles: 1,
+      blockedProfiles: 0,
+      warningProfiles: 0
+    },
+    exportProfiles: [
+      {
+        id: "ai-workstation-pack-codex",
+        name: "Codex Markdown",
+        target: "codex",
+        format: "markdown",
+        privacyMode: "redacted",
+        tokenBudget: 12000,
+        status: "ready",
+        exportEligible: true,
+        blockers: [],
+        warnings: []
+      }
+    ],
+    records: [
+      {
+        id: "ai-workstation.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        type: "runbook",
+        privacy: "public_safe",
+        reviewStatus: "approved",
+        freshness: "current",
+        sourceStatus: "verified",
+        tags: ["local_ai"],
+        exportEligible: true,
+        mcpEligible: true,
+        blockers: [],
+        warnings: []
+      }
+    ],
+    blockers: [],
+    warnings: []
   };
 }
 
