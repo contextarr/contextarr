@@ -1,0 +1,33 @@
+{
+  "id": "legacy-v0-1-pack",
+  "name": "Legacy v0.1 Pack",
+  "version": "0.1.0",
+  "description": "A fake public-safe compatibility pack for v1 schema freeze checks.",
+  "type": "technical_system",
+  "visibility": "local",
+  "trustLevel": "local",
+  "author": "Contextarr Test",
+  "license": "MIT",
+  "createdAt": "2026-05-07T00:00:00Z",
+  "updatedAt": "2026-05-07T00:00:00Z",
+  "lastReviewedAt": "2026-05-07T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": true,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "accentColor": "#2563eb"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

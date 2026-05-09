@@ -1,0 +1,2 @@
+stale_after_days:
+  default: 365

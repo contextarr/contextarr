@@ -1,0 +1,8 @@
+required_record_fields:
+  - id
+  - title
+  - type
+  - pack
+  - sources
+  - review_status
+
