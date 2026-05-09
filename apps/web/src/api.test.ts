@@ -255,6 +255,69 @@ describe("Contextarr API client", () => {
     expect(JSON.parse(String(requests[3].init?.body))).toEqual({ expectedHash: "a".repeat(64) });
   });
 
+  it("reads and updates active Context Pack record review status", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (init?.method === "POST") {
+          return jsonResponse({
+            ok: true,
+            packId: "pack-1",
+            recordId: "pack-1.record-1",
+            previousStatus: "draft",
+            reviewStatus: "approved",
+            lastReviewed: "2026-05-09",
+            contentHash: "b".repeat(64),
+            exportReady: false,
+            mcpReady: false,
+            warnings: [],
+            record: { id: "pack-1.record-1", reviewStatus: "approved" },
+            rescan: { packsIndexed: 1, packsSkipped: 0, recordsIndexed: 1, reviewItemsGenerated: 0 }
+          });
+        }
+        return jsonResponse({
+          packId: "pack-1",
+          validation: { valid: true, errors: 0, warnings: 0 },
+          security: { status: "policy_clean", recommendedAction: "activate", blocked: false },
+          records: [
+            {
+              id: "pack-1.record-1",
+              packId: "pack-1",
+              title: "Record One",
+              currentStatus: "draft",
+              privacy: "private",
+              tags: ["never_export"],
+              lastReviewed: null,
+              filePath: "records/record-one.md",
+              contentHash: "a".repeat(64),
+              promotion: { canPromote: true, blockingReasons: [], warnings: [], exportReadyAfterApproval: false, mcpReadyAfterApproval: false }
+            }
+          ]
+        });
+      }
+    });
+
+    await expect(client.getPackReviewStatus("pack-1")).resolves.toMatchObject({ packId: "pack-1" });
+    await expect(
+      client.updateRecordReviewStatus("pack-1", "pack-1.record-1", {
+        reviewStatus: "approved",
+        expectedHash: "a".repeat(64),
+        reviewedAt: "2026-05-09"
+      })
+    ).resolves.toMatchObject({ reviewStatus: "approved", lastReviewed: "2026-05-09" });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/packs/pack-1/review-status",
+      "/api/packs/pack-1/records/pack-1.record-1/review-status"
+    ]);
+    expect(JSON.parse(String(requests[1].init?.body))).toEqual({
+      reviewStatus: "approved",
+      expectedHash: "a".repeat(64),
+      reviewedAt: "2026-05-09"
+    });
+  });
+
   it("reads Agent Kit library, detail, relationships, health, preview, and posts save requests", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({

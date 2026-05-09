@@ -813,6 +813,62 @@ export interface RecordDetail extends RecordSummary {
   metadata: Record<string, unknown>;
 }
 
+export type RecordReviewPromotionStatus = "approved" | "needs_review" | "rejected";
+
+export interface RecordReviewCandidate {
+  id: string;
+  packId: string;
+  title: string;
+  currentStatus: string;
+  privacy: string;
+  tags: string[];
+  lastReviewed: string | null;
+  filePath: string;
+  contentHash: string;
+  promotion: {
+    canPromote: boolean;
+    blockingReasons: string[];
+    warnings: string[];
+    exportReadyAfterApproval: boolean;
+    mcpReadyAfterApproval: boolean;
+  };
+}
+
+export interface PackReviewStatusResponse {
+  packId: string;
+  validation: {
+    valid: boolean;
+    errors: number;
+    warnings: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocked: boolean;
+  };
+  records: RecordReviewCandidate[];
+}
+
+export interface RecordReviewPromotionResponse {
+  ok: true;
+  packId: string;
+  recordId: string;
+  previousStatus: string;
+  reviewStatus: RecordReviewPromotionStatus;
+  lastReviewed: string;
+  contentHash: string;
+  exportReady: boolean;
+  mcpReady: boolean;
+  warnings: string[];
+  record: RecordDetail | null;
+  rescan: {
+    packsIndexed: number;
+    packsSkipped: number;
+    recordsIndexed: number;
+    reviewItemsGenerated: number;
+  };
+}
+
 export interface SearchResult {
   id: string;
   kind: "pack" | "record" | "skill" | "skill_instruction" | "skill_example" | "agent-kit";

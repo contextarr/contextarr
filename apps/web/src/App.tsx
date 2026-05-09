@@ -129,8 +129,11 @@ import type {
   ContextPackDraftSummary,
   PackDetail,
   PackHealthResponse,
+  PackReviewStatusResponse,
   PackSummary,
   RecordDetail,
+  RecordReviewCandidate,
+  RecordReviewPromotionStatus,
   RecordSummary,
   ReviewItem,
   Route,
@@ -2242,38 +2245,37 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadPackDetail = useCallback(async (cancelledRef?: { cancelled: boolean }) => {
+    try {
+      const [packResponse, recordsResponse] = await Promise.all([
+        apiClient.getPack(packId),
+        apiClient.getPackRecords(packId)
+      ]);
+      if (!cancelledRef?.cancelled) {
+        setPack(packResponse);
+        setRecords(recordsResponse);
+      }
+    } catch (loadError) {
+      if (!cancelledRef?.cancelled) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load pack detail.");
+      }
+    } finally {
+      if (!cancelledRef?.cancelled) {
+        setLoading(false);
+      }
+    }
+  }, [packId]);
+
   useEffect(() => {
-    let cancelled = false;
+    const cancelledRef = { cancelled: false };
     setLoading(true);
     setError(null);
     setActiveTab("overview");
-
-    async function loadPackDetail() {
-      try {
-        const [packResponse, recordsResponse] = await Promise.all([
-          apiClient.getPack(packId),
-          apiClient.getPackRecords(packId)
-        ]);
-        if (!cancelled) {
-          setPack(packResponse);
-          setRecords(recordsResponse);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load pack detail.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadPackDetail();
+    void loadPackDetail(cancelledRef);
     return () => {
-      cancelled = true;
+      cancelledRef.cancelled = true;
     };
-  }, [packId]);
+  }, [loadPackDetail]);
 
   if (loading) {
     return <DetailLoading />;
@@ -2326,7 +2328,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       </div>
 
       {activeTab === "overview" ? <PackOverview pack={pack} records={records} packs={packs} /> : null}
-      {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
+      {activeTab === "records" ? <RecordsTab pack={pack} records={records} onReviewChanged={() => void loadPackDetail()} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
       {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
@@ -2410,12 +2412,46 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
   );
 }
 
-function RecordsTab({ pack, records }: { pack: PackDetail; records: RecordSummary[] }) {
+function RecordsTab({ pack, records, onReviewChanged }: { pack: PackDetail; records: RecordSummary[]; onReviewChanged(): void }) {
   const [selectedId, setSelectedId] = useState(records[0]?.id ?? "");
+  const [reviewStatus, setReviewStatus] = useState<PackReviewStatusResponse | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedId(records[0]?.id ?? "");
   }, [pack.id, records]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReviewStatus(null);
+    setReviewError(null);
+
+    async function loadReviewStatus() {
+      try {
+        const response = await apiClient.getPackReviewStatus(pack.id);
+        if (!cancelled) {
+          setReviewStatus(response);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setReviewError(loadError instanceof Error ? loadError.message : "Unable to load review status.");
+        }
+      }
+    }
+
+    void loadReviewStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [pack.id, records]);
+
+  async function refreshReviewStatus() {
+    const response = await apiClient.getPackReviewStatus(pack.id);
+    setReviewStatus(response);
+    onReviewChanged();
+  }
+
+  const selectedReview = reviewStatus?.records.find((record) => record.id === selectedId) ?? null;
 
   return (
     <div className="records-tab">
@@ -2429,18 +2465,31 @@ function RecordsTab({ pack, records }: { pack: PackDetail; records: RecordSummar
             key={record.id}
           >
             <strong>{record.title}</strong>
-            <span>{formatPackType(record.type)} / {record.sources.length} source</span>
+            <span>{formatPackType(record.type)} / {formatPackType(record.reviewStatus)} / {record.sources.length} source</span>
           </button>
         ))}
       </aside>
-      <RecordPreview recordId={selectedId} />
+      <RecordPreview recordId={selectedId} reviewCandidate={selectedReview} reviewError={reviewError} onReviewChanged={() => void refreshReviewStatus()} />
     </div>
   );
 }
 
-function RecordPreview({ recordId }: { recordId: string }) {
+function RecordPreview({
+  recordId,
+  reviewCandidate,
+  reviewError,
+  onReviewChanged
+}: {
+  recordId: string;
+  reviewCandidate: RecordReviewCandidate | null;
+  reviewError?: string | null;
+  onReviewChanged?: () => void;
+}) {
   const [record, setRecord] = useState<RecordDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [promotionError, setPromotionError] = useState<string | null>(null);
+  const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
+  const [promoting, setPromoting] = useState<RecordReviewPromotionStatus | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -2472,6 +2521,31 @@ function RecordPreview({ recordId }: { recordId: string }) {
     };
   }, [recordId]);
 
+  async function promote(reviewStatus: RecordReviewPromotionStatus) {
+    if (!record || !reviewCandidate) {
+      return;
+    }
+
+    setPromoting(reviewStatus);
+    setPromotionError(null);
+    setPromotionMessage(null);
+    try {
+      const result = await apiClient.updateRecordReviewStatus(record.packId, record.id, {
+        reviewStatus,
+        expectedHash: reviewCandidate.contentHash
+      });
+      setRecord((result.record as RecordDetail | null) ?? record);
+      setPromotionMessage(
+        `${record.title} moved from ${formatPackType(result.previousStatus)} to ${formatPackType(result.reviewStatus)}. Derived index refreshed.`
+      );
+      onReviewChanged?.();
+    } catch (updateError) {
+      setPromotionError(updateError instanceof Error ? updateError.message : "Unable to update review status.");
+    } finally {
+      setPromoting(null);
+    }
+  }
+
   if (error) {
     return <StateCard title="Record unavailable" detail={error} />;
   }
@@ -2491,8 +2565,80 @@ function RecordPreview({ recordId }: { recordId: string }) {
           Open Record
         </a>
       </div>
+      <div className="record-meta-strip">
+        <span>{formatPackType(record.reviewStatus)}</span>
+        <span>{formatPackType(record.privacy)}</span>
+        <span>Reviewed: {formatDate(record.lastReviewed ?? null)}</span>
+      </div>
+      <RecordReviewControls
+        record={record}
+        candidate={reviewCandidate}
+        reviewError={reviewError}
+        promotionError={promotionError}
+        promotionMessage={promotionMessage}
+        promoting={promoting}
+        onPromote={(status) => void promote(status)}
+      />
       <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderRecordBodyHtml(record.body) }} />
     </article>
+  );
+}
+
+function RecordReviewControls({
+  record,
+  candidate,
+  reviewError,
+  promotionError,
+  promotionMessage,
+  promoting,
+  onPromote
+}: {
+  record: RecordDetail;
+  candidate: RecordReviewCandidate | null;
+  reviewError?: string | null;
+  promotionError: string | null;
+  promotionMessage: string | null;
+  promoting: RecordReviewPromotionStatus | null;
+  onPromote(status: RecordReviewPromotionStatus): void;
+}) {
+  const disabled = !candidate || !candidate.promotion.canPromote;
+
+  return (
+    <div className="review-promotion-panel">
+      <div>
+        <strong>Explicit Review Status</strong>
+        <p>Promotion updates record frontmatter only after validation and scanner gates. Tags and privacy stay unchanged.</p>
+      </div>
+      {reviewError ? <p className="error-note">{reviewError}</p> : null}
+      {!candidate ? <p className="muted-note">Loading review gates...</p> : null}
+      {candidate?.promotion.blockingReasons.length ? (
+        <ul className="export-warning-list">
+          {candidate.promotion.blockingReasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+      {candidate?.promotion.warnings.length ? (
+        <ul className="export-warning-list">
+          {candidate.promotion.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="review-promotion-actions">
+        <button type="button" onClick={() => onPromote("approved")} disabled={disabled || record.reviewStatus === "approved" || promoting !== null}>
+          {promoting === "approved" ? "Approving..." : "Approve"}
+        </button>
+        <button type="button" onClick={() => onPromote("needs_review")} disabled={disabled || record.reviewStatus === "needs_review" || promoting !== null}>
+          {promoting === "needs_review" ? "Marking..." : "Needs Review"}
+        </button>
+        <button type="button" onClick={() => onPromote("rejected")} disabled={disabled || record.reviewStatus === "rejected" || promoting !== null}>
+          {promoting === "rejected" ? "Rejecting..." : "Reject"}
+        </button>
+      </div>
+      {promotionMessage ? <p className="success-note">{promotionMessage}</p> : null}
+      {promotionError ? <p className="error-note">{promotionError}</p> : null}
+    </div>
   );
 }
 

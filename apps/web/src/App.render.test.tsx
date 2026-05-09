@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => {
       getPacks: vi.fn(),
       getPack: vi.fn(),
       getPackRecords: vi.fn(),
+      getPackReviewStatus: vi.fn(),
+      updateRecordReviewStatus: vi.fn(),
       getRecord: vi.fn(),
       getSkills: vi.fn(),
       search: vi.fn(),
@@ -216,6 +218,21 @@ describe("App Skill UI routes", () => {
           setTimeout(() => resolve(draftDetailFixture()), 0);
         })
     );
+    mocks.apiClient.getPackReviewStatus.mockResolvedValue(packReviewStatusFixture());
+    mocks.apiClient.updateRecordReviewStatus.mockResolvedValue({
+      ok: true,
+      packId: "ai-workstation-pack",
+      recordId: "ai-workstation.local-ai-stack",
+      previousStatus: "draft",
+      reviewStatus: "approved",
+      lastReviewed: "2026-05-09",
+      contentHash: "b".repeat(64),
+      exportReady: true,
+      mcpReady: true,
+      warnings: [],
+      record: { ...recordFixture(), reviewStatus: "approved", lastReviewed: "2026-05-09" },
+      rescan: { packsIndexed: 5, packsSkipped: 0, recordsIndexed: 25, reviewItemsGenerated: 0 }
+    });
     mocks.apiClient.validateContextPackDraft.mockResolvedValue(draftDetailFixture());
     mocks.apiClient.activateContextPackDraft.mockResolvedValue({
       ok: true,
@@ -622,6 +639,25 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.runContextPackCollector).not.toHaveBeenCalled();
   });
 
+  it("promotes active Context Pack record review status from the records tab", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([recordFixture()]);
+    mocks.apiClient.getRecord.mockResolvedValue(recordFixture());
+
+    mountApp("#/packs/ai-workstation-pack");
+
+    await waitForText("AI Workstation Pack");
+    clickButton("Records");
+    await waitForText("Explicit Review Status");
+    await clickButtonAndFlush("Approve");
+    await waitForText("moved from Draft to Approved");
+
+    expect(mocks.apiClient.getPackReviewStatus).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(mocks.apiClient.updateRecordReviewStatus).toHaveBeenCalledWith("ai-workstation-pack", "ai-workstation.local-ai-stack", {
+      reviewStatus: "approved",
+      expectedHash: "a".repeat(64)
+    });
+  });
+
   it("renders Draft Review and activates a draft through the supported API path", async () => {
     mountApp("#/drafts");
 
@@ -1024,6 +1060,61 @@ function packDetailFixture() {
     },
     sources: [],
     exportProfiles: []
+  };
+}
+
+function recordFixture() {
+  return {
+    id: "ai-workstation.local-ai-stack",
+    packId: "ai-workstation-pack",
+    title: "Local AI Stack",
+    type: "runbook",
+    tags: ["local_ai"],
+    confidence: "high",
+    sourceStatus: "source_backed",
+    freshness: "current",
+    privacy: "public_safe",
+    lastReviewed: "2026-05-07",
+    reviewStatus: "draft",
+    sources: ["ai-workstation.source.local"],
+    resolvedSources: [],
+    redactionWarningCount: 0,
+    staleSourceCount: 0,
+    licenseWarningCount: 0,
+    licenseMissingCount: 0,
+    licenseUnknownCount: 0,
+    licenseRiskCount: 0,
+    body: "# Local AI Stack\n\nReviewed fixture body.",
+    filePath: "records/local-ai-stack.md",
+    metadata: {}
+  };
+}
+
+function packReviewStatusFixture() {
+  return {
+    packId: "ai-workstation-pack",
+    validation: { valid: true, errors: 0, warnings: 0 },
+    security: { status: "policy_clean", recommendedAction: "activate", blocked: false },
+    records: [
+      {
+        id: "ai-workstation.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        currentStatus: "draft",
+        privacy: "public_safe",
+        tags: ["local_ai"],
+        lastReviewed: "2026-05-07",
+        filePath: "records/local-ai-stack.md",
+        contentHash: "a".repeat(64),
+        promotion: {
+          canPromote: true,
+          blockingReasons: [],
+          warnings: [],
+          exportReadyAfterApproval: true,
+          mcpReadyAfterApproval: true
+        }
+      }
+    ]
   };
 }
 

@@ -122,9 +122,10 @@ The verifier covers API tests, web route/client tests, a local activation smoke 
 
 ## Boundaries
 
-Draft Review v0 does not add:
+Draft Review v0 does not add approval inside the activation step. The separate active-pack approval workflow is documented in [approval-workflow.md](approval-workflow.md).
 
-- approval workflow
+Draft Review v0 still does not add:
+
 - pack editing
 - registry behavior
 - marketplace behavior

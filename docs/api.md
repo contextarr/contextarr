@@ -58,6 +58,32 @@ Collector endpoints never accept an output path from the browser. Draft packs re
 
 Activation never overwrites active packs, never accepts arbitrary output paths, never approves records, never changes privacy, never removes `never_export` or `imported_draft` tags, and does not rebuild the index automatically. Activation is not approval and is not export or MCP exposure.
 
+## Context Pack Approval Endpoints
+
+- `GET /api/packs/:packId/review-status`: returns active pack validation/scanner gate state, per-record review metadata, content hashes, and promotion eligibility.
+- `POST /api/packs/:packId/records/:recordId/review-status`: promotes an active record to `approved`, `needs_review`, or `rejected` by updating record frontmatter.
+
+Approval is a separate human action after activation. The promotion endpoint requires a matching record content hash, validates and scans the active pack before and after writing, updates only `review_status` and `last_reviewed`, rebuilds the derived index after success, and restores the original file if the post-write gates fail.
+
+Approval does not change record body text, privacy, tags, source ids, manifests, export profiles, or rules. It does not remove `never_export` or `imported_draft`, does not create exports, and does not expose a record through MCP by itself.
+
+`POST /api/packs/:packId/records/:recordId/review-status` accepts:
+
+```json
+{
+  "reviewStatus": "approved",
+  "expectedHash": "64 character sha256 hex content hash",
+  "reviewedAt": "2026-05-09"
+}
+```
+
+Controlled responses:
+
+- `400` invalid body or failed validation/scanner gates.
+- `401` missing API token when token auth is enabled.
+- `404` unknown pack or record.
+- `409` content hash mismatch.
+
 ## Advanced Preview Endpoints
 
 The current repository includes completed advanced-preview Skills and Agent Kit surfaces. They are frozen behind the v1 bridge gate and are not the Context Pack v1 core expansion target.

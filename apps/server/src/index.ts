@@ -50,6 +50,17 @@ export {
   type DraftPackSummary,
   type DraftPackSourceType
 } from "./draft-packs";
+export {
+  getPackReviewStatus,
+  promoteRecordReviewStatus,
+  RecordReviewError,
+  recordReviewPromotionStatuses,
+  type PackReviewStatus,
+  type PromoteRecordReviewStatusRequest,
+  type PromoteRecordReviewStatusResult,
+  type RecordReviewCandidate,
+  type RecordReviewPromotionStatus
+} from "./record-review";
 export { loadSkills } from "./skill-loader";
 export type {
   AgentKitSummary,

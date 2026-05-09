@@ -25,7 +25,10 @@ import type {
   PackDetail,
   PackHealthResponse,
   PackSummary,
+  PackReviewStatusResponse,
   RecordDetail,
+  RecordReviewPromotionResponse,
+  RecordReviewPromotionStatus,
   RecordSummary,
   ReviewItemsResponse,
   ReviewItemStatus,
@@ -62,6 +65,12 @@ export interface ApiClient {
   getPack(id: string): Promise<PackDetail>;
   getPackHealth(id: string): Promise<PackHealthResponse>;
   getPackRecords(id: string): Promise<RecordSummary[]>;
+  getPackReviewStatus(id: string): Promise<PackReviewStatusResponse>;
+  updateRecordReviewStatus(
+    packId: string,
+    recordId: string,
+    request: { reviewStatus: RecordReviewPromotionStatus; expectedHash: string; reviewedAt?: string }
+  ): Promise<RecordReviewPromotionResponse>;
   getRecord(id: string): Promise<RecordDetail>;
   getSkills(): Promise<SkillSummary[]>;
   getSkill(id: string): Promise<SkillDetail>;
@@ -139,6 +148,16 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       const response = await requestJson<{ records: RecordSummary[] }>(`/api/packs/${encodeURIComponent(id)}/records`);
       return response.records;
     },
+    getPackReviewStatus: (id: string) => requestJson<PackReviewStatusResponse>(`/api/packs/${encodeURIComponent(id)}/review-status`),
+    updateRecordReviewStatus: (packId, recordId, body) =>
+      requestJson<RecordReviewPromotionResponse>(
+        `/api/packs/${encodeURIComponent(packId)}/records/${encodeURIComponent(recordId)}/review-status`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        }
+      ),
     getRecord: (id: string) => requestJson<RecordDetail>(`/api/records/${encodeURIComponent(id)}`),
     getSkills: async () => {
       const response = await requestJson<{ skills: SkillSummary[] }>("/api/skills");

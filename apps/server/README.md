@@ -48,6 +48,8 @@ Skill Health review items cover validation, safety rules, disallowed pattern sca
 
 `GET /api/context-pack-drafts` inventories draft Context Packs from collector, importer, and composed draft roots. `POST /api/context-pack-drafts/:id/activate` copies a passing draft into the active packs root for review only. Activation is not approval: it does not rewrite metadata, rebuild the index automatically, expose exports, or expose MCP.
 
+`GET /api/packs/:packId/review-status` returns active-pack validation/scanner status plus per-record content hashes and promotion gates. `POST /api/packs/:packId/records/:recordId/review-status` can promote a record to `approved`, `needs_review`, or `rejected` by updating only `review_status` and `last_reviewed` after a matching content hash, validation, and scanner checks. Approval is explicit; it does not change privacy, remove `never_export`, expose exports, expose MCP, or run pack content.
+
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 
 - `Authorization: Bearer <token>`

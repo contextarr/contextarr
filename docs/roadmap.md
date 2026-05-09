@@ -26,6 +26,7 @@ Contextarr currently supports:
 - Context Pack collector v0 creates private unreviewed draft packs under `draft-packs/` without activating them.
 - Composer save-as-draft-pack creates private unreviewed draft Context Packs under `composed-packs/`.
 - Draft Review v0 inventories `draft-packs/`, `imported-packs/`, and `composed-packs/`, then copies passing drafts into the active packs root for review without approval or exposure.
+- Explicit Approval v0 promotes active Context Pack record `review_status` only through validation/scanner-gated, content-hash-guarded file-backed updates. Approval is not activation and does not remove `never_export`, change privacy, or expose exports/MCP by itself.
 
 ## Second PRD Direction
 
@@ -80,6 +81,7 @@ Context Pack Draft Review v0 is now part of the v1 core hardening lane. It inven
 - Context Pack Collectors v0: local draft Context Pack creation. Complete.
 - Composer Save-As-Pack v0: durable private draft pack output from selected approved records. Complete.
 - Draft Review v0: validation/scanner-gated activation-for-review from draft roots. Complete.
+- Explicit Approval v0: active Context Pack record review status promotion. Complete.
 - Public feedback on the pack format, validation rules, and export profile ergonomics.
 - More fixture coverage for pack health and import edge cases.
 - Better screenshots and a short demo video.

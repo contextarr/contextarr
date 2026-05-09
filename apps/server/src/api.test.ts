@@ -988,6 +988,124 @@ describe("Contextarr API", () => {
     }
   });
 
+  it("promotes active draft record review status only through explicit validation and scanner gates", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-approval-pack-root-"));
+    createMarkdownDraftPack(activePacksDir, "approval-draft-pack", "Approval Draft Pack");
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills-for-approval"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits-for-approval")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const reviewStatus = await app.inject({ method: "GET", url: "/api/packs/approval-draft-pack/review-status" });
+      const candidate = reviewStatus.json().records[0] as { id: string; contentHash: string; currentStatus: string };
+      const reviewItemsBefore = await app.inject({
+        method: "GET",
+        url: "/api/review-items?packId=approval-draft-pack&type=review_status"
+      });
+      const promoted = await app.inject({
+        method: "POST",
+        url: `/api/packs/approval-draft-pack/records/${encodeURIComponent(candidate.id)}/review-status`,
+        payload: {
+          reviewStatus: "approved",
+          expectedHash: candidate.contentHash,
+          reviewedAt: "2026-05-09"
+        }
+      });
+      const record = await app.inject({ method: "GET", url: `/api/records/${encodeURIComponent(candidate.id)}` });
+      const reviewItemsAfter = await app.inject({
+        method: "GET",
+        url: "/api/review-items?packId=approval-draft-pack&type=review_status&status=open"
+      });
+      const recordText = listFilesRecursive(path.join(activePacksDir, "approval-draft-pack", "records"))
+        .map((file) => fs.readFileSync(file, "utf8"))
+        .join("\n");
+
+      expect(reviewStatus.statusCode).toBe(200);
+      expect(candidate.currentStatus).toBe("draft");
+      expect(reviewItemsBefore.json().items).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "review_status", recordId: candidate.id })])
+      );
+      expect(promoted.statusCode).toBe(200);
+      expect(promoted.json()).toMatchObject({
+        ok: true,
+        packId: "approval-draft-pack",
+        recordId: candidate.id,
+        previousStatus: "draft",
+        reviewStatus: "approved",
+        lastReviewed: "2026-05-09",
+        exportReady: false,
+        mcpReady: false
+      });
+      expect(promoted.json().warnings).toEqual(expect.arrayContaining([expect.stringContaining("Draft-blocking tags remain")]));
+      expect(record.statusCode).toBe(200);
+      expect(record.json()).toMatchObject({ reviewStatus: "approved", lastReviewed: "2026-05-09" });
+      expect(recordText).toContain("review_status: approved");
+      expect(recordText).toContain("last_reviewed: 2026-05-09");
+      expect(recordText).toContain("privacy: private");
+      expect(recordText).toContain("never_export");
+      expect(reviewItemsAfter.json().items).toEqual([]);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(activePacksDir, { recursive: true, force: true });
+    }
+  });
+
+  it("protects review promotion with token auth, hash checks, and scanner blocking", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-approval-pack-root-auth-"));
+    const packPath = createMarkdownDraftPack(activePacksDir, "blocked-approval-pack", "Blocked Approval Pack");
+    const fixtureContext = createTestContext("approval-token", activePacksDir, {
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills-for-approval-auth"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits-for-approval-auth")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const unauthorized = await app.inject({ method: "GET", url: "/api/packs/blocked-approval-pack/review-status" });
+      const reviewStatus = await app.inject({
+        method: "GET",
+        url: "/api/packs/blocked-approval-pack/review-status",
+        headers: { Authorization: "Bearer approval-token" }
+      });
+      const candidate = reviewStatus.json().records[0] as { id: string; contentHash: string };
+      const invalidBody = await app.inject({
+        method: "POST",
+        url: `/api/packs/blocked-approval-pack/records/${encodeURIComponent(candidate.id)}/review-status`,
+        headers: { Authorization: "Bearer approval-token" },
+        payload: { reviewStatus: "draft", expectedHash: candidate.contentHash }
+      });
+      const hashMismatch = await app.inject({
+        method: "POST",
+        url: `/api/packs/blocked-approval-pack/records/${encodeURIComponent(candidate.id)}/review-status`,
+        headers: { Authorization: "Bearer approval-token" },
+        payload: { reviewStatus: "approved", expectedHash: "0".repeat(64), reviewedAt: "2026-05-09" }
+      });
+      fs.writeFileSync(path.join(packPath, "unsafe.ps1"), "Write-Host 'not allowed'\n", "utf8");
+      const blocked = await app.inject({
+        method: "POST",
+        url: `/api/packs/blocked-approval-pack/records/${encodeURIComponent(candidate.id)}/review-status`,
+        headers: { Authorization: "Bearer approval-token" },
+        payload: { reviewStatus: "approved", expectedHash: candidate.contentHash, reviewedAt: "2026-05-09" }
+      });
+
+      expect(unauthorized.statusCode).toBe(401);
+      expect(reviewStatus.statusCode).toBe(200);
+      expect(invalidBody.statusCode).toBe(400);
+      expect(invalidBody.json()).toMatchObject({ error: "invalid_review_status_request" });
+      expect(hashMismatch.statusCode).toBe(409);
+      expect(hashMismatch.json()).toMatchObject({ error: "record.hash_mismatch" });
+      expect(blocked.statusCode).toBe(400);
+      expect(blocked.json()).toMatchObject({ error: "review.promotion_blocked" });
+      expect(blocked.body).not.toContain(activePacksDir);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(activePacksDir, { recursive: true, force: true });
+    }
+  });
+
   it("GET /api/review-items lists and filters generated items", async () => {
     db.close();
     const fixtureContext = createTestContext(undefined, validatorFixturesDir);

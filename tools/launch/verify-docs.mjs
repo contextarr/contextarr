@@ -15,6 +15,7 @@ const requiredFiles = [
   "docs/collectors.md",
   "docs/composed-packs.md",
   "docs/draft-review.md",
+  "docs/approval-workflow.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
@@ -57,6 +58,7 @@ if (!failed) {
   const collectorsDocs = read("docs/collectors.md");
   const composedPacksDocs = read("docs/composed-packs.md");
   const draftReviewDocs = read("docs/draft-review.md");
+  const approvalWorkflowDocs = read("docs/approval-workflow.md");
   const configReference = read("docs/config-reference.md");
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
@@ -420,6 +422,37 @@ if (!failed) {
   }
   if (!configReference.includes("CONTEXTARR_IMPORTED_PACKS_DIR") || !configReference.includes("./imported-packs")) {
     fail("Config reference must document CONTEXTARR_IMPORTED_PACKS_DIR.");
+  }
+
+  const requiredApprovalText = [
+    "/api/packs/:packId/review-status",
+    "/api/packs/:packId/records/:recordId/review-status",
+    "approval:verify",
+    "review_status",
+    "last_reviewed",
+    "Activation is not approval",
+    "Approval is a separate human action",
+    "does not remove `never_export`",
+    "does not expose a record through MCP by itself",
+    "requires a matching record content hash"
+  ];
+  for (const text of requiredApprovalText) {
+    if (
+      !readme.includes(text) &&
+      !apiDocs.includes(text) &&
+      !approvalWorkflowDocs.includes(text) &&
+      !architecture.includes(text) &&
+      !securityModel.includes(text) &&
+      !serverReadme.includes(text)
+    ) {
+      fail(`README or docs are missing Context Pack approval text: ${text}`);
+    }
+  }
+  if (!packageJson.scripts["approval:verify"]) {
+    fail("Root package scripts must include approval:verify.");
+  }
+  if (!packageJson.scripts["approval:verify"]?.includes("verify-approval.mjs")) {
+    fail("approval:verify must run the approval smoke verifier.");
   }
 
   if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {

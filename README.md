@@ -239,6 +239,7 @@ Useful launch docs:
 - [docs/collectors.md](docs/collectors.md)
 - [docs/composed-packs.md](docs/composed-packs.md)
 - [docs/draft-review.md](docs/draft-review.md)
+- [docs/approval-workflow.md](docs/approval-workflow.md)
 - [docs/validation-report.md](docs/validation-report.md)
 - [docs/api.md](docs/api.md)
 - [docs/sqlite-index.md](docs/sqlite-index.md)
@@ -282,6 +283,7 @@ pnpm backup:verify
 pnpm collectors:verify
 pnpm composer:verify
 pnpm drafts:verify
+pnpm approval:verify
 pnpm release:verify
 pnpm --filter @contextarr/cli contextarr validate packages/pack-validator/test/fixtures/valid-minimal-pack
 pnpm --filter @contextarr/cli contextarr validate demo-packs
@@ -349,6 +351,14 @@ pnpm drafts:verify
 ```
 
 The dashboard route `#/drafts` inventories collector, importer, and composed draft roots. Activating a draft copies it into the active packs root for review only; it does not approve records, rebuild the index, or expose export/MCP content. See [docs/draft-review.md](docs/draft-review.md).
+
+Promote active Context Pack record review status explicitly:
+
+```bash
+pnpm approval:verify
+```
+
+The Pack Detail Records tab can promote a record to `approved`, `needs_review`, or `rejected` after validation and scanner gates pass. Promotion updates only `review_status` and `last_reviewed`, rebuilds the derived index, and keeps privacy, tags, exports, and MCP boundaries governed by existing gates. See [docs/approval-workflow.md](docs/approval-workflow.md).
 
 Run the read-only MCP server:
 

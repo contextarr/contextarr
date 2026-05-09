@@ -53,6 +53,13 @@ import {
   listContextPackDrafts
 } from "./draft-packs";
 import {
+  getPackReviewStatus,
+  promoteRecordReviewStatus,
+  RecordReviewError,
+  recordReviewPromotionStatuses,
+  type PromoteRecordReviewStatusRequest
+} from "./record-review";
+import {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,
@@ -824,6 +831,43 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return pack;
   });
 
+  app.get<{ Params: { id: string } }>("/api/packs/:id/review-status", async (request, reply) => {
+    try {
+      const reviewStatus = getPackReviewStatus(db, config, request.params.id);
+      if (!reviewStatus) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+      }
+
+      return reviewStatus;
+    } catch (error) {
+      if (error instanceof RecordReviewError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
+      }
+
+      throw error;
+    }
+  });
+
+  app.post<{ Params: { id: string; recordId: string }; Body: RecordReviewPromotionBody }>(
+    "/api/packs/:id/records/:recordId/review-status",
+    async (request, reply) => {
+      const parsed = parseRecordReviewPromotionBody(request.body ?? {});
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_review_status_request", message: parsed.message });
+      }
+
+      try {
+        return promoteRecordReviewStatus(db, config, request.params.id, request.params.recordId, parsed.value);
+      } catch (error) {
+        if (error instanceof RecordReviewError) {
+          return reply.code(error.statusCode).send({ error: error.code, message: error.message, ...error.details });
+        }
+
+        throw error;
+      }
+    }
+  );
+
   app.get<{ Params: { id: string } }>("/api/packs/:id/health", async (request, reply) => {
     const health = getPackHealth(db, request.params.id);
     if (!health) {
@@ -1383,6 +1427,12 @@ interface DraftActivationBody {
   expectedHash?: unknown;
 }
 
+interface RecordReviewPromotionBody {
+  reviewStatus?: unknown;
+  expectedHash?: unknown;
+  reviewedAt?: unknown;
+}
+
 interface SaveAgentKitBody {
   id?: unknown;
   name?: unknown;
@@ -1525,6 +1575,39 @@ function parseDraftActivationBody(
     ok: true,
     value: {
       expectedHash: trimOptional(body.expectedHash)
+    }
+  };
+}
+
+function parseRecordReviewPromotionBody(
+  body: RecordReviewPromotionBody
+): { ok: true; value: PromoteRecordReviewStatusRequest } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Record review status request body must be an object." };
+  }
+
+  const allowedKeys = new Set(["reviewStatus", "expectedHash", "reviewedAt"]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Record review status field is not allowed: ${unknownKey}.` };
+  }
+
+  if (typeof body.reviewStatus !== "string" || !recordReviewPromotionStatuses.includes(body.reviewStatus as never)) {
+    return { ok: false, message: "reviewStatus must be approved, needs_review, or rejected." };
+  }
+  if (typeof body.expectedHash !== "string" || !/^[a-f0-9]{64}$/i.test(body.expectedHash)) {
+    return { ok: false, message: "expectedHash must be a SHA-256 hex string." };
+  }
+  if (body.reviewedAt !== undefined && (typeof body.reviewedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.reviewedAt))) {
+    return { ok: false, message: "reviewedAt must use YYYY-MM-DD format." };
+  }
+
+  return {
+    ok: true,
+    value: {
+      reviewStatus: body.reviewStatus as PromoteRecordReviewStatusRequest["reviewStatus"],
+      expectedHash: body.expectedHash,
+      reviewedAt: trimOptional(body.reviewedAt)
     }
   };
 }
