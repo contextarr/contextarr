@@ -94,6 +94,14 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     logger: false
   });
 
+  app.setErrorHandler((error, _request, reply) => {
+    const statusCode = httpStatusForError(error);
+    return reply.code(statusCode).send({
+      error: apiErrorCode(error, statusCode),
+      message: apiErrorMessage(error, statusCode, config)
+    });
+  });
+
   app.addHook("onRequest", async (request, reply) => {
     if (!config.apiToken || !isApiRequest(request) || isHealthRequest(request)) {
       return;
@@ -1145,6 +1153,48 @@ function isApiRequest(request: FastifyRequest): boolean {
 
 function isHealthRequest(request: FastifyRequest): boolean {
   return request.method === "GET" && request.url.split("?")[0] === "/api/health";
+}
+
+function httpStatusForError(error: unknown): number {
+  const statusCode = typeof (error as { statusCode?: unknown }).statusCode === "number" ? (error as { statusCode: number }).statusCode : 500;
+  return statusCode >= 400 && statusCode < 600 ? statusCode : 500;
+}
+
+function apiErrorCode(error: unknown, statusCode: number): string {
+  if (errorCode(error) === "FST_ERR_CTP_INVALID_JSON_BODY") {
+    return "invalid_json";
+  }
+
+  if (statusCode === 400) {
+    return "bad_request";
+  }
+
+  if (statusCode >= 500) {
+    return "internal_error";
+  }
+
+  return "request_failed";
+}
+
+function apiErrorMessage(error: unknown, statusCode: number, config: ServerConfig): string {
+  if (errorCode(error) === "FST_ERR_CTP_INVALID_JSON_BODY") {
+    return "Request body must be valid JSON.";
+  }
+
+  if (statusCode >= 500) {
+    return "Request failed.";
+  }
+
+  return sanitizeLocalPathText(errorMessage(error) || "Request is invalid.", config.packsDir);
+}
+
+function errorCode(error: unknown): string | undefined {
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function getRequestToken(request: FastifyRequest): string | undefined {

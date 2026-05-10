@@ -128,6 +128,11 @@ function expectPathInside(root: string, value: string): void {
   expect(path.isAbsolute(relative)).toBe(false);
 }
 
+function expectNoLocalPaths(value: string): void {
+  expect(value).not.toContain(repoRoot);
+  expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
+}
+
 describe("Contextarr API", () => {
   let db: ContextarrDatabase;
   let config: ServerConfig;
@@ -189,6 +194,26 @@ describe("Contextarr API", () => {
     expect(missingApi.json()).toEqual({ error: "not_found", message: "Route not found." });
     expect(clientRoute.statusCode).toBe(200);
     expect(clientRoute.body).toContain("root");
+    await app.close();
+    db.close();
+  });
+
+  it("normalizes malformed JSON request bodies without leaking internals", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      headers: { "content-type": "application/json" },
+      payload: "{not json"
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: "invalid_json",
+      message: "Request body must be valid JSON."
+    });
+    expect(response.body).not.toContain("stack");
+    expectNoLocalPaths(response.body);
     await app.close();
     db.close();
   });
@@ -1302,6 +1327,66 @@ describe("Contextarr API", () => {
     expect(response.json().includedRecords).toHaveLength(5);
     await app.close();
     db.close();
+  });
+
+  it("GET /api/packs/:id/exports/:profileId/preview excludes unsafe record bodies", async () => {
+    db.close();
+    const tempRoot = copyDemoPacksFixture("contextarr-api-export-boundary-");
+    const fixtureContext = createTestContext(undefined, tempRoot, {
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const packRoot = path.join(tempRoot, "ai-workstation-pack");
+      replaceInFile(
+        path.join(packRoot, "records", "hardware-overview.md"),
+        "privacy: public_safe",
+        "privacy: private"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "hardware-overview.md"), "\nprivate-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "storage-layout.md"),
+        "review_status: approved",
+        "review_status: draft"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "storage-layout.md"), "\ndraft-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "networking-notes.md"),
+        "privacy: public_safe",
+        "privacy: secret"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "networking-notes.md"), "\nsecret-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "troubleshooting-workflow.md"),
+        "  - workflow",
+        "  - workflow\n  - never_export"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "troubleshooting-workflow.md"), "\nnever-export-api-token\n", "utf8");
+      rebuildIndex(fixtureContext.db, tempRoot, getSkillIndexDirs(fixtureContext.config), getAgentKitIndexDirs(fixtureContext.config));
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+      });
+      const body = JSON.stringify(response.json());
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().includedRecords.map((record: { id: string }) => record.id)).toEqual([
+        "ai-workstation.local-ai-stack"
+      ]);
+      expect(body).not.toContain("private-api-export-token");
+      expect(body).not.toContain("draft-api-export-token");
+      expect(body).not.toContain("secret-api-export-token");
+      expect(body).not.toContain("never-export-api-token");
+      expectNoLocalPaths(body);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it("GET /api/packs/:id/exports/:profileId/preview reports missing packs and profiles", async () => {
