@@ -24,6 +24,12 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 - CLI and API error paths have tests for sanitized local paths and controlled JSON error bodies.
 - Draft, imported, composed, and restored/quarantine-shaped Context Pack outputs are tested to remain outside active API/export/search surfaces after rescan.
 - `pnpm release:verify` is the local alpha candidate gate. It does not tag, publish, push, deploy, or create a GitHub release.
+- `docs/audits/v0.1.0-alpha.1-release-candidate-evidence.md` records the local release candidate path and the explicit-approval boundary for tags or public release actions.
+
+### Planning Additions
+
+- Agentic AI Context Readiness and Local Observability are accepted as AR0 docs-only planning scope.
+- No readiness schemas, evidence tables, API routes, UI, CLI commands, release gates, telemetry, or agent runtime behavior are implemented by that planning addition.
 
 ### Advanced Preview
 
