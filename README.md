@@ -14,6 +14,8 @@ Status: developer preview from `main`. Core Context Pack workflows are being sta
 
 For exact shipped-versus-planned claims, use [docs/implementation-status.md](docs/implementation-status.md) as the source of truth.
 
+The accepted Agentic AI Context Readiness and Local Observability PRD is a planning addition only. It positions future work around source-backed, governed, redacted, locally observable context for AI assistants and agents without adding telemetry, agent execution, or new runtime interfaces in the current checkout.
+
 ## What Contextarr Is
 
 Contextarr is a self-hosted tool for building and managing local Context Packs:
@@ -53,6 +55,7 @@ These surfaces exist in the checkout, but they are not the public headline for t
 - Agent Kit templates that generate unreviewed local draft Agent Kits.
 - Local Skill importers, gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Backup/restore v0, Context Pack collectors, Composer save-as-draft-pack, local scanner reports, and trust/registry planning docs.
+- Context Readiness and Local Observability planning, accepted as a docs-only future track after the Context Pack core stabilizes.
 
 Skills and Agent Kits are frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
 
@@ -70,8 +73,10 @@ Contextarr prepares Agent Kits. It does not run them.
 - No Agent Kit runtime.
 - No scripts inside packs.
 - No direct Gmail, bank, or brokerage connectors.
+- No direct Slack, Google Drive, Jira, CRM, or sensitive-account connectors.
 - No managed AI dependency.
 - No telemetry.
+- No product analytics or hidden network calls.
 - No real private data in this repository.
 
 ## Quickstart
@@ -166,6 +171,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - Draft Intake shows metadata-only candidate inventories; it does not activate, index, export, or expose candidates through MCP.
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
+- Context Readiness is planned as a future report layer; Local Observability is planned as local evidence metadata only, not product telemetry.
 - The scanner is a gate, not a guarantee; human review remains required before activation, export, registry exposure, or MCP exposure.
 
 See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security-model.md), [docs/non-goals.md](docs/non-goals.md), and [docs/known-limitations.md](docs/known-limitations.md).
@@ -179,6 +185,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Backup/restore v0 is local and quarantine-only.
 - Draft Intake v0 is read-only; it does not include approve, promote, or activate actions.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
+- Context Readiness and Local Observability are accepted planning additions only; their schemas, API routes, UI, CLI commands, and release gates are not implemented yet.
 - Context Pack collectors and Composer save flows create private unreviewed drafts only.
 - Skills and Agent Kits are advanced-preview data objects, not runtime features.
 - Public registry, marketplace, signing implementation, remote install, cloud sync, and telemetry remain out of scope.
@@ -232,6 +239,8 @@ tools/                 Local verification and launch helpers
 - [docs/mcp.md](docs/mcp.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/pack-migrations.md](docs/pack-migrations.md)
+- [docs/prd-additions/agentic-ai-context-readiness-local-observability.md](docs/prd-additions/agentic-ai-context-readiness-local-observability.md)
+- [docs/decision-records/decision-agentic-ai-context-readiness.md](docs/decision-records/decision-agentic-ai-context-readiness.md)
 - [docs/quickstart.md](docs/quickstart.md)
 - [docs/release-checklist.md](docs/release-checklist.md)
 - [docs/release-process.md](docs/release-process.md)

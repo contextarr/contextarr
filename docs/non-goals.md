@@ -40,15 +40,28 @@ Contextarr v0 must not include:
 - Remote logo fetching.
 - Live SaaS, cloud, source-control, or workspace connectors from starter packs.
 - Hidden network calls.
+- Product analytics.
 - Claims of perfect prompt-injection detection.
 - Registry items bypassing local validation.
 - Encrypted artifacts bypassing scanner review.
 - Telemetry.
 - Direct Gmail connector.
+- Direct Slack connector.
+- Direct Google Drive connector.
+- Direct Jira connector.
+- Direct CRM connector.
 - Direct banking or brokerage connector.
+- Agent runner.
+- Mutating MCP.
 - Mobile app.
 - Real private data in the public repository.
 - Copied third-party documentation in demo or starter packs.
+
+## Local Observability Boundary
+
+Local Observability is planned as local evidence metadata only. It must not become product telemetry, hosted analytics, crash upload, always-on capture, cloud sync, or a surveillance dashboard.
+
+Future evidence logs must not store raw export bodies, raw MCP query text, returned context bodies, or private source dumps by default. They may store local timestamps, object ids, status, counts, target names, warning codes, hashes, and sanitized metadata when a later implementation phase explicitly scopes the storage.
 
 ## Starter Pack Boundaries
 

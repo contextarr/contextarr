@@ -226,6 +226,17 @@
 - Prefill the Agent Kit Composer from templates while requiring user review before save.
 - Status: complete.
 
+## Agentic AI Readiness And Local Observability Track
+
+- AR0: accepted as docs and decision record only through `docs/prd-additions/agentic-ai-context-readiness-local-observability.md` and `docs/decision-records/decision-agentic-ai-context-readiness.md`.
+- AR1: add schema types for Context Readiness reports, governance rules, token-budget rules, and readiness issue codes.
+- AR2: add local evidence storage and writer helpers for readiness reports, local evidence events, export evidence, governance rules, and dimension scores.
+- AR3 to AR4: add deterministic Context Readiness scoring and local API routes.
+- AR5 to AR7: add governance parsing, export evidence, token warnings, and MCP evidence, reusing the existing MCP query metadata log where possible.
+- AR8 to AR10: add readiness UI, local activity UI, and CLI commands.
+- AR11 to AR13: add the public-safe starter pack, benchmark fixtures, docs, and release gates.
+- Hard boundary: this track must not add telemetry, product analytics, hidden network calls, agent execution, mutating MCP, direct SaaS connectors, public registry behavior, or marketplace behavior.
+
 ## Later Only
 
 - Official Pack Gallery: official/demo/starter artifacts only, public preview pages, validation and scanner reports visible, manual import only.

@@ -22,9 +22,15 @@ Contextarr v0 must not include:
 - Scripts inside packs.
 - Agent action runner.
 - Direct Gmail connector.
+- Direct Slack connector.
+- Direct Google Drive connector.
+- Direct Jira connector.
+- Direct CRM connector.
 - Direct bank or brokerage connector.
 - Managed AI dependency.
 - Telemetry.
+- Product analytics.
+- Hidden network calls.
 - Passive always-on capture.
 - Real private data in the repository.
 - Claims of perfect prompt-injection detection.
@@ -91,6 +97,10 @@ MCP export previews reuse the same export engine and do not write generated file
 
 Exposure Readiness reports combine validation status, scanner status, review state, privacy flags, redaction/export profile eligibility, and source coverage for active Context Packs. They are read-only metadata reports. They must not approve packs, mutate source files or SQLite review state, change export behavior, widen MCP visibility, return record bodies, or expose absolute local paths.
 
+Context Readiness is accepted as a planned future report layer that may combine Pack Health, Exposure Readiness, governance metadata, token-budget warnings, and local evidence metadata. It must not replace human review, claim perfect safety, mutate source files, execute pack content, widen export or MCP visibility, or call external services.
+
+Local Observability is accepted as planned local evidence metadata, not telemetry. Future evidence logs may record timestamps, object ids, status, counts, targets, warning codes, hashes, and sanitized metadata. They must not store raw export bodies, raw MCP query text, returned context bodies, or private source dumps by default.
+
 Composer previews reuse the same export engine and redaction rules. They are read-only temporary artifacts: the API returns content, the browser may copy or download it locally, and Contextarr does not write composed pack files in Phase 10.
 
 ## Import Security
@@ -144,3 +154,5 @@ The public marketplace remains out of scope until the registry trust model, scan
 ## Telemetry
 
 Telemetry is disabled and out of scope. Contextarr should not phone home by default.
+
+Local Observability must remain local app state. It must not upload diagnostics, usage analytics, crash reports, readiness reports, export history, MCP logs, or evidence metadata automatically.

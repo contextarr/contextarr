@@ -33,6 +33,8 @@ Context Packs remain the core source-backed knowledge object.
 - Skills: non-executable instruction artifacts that tell agents how to work.
 - Agent Kits: self-describing, task-ready pairings of Context Packs and Skills that tell agents how a specific bundle should be used for a specific task.
 - Export Briefs: generated output artifacts for AI tools or humans.
+- Context Readiness: a planned report layer for whether a Context Pack is source-backed, reviewed, governed, redacted, export-fit, and locally observable enough for AI assistant or agent use.
+- Local Observability: planned local evidence metadata for exports, MCP queries, readiness calculations, reviews, and warnings. It is not product telemetry.
 
 Contextarr prepares Agent Kits. It does not run them.
 
@@ -52,6 +54,8 @@ The core readiness lane is:
 8. Delete SQLite and rebuild.
 9. Confirm nothing executes or phones home.
 
+Context Readiness may strengthen Pack Health, Exposure Readiness, export previews, MCP logs, benchmarks, and docs after the core loop is stable. It must not derail the Context Pack v1 lane.
+
 ## Near-Term
 
 - Repair stale release gates for the 15-pack demo set and 12 starter Context Packs.
@@ -60,6 +64,7 @@ The core readiness lane is:
 - Improve public-site and README framing around Core Now vs Advanced Preview.
 - Keep public feedback focused on pack format, validation rules, export profiles, and the local dashboard loop.
 - Complete v1 core release-hardening gates before any frozen expansion resumes.
+- Keep Agentic AI Context Readiness and Local Observability in AR0 docs-only status until a later scoped phase adds schemas and tests.
 - Usability polish around pack authoring.
 
 ## Deferred
@@ -69,4 +74,4 @@ The core readiness lane is:
 - Web importer UI.
 - Always-on API import endpoints.
 - Pack file mutation from review actions.
-- Hosted cloud, marketplace, telemetry, executable packs, Agent Kit runtime, and live sensitive-account connectors.
+- Hosted cloud, marketplace, product telemetry, executable packs, Agent Kit runtime, mutating MCP, agent runners, hidden network calls, and live sensitive-account connectors.

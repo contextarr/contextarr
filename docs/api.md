@@ -43,6 +43,23 @@ Draft Intake candidate endpoints scan configured local candidate roots for untru
 
 The endpoint is read-only. It does not approve packs, mutate SQLite state, change export behavior, widen MCP visibility, return record bodies, or expose absolute local paths.
 
+## Planned Context Readiness And Local Observability
+
+The Agentic AI Context Readiness and Local Observability PRD is accepted as a planning addition only. AR0 adds no API routes and no runtime behavior.
+
+Later scoped phases may add:
+
+- `GET /api/packs/:id/readiness`
+- `POST /api/packs/:id/readiness/recalculate`
+- `GET /api/readiness`
+- `GET /api/events`
+- `GET /api/exports/history`
+- `GET /api/mcp/query-log`
+- `GET /api/governance/:packId`
+- `GET /api/token-budget/:packId`
+
+These future routes must remain local-first, auth-protected with the same API rules, metadata-first, and non-executing. They must not upload telemetry, call external services, expose raw private bodies, mutate pack files, run agents, or widen MCP access.
+
 ## Composer Endpoint
 
 - `POST /api/compose/preview`
