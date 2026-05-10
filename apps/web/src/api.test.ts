@@ -398,6 +398,30 @@ describe("Contextarr API client", () => {
     const client = createApiClient({
       fetchImpl: async (url) => {
         requests.push(String(url));
+        if (String(url).endsWith("/activation-plan")) {
+          return jsonResponse({
+            plan: {
+              schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+              candidateKey: "candidate-key",
+              packId: "draft-candidate",
+              name: "Draft Candidate",
+              status: "ready",
+              canActivate: true,
+              source: { kind: "draft_pack", label: "drafts", pathLabel: "drafts/draft-candidate" },
+              target: {
+                activePacksRootLabel: "demo-packs",
+                packId: "draft-candidate",
+                pathLabel: "demo-packs/draft-candidate",
+                activeConflict: false
+              },
+              checks: [],
+              blockers: [],
+              warnings: [],
+              nextSteps: [],
+              boundaries: []
+            }
+          });
+        }
         if (String(url).includes("/candidate-key")) {
           return jsonResponse({ candidate: { key: "candidate-key", name: "Draft Candidate", records: [] } });
         }
@@ -413,9 +437,11 @@ describe("Contextarr API client", () => {
       counts: { readyForReview: 1 }
     });
     await expect(client.getReviewCandidate("candidate-key")).resolves.toMatchObject({ key: "candidate-key" });
+    await expect(client.getReviewCandidateActivationPlan("candidate-key")).resolves.toMatchObject({ canActivate: true });
     expect(requests).toEqual([
       "/api/review-candidates?status=ready_for_review&q=draft",
-      "/api/review-candidates/candidate-key"
+      "/api/review-candidates/candidate-key",
+      "/api/review-candidates/candidate-key/activation-plan"
     ]);
   });
 

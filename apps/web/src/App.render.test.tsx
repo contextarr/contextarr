@@ -62,6 +62,7 @@ const mocks = vi.hoisted(() => {
       getReviewItems: vi.fn(),
       getReviewCandidates: vi.fn(),
       getReviewCandidate: vi.fn(),
+      getReviewCandidateActivationPlan: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
   };
@@ -312,6 +313,53 @@ describe("App Skill UI routes", () => {
       sources: [],
       exportProfiles: []
     });
+    mocks.apiClient.getReviewCandidateActivationPlan.mockResolvedValue({
+      schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+      candidateKey: "candidate-key",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      status: "ready",
+      canActivate: true,
+      source: {
+        kind: "draft_pack",
+        label: "draft-packs",
+        pathLabel: "draft-packs/local-draft"
+      },
+      target: {
+        activePacksRootLabel: "demo-packs",
+        packId: "local-draft-pack",
+        pathLabel: "demo-packs/local-draft-pack",
+        activeConflict: false
+      },
+      checks: [
+        {
+          id: "validation",
+          label: "Validation",
+          status: "pass",
+          message: "Manifest, records, sources, and export profile metadata validate."
+        },
+        {
+          id: "write-boundary",
+          label: "Write Boundary",
+          status: "pass",
+          message: "This plan does not move files, update SQLite, export content, or expose MCP records."
+        }
+      ],
+      blockers: [],
+      warnings: [],
+      nextSteps: [
+        "Inspect the candidate records, sources, export profiles, validation issues, and scanner findings.",
+        "Move or copy the reviewed folder into demo-packs/local-draft-pack.",
+        "Run contextarr rescan --format json.",
+        "Check Pack Health and Exposure Readiness before export or MCP exposure."
+      ],
+      boundaries: [
+        "Read-only plan only; no files have been moved or copied.",
+        "No SQLite index mutation has run.",
+        "No export, MCP exposure, registry publish, or network action has run.",
+        "No record bodies are returned in this plan."
+      ]
+    });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
@@ -389,6 +437,9 @@ describe("App Skill UI routes", () => {
     await flushPendingUpdates();
     await waitForText("Overview Metadata");
     expect(mocks.apiClient.getReviewCandidate).toHaveBeenCalledWith("candidate-key");
+    expect(mocks.apiClient.getReviewCandidateActivationPlan).toHaveBeenCalledWith("candidate-key");
+    expect(document.body.textContent).toContain("Manual Activation Plan");
+    expect(document.body.textContent).toContain("demo-packs/local-draft-pack");
     expect(document.body.textContent).not.toContain("Approve");
     expect(document.body.textContent).not.toContain("Promote");
     expect(document.body.textContent).not.toContain("Activate");

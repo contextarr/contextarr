@@ -22,6 +22,7 @@ import {
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
 import {
   getReviewCandidate,
+  getReviewCandidateActivationPlan,
   listReviewCandidates,
   type ReviewCandidateSourceKind,
   type ReviewCandidateStatus
@@ -1042,6 +1043,22 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
         filtered: candidates.length
       }
     };
+  });
+
+  app.get<{ Params: { key: string } }>("/api/review-candidates/:key/activation-plan", async (request, reply) => {
+    const plan = getReviewCandidateActivationPlan({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      activePacksRoot: config.packsDir,
+      key: request.params.key
+    });
+
+    if (!plan) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { plan };
   });
 
   app.get<{ Params: { key: string } }>("/api/review-candidates/:key", async (request, reply) => {

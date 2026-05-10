@@ -26,6 +26,7 @@ import type {
   RecordSummary,
   ReviewItemsResponse,
   ReviewCandidatesResponse,
+  ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewItemStatus,
   SaveAgentKitResponse,
@@ -100,6 +101,7 @@ export interface ApiClient {
   }): Promise<ReviewItemsResponse>;
   getReviewCandidates(filters?: { sourceKind?: string; status?: string; q?: string }): Promise<ReviewCandidatesResponse>;
   getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
+  getReviewCandidateActivationPlan(key: string): Promise<ReviewCandidateActivationPlan>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -256,6 +258,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     getReviewCandidate: async (key: string) => {
       const response = await requestJson<{ candidate: ReviewCandidateDetail }>(`/api/review-candidates/${encodeURIComponent(key)}`);
       return response.candidate;
+    },
+    getReviewCandidateActivationPlan: async (key: string) => {
+      const response = await requestJson<{ plan: ReviewCandidateActivationPlan }>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation-plan`
+      );
+      return response.plan;
     },
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(

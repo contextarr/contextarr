@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { getReviewCandidate, listReviewCandidates, type ReviewCandidateRoot } from "./index";
+import { getReviewCandidate, getReviewCandidateActivationPlan, listReviewCandidates, type ReviewCandidateRoot } from "./index";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const validPackFixture = path.join(repoRoot, "packages/pack-validator/test/fixtures/valid-minimal-pack");
@@ -68,6 +68,36 @@ describe("@contextarr/review-candidates", () => {
     ]);
     expect(JSON.stringify(detail)).not.toContain("This is a valid minimal context pack");
     expect(JSON.stringify(detail)).not.toContain(root);
+
+    const plan = getReviewCandidateActivationPlan({
+      roots: [{ rootPath: path.join(root, "drafts"), sourceKind: "draft_pack" }],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: result.candidates[0].key
+    });
+
+    expect(plan).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+      packId: "valid-minimal-pack",
+      status: "ready",
+      canActivate: true,
+      target: {
+        activePacksRootLabel: "active-packs",
+        pathLabel: "active-packs/valid-minimal-pack",
+        activeConflict: false
+      }
+    });
+    expect(plan?.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "validation", status: "warning" }),
+        expect.objectContaining({ id: "candidate-contents", status: "pass" }),
+        expect.objectContaining({ id: "active-conflict", status: "pass" }),
+        expect.objectContaining({ id: "write-boundary", status: "pass" })
+      ])
+    );
+    expect(plan?.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "candidate.validation_warnings" })]));
+    expect(plan?.boundaries.join(" ")).toContain("No record bodies");
+    expect(JSON.stringify(plan)).not.toContain(root);
   });
 
   it("marks invalid, blocked, duplicate, missing-root, and quarantine candidates deterministically", () => {
@@ -103,6 +133,36 @@ describe("@contextarr/review-candidates", () => {
     expect(result.candidates.find((candidate) => candidate.pathLabel.endsWith("blocked-pack"))?.status).toBe("blocked");
     expect(result.candidates.find((candidate) => candidate.sourceKind === "restored_quarantine")?.sourceLabel).toBe("restored");
     expect(JSON.stringify(result)).not.toContain(root);
+
+    const duplicate = result.candidates.find((candidate) => candidate.pathLabel.endsWith("duplicate-pack"));
+    const duplicatePlan = getReviewCandidateActivationPlan({
+      roots,
+      activePackIds: ["valid-minimal-pack"],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: duplicate?.key ?? ""
+    });
+    expect(duplicatePlan).toMatchObject({
+      status: "blocked",
+      canActivate: false,
+      target: { activeConflict: true }
+    });
+    expect(duplicatePlan?.blockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "candidate.duplicate_active_id" })])
+    );
+
+    const blocked = result.candidates.find((candidate) => candidate.pathLabel.endsWith("blocked-pack"));
+    const blockedPlan = getReviewCandidateActivationPlan({
+      roots,
+      activePackIds: ["valid-minimal-pack"],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: blocked?.key ?? ""
+    });
+    expect(blockedPlan).toMatchObject({ status: "blocked", canActivate: false });
+    expect(blockedPlan?.blockers).toEqual(expect.arrayContaining([expect.objectContaining({ code: "candidate.blocked" })]));
+    expect(JSON.stringify(duplicatePlan)).not.toContain(root);
+    expect(JSON.stringify(blockedPlan)).not.toContain(root);
   });
 });
 

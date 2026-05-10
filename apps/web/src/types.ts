@@ -822,6 +822,42 @@ export interface ReviewCandidateDetail extends ReviewCandidateSummary {
   }>;
 }
 
+export interface ReviewCandidateActivationPlan {
+  schemaVersion: "contextarr.review-candidate-activation-plan.v1";
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: "ready" | "blocked";
+  canActivate: boolean;
+  source: {
+    kind: ReviewCandidateSourceKind;
+    label: string;
+    pathLabel: string;
+  };
+  target: {
+    activePacksRootLabel: string;
+    packId: string | null;
+    pathLabel: string | null;
+    activeConflict: boolean;
+  };
+  checks: Array<{
+    id: string;
+    label: string;
+    status: "pass" | "warning" | "error";
+    message: string;
+  }>;
+  blockers: Array<{
+    code: string;
+    message: string;
+  }>;
+  warnings: Array<{
+    code: string;
+    message: string;
+  }>;
+  nextSteps: string[];
+  boundaries: string[];
+}
+
 export interface ReviewCandidatesResponse {
   candidates: ReviewCandidateSummary[];
   skippedRoots: Array<{

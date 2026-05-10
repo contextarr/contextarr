@@ -1088,15 +1088,29 @@ describe("Contextarr API", () => {
 
     const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
     const detail = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}` });
+    const plan = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}/activation-plan` });
     expect(detail.statusCode).toBe(200);
+    expect(plan.statusCode).toBe(200);
     expect(detail.json().candidate.records).toEqual([
       expect.objectContaining({
         id: "valid.overview",
         title: "Valid Overview"
       })
     ]);
+    expect(plan.json().plan).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+      canActivate: true,
+      status: "ready",
+      target: {
+        pathLabel: "demo-packs/valid-minimal-pack",
+        activeConflict: false
+      }
+    });
+    expect(plan.json().plan.boundaries).toEqual(expect.arrayContaining([expect.stringContaining("No record bodies")]));
     expect(detail.body).not.toContain("This is a valid minimal context pack");
     expect(detail.body).not.toContain(draftPacksDir);
+    expect(plan.body).not.toContain("This is a valid minimal context pack");
+    expect(plan.body).not.toContain(draftPacksDir);
 
     await app.close();
     fixtureContext.db.close();
@@ -1111,14 +1125,22 @@ describe("Contextarr API", () => {
     const app = createApp(fixtureContext);
 
     const rejected = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const rejectedPlan = await app.inject({ method: "GET", url: "/api/review-candidates/fake-key/activation-plan" });
     const accepted = await app.inject({
       method: "GET",
       url: "/api/review-candidates",
       headers: { authorization: "Bearer candidate-token" }
     });
+    const acceptedPlan = await app.inject({
+      method: "GET",
+      url: "/api/review-candidates/fake-key/activation-plan",
+      headers: { authorization: "Bearer candidate-token" }
+    });
 
     expect(rejected.statusCode).toBe(401);
+    expect(rejectedPlan.statusCode).toBe(401);
     expect(accepted.statusCode).toBe(200);
+    expect(acceptedPlan.statusCode).toBe(404);
 
     await app.close();
     fixtureContext.db.close();

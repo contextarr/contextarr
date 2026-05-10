@@ -145,6 +145,7 @@ import type {
   RecordDetail,
   RecordSummary,
   ReviewItem,
+  ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewCandidateSummary,
   ReviewCandidateSourceKind,
@@ -3765,6 +3766,7 @@ function ReviewQueuePage({
     query: ""
   });
   const [candidateDetail, setCandidateDetail] = useState<ReviewCandidateDetail | null>(null);
+  const [candidateActivationPlan, setCandidateActivationPlan] = useState<ReviewCandidateActivationPlan | null>(null);
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
@@ -3823,10 +3825,18 @@ function ReviewQueuePage({
   async function inspectCandidate(candidate: ReviewCandidateSummary) {
     setSelectedCandidateKey(candidate.key);
     setCandidateError(null);
+    setCandidateDetail(null);
+    setCandidateActivationPlan(null);
     try {
-      setCandidateDetail(await apiClient.getReviewCandidate(candidate.key));
+      const [detail, plan] = await Promise.all([
+        apiClient.getReviewCandidate(candidate.key),
+        apiClient.getReviewCandidateActivationPlan(candidate.key)
+      ]);
+      setCandidateDetail(detail);
+      setCandidateActivationPlan(plan);
     } catch (loadError) {
       setCandidateDetail(null);
+      setCandidateActivationPlan(null);
       setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load review candidate detail.");
     }
   }
@@ -3904,7 +3914,11 @@ function ReviewQueuePage({
                   />
                 ))}
               </div>
-              <ReviewCandidateDetailPanel candidate={candidateDetail} skippedRoots={candidateResponse?.skippedRoots ?? []} />
+              <ReviewCandidateDetailPanel
+                candidate={candidateDetail}
+                activationPlan={candidateActivationPlan}
+                skippedRoots={candidateResponse?.skippedRoots ?? []}
+              />
             </div>
           )}
         </>
@@ -4568,9 +4582,11 @@ function ReviewCandidateCard({
 
 function ReviewCandidateDetailPanel({
   candidate,
+  activationPlan,
   skippedRoots
 }: {
   candidate: ReviewCandidateDetail | null;
+  activationPlan: ReviewCandidateActivationPlan | null;
   skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
 }) {
   if (!candidate) {
@@ -4605,6 +4621,7 @@ function ReviewCandidateDetailPanel({
         <Fact label="Security" value={formatPackType(candidate.security.status)} />
       </div>
       <p className="muted-note">{candidate.recommendedAction}</p>
+      <ReviewCandidateActivationPlanView plan={activationPlan} />
 
       <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
       <CandidateSecurityList findings={candidate.securityFindings} />
@@ -4630,6 +4647,70 @@ function ReviewCandidateDetailPanel({
         <Stat value={candidate.security.findingCount} label="Findings" />
       </div>
     </aside>
+  );
+}
+
+function ReviewCandidateActivationPlanView({ plan }: { plan: ReviewCandidateActivationPlan | null }) {
+  if (!plan) {
+    return null;
+  }
+
+  return (
+    <section className={`candidate-plan candidate-plan-${plan.status}`} aria-label="Manual activation plan">
+      <h3>Manual Activation Plan</h3>
+      <div className="fact-grid">
+        <Fact label="Plan" value={plan.status === "ready" ? "Ready" : "Blocked"} />
+        <Fact label="Target" value={plan.target.pathLabel ?? plan.target.activePacksRootLabel} />
+        <Fact label="Blockers" value={plan.blockers.length} />
+        <Fact label="Warnings" value={plan.warnings.length} />
+      </div>
+
+      <h3>Checks</h3>
+      <ul className="simple-list candidate-plan-list">
+        {plan.checks.map((check) => (
+          <li key={check.id}>
+            <span>{check.message}</span>
+            <strong>{formatPackType(check.status)}</strong>
+          </li>
+        ))}
+      </ul>
+
+      {plan.blockers.length > 0 ? (
+        <>
+          <h3>Blocking Conditions</h3>
+          <ul className="simple-list candidate-issue-list">
+            {plan.blockers.map((blocker) => (
+              <li key={blocker.code}>
+                <span>{blocker.message}</span>
+                <strong>{blocker.code}</strong>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      {plan.warnings.length > 0 ? (
+        <>
+          <h3>Warnings</h3>
+          <ul className="simple-list candidate-issue-list">
+            {plan.warnings.map((warning) => (
+              <li key={warning.code}>
+                <span>{warning.message}</span>
+                <strong>{warning.code}</strong>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      <h3>Next Steps</h3>
+      <ol className="candidate-next-steps">
+        {plan.nextSteps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      <p className="muted-note">{plan.boundaries.join(" ")}</p>
+    </section>
   );
 }
 

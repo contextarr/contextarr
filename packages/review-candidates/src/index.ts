@@ -26,6 +26,8 @@ import {
 
 export type ReviewCandidateSourceKind = "draft_pack" | "composed_pack" | "imported_pack" | "restored_quarantine" | "unknown";
 export type ReviewCandidateStatus = "ready_for_review" | "invalid" | "blocked" | "duplicate_active_id";
+export type ReviewCandidateActivationPlanStatus = "ready" | "blocked";
+export type ReviewCandidateActivationCheckStatus = "pass" | "warning" | "error";
 
 export interface ReviewCandidateRoot {
   rootPath: string;
@@ -84,6 +86,48 @@ export interface ReviewCandidateDetail extends ReviewCandidateSummary {
   records: ReviewCandidateRecordSummary[];
   sources: ReviewCandidateSourceSummary[];
   exportProfiles: ReviewCandidateExportProfileSummary[];
+}
+
+export interface ReviewCandidateActivationCheck {
+  id: string;
+  label: string;
+  status: ReviewCandidateActivationCheckStatus;
+  message: string;
+}
+
+export interface ReviewCandidateActivationBlocker {
+  code: string;
+  message: string;
+}
+
+export interface ReviewCandidateActivationWarning {
+  code: string;
+  message: string;
+}
+
+export interface ReviewCandidateActivationPlan {
+  schemaVersion: "contextarr.review-candidate-activation-plan.v1";
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: ReviewCandidateActivationPlanStatus;
+  canActivate: boolean;
+  source: {
+    kind: ReviewCandidateSourceKind;
+    label: string;
+    pathLabel: string;
+  };
+  target: {
+    activePacksRootLabel: string;
+    packId: string | null;
+    pathLabel: string | null;
+    activeConflict: boolean;
+  };
+  checks: ReviewCandidateActivationCheck[];
+  blockers: ReviewCandidateActivationBlocker[];
+  warnings: ReviewCandidateActivationWarning[];
+  nextSteps: string[];
+  boundaries: string[];
 }
 
 export interface ReviewCandidateListResult {
@@ -236,6 +280,52 @@ export function getReviewCandidate(options: ReviewCandidateOptions & { key: stri
   }
 
   return undefined;
+}
+
+export function getReviewCandidateActivationPlan(
+  options: ReviewCandidateOptions & { key: string; activePacksRoot?: string }
+): ReviewCandidateActivationPlan | undefined {
+  const candidate = getReviewCandidate(options);
+  if (!candidate) {
+    return undefined;
+  }
+
+  const displayRoot = path.resolve(options.displayRoot ?? process.cwd());
+  const activePacksRootLabel = displayPath(path.resolve(options.activePacksRoot ?? "demo-packs"), displayRoot);
+  const targetPathLabel = candidate.packId ? normalizePath(`${activePacksRootLabel}/${candidate.packId}`) : null;
+  const blockers = activationBlockers(candidate);
+  const warnings = activationWarnings(candidate);
+  const canActivate = candidate.status === "ready_for_review" && blockers.length === 0;
+
+  return {
+    schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+    candidateKey: candidate.key,
+    packId: candidate.packId,
+    name: candidate.name,
+    status: canActivate ? "ready" : "blocked",
+    canActivate,
+    source: {
+      kind: candidate.sourceKind,
+      label: candidate.sourceLabel,
+      pathLabel: candidate.pathLabel
+    },
+    target: {
+      activePacksRootLabel,
+      packId: candidate.packId,
+      pathLabel: targetPathLabel,
+      activeConflict: candidate.activeConflict
+    },
+    checks: activationChecks(candidate),
+    blockers,
+    warnings,
+    nextSteps: activationNextSteps(candidate, canActivate, targetPathLabel),
+    boundaries: [
+      "Read-only plan only; no files have been moved or copied.",
+      "No SQLite index mutation has run.",
+      "No export, MCP exposure, registry publish, or network action has run.",
+      "No record bodies are returned in this plan."
+    ]
+  };
 }
 
 function discoverCandidatePaths(rootPath: string): string[] {
@@ -411,6 +501,159 @@ function recommendedActionForStatus(status: ReviewCandidateStatus, scannerAction
     return "Review manually before activation, export, or MCP exposure.";
   }
   return "Ready for human review; remains inactive until a future reviewed workflow exists.";
+}
+
+function activationBlockers(candidate: ReviewCandidateDetail): ReviewCandidateActivationBlocker[] {
+  const blockers: ReviewCandidateActivationBlocker[] = [];
+
+  if (!candidate.packId) {
+    blockers.push({
+      code: "candidate.missing_pack_id",
+      message: "Candidate does not expose a valid Context Pack ID."
+    });
+  }
+
+  if (candidate.status === "invalid") {
+    blockers.push({
+      code: "candidate.invalid",
+      message: "Validation errors must be fixed before the candidate can join the active pack root."
+    });
+  }
+
+  if (candidate.status === "blocked") {
+    blockers.push({
+      code: "candidate.blocked",
+      message: "Blocking security findings must be remediated before the candidate can join the active pack root."
+    });
+  }
+
+  if (candidate.status === "duplicate_active_id" || candidate.activeConflict) {
+    blockers.push({
+      code: "candidate.duplicate_active_id",
+      message: "An active Context Pack already uses this pack ID."
+    });
+  }
+
+  if (candidate.counts.records === 0) {
+    blockers.push({
+      code: "candidate.no_records",
+      message: "Candidate has no readable record metadata."
+    });
+  }
+
+  if (candidate.counts.sources === 0) {
+    blockers.push({
+      code: "candidate.no_sources",
+      message: "Candidate has no readable source map entries."
+    });
+  }
+
+  if (candidate.counts.exportProfiles === 0) {
+    blockers.push({
+      code: "candidate.no_export_profiles",
+      message: "Candidate has no readable export profiles."
+    });
+  }
+
+  return blockers;
+}
+
+function activationWarnings(candidate: ReviewCandidateDetail): ReviewCandidateActivationWarning[] {
+  const warnings: ReviewCandidateActivationWarning[] = [];
+
+  if (candidate.validation.warnings > 0) {
+    warnings.push({
+      code: "candidate.validation_warnings",
+      message: `${candidate.validation.warnings} validation warning(s) should be reviewed before relying on this candidate.`
+    });
+  }
+
+  if (!candidate.security.blocking && candidate.security.findingCount > 0) {
+    warnings.push({
+      code: "candidate.security_findings",
+      message: `${candidate.security.findingCount} non-blocking scanner finding(s) should be reviewed.`
+    });
+  }
+
+  if (!candidate.security.blocking && candidate.security.recommendedAction === "quarantine") {
+    warnings.push({
+      code: "candidate.security_review_recommended",
+      message: "The scanner recommends manual review before this candidate is used."
+    });
+  }
+
+  if (candidate.sourceKind === "restored_quarantine") {
+    warnings.push({
+      code: "candidate.restored_quarantine",
+      message: "Candidate came from restored quarantine and needs extra provenance review."
+    });
+  }
+
+  return warnings;
+}
+
+function activationChecks(candidate: ReviewCandidateDetail): ReviewCandidateActivationCheck[] {
+  return [
+    {
+      id: "validation",
+      label: "Validation",
+      status: candidate.status === "invalid" || candidate.validation.errors > 0 ? "error" : candidate.validation.warnings > 0 ? "warning" : "pass",
+      message:
+        candidate.validation.errors > 0
+          ? `${candidate.validation.errors} validation error(s) reported.`
+          : candidate.validation.warnings > 0
+            ? `${candidate.validation.warnings} validation warning(s) reported.`
+            : "Manifest, records, sources, and export profile metadata validate."
+    },
+    {
+      id: "security",
+      label: "Security Scan",
+      status: candidate.security.blocking ? "error" : candidate.security.findingCount > 0 || candidate.security.recommendedAction === "quarantine" ? "warning" : "pass",
+      message: candidate.security.blocking
+        ? "Scanner reported blocking findings."
+        : candidate.security.findingCount > 0
+          ? `${candidate.security.findingCount} scanner finding(s) require review.`
+          : candidate.security.recommendedAction === "quarantine"
+            ? "Scanner recommends manual review before use."
+          : "Scanner did not report findings."
+    },
+    {
+      id: "active-conflict",
+      label: "Active ID Conflict",
+      status: candidate.activeConflict ? "error" : "pass",
+      message: candidate.activeConflict ? "Pack ID already exists in the active index." : "Pack ID is not currently indexed as active."
+    },
+    {
+      id: "candidate-contents",
+      label: "Candidate Contents",
+      status:
+        candidate.counts.records === 0 || candidate.counts.sources === 0 || candidate.counts.exportProfiles === 0 ? "error" : "pass",
+      message: `${candidate.counts.records} record(s), ${candidate.counts.sources} source(s), and ${candidate.counts.exportProfiles} export profile(s) found.`
+    },
+    {
+      id: "write-boundary",
+      label: "Write Boundary",
+      status: "pass",
+      message: "This plan does not move files, update SQLite, export content, or expose MCP records."
+    }
+  ];
+}
+
+function activationNextSteps(candidate: ReviewCandidateDetail, canActivate: boolean, targetPathLabel: string | null): string[] {
+  if (!canActivate) {
+    return [
+      "Resolve every blocker listed in this plan.",
+      "Refresh Draft Intake after the candidate files are corrected.",
+      "Move the reviewed folder into the active packs root only after this plan reports ready."
+    ];
+  }
+
+  return [
+    "Inspect the candidate records, sources, export profiles, validation issues, and scanner findings.",
+    `Move or copy the reviewed folder into ${targetPathLabel ?? "the active packs root"}.`,
+    "Run contextarr rescan --format json.",
+    "Check Pack Health and Exposure Readiness before export or MCP exposure."
+  ];
 }
 
 function isBlockingSecurityReport(report: SecurityScannerReportV1 | undefined): boolean {
