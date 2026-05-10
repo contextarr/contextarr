@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -189,6 +190,113 @@ describe("@contextarr/backups", () => {
     expect(fs.existsSync(path.join(restoreDir, "tamper-backup"))).toBe(false);
   });
 
+  it("refuses to restore when the backup manifest checksum is malformed or stale", () => {
+    const malformed = createContextPackBackup({
+      packsDir: path.join(demoPacksDir, "ai-workstation-pack"),
+      outputDir: tempDir(),
+      backupId: "malformed-manifest-checksum",
+      createdAt: "2026-05-08T00:00:00.000Z",
+      currentDate: "2026-05-08T00:00:00.000Z"
+    });
+    fs.writeFileSync(path.join(malformed.backupPath, "contextarr-backup.sha256"), "abc123 wrong-file.json\n", "utf8");
+
+    expect(() =>
+      restoreContextPackBackup({
+        backupPath: malformed.backupPath,
+        outputDir: tempDir(),
+        restoredAt: "2026-05-08T00:01:00.000Z",
+        currentDate: "2026-05-08T00:01:00.000Z"
+      })
+    ).toThrow(/checksum file is malformed/);
+
+    const stale = createContextPackBackup({
+      packsDir: path.join(demoPacksDir, "ai-workstation-pack"),
+      outputDir: tempDir(),
+      backupId: "stale-manifest-checksum",
+      createdAt: "2026-05-08T00:00:00.000Z",
+      currentDate: "2026-05-08T00:00:00.000Z"
+    });
+    const manifest = JSON.parse(fs.readFileSync(stale.manifestPath, "utf8")) as ContextPackBackupManifest;
+    manifest.summary.packCount = 999;
+    fs.writeFileSync(stale.manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+    expect(() =>
+      restoreContextPackBackup({
+        backupPath: stale.backupPath,
+        outputDir: tempDir(),
+        restoredAt: "2026-05-08T00:01:00.000Z",
+        currentDate: "2026-05-08T00:01:00.000Z"
+      })
+    ).toThrow(/Backup manifest checksum does not match/);
+  });
+
+  it("refuses to restore when a backed-up pack folder is missing", () => {
+    const restoreDir = tempDir();
+    const backup = createContextPackBackup({
+      packsDir: path.join(demoPacksDir, "ai-workstation-pack"),
+      outputDir: tempDir(),
+      backupId: "missing-pack-folder",
+      createdAt: "2026-05-08T00:00:00.000Z",
+      currentDate: "2026-05-08T00:00:00.000Z"
+    });
+
+    fs.rmSync(path.join(backup.backupPath, "packs", "ai-workstation-pack"), { recursive: true, force: true });
+
+    expect(() =>
+      restoreContextPackBackup({
+        backupPath: backup.backupPath,
+        outputDir: restoreDir,
+        restoredAt: "2026-05-08T00:01:00.000Z",
+        currentDate: "2026-05-08T00:01:00.000Z"
+      })
+    ).toThrow(/Backup file is missing/);
+    expect(fs.existsSync(path.join(restoreDir, "missing-pack-folder"))).toBe(false);
+  });
+
+  it("keeps checksum-valid but validation-invalid restores quarantined", () => {
+    const backup = createContextPackBackup({
+      packsDir: path.join(demoPacksDir, "ai-workstation-pack"),
+      outputDir: tempDir(),
+      backupId: "validation-invalid-restore",
+      createdAt: "2026-05-08T00:00:00.000Z",
+      currentDate: "2026-05-08T00:00:00.000Z"
+    });
+    const packedManifestPath = path.join(backup.backupPath, "packs", "ai-workstation-pack", "contextarr-pack.json");
+    const packedManifest = JSON.parse(fs.readFileSync(packedManifestPath, "utf8")) as Record<string, unknown>;
+    packedManifest.version = "";
+    fs.writeFileSync(packedManifestPath, `${JSON.stringify(packedManifest, null, 2)}\n`, "utf8");
+    refreshBackupFileChecksums(backup.backupPath, "ai-workstation-pack", "contextarr-pack.json");
+
+    const restore = restoreContextPackBackup({
+      backupPath: backup.backupPath,
+      outputDir: tempDir(),
+      restoredAt: "2026-05-08T00:01:00.000Z",
+      currentDate: "2026-05-08T00:01:00.000Z"
+    });
+
+    expect(restore).toMatchObject({
+      backupId: "validation-invalid-restore",
+      status: "restored_with_validation_errors",
+      packCount: 1,
+      scannerBlocked: 0
+    });
+    expect(restore.packs[0]).toMatchObject({
+      packId: "ai-workstation-pack",
+      checksumStatus: "verified",
+      quarantineStatus: "invalid",
+      validation: {
+        valid: false
+      }
+    });
+
+    const report = JSON.parse(fs.readFileSync(restore.reportPath, "utf8")) as RestoreReport;
+    expect(report.activation).toMatchObject({
+      automaticActivation: false,
+      requiresManualReview: true
+    });
+    expect(report.packs[0]?.quarantineStatus).toBe("invalid");
+  });
+
   it("does not overwrite existing backup or restore output", () => {
     const outDir = tempDir();
     const backup = createContextPackBackup({
@@ -226,3 +334,36 @@ describe("@contextarr/backups", () => {
     ).toThrow(/already exists/);
   });
 });
+
+function refreshBackupFileChecksums(backupPath: string, packId: string, relativeFilePath: string): void {
+  const manifestPath = path.join(backupPath, "contextarr-backup.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as ContextPackBackupManifest;
+  const pack = manifest.packs.find((entry) => entry.packId === packId);
+  if (!pack) {
+    throw new Error(`Missing backup manifest pack entry: ${packId}`);
+  }
+  const file = pack.files.find((entry) => entry.path === relativeFilePath);
+  if (!file) {
+    throw new Error(`Missing backup manifest file entry: ${relativeFilePath}`);
+  }
+
+  const filePath = path.join(backupPath, pack.backupPath, relativeFilePath);
+  const sha256 = sha256File(filePath);
+  file.sha256 = sha256;
+  file.sizeBytes = fs.statSync(filePath).size;
+  if (relativeFilePath === pack.manifestPath) {
+    pack.manifestSha256 = sha256;
+  }
+
+  const manifestJson = `${JSON.stringify(manifest, null, 2)}\n`;
+  fs.writeFileSync(manifestPath, manifestJson, "utf8");
+  fs.writeFileSync(path.join(backupPath, "contextarr-backup.sha256"), `${sha256Text(manifestJson)}  contextarr-backup.json\n`, "utf8");
+}
+
+function sha256File(filePath: string): string {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function sha256Text(value: string): string {
+  return crypto.createHash("sha256").update(value, "utf8").digest("hex");
+}
