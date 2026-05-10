@@ -12,6 +12,7 @@ pnpm v1-core:verify
 pnpm v1-core:idempotent
 pnpm advanced-preview:verify
 pnpm limitations:verify
+pnpm screenshots:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify
@@ -47,7 +48,7 @@ The `v0.1.0-alpha.1` release notes should include:
 - Install path.
 - Demo flow.
 - Verification commands.
-- Screenshot set.
+- Reviewed screenshot set.
 - Security boundaries.
 - No support guarantee yet.
 - No public registry or marketplace.
@@ -55,7 +56,7 @@ The `v0.1.0-alpha.1` release notes should include:
 
 ## Screenshot Requirements
 
-Do not commit generated screenshots unless they are intentionally reviewed and approved. The alpha screenshot set should cover:
+Do not commit generated screenshots unless they are intentionally reviewed and approved. The reviewed alpha screenshot set is under `docs/screenshots/v0.1.0-alpha.1/` and must pass `pnpm screenshots:verify`. The alpha screenshot set covers:
 
 - Pack Library grid.
 - Dense table.
@@ -64,7 +65,7 @@ Do not commit generated screenshots unless they are intentionally reviewed and a
 - Pack Health.
 - Export preview.
 - MCP or CLI output.
-- Backup/security settings if promoted.
+- Backup or security boundary view.
 
 ## Public Safety
 

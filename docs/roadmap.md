@@ -56,7 +56,7 @@ The core readiness lane is:
 
 - Repair stale release gates for the 16-pack demo set and 12 starter Context Packs.
 - Finish `v0.1.0-alpha.1` release docs and known limitations.
-- Add reviewed screenshots and a short demo video.
+- Keep reviewed screenshots current and add a short demo video.
 - Improve public-site and README framing around Core Now vs Advanced Preview.
 - Keep public feedback focused on pack format, validation rules, export profiles, and the local dashboard loop.
 - Complete v1 core release-hardening gates before any frozen expansion resumes.

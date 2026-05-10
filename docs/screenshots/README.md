@@ -1,8 +1,14 @@
-# Screenshot Placeholders
+# Alpha Screenshot Evidence
 
-This folder is reserved for reviewed launch screenshots.
+This folder contains reviewed screenshot evidence for the `v0.1.0-alpha.1` developer preview.
 
-Do not commit generated screenshots unless they are explicitly reviewed and approved. Local screenshot output should remain outside the repository or in ignored local output folders.
+Do not commit generated screenshots unless they are explicitly reviewed and approved. Local scratch captures should remain outside the repository or in ignored local output folders.
+
+The reviewed alpha set lives in `docs/screenshots/v0.1.0-alpha.1/` and is verified by:
+
+```bash
+pnpm screenshots:verify
+```
 
 Required alpha screenshot slots:
 
@@ -13,4 +19,4 @@ Required alpha screenshot slots:
 - Pack Health.
 - Export preview.
 - MCP or CLI output.
-- Backup/security settings if promoted.
+- Backup or security boundary view.

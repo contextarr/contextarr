@@ -28,7 +28,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - No tagged release yet.
 - No npm package publishing.
 - No support guarantee yet.
-- Screenshots remain placeholders until reviewed.
+- Reviewed alpha screenshots are committed under `docs/screenshots/v0.1.0-alpha.1/` and verified by `pnpm screenshots:verify`.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - No public registry, marketplace, remote install, signing implementation, hosted cloud sync, telemetry, executable packs, executable Skills, or Agent Kit runtime.
 

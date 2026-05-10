@@ -33,7 +33,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Confirm MCP docs still use `pnpm contextarr-mcp` and stdio-only boundaries.
 - Confirm the Astro site builds and does not claim production readiness.
 - Confirm Skills and Agent Kits remain advanced-preview, data-only, and frozen behind the v1 bridge gate.
-- Confirm known limitations and screenshot placeholders are current.
+- Confirm known limitations and reviewed screenshot evidence are current.
 
 ## Release Notes Must Include
 
@@ -41,7 +41,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Install path.
 - Demo flow.
 - Verification commands.
-- Screenshot requirements.
+- Reviewed screenshot requirements.
 - Security boundaries.
 - No support guarantee yet.
 - No public registry or marketplace.

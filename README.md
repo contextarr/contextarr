@@ -41,7 +41,7 @@ Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, 
 - CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, quarantine restore, rescan, list, inspect, health, review, brief, and query.
 - Read-only stdio MCP surfaces where implemented by the local MCP package.
 - Docker Compose local preview serving the built dashboard and API from one local origin.
-- Public-safe starter pack docs, release hardening docs, and screenshot placeholders.
+- Public-safe starter pack docs, release hardening docs, and reviewed alpha screenshot evidence.
 
 ## Advanced Preview
 
@@ -168,7 +168,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 
 - No tagged GitHub release has been created.
 - The root package is still `private: true`; no npm package is published.
-- Screenshots are placeholders until reviewed launch screenshots are approved.
+- Reviewed `v0.1.0-alpha.1` screenshots are committed under `docs/screenshots/v0.1.0-alpha.1/` and verified by `pnpm screenshots:verify`.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Backup/restore v0 is local and quarantine-only.
 - Context Pack collectors and Composer save flows create private unreviewed drafts only.

@@ -7,7 +7,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - No tagged GitHub release has been created.
 - No npm package is published; the root package remains `private: true`.
 - No public support guarantee exists yet.
-- Public screenshots are placeholders until reviewed launch screenshots are approved.
+- Reviewed `v0.1.0-alpha.1` screenshots exist for the local dashboard and CLI health proof, but no demo video has been approved.
 - Docker Compose is a local preview path, not a hardened production deployment.
 
 ## Product Limits
@@ -36,7 +36,7 @@ This page tracks public-launch limitations for the current developer preview. It
 
 ## Screenshot Requirements
 
-The alpha release needs reviewed screenshots before wider promotion:
+The alpha release screenshot set is reviewed under `docs/screenshots/v0.1.0-alpha.1/` and must continue to pass `pnpm screenshots:verify`. Any replacement screenshot needs the same review check before commit.
 
 - Pack Library grid.
 - Dense table.
@@ -45,4 +45,4 @@ The alpha release needs reviewed screenshots before wider promotion:
 - Pack Health.
 - Export preview.
 - MCP or CLI output.
-- Backup/security settings if that surface is promoted.
+- Backup or security boundary view.

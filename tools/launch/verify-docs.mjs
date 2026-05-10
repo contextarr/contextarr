@@ -251,6 +251,7 @@ if (!failed) {
     "docker:verify",
     "phase11:verify",
     "site:verify",
+    "screenshots:verify",
     "release:verify"
   ];
   for (const script of requiredScripts) {
@@ -267,10 +268,14 @@ const trackedScreenshots = execFileSync("git", ["ls-files", "--", "docs/screensh
   .trim()
   .split(/\r?\n/)
   .filter(Boolean)
-  .filter((file) => file !== "docs/screenshots/README.md");
+  .filter(
+    (file) =>
+      file !== "docs/screenshots/README.md" &&
+      !file.startsWith("docs/screenshots/v0.1.0-alpha.1/")
+  );
 
 if (trackedScreenshots.length > 0) {
-  fail(`Only docs/screenshots/README.md may be tracked unless explicitly reviewed:\n${trackedScreenshots.join("\n")}`);
+  fail(`Only reviewed alpha screenshots may be tracked under docs/screenshots:\n${trackedScreenshots.join("\n")}`);
 }
 
 if (failed) {

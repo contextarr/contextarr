@@ -59,6 +59,7 @@
     "v1-core:idempotent": "node tools/launch/verify-v1-core-idempotent.mjs",
     "advanced-preview:verify": "pnpm skills:validate && pnpm agent-kits:validate && pnpm --filter @contextarr/skill-validator test && pnpm --filter @contextarr/agent-kit-validator test && node tools/launch/verify-advanced-preview.mjs",
     "limitations:verify": "node tools/launch/verify-alpha-limitations.mjs",
+    "screenshots:verify": "node tools/launch/verify-screenshots.mjs",
     "compatibility:check": "vitest run packages/pack-validator/src/compatibility.test.ts",
     "compatibility:verify": "pnpm v1-core:verify && pnpm compatibility:check",
     "security:check": "pnpm scanner:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts && node tools/launch/verify-security.mjs",
@@ -72,7 +73,7 @@
     "ui:verify": "pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "site:verify": "pnpm --filter @contextarr/site check && pnpm --filter @contextarr/site build",
     "backup:verify": "node tools/launch/verify-backups.mjs prepare && pnpm --filter @contextarr/backups test && pnpm --filter @contextarr/cli contextarr backup demo-packs --out .contextarr-cache/backup-smoke/backups --backup-id backup-smoke --format json && pnpm --filter @contextarr/cli contextarr restore .contextarr-cache/backup-smoke/backups/backup-smoke --out .contextarr-cache/backup-smoke/restored --format json && node tools/launch/verify-backups.mjs validate-restored && node tools/launch/verify-backups.mjs check",
-    "release:verify": "pnpm v1-core:verify && pnpm v1-core:idempotent && pnpm advanced-preview:verify && pnpm limitations:verify && pnpm compatibility:check && pnpm security:check && pnpm workflow-scope:check && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm site:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
+    "release:verify": "pnpm v1-core:verify && pnpm v1-core:idempotent && pnpm advanced-preview:verify && pnpm limitations:verify && pnpm screenshots:verify && pnpm compatibility:check && pnpm security:check && pnpm workflow-scope:check && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm site:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

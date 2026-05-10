@@ -9,7 +9,7 @@ For launch-facing limitations, see [known-limitations.md](known-limitations.md).
 - Backup/restore v0 is CLI/core only. It creates local backup directories and restores to quarantine; it does not include a web UI, cloud sync, signing, compression, or automatic activation.
 - Context Pack collectors v0 create local draft packs only. They do not activate packs, approve review status, or move drafts into the active pack directory.
 - Composer save-as-draft-pack for Context Packs is implemented as a local draft workflow only. It does not activate, approve, or publish composed packs.
-- Screenshots are placeholders only.
+- Reviewed alpha screenshots exist, but no demo video has been approved.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Skills and Agent Kits exist as advanced-preview data-only work but are frozen behind the v1 bridge gate.
 
