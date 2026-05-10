@@ -177,11 +177,71 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("reports local index health in summary and object formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const summaryOutput = createIo();
+      const packOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["health", "--json"], summaryOutput.io)).toBe(0);
+      const summary = JSON.parse(summaryOutput.stdout);
+
+      expect(summary).toMatchObject({
+        schemaVersion: "contextarr.cli.health.v1",
+        kind: "summary",
+        counts: {
+          packs: 5,
+          skills: 8,
+          agentKits: 8
+        },
+        reviewItems: {
+          total: expect.any(Number),
+          open: expect.any(Number)
+        }
+      });
+      expect(summaryOutput.stdout).not.toContain(repoRoot);
+
+      expect(await runCli(["health", "ai-workstation-pack", "--kind", "pack"], packOutput.io)).toBe(0);
+      expect(packOutput.stdout).toContain("Context Pack health: ai-workstation-pack");
+      expect(packOutput.stdout).toContain("Score:");
+      expect(packOutput.stdout).toContain("Review queue:");
+      expect(packOutput.stderr).toBe("");
+    });
+  });
+
+  it("lists local review items with deterministic filters", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const reviewOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["review", "--status", "all", "--object-type", "agent-kit", "--limit", "2", "--json"], reviewOutput.io)).toBe(0);
+      const json = JSON.parse(reviewOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.review.v1",
+        filters: {
+          objectType: "agent_kit"
+        },
+        limit: 2,
+        total: expect.any(Number),
+        returned: expect.any(Number)
+      });
+      expect(json.returned).toBeLessThanOrEqual(2);
+      expect(Array.isArray(json.items)).toBe(true);
+      expect(reviewOutput.stdout).not.toContain(repoRoot);
+      expect(reviewOutput.stderr).toBe("");
+    });
+  });
+
   it("returns expected codes for read-only index command usage and misses", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();
       const listOutput = createIo();
       const inspectOutput = createIo();
+      const healthOutput = createIo();
+      const reviewOutput = createIo();
 
       expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
       expect(await runCli(["list", "widgets"], listOutput.io)).toBe(2);
@@ -189,6 +249,12 @@ describe("contextarr CLI", () => {
 
       expect(await runCli(["inspect", "missing-object", "--json"], inspectOutput.io)).toBe(1);
       expect(inspectOutput.stderr).toContain("Indexed Contextarr object not found");
+
+      expect(await runCli(["health", "missing-object", "--json"], healthOutput.io)).toBe(1);
+      expect(healthOutput.stderr).toContain("Indexed Contextarr health target not found");
+
+      expect(await runCli(["review", "--status", "bogus"], reviewOutput.io)).toBe(2);
+      expect(reviewOutput.stderr).toContain("Unsupported review filter value");
     });
   });
 

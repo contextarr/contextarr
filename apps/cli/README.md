@@ -12,5 +12,10 @@ Implemented:
 - `contextarr render <path> --out <path>`
 - `contextarr export <path> --profile <profile-id> --out <path>`
 - `contextarr export <path> --all --out <path>`
+- `contextarr rescan`
+- `contextarr list [all|packs|skills|agent-kits]`
+- `contextarr inspect <id> --kind auto|pack|record|skill|agent-kit`
+- `contextarr health [id] --kind auto|summary|pack|skill|agent-kit`
+- `contextarr review --status open|ignored|accepted|reviewed|resolved|all`
 
 Validation is read-only for Context Packs, Skills, and Agent Kits. Render and export commands write generated artifacts to the requested output folder and never mutate source files.
