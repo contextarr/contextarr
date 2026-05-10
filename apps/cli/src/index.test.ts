@@ -235,6 +235,75 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("builds local briefs without requiring MCP or the API server", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const summaryOutput = createIo();
+      const packOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["brief", "--limit", "2", "--json"], summaryOutput.io)).toBe(0);
+      const summary = JSON.parse(summaryOutput.stdout);
+
+      expect(summary).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "summary",
+        limit: 2,
+        stats: {
+          packs: 5,
+          records: 25,
+          skills: 8,
+          agentKits: 8
+        }
+      });
+      expect(summary.packs).toHaveLength(2);
+      expect(summary.skills).toHaveLength(2);
+      expect(summary.agentKits).toHaveLength(2);
+      expect(summaryOutput.stdout).not.toContain(repoRoot);
+
+      expect(await runCli(["brief", "ai-workstation-pack", "--kind", "pack", "--limit", "3", "--json"], packOutput.io)).toBe(0);
+      const packBrief = JSON.parse(packOutput.stdout);
+
+      expect(packBrief).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "pack",
+        id: "ai-workstation-pack",
+        limit: 3,
+        summary: {
+          id: "ai-workstation-pack",
+          name: "AI Workstation Pack"
+        }
+      });
+      expect(packBrief.sections.find((section: { id: string }) => section.id === "records").items).toHaveLength(3);
+      expect(packOutput.stdout).not.toContain(repoRoot);
+      expect(packOutput.stderr).toBe("");
+    });
+  });
+
+  it("queries the local index with deterministic type and limit filters", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const queryOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["query", "workstation", "--type", "record", "--limit", "3", "--json"], queryOutput.io)).toBe(0);
+      const json = JSON.parse(queryOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.query.v1",
+        query: "workstation",
+        type: "record",
+        limit: 3,
+        total: expect.any(Number),
+        returned: expect.any(Number)
+      });
+      expect(json.returned).toBeLessThanOrEqual(3);
+      expect(Array.isArray(json.results)).toBe(true);
+      expect(queryOutput.stdout).not.toContain(repoRoot);
+      expect(queryOutput.stderr).toBe("");
+    });
+  });
+
   it("returns expected codes for read-only index command usage and misses", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();
@@ -242,6 +311,8 @@ describe("contextarr CLI", () => {
       const inspectOutput = createIo();
       const healthOutput = createIo();
       const reviewOutput = createIo();
+      const briefOutput = createIo();
+      const queryOutput = createIo();
 
       expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
       expect(await runCli(["list", "widgets"], listOutput.io)).toBe(2);
@@ -255,6 +326,12 @@ describe("contextarr CLI", () => {
 
       expect(await runCli(["review", "--status", "bogus"], reviewOutput.io)).toBe(2);
       expect(reviewOutput.stderr).toContain("Unsupported review filter value");
+
+      expect(await runCli(["brief", "missing-object", "--json"], briefOutput.io)).toBe(1);
+      expect(briefOutput.stderr).toContain("Indexed Contextarr brief target not found");
+
+      expect(await runCli(["query", "workstation", "--type", "widgets"], queryOutput.io)).toBe(2);
+      expect(queryOutput.stderr).toContain("Unsupported query type");
     });
   });
 
