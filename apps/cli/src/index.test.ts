@@ -63,6 +63,43 @@ function createIo() {
   };
 }
 
+async function withCliIndex(callback: () => Promise<void>): Promise<void> {
+  const previousEnv = {
+    INIT_CWD: process.env.INIT_CWD,
+    CONTEXTARR_DATABASE_PATH: process.env.CONTEXTARR_DATABASE_PATH,
+    CONTEXTARR_PACKS_DIR: process.env.CONTEXTARR_PACKS_DIR,
+    CONTEXTARR_SKILLS_DIR: process.env.CONTEXTARR_SKILLS_DIR,
+    CONTEXTARR_IMPORTED_SKILLS_DIR: process.env.CONTEXTARR_IMPORTED_SKILLS_DIR,
+    CONTEXTARR_AGENT_KITS_DIR: process.env.CONTEXTARR_AGENT_KITS_DIR,
+    CONTEXTARR_DEMO_AGENT_KITS_DIR: process.env.CONTEXTARR_DEMO_AGENT_KITS_DIR
+  };
+  const root = tempDir();
+
+  process.env.INIT_CWD = repoRoot;
+  process.env.CONTEXTARR_DATABASE_PATH = path.join(root, "contextarr.db");
+  process.env.CONTEXTARR_PACKS_DIR = "./demo-packs";
+  process.env.CONTEXTARR_SKILLS_DIR = "./demo-skills";
+  process.env.CONTEXTARR_IMPORTED_SKILLS_DIR = path.join(root, "imported-skills");
+  process.env.CONTEXTARR_AGENT_KITS_DIR = path.join(root, "agent-kits");
+  process.env.CONTEXTARR_DEMO_AGENT_KITS_DIR = "./demo-agent-kits";
+
+  try {
+    await callback();
+  } finally {
+    restoreEnv(previousEnv);
+  }
+}
+
+function restoreEnv(values: Record<string, string | undefined>): void {
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+}
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -70,6 +107,91 @@ afterEach(() => {
 });
 
 describe("contextarr CLI", () => {
+  it("rescans the configured local index with deterministic JSON output", async () => {
+    await withCliIndex(async () => {
+      const output = createIo();
+      const code = await runCli(["rescan", "--json"], output.io);
+      const json = JSON.parse(output.stdout);
+
+      expect(code).toBe(0);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.rescan.v1",
+        packsIndexed: 5,
+        recordsIndexed: 25,
+        skillsIndexed: 8,
+        agentKitsIndexed: 8
+      });
+      expect(output.stderr).toBe("");
+      expect(output.stdout).not.toContain(repoRoot);
+    });
+  });
+
+  it("lists indexed packs without requiring MCP or the API server", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const listOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["list", "packs", "--json"], listOutput.io)).toBe(0);
+      const json = JSON.parse(listOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.list.v1",
+        kind: "packs",
+        stats: {
+          packs: 5,
+          records: 25,
+          skills: 8,
+          agentKits: 8
+        }
+      });
+      expect(json.packs).toHaveLength(5);
+      expect(json.packs.map((pack: { id: string }) => pack.id)).toContain("ai-workstation-pack");
+      expect(json.skills).toEqual([]);
+      expect(json.agentKits).toEqual([]);
+    });
+  });
+
+  it("inspects indexed objects in JSON and text formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const skillOutput = createIo();
+      const recordOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["inspect", "support-ticket-writing-skill", "--kind", "skill", "--json"], skillOutput.io)).toBe(0);
+      expect(JSON.parse(skillOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "skill",
+        id: "support-ticket-writing-skill",
+        object: {
+          id: "support-ticket-writing-skill",
+          name: "Support Ticket Writing Skill"
+        }
+      });
+
+      expect(await runCli(["inspect", "ai-workstation.local-ai-stack", "--kind", "record"], recordOutput.io)).toBe(0);
+      expect(recordOutput.stdout).toContain("Record: Local AI Stack");
+      expect(recordOutput.stdout).toContain("Review status: approved");
+      expect(recordOutput.stderr).toBe("");
+    });
+  });
+
+  it("returns expected codes for read-only index command usage and misses", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const listOutput = createIo();
+      const inspectOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["list", "widgets"], listOutput.io)).toBe(2);
+      expect(listOutput.stderr).toContain("Unsupported list kind");
+
+      expect(await runCli(["inspect", "missing-object", "--json"], inspectOutput.io)).toBe(1);
+      expect(inspectOutput.stderr).toContain("Indexed Contextarr object not found");
+    });
+  });
+
   it("returns 0 for a valid pack", async () => {
     const output = createIo();
     const code = await runCli(["validate", fixture("valid-minimal-pack")], output.io);

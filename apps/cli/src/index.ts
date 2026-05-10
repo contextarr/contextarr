@@ -44,6 +44,27 @@ import {
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
 import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
+  getAgentKit,
+  getAgentKitIndexDirs,
+  getAgentKits,
+  getIndexStats,
+  getPack,
+  getPacks,
+  getRecord,
+  getSkill,
+  getSkillIndexDirs,
+  getSkills,
+  loadConfig,
+  openDatabase,
+  rebuildIndex,
+  type AgentKitSummary,
+  type ContextarrDatabase,
+  type PackSummary,
+  type RebuildIndexResult,
+  type ServerConfig,
+  type SkillSummary
+} from "@contextarr/server";
+import {
   formatSkillValidationResult,
   SkillReadError,
   validateSkill,
@@ -73,6 +94,111 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .configureOutput({
       writeOut: (value) => io.stdout.write(value),
       writeErr: (value) => io.stderr.write(value)
+    });
+
+  program
+    .command("rescan")
+    .description("rebuild the derived local Contextarr index from configured folders")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((options: { format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db, config) =>
+          rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config))
+        );
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatRescanJson(result), null, 2)}\n` : formatRescanText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("list")
+    .description("list indexed Contextarr objects from the local derived index")
+    .argument("[kind]", "object kind: all, packs, skills, or agent-kits", "all")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((kindValue: string, options: { format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const kind = parseListKind(kindValue);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!kind) {
+        io.stderr.write(`Unsupported list kind: ${kindValue}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db) => ({
+          kind,
+          stats: getIndexStats(db),
+          packs: kind === "all" || kind === "packs" ? getPacks(db) : [],
+          skills: kind === "all" || kind === "skills" ? getSkills(db) : [],
+          agentKits: kind === "all" || kind === "agent-kits" ? getAgentKits(db) : []
+        }));
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatListJson(result), null, 2)}\n` : formatListText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("inspect")
+    .description("inspect one indexed Contextarr object from the local derived index")
+    .argument("<id>", "pack, record, Skill, or Agent Kit id")
+    .option("--kind <kind>", "object kind: auto, pack, record, skill, or agent-kit", "auto")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((id: string, options: { kind: string; format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const kind = parseInspectKind(options.kind);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!kind) {
+        io.stderr.write(`Unsupported inspect kind: ${options.kind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db) => findIndexedObject(db, id, kind));
+        if (!result) {
+          io.stderr.write(`Indexed Contextarr object not found: ${id}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatInspectJson(result), null, 2)}\n` : formatInspectText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
     });
 
   program
@@ -548,6 +674,229 @@ function isBlockingScanReport(report: SecurityScannerReportV1): boolean {
 
 function resolveUserPath(value: string): string {
   return path.resolve(process.env.INIT_CWD ?? process.cwd(), value);
+}
+
+type ListKind = "all" | "packs" | "skills" | "agent-kits";
+type InspectKind = "auto" | "pack" | "record" | "skill" | "agent-kit";
+type IndexStats = ReturnType<typeof getIndexStats>;
+type ListResult = {
+  kind: ListKind;
+  stats: IndexStats;
+  packs: PackSummary[];
+  skills: SkillSummary[];
+  agentKits: AgentKitSummary[];
+};
+type IndexedObjectKind = Exclude<InspectKind, "auto">;
+type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown };
+
+function parseListKind(value: string): ListKind | undefined {
+  switch (value) {
+    case "all":
+      return "all";
+    case "pack":
+    case "packs":
+      return "packs";
+    case "skill":
+    case "skills":
+      return "skills";
+    case "agent-kit":
+    case "agent-kits":
+      return "agent-kits";
+    default:
+      return undefined;
+  }
+}
+
+function parseInspectKind(value: string): InspectKind | undefined {
+  return ["auto", "pack", "record", "skill", "agent-kit"].includes(value) ? (value as InspectKind) : undefined;
+}
+
+function loadCliConfig(): ServerConfig {
+  return loadConfig({
+    ...process.env,
+    CONTEXTARR_HOST: "127.0.0.1"
+  });
+}
+
+function withConfiguredIndex<T>(callback: (db: ContextarrDatabase, config: ServerConfig) => T): T {
+  const config = loadCliConfig();
+  const db = openDatabase(config.databasePath);
+  try {
+    return callback(db, config);
+  } finally {
+    db.close();
+  }
+}
+
+function findIndexedObject(db: ContextarrDatabase, id: string, kind: InspectKind): IndexedObject | undefined {
+  const candidates: IndexedObjectKind[] =
+    kind === "auto" ? ["pack", "skill", "agent-kit", "record"] : [kind];
+
+  for (const candidate of candidates) {
+    const object =
+      candidate === "pack"
+        ? getPack(db, id)
+        : candidate === "skill"
+          ? getSkill(db, id)
+          : candidate === "agent-kit"
+            ? getAgentKit(db, id)
+            : getRecord(db, id);
+    if (object) {
+      return { kind: candidate, id, object };
+    }
+  }
+
+  return undefined;
+}
+
+function formatRescanJson(result: RebuildIndexResult): RebuildIndexResult & { schemaVersion: string } {
+  return {
+    schemaVersion: "contextarr.cli.rescan.v1",
+    ...result,
+    skipped: result.skipped.map((skipped) => ({
+      ...skipped,
+      packPath: displayPath(skipped.packPath)
+    })),
+    skippedSkills: result.skippedSkills.map((skipped) => ({
+      ...skipped,
+      skillPath: displayPath(skipped.skillPath)
+    })),
+    skippedAgentKits: result.skippedAgentKits.map((skipped) => ({
+      ...skipped,
+      agentKitPath: displayPath(skipped.agentKitPath)
+    }))
+  };
+}
+
+function formatRescanText(result: RebuildIndexResult): string {
+  const lines = [
+    `Rebuilt Contextarr index at ${result.indexedAt}`,
+    `Packs: ${result.packsIndexed} indexed, ${result.packsSkipped} skipped, ${result.recordsIndexed} records`,
+    `Skills: ${result.skillsIndexed} indexed, ${result.skillsSkipped} skipped, ${result.skillInstructionsIndexed} instructions, ${result.skillExamplesIndexed} examples`,
+    `Agent Kits: ${result.agentKitsIndexed} indexed, ${result.agentKitsSkipped} skipped`,
+    `Review items: ${result.reviewItemsGenerated}`
+  ];
+
+  const skipped = [
+    ...result.skipped.map((item) => `pack ${item.packId ?? displayPath(item.packPath)}`),
+    ...result.skippedSkills.map((item) => `skill ${item.skillId ?? displayPath(item.skillPath)}`),
+    ...result.skippedAgentKits.map((item) => `agent-kit ${item.agentKitId ?? displayPath(item.agentKitPath)}`)
+  ];
+  if (skipped.length > 0) {
+    lines.push(`Skipped: ${skipped.join(", ")}`);
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatListJson(result: ListResult): ListResult & { schemaVersion: string } {
+  return {
+    schemaVersion: "contextarr.cli.list.v1",
+    ...result
+  };
+}
+
+function formatListText(result: ListResult): string {
+  const lines = [
+    `Contextarr index: ${result.stats.packs} pack(s), ${result.stats.skills} skill(s), ${result.stats.agentKits} agent kit(s)`,
+    `Records: ${result.stats.records}; review items: ${result.stats.reviewItems} (${result.stats.openReviewItems} open)`,
+    `Last indexed: ${result.stats.lastIndexedAt ?? "never"}`
+  ];
+
+  if (result.packs.length > 0) {
+    lines.push("", "Packs:");
+    lines.push(...result.packs.map((pack) => formatPackListLine(pack)));
+  }
+
+  if (result.skills.length > 0) {
+    lines.push("", "Skills:");
+    lines.push(...result.skills.map((skill) => formatSkillListLine(skill)));
+  }
+
+  if (result.agentKits.length > 0) {
+    lines.push("", "Agent Kits:");
+    lines.push(...result.agentKits.map((agentKit) => formatAgentKitListLine(agentKit)));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatPackListLine(pack: PackSummary): string {
+  return `- ${pack.id}: ${pack.name} [${pack.healthStatus}; records=${pack.recordCount}; review=${pack.reviewQueueCount}]`;
+}
+
+function formatSkillListLine(skill: SkillSummary): string {
+  return `- ${skill.id}: ${skill.name} [${skill.healthStatus}; instructions=${skill.instructionCount}; review=${skill.reviewQueueCount}]`;
+}
+
+function formatAgentKitListLine(agentKit: AgentKitSummary): string {
+  return `- ${agentKit.id}: ${agentKit.name} [${agentKit.healthStatus}; packs=${agentKit.contextPackCount}; skills=${agentKit.skillCount}; review=${agentKit.reviewQueueCount}]`;
+}
+
+function formatInspectJson(result: IndexedObject): { schemaVersion: string; kind: IndexedObjectKind; id: string; object: unknown } {
+  return {
+    schemaVersion: "contextarr.cli.inspect.v1",
+    ...result
+  };
+}
+
+function formatInspectText(result: IndexedObject): string {
+  const object = isRecordObject(result.object) ? result.object : {};
+  const title = stringValue(object.name) ?? stringValue(object.title) ?? result.id;
+  const lines = [`${inspectKindLabel(result.kind)}: ${title}`, `ID: ${result.id}`];
+
+  appendTextField(lines, "Health", object.healthStatus);
+  appendTextField(lines, "Visibility", object.visibility);
+  appendTextField(lines, "Trust", object.trustLevel);
+  appendTextField(lines, "Review status", object.reviewStatus);
+  appendTextField(lines, "Privacy", object.privacy);
+  appendTextField(lines, "Updated", object.updatedAt);
+
+  if (isRecordObject(object.counts)) {
+    const countParts = Object.entries(object.counts)
+      .filter(([, value]) => typeof value === "number")
+      .map(([key, value]) => `${key}=${value}`);
+    if (countParts.length > 0) {
+      lines.push(`Counts: ${countParts.join(", ")}`);
+    }
+  }
+
+  if (typeof object.reviewQueueCount === "number") {
+    lines.push(`Review queue: ${object.reviewQueueCount}`);
+  }
+
+  if (result.kind === "record" && typeof object.body === "string") {
+    lines.push("", object.body.trim());
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function inspectKindLabel(kind: IndexedObjectKind): string {
+  switch (kind) {
+    case "pack":
+      return "Context Pack";
+    case "skill":
+      return "Skill";
+    case "agent-kit":
+      return "Agent Kit";
+    case "record":
+      return "Record";
+  }
+}
+
+function appendTextField(lines: string[], label: string, value: unknown): void {
+  if (typeof value === "string" && value.trim()) {
+    lines.push(`${label}: ${value}`);
+  }
+}
+
+function isRecordObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 type ValidationTarget = { kind: "pack" | "skill" | "agent-kit"; path: string };

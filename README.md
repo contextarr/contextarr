@@ -32,6 +32,7 @@ Current scope:
 - Zod schemas for pack manifests, records, sources, export profiles, and rules.
 - Deterministic read-only pack validator.
 - `contextarr validate <path>` CLI command.
+- `contextarr rescan`, `contextarr list`, and `contextarr inspect` CLI commands for deterministic local index refresh and read-only inspection without requiring MCP or the API server.
 - Test fixture packs for validator coverage.
 - Five public-safe demo packs under `demo-packs/`.
 - Rebuildable SQLite index for local pack folders.
