@@ -9,6 +9,7 @@ pnpm install
 pnpm docs:verify
 pnpm demo:validate
 pnpm v1-core:verify
+pnpm v1-core:idempotent
 pnpm advanced-preview:verify
 pnpm compatibility:verify
 pnpm security:verify

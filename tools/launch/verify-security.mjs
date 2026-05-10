@@ -69,19 +69,25 @@ if (!failed) {
     }
   }
 
-  const securityScript = packageJson.scripts?.["security:verify"];
-  if (!securityScript) {
+  const securityVerifyScript = packageJson.scripts?.["security:verify"];
+  const securityCheckScript = packageJson.scripts?.["security:check"];
+  if (!securityVerifyScript) {
     fail("Root package scripts must include security:verify.");
+  } else if (!securityVerifyScript.includes("pnpm v1-core:verify") || !securityVerifyScript.includes("pnpm security:check")) {
+    fail("security:verify must run v1-core:verify and delegate leaf security checks to security:check.");
+  }
+
+  if (!securityCheckScript) {
+    fail("Root package scripts must include security:check.");
   } else {
     for (const required of [
-      "pnpm v1-core:verify",
       "packages/pack-validator/src/security-fixtures.test.ts",
       "apps/server/src/api.test.ts",
       "apps/mcp/src/tools.test.ts",
       "tools/launch/verify-security.mjs"
     ]) {
-      if (!securityScript.includes(required)) {
-        fail(`security:verify is missing required check: ${required}`);
+      if (!securityCheckScript.includes(required)) {
+        fail(`security:check is missing required check: ${required}`);
       }
     }
   }

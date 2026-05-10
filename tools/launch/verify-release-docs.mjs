@@ -79,7 +79,11 @@ if (!failed) {
     "ui:verify",
     "site:verify",
     "backup:verify",
+    "v1-core:idempotent",
     "advanced-preview:verify",
+    "compatibility:check",
+    "security:check",
+    "workflow-scope:check",
     "release:verify"
   ];
   for (const script of requiredScripts) {
@@ -91,10 +95,11 @@ if (!failed) {
   const releaseScript = packageJson.scripts?.["release:verify"] ?? "";
   for (const required of [
     "pnpm v1-core:verify",
+    "pnpm v1-core:idempotent",
     "pnpm advanced-preview:verify",
-    "pnpm compatibility:verify",
-    "pnpm security:verify",
-    "pnpm workflow-scope:verify",
+    "pnpm compatibility:check",
+    "pnpm security:check",
+    "pnpm workflow-scope:check",
     "pnpm docker:verify",
     "pnpm demo:verify",
     "pnpm ui:verify",
