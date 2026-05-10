@@ -45,23 +45,32 @@ import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } fr
 import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
   getAgentKit,
+  getAgentKitHealth,
   getAgentKitIndexDirs,
   getAgentKits,
   getIndexStats,
   getPack,
+  getPackHealth,
   getPacks,
   getRecord,
+  getReviewItems,
   getSkill,
+  getSkillHealth,
   getSkillIndexDirs,
   getSkills,
   loadConfig,
   openDatabase,
   rebuildIndex,
+  type AgentKitHealthDetail,
   type AgentKitSummary,
   type ContextarrDatabase,
+  type PackHealthDetail,
   type PackSummary,
   type RebuildIndexResult,
+  type ReviewItem,
+  type ReviewItemFilters,
   type ServerConfig,
+  type SkillHealthDetail,
   type SkillSummary
 } from "@contextarr/server";
 import {
@@ -200,6 +209,122 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         exitCode = 2;
       }
     });
+
+  program
+    .command("health")
+    .description("summarize local Contextarr index health or inspect one object's health")
+    .argument("[id]", "pack, Skill, or Agent Kit id")
+    .option("--kind <kind>", "health target kind: auto, summary, pack, skill, or agent-kit", "auto")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((id: string | undefined, options: { kind: string; format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const kind = parseHealthKind(options.kind);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!kind) {
+        io.stderr.write(`Unsupported health kind: ${options.kind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (id && kind === "summary") {
+        io.stderr.write("Health summary does not accept an object id.\n");
+        exitCode = 2;
+        return;
+      }
+
+      if (!id && kind !== "summary" && kind !== "auto") {
+        io.stderr.write(`Health kind requires an object id: ${kind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db) => (id ? findHealthDetail(db, id, kind) : buildHealthSummary(db)));
+        if (!result) {
+          io.stderr.write(`Indexed Contextarr health target not found: ${id}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatHealthJson(result), null, 2)}\n` : formatHealthText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("review")
+    .description("list local Contextarr review items from the derived index")
+    .option("--status <status>", "review item status: open, ignored, accepted, reviewed, resolved, or all", "open")
+    .option("--severity <severity>", "review item severity: error, warning, info, or all")
+    .option("--type <type>", "review item type or all")
+    .option("--object-type <type>", "object type: pack, skill, agent-kit, agent_kit, or all")
+    .option("--object-id <id>", "object id filter")
+    .option("--pack-id <id>", "pack id filter")
+    .option("--skill-id <id>", "Skill id filter")
+    .option("--agent-kit-id <id>", "Agent Kit id filter")
+    .option("--limit <count>", "maximum items to return", "50")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action(
+      (options: {
+        status: string;
+        severity?: string;
+        type?: string;
+        objectType?: string;
+        objectId?: string;
+        packId?: string;
+        skillId?: string;
+        agentKitId?: string;
+        limit: string;
+        format: string;
+        json?: boolean;
+      }) => {
+        const format = options.json ? "json" : parseFormat(options.format);
+        const filters = parseReviewFilters(options);
+        const limit = parsePositiveInteger(options.limit);
+
+        if (!format) {
+          io.stderr.write(`Unsupported output format: ${options.format}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        if (!filters) {
+          io.stderr.write("Unsupported review filter value.\n");
+          exitCode = 2;
+          return;
+        }
+
+        if (!limit) {
+          io.stderr.write(`Review limit must be a positive integer: ${options.limit}\n`);
+          exitCode = 2;
+          return;
+        }
+
+        try {
+          const result = withConfiguredIndex((db) => {
+            const items = getReviewItems(db, filters);
+            return { filters, limit, total: items.length, items: items.slice(0, limit) };
+          });
+
+          io.stdout.write(format === "json" ? `${JSON.stringify(formatReviewJson(result), null, 2)}\n` : formatReviewText(result));
+          exitCode = 0;
+        } catch (error) {
+          io.stderr.write(`${errorMessage(error)}\n`);
+          exitCode = 2;
+        }
+      }
+    );
 
   program
     .command("backup")
@@ -678,6 +803,7 @@ function resolveUserPath(value: string): string {
 
 type ListKind = "all" | "packs" | "skills" | "agent-kits";
 type InspectKind = "auto" | "pack" | "record" | "skill" | "agent-kit";
+type HealthKind = "auto" | "summary" | "pack" | "skill" | "agent-kit";
 type IndexStats = ReturnType<typeof getIndexStats>;
 type ListResult = {
   kind: ListKind;
@@ -688,6 +814,63 @@ type ListResult = {
 };
 type IndexedObjectKind = Exclude<InspectKind, "auto">;
 type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown };
+type HealthObjectKind = Exclude<HealthKind, "auto" | "summary">;
+type HealthDetail = PackHealthDetail | SkillHealthDetail | AgentKitHealthDetail;
+type HealthObjectResult = { kind: HealthObjectKind; id: string; health: HealthDetail };
+type HealthSummaryResult = {
+  kind: "summary";
+  status: "healthy" | "review_required";
+  stats: IndexStats;
+  counts: {
+    packs: number;
+    skills: number;
+    agentKits: number;
+  };
+  reviewItems: {
+    total: number;
+    open: number;
+  };
+  unhealthy: {
+    packs: Array<Pick<PackSummary, "id" | "name" | "healthStatus" | "reviewQueueCount">>;
+    skills: Array<Pick<SkillSummary, "id" | "name" | "healthStatus" | "reviewQueueCount">>;
+    agentKits: Array<Pick<AgentKitSummary, "id" | "name" | "healthStatus" | "reviewQueueCount">>;
+  };
+};
+type HealthResult = HealthSummaryResult | HealthObjectResult;
+type ReviewQueryResult = {
+  filters: ReviewItemFilters;
+  limit: number;
+  total: number;
+  items: ReviewItem[];
+};
+type ReviewCommandOptions = {
+  status: string;
+  severity?: string;
+  type?: string;
+  objectType?: string;
+  objectId?: string;
+  packId?: string;
+  skillId?: string;
+  agentKitId?: string;
+};
+
+const reviewStatuses: ReviewItem["status"][] = ["open", "ignored", "accepted", "reviewed", "resolved"];
+const reviewSeverities: ReviewItem["severity"][] = ["error", "warning", "info"];
+const reviewTypes: ReviewItem["type"][] = [
+  "validation",
+  "freshness",
+  "export_safety",
+  "export_readiness",
+  "example_coverage",
+  "safety_rules",
+  "target_compatibility",
+  "disallowed_pattern",
+  "ai_draft",
+  "review_status",
+  "trust",
+  "source_coverage"
+];
+const reviewObjectTypes: ReviewItem["objectType"][] = ["pack", "skill", "agent_kit"];
 
 function parseListKind(value: string): ListKind | undefined {
   switch (value) {
@@ -709,6 +892,79 @@ function parseListKind(value: string): ListKind | undefined {
 
 function parseInspectKind(value: string): InspectKind | undefined {
   return ["auto", "pack", "record", "skill", "agent-kit"].includes(value) ? (value as InspectKind) : undefined;
+}
+
+function parseHealthKind(value: string): HealthKind | undefined {
+  return ["auto", "summary", "pack", "skill", "agent-kit"].includes(value) ? (value as HealthKind) : undefined;
+}
+
+function parseReviewFilters(options: ReviewCommandOptions): ReviewItemFilters | undefined {
+  const status = parseReviewStatus(options.status);
+  const severity = parseOptionalReviewSeverity(options.severity);
+  const type = parseOptionalReviewType(options.type);
+  const objectType = parseOptionalReviewObjectType(options.objectType);
+
+  if (!status || !severity || !type || !objectType) {
+    return undefined;
+  }
+
+  const filters: ReviewItemFilters = {};
+  if (status !== "all") {
+    filters.status = status;
+  }
+  if (severity !== "all") {
+    filters.severity = severity;
+  }
+  if (type !== "all") {
+    filters.type = type;
+  }
+  if (objectType !== "all") {
+    filters.objectType = objectType;
+  }
+  if (options.objectId) {
+    filters.objectId = options.objectId;
+  }
+  if (options.packId) {
+    filters.packId = options.packId;
+  }
+  if (options.skillId) {
+    filters.skillId = options.skillId;
+  }
+  if (options.agentKitId) {
+    filters.agentKitId = options.agentKitId;
+  }
+
+  return filters;
+}
+
+function parseReviewStatus(value: string): ReviewItem["status"] | "all" | undefined {
+  if (value === "all") {
+    return "all";
+  }
+  return reviewStatuses.includes(value as ReviewItem["status"]) ? (value as ReviewItem["status"]) : undefined;
+}
+
+function parseOptionalReviewSeverity(value?: string): ReviewItem["severity"] | "all" | undefined {
+  if (!value || value === "all") {
+    return "all";
+  }
+  return reviewSeverities.includes(value as ReviewItem["severity"]) ? (value as ReviewItem["severity"]) : undefined;
+}
+
+function parseOptionalReviewType(value?: string): ReviewItem["type"] | "all" | undefined {
+  if (!value || value === "all") {
+    return "all";
+  }
+  return reviewTypes.includes(value as ReviewItem["type"]) ? (value as ReviewItem["type"]) : undefined;
+}
+
+function parseOptionalReviewObjectType(value?: string): ReviewItem["objectType"] | "all" | undefined {
+  if (!value || value === "all") {
+    return "all";
+  }
+
+  const normalized = value === "agent-kit" ? "agent_kit" : value;
+  return reviewObjectTypes.includes(normalized as ReviewItem["objectType"]) ? (normalized as ReviewItem["objectType"]) : undefined;
 }
 
 function loadCliConfig(): ServerConfig {
@@ -747,6 +1003,73 @@ function findIndexedObject(db: ContextarrDatabase, id: string, kind: InspectKind
   }
 
   return undefined;
+}
+
+function findHealthDetail(db: ContextarrDatabase, id: string, kind: HealthKind): HealthObjectResult | undefined {
+  if (kind === "summary") {
+    return undefined;
+  }
+
+  const candidates: HealthObjectKind[] = kind === "auto" ? ["pack", "skill", "agent-kit"] : [kind];
+
+  for (const candidate of candidates) {
+    const health =
+      candidate === "pack"
+        ? getPackHealth(db, id)
+        : candidate === "skill"
+          ? getSkillHealth(db, id)
+          : getAgentKitHealth(db, id);
+
+    if (health) {
+      return { kind: candidate, id, health };
+    }
+  }
+
+  return undefined;
+}
+
+function buildHealthSummary(db: ContextarrDatabase): HealthSummaryResult {
+  const stats = getIndexStats(db);
+  const packs = getPacks(db);
+  const skills = getSkills(db);
+  const agentKits = getAgentKits(db);
+  const unhealthy = {
+    packs: packs.filter(hasHealthAttention).map(formatHealthSummaryObject),
+    skills: skills.filter(hasHealthAttention).map(formatHealthSummaryObject),
+    agentKits: agentKits.filter(hasHealthAttention).map(formatHealthSummaryObject)
+  };
+  const unhealthyCount = unhealthy.packs.length + unhealthy.skills.length + unhealthy.agentKits.length;
+
+  return {
+    kind: "summary",
+    status: unhealthyCount === 0 && stats.openReviewItems === 0 ? "healthy" : "review_required",
+    stats,
+    counts: {
+      packs: packs.length,
+      skills: skills.length,
+      agentKits: agentKits.length
+    },
+    reviewItems: {
+      total: stats.reviewItems,
+      open: stats.openReviewItems
+    },
+    unhealthy
+  };
+}
+
+function hasHealthAttention(object: { healthStatus: string; reviewQueueCount: number }): boolean {
+  return object.healthStatus !== "healthy" || object.reviewQueueCount > 0;
+}
+
+function formatHealthSummaryObject<T extends { id: string; name: string; healthStatus: string; reviewQueueCount: number }>(
+  object: T
+): Pick<T, "id" | "name" | "healthStatus" | "reviewQueueCount"> {
+  return {
+    id: object.id,
+    name: object.name,
+    healthStatus: object.healthStatus,
+    reviewQueueCount: object.reviewQueueCount
+  };
 }
 
 function formatRescanJson(result: RebuildIndexResult): RebuildIndexResult & { schemaVersion: string } {
@@ -872,6 +1195,148 @@ function formatInspectText(result: IndexedObject): string {
   return `${lines.join("\n")}\n`;
 }
 
+function formatHealthJson(result: HealthResult): unknown {
+  if (result.kind === "summary") {
+    return {
+      schemaVersion: "contextarr.cli.health.v1",
+      ...result
+    };
+  }
+
+  return {
+    schemaVersion: "contextarr.cli.health.v1",
+    kind: result.kind,
+    id: result.id,
+    health: formatHealthDetailForCli(result.health)
+  };
+}
+
+function formatHealthDetailForCli(health: HealthDetail): Record<string, unknown> {
+  return {
+    ...health,
+    items: health.items.map(formatReviewItemForCli)
+  };
+}
+
+function formatHealthText(result: HealthResult): string {
+  if (result.kind === "summary") {
+    const unhealthyCount = result.unhealthy.packs.length + result.unhealthy.skills.length + result.unhealthy.agentKits.length;
+    const lines = [
+      `Contextarr health: ${result.status === "healthy" ? "healthy" : "review required"}`,
+      `Objects: ${result.counts.packs} pack(s), ${result.counts.skills} skill(s), ${result.counts.agentKits} agent kit(s)`,
+      `Review items: ${result.reviewItems.total} total, ${result.reviewItems.open} open`,
+      `Objects needing attention: ${unhealthyCount}`,
+      `Last indexed: ${result.stats.lastIndexedAt ?? "never"}`
+    ];
+
+    appendHealthSummarySection(lines, "Packs", result.unhealthy.packs);
+    appendHealthSummarySection(lines, "Skills", result.unhealthy.skills);
+    appendHealthSummarySection(lines, "Agent Kits", result.unhealthy.agentKits);
+
+    return `${lines.join("\n")}\n`;
+  }
+
+  const lines = [
+    `${healthKindLabel(result.kind)} health: ${result.id}`,
+    `Score: ${result.health.score}`,
+    `Status: ${result.health.status}`,
+    `Review queue: ${result.health.reviewQueueCount}`
+  ];
+
+  if (result.health.checks.length > 0) {
+    lines.push("", "Checks:");
+    lines.push(...result.health.checks.map((check) => `- ${check.id}: ${check.status} (${check.count})`));
+  }
+
+  if (result.health.items.length > 0) {
+    lines.push("", "Review items:");
+    lines.push(...result.health.items.map((item) => formatReviewItemLine(item)));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function appendHealthSummarySection(
+  lines: string[],
+  label: string,
+  objects: Array<{ id: string; name: string; healthStatus: string; reviewQueueCount: number }>
+): void {
+  if (objects.length === 0) {
+    return;
+  }
+
+  lines.push("", `${label} needing attention:`);
+  lines.push(...objects.map((object) => `- ${object.id}: ${object.name} [${object.healthStatus}; review=${object.reviewQueueCount}]`));
+}
+
+function formatReviewJson(result: ReviewQueryResult): unknown {
+  return {
+    schemaVersion: "contextarr.cli.review.v1",
+    filters: result.filters,
+    limit: result.limit,
+    total: result.total,
+    returned: result.items.length,
+    items: result.items.map(formatReviewItemForCli)
+  };
+}
+
+function formatReviewText(result: ReviewQueryResult): string {
+  const lines = [
+    `Review items: ${result.items.length} returned (${result.total} matching)`,
+    `Filters: ${formatReviewFiltersText(result.filters)}`,
+    `Limit: ${result.limit}`
+  ];
+
+  if (result.items.length === 0) {
+    lines.push("No review items match the filters.");
+  } else {
+    lines.push("", "Items:");
+    lines.push(...result.items.map((item) => formatReviewItemLine(item)));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatReviewFiltersText(filters: ReviewItemFilters): string {
+  const entries = [
+    ["status", filters.status],
+    ["severity", filters.severity],
+    ["type", filters.type],
+    ["objectType", filters.objectType ? reviewObjectTypeLabel(filters.objectType) : undefined],
+    ["objectId", filters.objectId],
+    ["packId", filters.packId],
+    ["skillId", filters.skillId],
+    ["agentKitId", filters.agentKitId]
+  ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0);
+
+  return entries.length > 0 ? entries.map(([key, value]) => `${key}=${value}`).join(", ") : "all";
+}
+
+function formatReviewItemForCli(item: ReviewItem): Omit<ReviewItem, "fingerprint" | "metadata"> {
+  return {
+    id: item.id,
+    objectType: item.objectType,
+    objectId: item.objectId,
+    type: item.type,
+    severity: item.severity,
+    packId: item.packId,
+    skillId: item.skillId,
+    agentKitId: item.agentKitId,
+    recordId: item.recordId,
+    sourceId: item.sourceId,
+    message: item.message,
+    suggestedAction: item.suggestedAction,
+    status: item.status,
+    firstSeenAt: item.firstSeenAt,
+    lastSeenAt: item.lastSeenAt,
+    updatedAt: item.updatedAt
+  };
+}
+
+function formatReviewItemLine(item: ReviewItem): string {
+  return `- [${item.severity}/${item.status}] ${reviewObjectTypeLabel(item.objectType)}/${item.objectId} ${item.type}: ${item.message}`;
+}
+
 function inspectKindLabel(kind: IndexedObjectKind): string {
   switch (kind) {
     case "pack":
@@ -883,6 +1348,21 @@ function inspectKindLabel(kind: IndexedObjectKind): string {
     case "record":
       return "Record";
   }
+}
+
+function healthKindLabel(kind: HealthObjectKind): string {
+  switch (kind) {
+    case "pack":
+      return "Context Pack";
+    case "skill":
+      return "Skill";
+    case "agent-kit":
+      return "Agent Kit";
+  }
+}
+
+function reviewObjectTypeLabel(value: ReviewItem["objectType"]): string {
+  return value === "agent_kit" ? "agent-kit" : value;
 }
 
 function appendTextField(lines: string[], label: string, value: unknown): void {
