@@ -11,6 +11,7 @@ pnpm v1-core:verify
 pnpm v1-core:idempotent
 pnpm advanced-preview:verify
 pnpm limitations:verify
+pnpm screenshots:verify
 pnpm exports:verify
 pnpm compatibility:verify
 pnpm security:verify
@@ -29,6 +30,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Confirm demo packs validate with 0 errors and 0 warnings.
 - Confirm the 12 starter Context Packs are clearly local examples, not marketplace listings.
 - Confirm starter Context Pack exports pass deterministic, redaction-aware checks with `pnpm exports:verify`.
+- Confirm CLI/API path-safety and draft/quarantine boundary tests are included in the latest test run.
 - Confirm no ignored local outputs are staged.
 - Confirm Docker preview opens at `http://127.0.0.1:3210`.
 - Confirm Library, Pack Detail, Exports, Composer, Health, and Review Queue work with demo packs.
@@ -44,6 +46,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Demo flow.
 - Verification commands.
 - Reviewed screenshot requirements.
+- Starter export determinism and review/quarantine proof.
 - Security boundaries.
 - No support guarantee yet.
 - No public registry or marketplace.

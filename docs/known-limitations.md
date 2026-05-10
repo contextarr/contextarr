@@ -19,6 +19,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - Composer save-as-draft-pack writes private unreviewed draft Context Packs only.
 - Local Skill importers are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.
+- CLI/API path-redaction checks reduce accidental local path leakage in known outputs, but they are not a substitute for a full external security audit.
 
 ## Explicit Non-Launches
 
@@ -50,3 +51,5 @@ The alpha release screenshot set is reviewed under `docs/screenshots/v0.1.0-alph
 ## Export Proof Limits
 
 Starter Context Pack export proof is limited to the 12 curated starter packs and the canonical alpha export targets. It must continue to pass `pnpm exports:verify` before release; broader Skill and Agent Kit exports remain advanced-preview gates.
+
+Draft/quarantine proof is local and automated: tests cover imported, restored, composed, and collector-created draft outputs staying outside active API/export/search surfaces. Manual promotion or review workflows are still not part of this alpha release.

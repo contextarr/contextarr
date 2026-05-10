@@ -16,6 +16,14 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 - Local backup/restore v0 with checksum manifests and quarantine-only restore.
 - Release hardening docs and verification scripts.
 
+### Alpha Evidence
+
+- Reviewed screenshots live under `docs/screenshots/v0.1.0-alpha.1/` and are checked by `pnpm screenshots:verify`.
+- Starter exports are checked for deterministic output, redaction-aware inclusion, stable warning metadata, and no local absolute path leakage by `pnpm exports:verify`.
+- CLI and API error paths have tests for sanitized local paths and controlled JSON error bodies.
+- Draft, imported, composed, and restored/quarantine-shaped Context Pack outputs are tested to remain outside active API/export/search surfaces after rescan.
+- `pnpm release:verify` is the local alpha candidate gate. It does not tag, publish, push, deploy, or create a GitHub release.
+
 ### Advanced Preview
 
 - Non-executable Skills as data-only instruction artifacts.

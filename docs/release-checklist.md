@@ -39,6 +39,7 @@ git status --short --branch
 - If `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`, confirm the preserved local Skill import lane still previews/imports only private draft Skills under `imported-skills/`.
 - Confirm all demo packs validate with zero errors.
 - Confirm starter Context Pack exports are deterministic, redaction-aware, and path-free with `pnpm exports:verify`.
+- Confirm draft/import/restore/compose/collector outputs remain review-bound and absent from active API/export/search surfaces.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 - Confirm the Astro public site builds through `pnpm site:verify`.
 
