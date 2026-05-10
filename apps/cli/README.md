@@ -17,5 +17,7 @@ Implemented:
 - `contextarr inspect <id> --kind auto|pack|record|skill|agent-kit`
 - `contextarr health [id] --kind auto|summary|pack|skill|agent-kit`
 - `contextarr review --status open|ignored|accepted|reviewed|resolved|all`
+- `contextarr brief [id] --kind auto|summary|pack|skill|agent-kit`
+- `contextarr query <query> --type all|pack|record|skill|agent-kit`
 
 Validation is read-only for Context Packs, Skills, and Agent Kits. Render and export commands write generated artifacts to the requested output folder and never mutate source files.

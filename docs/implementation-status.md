@@ -21,7 +21,7 @@ Before claiming a command, API route, export target, safety gate, or product sur
 | Capability | Status | Evidence path | Notes |
 |---|---|---|---|
 | Context Packs | Current | `packages/schema/src/index.ts`; `packages/pack-validator/src/index.ts`; `demo-packs/` | Core object. Files are source of truth; SQLite is derived. |
-| Local CLI | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Current commands include validation, render, export, import, Skill import, Agent Kit validation/export, scan, backup/restore, and read-only index health/review helpers. |
+| Local CLI | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Current commands include validation, render, export, import, Skill import, Agent Kit validation/export, scan, backup/restore, and read-only index health/review/brief/query helpers. |
 | Local Fastify API | Current | `apps/server/src/api.ts`; `apps/server/src/main.ts` | Serves derived local state, review status, preview, collector, Composer, Skill, and Agent Kit surfaces. Non-loopback binds must be token-protected. |
 | React/Vite dashboard | Current | `apps/web/src/App.tsx`; `apps/web/src/api.ts` | Local power-user dashboard for pack library, records, health, review, exports, Composer, collectors, Skills, and Agent Kits. |
 | Docker Compose preview | Current | `Dockerfile`; `docker-compose.yml`; `tools/launch/verify-docker.mjs` | Local preview only. Serves the built web app and API from one Fastify origin with demo objects mounted locally. |
@@ -50,7 +50,8 @@ Before claiming a command, API route, export target, safety gate, or product sur
 | `contextarr inspect` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. |
 | `contextarr health` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Summarizes local index health or reports one pack, Skill, or Agent Kit health without requiring the API server or MCP. |
 | `contextarr review` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Lists local review items with deterministic filters, limits, text, and JSON output. |
-| `contextarr brief`, `contextarr query` | Planned | none | Remaining read-only CLI parity batch after health/review. |
+| `contextarr brief` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Builds a compact local index or object brief for packs, Skills, and Agent Kits without requiring the API server or MCP. |
+| `contextarr query` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
 | CLI commands that execute pack, Skill, or Agent Kit content | Rejected | `README.md`; `docs/security-model.md` | Contextarr prepares data; it does not run agents or execute content. |
 
 ## Safety And Exposure Gates

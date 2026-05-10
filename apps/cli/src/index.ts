@@ -45,22 +45,28 @@ import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } fr
 import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
   getAgentKit,
+  getAgentKitContextPacks,
   getAgentKitHealth,
   getAgentKitIndexDirs,
+  getAgentKitSkills,
   getAgentKits,
   getIndexStats,
   getPack,
   getPackHealth,
+  getPackRecords,
   getPacks,
   getRecord,
   getReviewItems,
   getSkill,
+  getSkillExamples,
   getSkillHealth,
+  getSkillInstructions,
   getSkillIndexDirs,
   getSkills,
   loadConfig,
   openDatabase,
   rebuildIndex,
+  searchIndex,
   type AgentKitHealthDetail,
   type AgentKitSummary,
   type ContextarrDatabase,
@@ -325,6 +331,111 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         }
       }
     );
+
+  program
+    .command("brief")
+    .description("build a compact read-only brief from the local derived index")
+    .argument("[id]", "pack, Skill, or Agent Kit id")
+    .option("--kind <kind>", "brief target kind: auto, summary, pack, skill, or agent-kit", "auto")
+    .option("--limit <count>", "maximum child items per brief section", "5")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((id: string | undefined, options: { kind: string; limit: string; format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const kind = parseBriefKind(options.kind);
+      const limit = parsePositiveInteger(options.limit);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!kind) {
+        io.stderr.write(`Unsupported brief kind: ${options.kind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!limit) {
+        io.stderr.write(`Brief limit must be a positive integer: ${options.limit}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (id && kind === "summary") {
+        io.stderr.write("Brief summary does not accept an object id.\n");
+        exitCode = 2;
+        return;
+      }
+
+      if (!id && kind !== "summary" && kind !== "auto") {
+        io.stderr.write(`Brief kind requires an object id: ${kind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db) => (id ? findBriefDetail(db, id, kind, limit) : buildBriefSummary(db, limit)));
+        if (!result) {
+          io.stderr.write(`Indexed Contextarr brief target not found: ${id}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatBriefJson(result), null, 2)}\n` : formatBriefText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("query")
+    .description("search the local derived Contextarr index without requiring MCP or the API server")
+    .argument("<query...>", "search query")
+    .option("--type <type>", "search type: all, pack, record, skill, or agent-kit", "all")
+    .option("--limit <count>", "maximum results to return", "10")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((queryParts: string[], options: { type: string; limit: string; format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const type = parseQueryKind(options.type);
+      const limit = parsePositiveInteger(options.limit);
+      const query = queryParts.join(" ").trim();
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!type) {
+        io.stderr.write(`Unsupported query type: ${options.type}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!limit) {
+        io.stderr.write(`Query limit must be a positive integer: ${options.limit}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db) => {
+          const results = searchIndex(db, query, type);
+          return { query, type, limit, total: results.length, results: results.slice(0, limit) };
+        });
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatQueryJson(result), null, 2)}\n` : formatQueryText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
 
   program
     .command("backup")
@@ -804,6 +915,8 @@ function resolveUserPath(value: string): string {
 type ListKind = "all" | "packs" | "skills" | "agent-kits";
 type InspectKind = "auto" | "pack" | "record" | "skill" | "agent-kit";
 type HealthKind = "auto" | "summary" | "pack" | "skill" | "agent-kit";
+type BriefKind = "auto" | "summary" | "pack" | "skill" | "agent-kit";
+type QueryKind = "all" | "pack" | "record" | "skill" | "agent-kit";
 type IndexStats = ReturnType<typeof getIndexStats>;
 type ListResult = {
   kind: ListKind;
@@ -837,6 +950,57 @@ type HealthSummaryResult = {
   };
 };
 type HealthResult = HealthSummaryResult | HealthObjectResult;
+type BriefObjectKind = Exclude<BriefKind, "auto" | "summary">;
+type BriefSummaryObject = {
+  id: string;
+  name: string;
+  description: string;
+  healthStatus: string;
+  reviewQueueCount: number;
+};
+type BriefContentItem = {
+  id: string;
+  title: string;
+  kind?: string;
+  snippet?: string;
+  packId?: string;
+  skillId?: string;
+  target?: string;
+  privacyMode?: string;
+};
+type BriefSummaryResult = {
+  kind: "summary";
+  limit: number;
+  status: "healthy" | "review_required";
+  stats: IndexStats;
+  reviewItems: {
+    total: number;
+    open: number;
+  };
+  packs: BriefSummaryObject[];
+  skills: BriefSummaryObject[];
+  agentKits: BriefSummaryObject[];
+};
+type BriefObjectResult = {
+  kind: BriefObjectKind;
+  id: string;
+  limit: number;
+  summary: Record<string, unknown>;
+  health: Record<string, unknown>;
+  sections: Array<{
+    id: string;
+    label: string;
+    items: BriefContentItem[];
+  }>;
+};
+type BriefResult = BriefSummaryResult | BriefObjectResult;
+type QueryResult = {
+  query: string;
+  type: QueryKind;
+  limit: number;
+  total: number;
+  results: unknown[];
+};
 type ReviewQueryResult = {
   filters: ReviewItemFilters;
   limit: number;
@@ -896,6 +1060,31 @@ function parseInspectKind(value: string): InspectKind | undefined {
 
 function parseHealthKind(value: string): HealthKind | undefined {
   return ["auto", "summary", "pack", "skill", "agent-kit"].includes(value) ? (value as HealthKind) : undefined;
+}
+
+function parseBriefKind(value: string): BriefKind | undefined {
+  return ["auto", "summary", "pack", "skill", "agent-kit"].includes(value) ? (value as BriefKind) : undefined;
+}
+
+function parseQueryKind(value: string): QueryKind | undefined {
+  switch (value) {
+    case "all":
+      return "all";
+    case "pack":
+    case "packs":
+      return "pack";
+    case "record":
+    case "records":
+      return "record";
+    case "skill":
+    case "skills":
+      return "skill";
+    case "agent-kit":
+    case "agent-kits":
+      return "agent-kit";
+    default:
+      return undefined;
+  }
 }
 
 function parseReviewFilters(options: ReviewCommandOptions): ReviewItemFilters | undefined {
@@ -1069,6 +1258,131 @@ function formatHealthSummaryObject<T extends { id: string; name: string; healthS
     name: object.name,
     healthStatus: object.healthStatus,
     reviewQueueCount: object.reviewQueueCount
+  };
+}
+
+function buildBriefSummary(db: ContextarrDatabase, limit: number): BriefSummaryResult {
+  const health = buildHealthSummary(db);
+  return {
+    kind: "summary",
+    limit,
+    status: health.status,
+    stats: health.stats,
+    reviewItems: health.reviewItems,
+    packs: getPacks(db).slice(0, limit).map(formatPackBriefSummary),
+    skills: getSkills(db).slice(0, limit).map(formatSkillBriefSummary),
+    agentKits: getAgentKits(db).slice(0, limit).map(formatAgentKitBriefSummary)
+  };
+}
+
+function findBriefDetail(db: ContextarrDatabase, id: string, kind: BriefKind, limit: number): BriefObjectResult | undefined {
+  if (kind === "summary") {
+    return undefined;
+  }
+
+  const candidates: BriefObjectKind[] = kind === "auto" ? ["pack", "skill", "agent-kit"] : [kind];
+
+  for (const candidate of candidates) {
+    if (candidate === "pack") {
+      const pack = getPack(db, id);
+      const health = getPackHealth(db, id);
+      if (pack && health) {
+        return {
+          kind: candidate,
+          id,
+          limit,
+          summary: formatObjectBriefSummary(pack),
+          health: formatHealthDetailForCli(health),
+          sections: [
+            {
+              id: "records",
+              label: "Records",
+              items: getPackRecords(db, id).slice(0, limit).map(formatBriefContentItem)
+            }
+          ]
+        };
+      }
+    } else if (candidate === "skill") {
+      const skill = getSkill(db, id);
+      const health = getSkillHealth(db, id);
+      if (skill && health) {
+        return {
+          kind: candidate,
+          id,
+          limit,
+          summary: formatObjectBriefSummary(skill),
+          health: formatHealthDetailForCli(health),
+          sections: [
+            {
+              id: "instructions",
+              label: "Instructions",
+              items: getSkillInstructions(db, id).slice(0, limit).map(formatBriefContentItem)
+            },
+            {
+              id: "examples",
+              label: "Examples",
+              items: getSkillExamples(db, id).slice(0, limit).map(formatBriefContentItem)
+            }
+          ]
+        };
+      }
+    } else {
+      const agentKit = getAgentKit(db, id);
+      const health = getAgentKitHealth(db, id);
+      if (agentKit && health) {
+        return {
+          kind: candidate,
+          id,
+          limit,
+          summary: formatObjectBriefSummary(agentKit),
+          health: formatHealthDetailForCli(health),
+          sections: [
+            {
+              id: "contextPacks",
+              label: "Context Packs",
+              items: getAgentKitContextPacks(db, id).slice(0, limit).map(formatBriefContentItem)
+            },
+            {
+              id: "skills",
+              label: "Skills",
+              items: getAgentKitSkills(db, id).slice(0, limit).map(formatBriefContentItem)
+            }
+          ]
+        };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function formatPackBriefSummary(pack: PackSummary): BriefSummaryObject {
+  return {
+    id: pack.id,
+    name: pack.name,
+    description: pack.description,
+    healthStatus: pack.healthStatus,
+    reviewQueueCount: pack.reviewQueueCount
+  };
+}
+
+function formatSkillBriefSummary(skill: SkillSummary): BriefSummaryObject {
+  return {
+    id: skill.id,
+    name: skill.name,
+    description: skill.description,
+    healthStatus: skill.healthStatus,
+    reviewQueueCount: skill.reviewQueueCount
+  };
+}
+
+function formatAgentKitBriefSummary(agentKit: AgentKitSummary): BriefSummaryObject {
+  return {
+    id: agentKit.id,
+    name: agentKit.name,
+    description: agentKit.description,
+    healthStatus: agentKit.healthStatus,
+    reviewQueueCount: agentKit.reviewQueueCount
   };
 }
 
@@ -1269,6 +1583,154 @@ function appendHealthSummarySection(
   lines.push(...objects.map((object) => `- ${object.id}: ${object.name} [${object.healthStatus}; review=${object.reviewQueueCount}]`));
 }
 
+function formatBriefJson(result: BriefResult): unknown {
+  return {
+    schemaVersion: "contextarr.cli.brief.v1",
+    ...result
+  };
+}
+
+function formatBriefText(result: BriefResult): string {
+  if (result.kind === "summary") {
+    const lines = [
+      "Contextarr brief",
+      `Status: ${result.status === "healthy" ? "healthy" : "review required"}`,
+      `Index: ${result.stats.packs} pack(s), ${result.stats.records} record(s), ${result.stats.skills} skill(s), ${result.stats.agentKits} agent kit(s)`,
+      `Review items: ${result.reviewItems.total} total, ${result.reviewItems.open} open`,
+      `Last indexed: ${result.stats.lastIndexedAt ?? "never"}`,
+      `Limit: ${result.limit}`
+    ];
+
+    appendBriefSummarySection(lines, "Packs", result.packs);
+    appendBriefSummarySection(lines, "Skills", result.skills);
+    appendBriefSummarySection(lines, "Agent Kits", result.agentKits);
+
+    return `${lines.join("\n")}\n`;
+  }
+
+  const lines = [
+    `${healthKindLabel(result.kind)} brief: ${stringValue(result.summary.name) ?? result.id}`,
+    `ID: ${result.id}`,
+    `Health: ${stringValue(result.summary.healthStatus) ?? stringValue(result.health.status) ?? "unknown"}`,
+    `Review queue: ${numberValue(result.summary.reviewQueueCount) ?? numberValue(result.health.reviewQueueCount) ?? 0}`,
+    `Visibility: ${stringValue(result.summary.visibility) ?? "unknown"}`,
+    `Trust: ${stringValue(result.summary.trustLevel) ?? "unknown"}`,
+    `Updated: ${stringValue(result.summary.updatedAt) ?? "unknown"}`,
+    `Limit: ${result.limit}`
+  ];
+
+  const description = stringValue(result.summary.description);
+  if (description) {
+    lines.push("", description);
+  }
+
+  for (const section of result.sections) {
+    if (section.items.length === 0) {
+      continue;
+    }
+    lines.push("", `${section.label}:`);
+    lines.push(...section.items.map(formatBriefContentLine));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function appendBriefSummarySection(lines: string[], label: string, objects: BriefSummaryObject[]): void {
+  if (objects.length === 0) {
+    return;
+  }
+
+  lines.push("", `${label}:`);
+  lines.push(...objects.map((object) => `- ${object.id}: ${object.name} [${object.healthStatus}; review=${object.reviewQueueCount}]`));
+}
+
+function formatObjectBriefSummary(value: unknown): Record<string, unknown> {
+  const object = isRecordObject(value) ? value : {};
+  const counts = isRecordObject(object.counts) ? object.counts : undefined;
+
+  return {
+    id: object.id,
+    name: object.name,
+    description: object.description,
+    type: object.type,
+    visibility: object.visibility,
+    trustLevel: object.trustLevel,
+    healthStatus: object.healthStatus ?? (isRecordObject(object.health) ? object.health.status : undefined),
+    healthScore: object.healthScore ?? (isRecordObject(object.health) ? object.health.score : undefined),
+    reviewQueueCount: object.reviewQueueCount,
+    updatedAt: object.updatedAt,
+    lastReviewedAt: object.lastReviewedAt,
+    counts
+  };
+}
+
+function formatBriefContentItem(value: unknown): BriefContentItem {
+  const object = isRecordObject(value) ? value : {};
+  const id = stringValue(object.id) ?? "unknown";
+  const title = stringValue(object.title) ?? stringValue(object.name) ?? id;
+  const body = stringValue(object.body);
+  const description = stringValue(object.description);
+  const snippet = stringValue(object.snippet) ?? (body ? truncateText(body, 180) : description ? truncateText(description, 180) : undefined);
+
+  return {
+    id,
+    title,
+    kind: stringValue(object.kind) ?? stringValue(object.type),
+    snippet,
+    packId: stringValue(object.packId),
+    skillId: stringValue(object.skillId),
+    target: stringValue(object.target),
+    privacyMode: stringValue(object.privacyMode)
+  };
+}
+
+function formatBriefContentLine(item: BriefContentItem): string {
+  const parts = [item.kind, item.packId ? `pack=${item.packId}` : undefined, item.skillId ? `skill=${item.skillId}` : undefined].filter(Boolean);
+  const suffix = parts.length > 0 ? ` [${parts.join("; ")}]` : "";
+  return `- ${item.id}: ${item.title}${suffix}`;
+}
+
+function formatQueryJson(result: QueryResult): unknown {
+  return {
+    schemaVersion: "contextarr.cli.query.v1",
+    query: result.query,
+    type: result.type,
+    limit: result.limit,
+    total: result.total,
+    returned: result.results.length,
+    results: result.results.map(formatQueryResultForCli)
+  };
+}
+
+function formatQueryText(result: QueryResult): string {
+  const lines = [
+    `Query: ${result.query}`,
+    `Type: ${result.type}`,
+    `Results: ${result.results.length} returned (${result.total} matching)`,
+    `Limit: ${result.limit}`
+  ];
+
+  if (result.results.length === 0) {
+    lines.push("No indexed context matched the query.");
+  } else {
+    lines.push("", "Results:");
+    lines.push(...result.results.map((item) => formatQueryResultLine(formatQueryResultForCli(item))));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatQueryResultForCli(value: unknown): BriefContentItem {
+  return formatBriefContentItem(value);
+}
+
+function formatQueryResultLine(item: BriefContentItem): string {
+  const parts = [item.kind, item.packId ? `pack=${item.packId}` : undefined, item.skillId ? `skill=${item.skillId}` : undefined].filter(Boolean);
+  const suffix = parts.length > 0 ? ` [${parts.join("; ")}]` : "";
+  const snippet = item.snippet ? ` - ${collapseWhitespace(item.snippet)}` : "";
+  return `- ${item.id}: ${item.title}${suffix}${snippet}`;
+}
+
 function formatReviewJson(result: ReviewQueryResult): unknown {
   return {
     schemaVersion: "contextarr.cli.review.v1",
@@ -1377,6 +1839,19 @@ function isRecordObject(value: unknown): value is Record<string, unknown> {
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function truncateText(value: string, maxLength: number): string {
+  const collapsed = collapseWhitespace(value);
+  return collapsed.length > maxLength ? `${collapsed.slice(0, Math.max(0, maxLength - 3))}...` : collapsed;
+}
+
+function collapseWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 type ValidationTarget = { kind: "pack" | "skill" | "agent-kit"; path: string };
