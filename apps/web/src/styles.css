@@ -1107,16 +1107,20 @@ h1 {
   padding-bottom: 8px;
 }
 
-.detail-tabs button {
+.detail-tabs button,
+.detail-tabs a {
   min-height: 40px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--muted);
   padding: 0 14px;
+  align-items: center;
+  display: inline-flex;
 }
 
-.detail-tabs button.is-selected {
+.detail-tabs button.is-selected,
+.detail-tabs a.is-selected {
   border-color: rgba(37, 99, 235, 0.6);
   background: rgba(37, 99, 235, 0.18);
   color: var(--text);
@@ -1312,6 +1316,20 @@ h1 {
   gap: 10px;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
   margin-bottom: 18px;
+}
+
+.candidate-filters {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.candidate-search input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+  outline: 0;
+  width: 100%;
 }
 
 .export-pack-select {
@@ -1830,6 +1848,13 @@ h1 {
   gap: 12px;
 }
 
+.draft-intake-layout {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+}
+
 .review-list.compact {
   margin-top: 18px;
 }
@@ -1856,6 +1881,11 @@ h1 {
 
 .review-card.severity-info {
   border-left-color: var(--blue);
+}
+
+.review-card.candidate-card.is-selected {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28);
 }
 
 .review-card h2 {
@@ -1934,6 +1964,21 @@ h1 {
   background: rgba(37, 99, 235, 0.12);
   border-color: rgba(37, 99, 235, 0.34);
   color: #d8e7ff;
+}
+
+.candidate-detail-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.candidate-detail-panel h3 {
+  font-size: 14px;
+  margin: 18px 0 8px;
+}
+
+.candidate-issue-list span,
+.candidate-metadata-list span {
+  overflow-wrap: anywhere;
 }
 
 .health-check-grid {
@@ -2177,6 +2222,7 @@ h1 {
   .collector-grid,
   .export-header,
   .composer-grid,
+  .draft-intake-layout,
   .review-card {
     grid-template-columns: 1fr;
   }
@@ -2189,6 +2235,7 @@ h1 {
   .summary-strip,
   .export-stats,
   .review-filters,
+  .candidate-filters,
   .agent-kit-filters,
   .composer-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2303,6 +2350,7 @@ h1 {
   .summary-strip,
   .export-stats,
   .review-filters,
+  .candidate-filters,
   .agent-kit-filters,
   .collector-grid,
   .composer-filters,
@@ -2323,6 +2371,10 @@ h1 {
 
   .review-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .candidate-detail-panel {
+    position: static;
   }
 
   .composer-panel-heading {

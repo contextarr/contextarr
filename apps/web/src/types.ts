@@ -659,6 +659,109 @@ export interface ReviewItemsResponse {
   };
 }
 
+export type ReviewCandidateSourceKind = "draft_pack" | "composed_pack" | "imported_pack" | "restored_quarantine" | "unknown";
+export type ReviewCandidateStatus = "ready_for_review" | "invalid" | "blocked" | "duplicate_active_id";
+
+export interface ReviewCandidateSummary {
+  key: string;
+  sourceKind: ReviewCandidateSourceKind;
+  sourceLabel: string;
+  pathLabel: string;
+  packId: string | null;
+  name: string;
+  version: string | null;
+  status: ReviewCandidateStatus;
+  recommendedAction: string;
+  activeConflict: boolean;
+  validation: {
+    status: string;
+    errors: number;
+    warnings: number;
+    infos: number;
+    issueCount: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocking: boolean;
+    summary: Record<string, number> | null;
+    findingCount: number;
+  };
+  counts: {
+    records: number;
+    sources: number;
+    exportProfiles: number;
+  };
+}
+
+export interface ReviewCandidateDetail extends ReviewCandidateSummary {
+  validationIssues: Array<{
+    severity: string;
+    code: string;
+    message: string;
+    file?: string;
+    path?: string;
+  }>;
+  securityFindings: Array<{
+    id: string;
+    code: string;
+    severity: string;
+    category: string;
+    file: string;
+    line?: number;
+    message: string;
+    recommendedAction: string;
+    blocking: boolean;
+  }>;
+  records: Array<{
+    id: string;
+    title: string;
+    type: string;
+    privacy: string;
+    reviewStatus: string;
+    sourceStatus: string;
+    tags: string[];
+    sources: string[];
+    file: string;
+  }>;
+  sources: Array<{
+    id: string;
+    type: string;
+    title: string;
+    url?: string | null;
+    path?: string | null;
+    trust?: string | null;
+    status?: string | null;
+    licenseStatus?: string | null;
+  }>;
+  exportProfiles: Array<{
+    id: string;
+    name: string;
+    target: string;
+    format: string;
+    privacyMode?: string | null;
+  }>;
+}
+
+export interface ReviewCandidatesResponse {
+  candidates: ReviewCandidateSummary[];
+  skippedRoots: Array<{
+    sourceKind: ReviewCandidateSourceKind;
+    rootLabel: string;
+    reason: string;
+    message: string;
+  }>;
+  counts: {
+    total: number;
+    readyForReview: number;
+    invalid: number;
+    blocked: number;
+    duplicateActiveId: number;
+    skippedRoots: number;
+    filtered: number;
+  };
+}
+
 export interface HealthCheck {
   id: string;
   label: string;
@@ -743,7 +846,7 @@ export type Route =
   | { name: "agentKits" }
   | { name: "agentKit"; agentKitId: string }
   | { name: "collectors" }
-  | { name: "reviewQueue" }
+  | { name: "reviewQueue"; tab?: "items" | "drafts" }
   | { name: "composer"; mode?: ComposerMode }
   | { name: "exports" }
   | { name: "health" };

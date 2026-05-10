@@ -6,8 +6,10 @@ import {
   assertAgentKitDirectorySeparation,
   assertComposedPackDirectorySeparation,
   assertDraftPackDirectorySeparation,
+  assertReviewCandidateDirectorySeparation,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getSkillIndexDirs,
   loadConfig
 } from "./config";
@@ -23,6 +25,7 @@ describe("server config", () => {
     expect(config.importedSkillsDir).toBe(path.join(root, "imported-skills"));
     expect(config.draftPacksDir).toBe(path.join(root, "draft-packs"));
     expect(config.composedPacksDir).toBe(path.join(root, "composed-packs"));
+    expect(config.reviewCandidateDirs).toEqual([]);
     expect(config.localImportsEnabled).toBe(false);
   });
 
@@ -109,6 +112,46 @@ describe("server config", () => {
         packsDir: path.join(root, "demo-packs"),
         draftPacksDir: path.join(root, "draft-packs"),
         composedPacksDir: path.join(root, "demo-packs", "composed")
+      })
+    ).toThrow(/must not overlap/);
+  });
+
+  it("parses optional review candidate roots without indexing them", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+    const quarantineA = path.join(root, "restored-a");
+    const quarantineB = path.join(root, "restored-b");
+    fs.mkdirSync(quarantineA, { recursive: true });
+    fs.mkdirSync(quarantineB, { recursive: true });
+
+    const config = loadConfig({
+      INIT_CWD: root,
+      CONTEXTARR_REVIEW_CANDIDATE_DIRS: `./restored-a${path.delimiter}${quarantineB}`
+    });
+
+    expect(config.reviewCandidateDirs).toEqual([quarantineA, quarantineB]);
+    expect(getReviewCandidateRoots(config)).toEqual([
+      { rootPath: path.join(root, "draft-packs"), sourceKind: "draft_pack", label: "draft-packs" },
+      { rootPath: path.join(root, "composed-packs"), sourceKind: "composed_pack", label: "composed-packs" },
+      { rootPath: quarantineA, sourceKind: "restored_quarantine", label: "restored-a" },
+      { rootPath: quarantineB, sourceKind: "restored_quarantine", label: "restored-b" }
+    ]);
+  });
+
+  it("rejects review candidate roots that overlap active Context Packs", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
+
+    expect(() =>
+      loadConfig({
+        INIT_CWD: root,
+        CONTEXTARR_PACKS_DIR: "./demo-packs",
+        CONTEXTARR_REVIEW_CANDIDATE_DIRS: "./demo-packs"
+      })
+    ).toThrow(/must not overlap/);
+
+    expect(() =>
+      assertReviewCandidateDirectorySeparation({
+        packsDir: path.join(root, "demo-packs"),
+        reviewCandidateDirs: [path.join(root, "demo-packs", "quarantine")]
       })
     ).toThrow(/must not overlap/);
   });

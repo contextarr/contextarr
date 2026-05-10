@@ -59,6 +59,9 @@ importers:
       '@contextarr/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
+      '@contextarr/review-candidates':
+        specifier: workspace:*
+        version: link:../../packages/review-candidates
       '@contextarr/security-scanner':
         specifier: workspace:*
         version: link:../../packages/security-scanner
@@ -104,6 +107,9 @@ importers:
       '@contextarr/pack-validator':
         specifier: workspace:*
         version: link:../../packages/pack-validator
+      '@contextarr/review-candidates':
+        specifier: workspace:*
+        version: link:../../packages/review-candidates
       '@contextarr/schema':
         specifier: workspace:*
         version: link:../../packages/schema
@@ -319,6 +325,24 @@ importers:
       unified:
         specifier: ^11.0.5
         version: 11.0.5
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.4
+
+  packages/review-candidates:
+    dependencies:
+      '@contextarr/pack-validator':
+        specifier: workspace:*
+        version: link:../pack-validator
+      '@contextarr/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@contextarr/security-scanner':
+        specifier: workspace:*
+        version: link:../security-scanner
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
       yaml:
         specifier: ^2.6.1
         version: 2.8.4

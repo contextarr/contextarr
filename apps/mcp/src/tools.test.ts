@@ -481,6 +481,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     packsDir: demoPacksDir,
     draftPacksDir: path.join(repoRoot, "draft-packs"),
     composedPacksDir: path.join(repoRoot, "composed-packs"),
+    reviewCandidateDirs: [],
     skillsDir: demoSkillsDir,
     importedSkillsDir: path.join(repoRoot, "imported-skills"),
     agentKitsDir: demoAgentKitsDir,

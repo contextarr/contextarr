@@ -42,12 +42,20 @@ import {
   type ValidationResult
 } from "@contextarr/pack-validator";
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
+import {
+  listReviewCandidates,
+  type ReviewCandidateListResult,
+  type ReviewCandidateSourceKind,
+  type ReviewCandidateStatus,
+  type ReviewCandidateSummary
+} from "@contextarr/review-candidates";
 import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitHealth,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getAgentKitSkills,
   getAgentKits,
   getIndexStats,
@@ -331,6 +339,65 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         }
       }
     );
+
+  program
+    .command("review-candidates")
+    .description("list untrusted draft Context Pack candidates without activating or indexing them")
+    .option("--source-kind <kind>", "candidate source: draft_pack, composed_pack, imported_pack, restored_quarantine, unknown, or all", "all")
+    .option("--status <status>", "candidate status: ready_for_review, invalid, blocked, duplicate_active_id, or all", "all")
+    .option("--q <query>", "filter by pack id, name, source label, or path label")
+    .option("--limit <count>", "maximum candidates to return", "50")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .action((options: { sourceKind: string; status: string; q?: string; limit: string; format: string; json?: boolean }) => {
+      const format = options.json ? "json" : parseFormat(options.format);
+      const sourceKind = parseReviewCandidateSourceKind(options.sourceKind);
+      const status = parseReviewCandidateStatus(options.status);
+      const limit = parsePositiveInteger(options.limit);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (sourceKind === "invalid") {
+        io.stderr.write(`Unsupported review candidate source kind: ${options.sourceKind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (status === "invalid") {
+        io.stderr.write(`Unsupported review candidate status: ${options.status}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!limit) {
+        io.stderr.write(`Review candidate limit must be a positive integer: ${options.limit}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db, config) => {
+          const candidates = listReviewCandidates({
+            roots: getReviewCandidateRoots(config),
+            activePackIds: getPacks(db).map((pack) => pack.id),
+            displayRoot: process.env.INIT_CWD ?? process.cwd()
+          });
+          return filterReviewCandidateResult(candidates, { sourceKind, status, query: options.q, limit });
+        });
+
+        io.stdout.write(
+          format === "json" ? `${JSON.stringify(formatReviewCandidatesJson(result), null, 2)}\n` : formatReviewCandidatesText(result)
+        );
+        exitCode = 0;
+      } catch (error) {
+        writeCliError(io, format, error);
+        exitCode = 2;
+      }
+    });
 
   program
     .command("brief")
@@ -1007,6 +1074,19 @@ type ReviewQueryResult = {
   total: number;
   items: ReviewItem[];
 };
+type ReviewCandidateCommandResult = {
+  filters: {
+    sourceKind?: ReviewCandidateSourceKind;
+    status?: ReviewCandidateStatus;
+    query?: string;
+  };
+  limit: number;
+  total: number;
+  returned: number;
+  counts: ReviewCandidateListResult["counts"];
+  skippedRoots: ReviewCandidateListResult["skippedRoots"];
+  candidates: ReviewCandidateSummary[];
+};
 type ReviewCommandOptions = {
   status: string;
   severity?: string;
@@ -1154,6 +1234,24 @@ function parseOptionalReviewObjectType(value?: string): ReviewItem["objectType"]
 
   const normalized = value === "agent-kit" ? "agent_kit" : value;
   return reviewObjectTypes.includes(normalized as ReviewItem["objectType"]) ? (normalized as ReviewItem["objectType"]) : undefined;
+}
+
+function parseReviewCandidateSourceKind(value?: string): ReviewCandidateSourceKind | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["draft_pack", "composed_pack", "imported_pack", "restored_quarantine", "unknown"].includes(value)
+    ? (value as ReviewCandidateSourceKind)
+    : "invalid";
+}
+
+function parseReviewCandidateStatus(value?: string): ReviewCandidateStatus | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
+    ? (value as ReviewCandidateStatus)
+    : "invalid";
 }
 
 function loadCliConfig(): ServerConfig {
@@ -1797,6 +1895,108 @@ function formatReviewItemForCli(item: ReviewItem): Omit<ReviewItem, "fingerprint
 
 function formatReviewItemLine(item: ReviewItem): string {
   return `- [${item.severity}/${item.status}] ${reviewObjectTypeLabel(item.objectType)}/${item.objectId} ${item.type}: ${item.message}`;
+}
+
+function filterReviewCandidateResult(
+  result: ReviewCandidateListResult,
+  filters: {
+    sourceKind?: ReviewCandidateSourceKind;
+    status?: ReviewCandidateStatus;
+    query?: string;
+    limit: number;
+  }
+): ReviewCandidateCommandResult {
+  const query = filters.query?.trim().toLowerCase();
+  const candidates = result.candidates.filter((candidate) => {
+    if (filters.sourceKind && candidate.sourceKind !== filters.sourceKind) {
+      return false;
+    }
+    if (filters.status && candidate.status !== filters.status) {
+      return false;
+    }
+    if (query) {
+      return [candidate.packId, candidate.name, candidate.sourceLabel, candidate.pathLabel]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    }
+    return true;
+  });
+
+  return {
+    filters: {
+      sourceKind: filters.sourceKind,
+      status: filters.status,
+      query: filters.query?.trim() || undefined
+    },
+    limit: filters.limit,
+    total: candidates.length,
+    returned: Math.min(candidates.length, filters.limit),
+    counts: result.counts,
+    skippedRoots: result.skippedRoots,
+    candidates: candidates.slice(0, filters.limit)
+  };
+}
+
+function formatReviewCandidatesJson(result: ReviewCandidateCommandResult): unknown {
+  return {
+    schemaVersion: "contextarr.cli.review-candidates.v1",
+    filters: result.filters,
+    limit: result.limit,
+    total: result.total,
+    returned: result.returned,
+    counts: result.counts,
+    skippedRoots: result.skippedRoots,
+    candidates: result.candidates.map((candidate) => ({
+      key: candidate.key,
+      sourceKind: candidate.sourceKind,
+      sourceLabel: candidate.sourceLabel,
+      pathLabel: candidate.pathLabel,
+      packId: candidate.packId,
+      name: candidate.name,
+      version: candidate.version,
+      status: candidate.status,
+      recommendedAction: candidate.recommendedAction,
+      activeConflict: candidate.activeConflict,
+      validation: candidate.validation,
+      security: candidate.security,
+      counts: candidate.counts
+    }))
+  };
+}
+
+function formatReviewCandidatesText(result: ReviewCandidateCommandResult): string {
+  const lines = [
+    `Review candidates: ${result.returned} returned (${result.total} matching)`,
+    `Filters: ${formatReviewCandidateFiltersText(result.filters)}`,
+    `Limit: ${result.limit}`
+  ];
+
+  if (result.skippedRoots.length > 0) {
+    lines.push(`Skipped roots: ${result.skippedRoots.length}`);
+  }
+
+  if (result.candidates.length === 0) {
+    lines.push("No review candidates match the filters.");
+  } else {
+    lines.push("", "Candidates:");
+    lines.push(...result.candidates.map(formatReviewCandidateLine));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatReviewCandidateFiltersText(filters: ReviewCandidateCommandResult["filters"]): string {
+  const entries = [
+    ["sourceKind", filters.sourceKind],
+    ["status", filters.status],
+    ["query", filters.query]
+  ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0);
+
+  return entries.length > 0 ? entries.map(([key, value]) => `${key}=${value}`).join(", ") : "all";
+}
+
+function formatReviewCandidateLine(candidate: ReviewCandidateSummary): string {
+  return `- [${candidate.status}] ${candidate.packId ?? candidate.name} (${candidate.sourceKind}; ${candidate.pathLabel}) records=${candidate.counts.records}; sources=${candidate.counts.sources}; exports=${candidate.counts.exportProfiles}`;
 }
 
 function inspectKindLabel(kind: IndexedObjectKind): string {

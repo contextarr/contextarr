@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { filterReviewItems, reviewAgentKitName, reviewPackName, reviewSkillName, summarizeReviewItems } from "./review";
-import type { AgentKitSummary, PackSummary, ReviewItem, SkillSummary } from "./types";
+import {
+  filterReviewCandidates,
+  filterReviewItems,
+  reviewAgentKitName,
+  reviewPackName,
+  reviewSkillName,
+  summarizeReviewCandidates,
+  summarizeReviewItems
+} from "./review";
+import type { AgentKitSummary, PackSummary, ReviewCandidateSummary, ReviewItem, SkillSummary } from "./types";
 
 const items: ReviewItem[] = [
   reviewItem({ id: "one", status: "open", severity: "error", type: "validation", packId: "pack-a" }),
@@ -48,6 +56,26 @@ describe("review utilities", () => {
     });
   });
 
+  it("filters and summarizes draft review candidates", () => {
+    const candidates = [
+      reviewCandidate({ key: "one", sourceKind: "draft_pack", status: "ready_for_review", name: "Draft Pack" }),
+      reviewCandidate({ key: "two", sourceKind: "restored_quarantine", status: "blocked", name: "Blocked Pack" }),
+      reviewCandidate({ key: "three", sourceKind: "composed_pack", status: "duplicate_active_id", name: "Composed Pack" }),
+      reviewCandidate({ key: "four", sourceKind: "draft_pack", status: "invalid", name: "Invalid Pack" })
+    ];
+
+    expect(filterReviewCandidates(candidates, { sourceKind: "draft_pack", status: "all", query: "invalid" })).toEqual([
+      candidates[3]
+    ]);
+    expect(summarizeReviewCandidates(candidates)).toEqual({
+      total: 4,
+      ready: 1,
+      invalid: 1,
+      blocked: 1,
+      duplicates: 1
+    });
+  });
+
   it("resolves pack names", () => {
     expect(reviewPackName("pack-a", [pack({ id: "pack-a", name: "Pack A" })])).toBe("Pack A");
     expect(reviewPackName("missing", [])).toBe("missing");
@@ -84,6 +112,31 @@ function reviewItem(overrides: Partial<ReviewItem>): ReviewItem {
     lastSeenAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     metadata: {},
+    ...overrides
+  };
+}
+
+function reviewCandidate(overrides: Partial<ReviewCandidateSummary>): ReviewCandidateSummary {
+  return {
+    key: "candidate",
+    sourceKind: "draft_pack",
+    sourceLabel: "draft-packs",
+    pathLabel: "draft-packs/candidate",
+    packId: "candidate-pack",
+    name: "Candidate Pack",
+    version: "0.1.0",
+    status: "ready_for_review",
+    recommendedAction: "Review manually.",
+    activeConflict: false,
+    validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+    security: {
+      status: "policy_clean",
+      recommendedAction: "quarantine",
+      blocking: false,
+      summary: null,
+      findingCount: 0
+    },
+    counts: { records: 1, sources: 1, exportProfiles: 1 },
     ...overrides
   };
 }

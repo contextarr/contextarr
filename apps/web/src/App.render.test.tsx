@@ -59,6 +59,8 @@ const mocks = vi.hoisted(() => {
       composePreview: vi.fn(),
       saveComposedPack: vi.fn(),
       getReviewItems: vi.fn(),
+      getReviewCandidates: vi.fn(),
+      getReviewCandidate: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
   };
@@ -243,6 +245,71 @@ describe("App Skill UI routes", () => {
       draft: { status: "review_required", indexed: false }
     });
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
+    mocks.apiClient.getReviewCandidates.mockResolvedValue({
+      candidates: [
+        {
+          key: "candidate-key",
+          sourceKind: "draft_pack",
+          sourceLabel: "draft-packs",
+          pathLabel: "draft-packs/local-draft",
+          packId: "local-draft-pack",
+          name: "Local Draft Pack",
+          version: "0.1.0",
+          status: "ready_for_review",
+          recommendedAction: "Review manually before activation, export, or MCP exposure.",
+          activeConflict: false,
+          validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+          security: {
+            status: "policy_clean",
+            recommendedAction: "quarantine",
+            blocking: false,
+            summary: null,
+            findingCount: 0
+          },
+          counts: { records: 1, sources: 1, exportProfiles: 1 }
+        }
+      ],
+      skippedRoots: [],
+      counts: { total: 1, readyForReview: 1, invalid: 0, blocked: 0, duplicateActiveId: 0, skippedRoots: 0, filtered: 1 }
+    });
+    mocks.apiClient.getReviewCandidate.mockResolvedValue({
+      key: "candidate-key",
+      sourceKind: "draft_pack",
+      sourceLabel: "draft-packs",
+      pathLabel: "draft-packs/local-draft",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      version: "0.1.0",
+      status: "ready_for_review",
+      recommendedAction: "Review manually before activation, export, or MCP exposure.",
+      activeConflict: false,
+      validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+      security: {
+        status: "policy_clean",
+        recommendedAction: "quarantine",
+        blocking: false,
+        summary: null,
+        findingCount: 0
+      },
+      counts: { records: 1, sources: 1, exportProfiles: 1 },
+      validationIssues: [],
+      securityFindings: [],
+      records: [
+        {
+          id: "local-draft-pack.overview",
+          title: "Overview Metadata",
+          type: "overview",
+          privacy: "private",
+          reviewStatus: "draft",
+          sourceStatus: "draft",
+          tags: ["never_export"],
+          sources: ["local-draft-pack.source.overview"],
+          file: "records/overview.md"
+        }
+      ],
+      sources: [],
+      exportProfiles: []
+    });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
@@ -292,6 +359,26 @@ describe("App Skill UI routes", () => {
       "Help center unavailable in developer preview",
       "User profile unavailable in developer preview"
     ]);
+  });
+
+  it("renders Draft Intake review candidates without activation controls", async () => {
+    mountApp("#/review-queue/drafts");
+
+    await waitForMockResult(mocks.apiClient.getReviewCandidates, 0);
+    await flushPendingUpdates();
+    await waitForText("Draft Intake");
+    await waitForText("Local Draft Pack");
+    expect(document.body.textContent).toContain("Review manually before activation, export, or MCP exposure.");
+    expect(document.body.textContent).not.toContain("Activate Later");
+
+    await clickButtonAndFlush("Inspect");
+    await waitForMockResult(mocks.apiClient.getReviewCandidate, 0);
+    await flushPendingUpdates();
+    await waitForText("Overview Metadata");
+    expect(mocks.apiClient.getReviewCandidate).toHaveBeenCalledWith("candidate-key");
+    expect(document.body.textContent).not.toContain("Approve");
+    expect(document.body.textContent).not.toContain("Promote");
+    expect(document.body.textContent).not.toContain("Activate");
   });
 
   it("renders the Skill Library auth-required state when Skill loading is protected", async () => {

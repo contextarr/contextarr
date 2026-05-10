@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import type { ReviewCandidateRoot } from "@contextarr/review-candidates";
 import type { ServerConfig } from "./types";
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -19,6 +20,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     packsDir: resolveFrom(invocationRoot, env.CONTEXTARR_PACKS_DIR ?? "./demo-packs"),
     draftPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_DRAFT_PACKS_DIR ?? "./draft-packs"),
     composedPacksDir: resolveFrom(invocationRoot, env.CONTEXTARR_COMPOSED_PACKS_DIR ?? "./composed-packs"),
+    reviewCandidateDirs: parsePathList(invocationRoot, env.CONTEXTARR_REVIEW_CANDIDATE_DIRS),
     skillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_SKILLS_DIR ?? "./demo-skills"),
     importedSkillsDir: resolveFrom(invocationRoot, env.CONTEXTARR_IMPORTED_SKILLS_DIR ?? "./imported-skills"),
     agentKitsDir: resolveFrom(invocationRoot, env.CONTEXTARR_AGENT_KITS_DIR ?? "./agent-kits"),
@@ -34,6 +36,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   assertAgentKitDirectorySeparation(config);
   assertDraftPackDirectorySeparation(config);
   assertComposedPackDirectorySeparation(config);
+  assertReviewCandidateDirectorySeparation(config);
   return config;
 }
 
@@ -57,6 +60,20 @@ export function getAgentKitIndexDirs(config: Pick<ServerConfig, "agentKitsDir" |
   }
 
   return uniqueExistingAwareDirs(dirs);
+}
+
+export function getReviewCandidateRoots(
+  config: Pick<ServerConfig, "draftPacksDir" | "composedPacksDir" | "reviewCandidateDirs">
+): ReviewCandidateRoot[] {
+  return [
+    { rootPath: config.draftPacksDir, sourceKind: "draft_pack", label: "draft-packs" },
+    { rootPath: config.composedPacksDir, sourceKind: "composed_pack", label: "composed-packs" },
+    ...config.reviewCandidateDirs.map((rootPath) => ({
+      rootPath,
+      sourceKind: "restored_quarantine" as const,
+      label: path.basename(path.resolve(rootPath)) || "review-candidates"
+    }))
+  ];
 }
 
 export function assertSkillDirectorySeparation(config: Pick<ServerConfig, "skillsDir" | "importedSkillsDir">): void {
@@ -113,6 +130,15 @@ export function assertComposedPacksDirectory(config: Pick<ServerConfig, "compose
   }
 }
 
+export function assertReviewCandidateDirectorySeparation(config: Pick<ServerConfig, "packsDir" | "reviewCandidateDirs">): void {
+  const indexed = path.resolve(config.packsDir);
+  for (const candidateDir of config.reviewCandidateDirs) {
+    if (pathsOverlap(indexed, path.resolve(candidateDir))) {
+      throw new Error("CONTEXTARR_REVIEW_CANDIDATE_DIRS must not overlap CONTEXTARR_PACKS_DIR.");
+    }
+  }
+}
+
 function uniqueExistingAwareDirs(dirs: string[]): string[] {
   const seen = new Set<string>();
   return dirs.filter((dir) => {
@@ -139,6 +165,20 @@ export function assertAgentKitDirectorySeparation(config: Pick<ServerConfig, "ag
 
 function resolveFrom(root: string, value: string): string {
   return path.isAbsolute(value) ? value : path.resolve(root, value);
+}
+
+function parsePathList(root: string, value: string | undefined): string[] {
+  if (!value?.trim()) {
+    return [];
+  }
+
+  return uniqueExistingAwareDirs(
+    value
+      .split(path.delimiter)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => resolveFrom(root, entry))
+  );
 }
 
 function parseBoolean(value: string | undefined): boolean {

@@ -79,6 +79,9 @@ async function withCliIndex(callback: () => Promise<void>): Promise<void> {
     INIT_CWD: process.env.INIT_CWD,
     CONTEXTARR_DATABASE_PATH: process.env.CONTEXTARR_DATABASE_PATH,
     CONTEXTARR_PACKS_DIR: process.env.CONTEXTARR_PACKS_DIR,
+    CONTEXTARR_DRAFT_PACKS_DIR: process.env.CONTEXTARR_DRAFT_PACKS_DIR,
+    CONTEXTARR_COMPOSED_PACKS_DIR: process.env.CONTEXTARR_COMPOSED_PACKS_DIR,
+    CONTEXTARR_REVIEW_CANDIDATE_DIRS: process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS,
     CONTEXTARR_SKILLS_DIR: process.env.CONTEXTARR_SKILLS_DIR,
     CONTEXTARR_IMPORTED_SKILLS_DIR: process.env.CONTEXTARR_IMPORTED_SKILLS_DIR,
     CONTEXTARR_AGENT_KITS_DIR: process.env.CONTEXTARR_AGENT_KITS_DIR,
@@ -89,6 +92,9 @@ async function withCliIndex(callback: () => Promise<void>): Promise<void> {
   process.env.INIT_CWD = repoRoot;
   process.env.CONTEXTARR_DATABASE_PATH = path.join(root, "contextarr.db");
   process.env.CONTEXTARR_PACKS_DIR = "./demo-packs";
+  process.env.CONTEXTARR_DRAFT_PACKS_DIR = path.join(root, "draft-packs");
+  process.env.CONTEXTARR_COMPOSED_PACKS_DIR = path.join(root, "composed-packs");
+  delete process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS;
   process.env.CONTEXTARR_SKILLS_DIR = "./demo-skills";
   process.env.CONTEXTARR_IMPORTED_SKILLS_DIR = path.join(root, "imported-skills");
   process.env.CONTEXTARR_AGENT_KITS_DIR = path.join(root, "agent-kits");
@@ -243,6 +249,45 @@ describe("contextarr CLI", () => {
       expect(Array.isArray(json.items)).toBe(true);
       expect(reviewOutput.stdout).not.toContain(repoRoot);
       expect(reviewOutput.stderr).toBe("");
+    });
+  });
+
+  it("lists draft review candidates without indexing or leaking local paths", async () => {
+    await withCliIndex(async () => {
+      const root = tempDir();
+      const draftRoot = path.join(root, "draft-packs");
+      const quarantineRoot = path.join(root, "restored");
+      fs.mkdirSync(draftRoot, { recursive: true });
+      fs.mkdirSync(quarantineRoot, { recursive: true });
+      fs.cpSync(fixture("valid-minimal-pack"), path.join(draftRoot, "valid-draft"), { recursive: true });
+      fs.cpSync(path.join(scannerFixturesDir, "shell-command-pack"), path.join(quarantineRoot, "blocked-draft"), { recursive: true });
+      process.env.CONTEXTARR_DRAFT_PACKS_DIR = draftRoot;
+      process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS = quarantineRoot;
+
+      const jsonOutput = createIo();
+      const textOutput = createIo();
+      const invalidOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+      expect(await runCli(["review-candidates", "--status", "ready_for_review", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        filters: { status: "ready_for_review" },
+        returned: 1,
+        candidates: [expect.objectContaining({ packId: "valid-minimal-pack", status: "ready_for_review" })]
+      });
+      expectNoAbsolutePaths(jsonOutput.stdout);
+      expect(jsonOutput.stderr).toBe("");
+
+      expect(await runCli(["review-candidates", "--source-kind", "restored_quarantine"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("blocked");
+      expectNoAbsolutePaths(textOutput.stdout);
+      expect(textOutput.stderr).toBe("");
+
+      expect(await runCli(["review-candidates", "--status", "published"], invalidOutput.io)).toBe(2);
+      expect(invalidOutput.stderr).toContain("Unsupported review candidate status");
     });
   });
 

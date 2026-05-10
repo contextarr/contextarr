@@ -33,7 +33,7 @@ export function parseHashRoute(hash: string): Route {
   }
 
   if (parts[0] === "review-queue") {
-    return { name: "reviewQueue" };
+    return { name: "reviewQueue", tab: parts[1] === "drafts" ? "drafts" : "items" };
   }
 
   if (parts[0] === "composer") {
@@ -83,8 +83,8 @@ export function collectorsHref(): string {
   return "#/collectors";
 }
 
-export function reviewQueueHref(): string {
-  return "#/review-queue";
+export function reviewQueueHref(tab?: "items" | "drafts"): string {
+  return tab === "drafts" ? "#/review-queue/drafts" : "#/review-queue";
 }
 
 export function exportsHref(): string {

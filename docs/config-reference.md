@@ -15,6 +15,7 @@ Contextarr reads configuration from environment variables and local defaults. Pa
 | `CONTEXTARR_PACKS_DIR` | `./demo-packs` | Context Pack directory. |
 | `CONTEXTARR_DRAFT_PACKS_DIR` | `./draft-packs` | Local draft Context Pack output root for collectors. Not indexed as active packs automatically. |
 | `CONTEXTARR_COMPOSED_PACKS_DIR` | `./composed-packs` | Local draft Context Pack output root for Composer save-as-draft-pack. Not indexed as active packs automatically. |
+| `CONTEXTARR_REVIEW_CANDIDATE_DIRS` | empty | Optional path-delimited local roots for restored/imported quarantine candidate packs shown in Draft Intake. Not indexed as active packs automatically. |
 | `CONTEXTARR_WEB_DIST_DIR` | empty | Optional built web asset directory for same-origin serving. |
 | `CONTEXTARR_API_TOKEN` | empty | Optional local API token for loopback development; required for non-loopback binds. |
 | `CONTEXTARR_TELEMETRY` | `false` | Must remain false; telemetry is not part of v1 core. |

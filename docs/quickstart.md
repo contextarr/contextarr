@@ -51,9 +51,16 @@ pnpm release:verify
 1. Validate the demo packs.
 2. Open the dashboard.
 3. Inspect the Pack Library, Pack Health, and a record detail source map.
-4. Preview a Codex or Claude export.
-5. Query through read-only MCP if needed.
-6. Delete the local SQLite database and rescan to confirm the index is rebuildable.
+4. Open Review Queue, then Draft Intake, to see untrusted draft/composed candidates as metadata-only review inputs.
+5. Preview a Codex or Claude export.
+6. Query through read-only MCP if needed.
+7. Delete the local SQLite database and rescan to confirm the index is rebuildable.
+
+List draft intake candidates from the CLI:
+
+```bash
+pnpm --filter @contextarr/cli contextarr review-candidates --format json
+```
 
 ## Backup And Restore
 

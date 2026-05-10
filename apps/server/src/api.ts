@@ -20,6 +20,12 @@ import {
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
+import {
+  getReviewCandidate,
+  listReviewCandidates,
+  type ReviewCandidateSourceKind,
+  type ReviewCandidateStatus
+} from "@contextarr/review-candidates";
 import { redactionRulesSchema, type AgentKitTemplate, type RedactionRules } from "@contextarr/schema";
 import {
   assertAgentKitDirectorySeparation,
@@ -28,6 +34,7 @@ import {
   assertDraftPacksDirectory,
   assertImportedSkillsDirectory,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getSkillIndexDirs
 } from "./config";
 import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
@@ -974,6 +981,68 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
 
   app.get<{
     Querystring: {
+      sourceKind?: string;
+      status?: string;
+      q?: string;
+    };
+  }>("/api/review-candidates", async (request, reply) => {
+    const sourceKind = parseReviewCandidateSourceKind(request.query.sourceKind);
+    const status = parseReviewCandidateStatus(request.query.status);
+    if (sourceKind === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Review candidate sourceKind is invalid." });
+    }
+    if (status === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Review candidate status is invalid." });
+    }
+
+    const result = listReviewCandidates({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd()
+    });
+    const query = request.query.q?.trim().toLowerCase();
+    const candidates = result.candidates.filter((candidate) => {
+      if (sourceKind && candidate.sourceKind !== sourceKind) {
+        return false;
+      }
+      if (status && candidate.status !== status) {
+        return false;
+      }
+      if (query) {
+        return [candidate.packId, candidate.name, candidate.pathLabel, candidate.sourceLabel]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    return {
+      candidates,
+      skippedRoots: result.skippedRoots,
+      counts: {
+        ...result.counts,
+        filtered: candidates.length
+      }
+    };
+  });
+
+  app.get<{ Params: { key: string } }>("/api/review-candidates/:key", async (request, reply) => {
+    const candidate = getReviewCandidate({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      key: request.params.key
+    });
+
+    if (!candidate) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { candidate };
+  });
+
+  app.get<{
+    Querystring: {
       status?: ReviewItemStatus;
       severity?: ReviewItemSeverity;
       type?: ReviewItemType;
@@ -1224,6 +1293,24 @@ function parseBooleanQuery(value: string | undefined): boolean | "invalid" | und
     return false;
   }
   return "invalid";
+}
+
+function parseReviewCandidateSourceKind(value: string | undefined): ReviewCandidateSourceKind | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["draft_pack", "composed_pack", "imported_pack", "restored_quarantine", "unknown"].includes(value)
+    ? (value as ReviewCandidateSourceKind)
+    : "invalid";
+}
+
+function parseReviewCandidateStatus(value: string | undefined): ReviewCandidateStatus | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
+    ? (value as ReviewCandidateStatus)
+    : "invalid";
 }
 
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {

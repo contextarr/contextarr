@@ -19,6 +19,7 @@
     "@contextarr/agent-kit-validator": "workspace:*",
     "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
+    "@contextarr/review-candidates": "workspace:*",
     "@contextarr/schema": "workspace:*",
     "@contextarr/skill-validator": "workspace:*",
     "@fastify/static": "^9.1.3",

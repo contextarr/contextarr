@@ -4,6 +4,7 @@ export {
   assertImportedSkillsDirectory,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getSkillIndexDirs,
   loadConfig
 } from "./config";

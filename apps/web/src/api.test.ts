@@ -384,6 +384,32 @@ describe("Contextarr API client", () => {
     });
   });
 
+  it("reads review candidate routes", async () => {
+    const requests: string[] = [];
+    const client = createApiClient({
+      fetchImpl: async (url) => {
+        requests.push(String(url));
+        if (String(url).includes("/candidate-key")) {
+          return jsonResponse({ candidate: { key: "candidate-key", name: "Draft Candidate", records: [] } });
+        }
+        return jsonResponse({
+          candidates: [{ key: "candidate-key", name: "Draft Candidate" }],
+          skippedRoots: [],
+          counts: { total: 1, readyForReview: 1, invalid: 0, blocked: 0, duplicateActiveId: 0, skippedRoots: 0, filtered: 1 }
+        });
+      }
+    });
+
+    await expect(client.getReviewCandidates({ status: "ready_for_review", q: "draft" })).resolves.toMatchObject({
+      counts: { readyForReview: 1 }
+    });
+    await expect(client.getReviewCandidate("candidate-key")).resolves.toMatchObject({ key: "candidate-key" });
+    expect(requests).toEqual([
+      "/api/review-candidates?status=ready_for_review&q=draft",
+      "/api/review-candidates/candidate-key"
+    ]);
+  });
+
   it("reads export preview routes", async () => {
     const requests: string[] = [];
     const client = createApiClient({

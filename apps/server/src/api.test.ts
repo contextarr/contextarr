@@ -28,6 +28,7 @@ function createTestContext(
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
   const draftPacksDir = overrides.draftPacksDir ?? path.join(os.tmpdir(), "contextarr-no-draft-packs");
   const composedPacksDir = overrides.composedPacksDir ?? path.join(os.tmpdir(), "contextarr-no-composed-packs");
+  const reviewCandidateDirs = overrides.reviewCandidateDirs ?? [];
   const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
   const resolvedDemoAgentKitsDir =
@@ -38,6 +39,7 @@ function createTestContext(
     packsDir,
     draftPacksDir,
     composedPacksDir,
+    reviewCandidateDirs,
     skillsDir,
     importedSkillsDir,
     agentKitsDir,
@@ -981,6 +983,81 @@ describe("Contextarr API", () => {
       fixtureContext.db.close();
       fs.rmSync(draftPacksDir, { recursive: true, force: true });
     }
+  });
+
+  it("GET /api/review-candidates lists unindexed draft and quarantine packs without local path leaks", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-draft-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-composed-"));
+    const quarantineDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-quarantine-"));
+    fs.cpSync(path.join(validatorFixturesDir, "valid-minimal-pack"), path.join(draftPacksDir, "valid-draft"), { recursive: true });
+    fs.cpSync(path.join(demoPacksDir, "ai-workstation-pack"), path.join(composedPacksDir, "duplicate-active-pack"), { recursive: true });
+    fs.cpSync(path.join(validatorFixturesDir, "missing-manifest-pack"), path.join(quarantineDir, "invalid-quarantine"), { recursive: true });
+    const fixtureContext = createTestContext(undefined, demoPacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      reviewCandidateDirs: [quarantineDir]
+    });
+    const app = createApp(fixtureContext);
+
+    const list = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const filtered = await app.inject({ method: "GET", url: "/api/review-candidates?status=duplicate_active_id" });
+    const invalidQuery = await app.inject({ method: "GET", url: "/api/review-candidates?sourceKind=agent_runtime" });
+
+    expect(list.statusCode).toBe(200);
+    expect(filtered.statusCode).toBe(200);
+    expect(invalidQuery.statusCode).toBe(400);
+    expect(list.json().counts.total).toBe(3);
+    expect(list.json().candidates.map((candidate: { status: string }) => candidate.status).sort()).toEqual(
+      ["duplicate_active_id", "invalid", "ready_for_review"].sort()
+    );
+    expect(filtered.json().candidates).toEqual([
+      expect.objectContaining({
+        packId: "ai-workstation-pack",
+        status: "duplicate_active_id",
+        activeConflict: true
+      })
+    ]);
+    expect(list.body).not.toContain(draftPacksDir);
+    expect(list.body).not.toContain(composedPacksDir);
+    expect(list.body).not.toContain(quarantineDir);
+
+    const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
+    const detail = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}` });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().candidate.records).toEqual([
+      expect.objectContaining({
+        id: "valid.overview",
+        title: "Valid Overview"
+      })
+    ]);
+    expect(detail.body).not.toContain("This is a valid minimal context pack");
+    expect(detail.body).not.toContain(draftPacksDir);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
+    fs.rmSync(quarantineDir, { recursive: true, force: true });
+  });
+
+  it("protects review candidate routes with optional token auth", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-auth-"));
+    const fixtureContext = createTestContext("candidate-token", demoPacksDir, { draftPacksDir });
+    const app = createApp(fixtureContext);
+
+    const rejected = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const accepted = await app.inject({
+      method: "GET",
+      url: "/api/review-candidates",
+      headers: { authorization: "Bearer candidate-token" }
+    });
+
+    expect(rejected.statusCode).toBe(401);
+    expect(accepted.statusCode).toBe(200);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
   });
 
   it("GET /api/review-items lists and filters generated items", async () => {

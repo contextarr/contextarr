@@ -24,6 +24,8 @@ import type {
   RecordDetail,
   RecordSummary,
   ReviewItemsResponse,
+  ReviewCandidatesResponse,
+  ReviewCandidateDetail,
   ReviewItemStatus,
   SaveAgentKitResponse,
   SearchResponse,
@@ -94,6 +96,8 @@ export interface ApiClient {
     skillId?: string;
     agentKitId?: string;
   }): Promise<ReviewItemsResponse>;
+  getReviewCandidates(filters?: { sourceKind?: string; status?: string; q?: string }): Promise<ReviewCandidatesResponse>;
+  getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -243,6 +247,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         body: JSON.stringify(body)
       }),
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
+    getReviewCandidates: (filters = {}) =>
+      requestJson<ReviewCandidatesResponse>(`/api/review-candidates${toQueryString(filters)}`),
+    getReviewCandidate: async (key: string) => {
+      const response = await requestJson<{ candidate: ReviewCandidateDetail }>(`/api/review-candidates/${encodeURIComponent(key)}`);
+      return response.candidate;
+    },
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(
         `/api/review-items/${encodeURIComponent(id)}/status`,

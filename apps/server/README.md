@@ -17,6 +17,7 @@ Implemented through Phase 17:
 - calculate deterministic Skill Health v0
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue, pack health, and Skill health API endpoints
+- expose read-only Draft Intake candidate endpoints for untrusted Context Pack folders
 - expose local export preview API endpoints
 - expose Composer preview and Context Pack save-as-draft-pack API endpoints
 - optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`
@@ -44,6 +45,8 @@ Skill Health review items cover validation, safety rules, disallowed pattern sca
 `POST /api/compose/preview` builds a temporary export artifact from selected pack records. It reuses local pack validation, redaction rules, and the shared export engine.
 
 `POST /api/compose/save-pack` writes selected approved `public_safe` records to a private unreviewed draft Context Pack under `CONTEXTARR_COMPOSED_PACKS_DIR`, defaulting to ignored `composed-packs/`. It applies source pack redaction rules to persisted drafts, validates before success, returns no local filesystem path, does not index drafts automatically, and does not mutate source pack files.
+
+`GET /api/review-candidates` and `GET /api/review-candidates/:key` list metadata-only draft intake candidates from `CONTEXTARR_DRAFT_PACKS_DIR`, `CONTEXTARR_COMPOSED_PACKS_DIR`, and optional path-delimited `CONTEXTARR_REVIEW_CANDIDATE_DIRS`. They return sanitized labels, validation/scanner summaries, duplicate-active-pack warnings, and record/source/export metadata only. They do not return record bodies, index candidates, activate candidates, export candidates, or expose them through MCP.
 
 When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 

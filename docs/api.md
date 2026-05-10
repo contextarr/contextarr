@@ -29,8 +29,12 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local d
 
 - `GET /api/review-items`
 - `POST /api/review-items/:id/status`
+- `GET /api/review-candidates`
+- `GET /api/review-candidates/:key`
 
 Review item status changes are SQLite app state. They must not rewrite pack files.
+
+Draft Intake candidate endpoints scan configured local candidate roots for untrusted Context Pack folders. The default roots are `CONTEXTARR_DRAFT_PACKS_DIR` and `CONTEXTARR_COMPOSED_PACKS_DIR`; optional restored/imported quarantine roots can be added with `CONTEXTARR_REVIEW_CANDIDATE_DIRS` using the platform path delimiter. Responses include validation summaries, scanner summaries, duplicate-active-pack warnings, counts, source kind, candidate status, sanitized path labels, and metadata-only record/source/export summaries. They do not return record bodies or absolute local paths, and they do not activate, index, export, or expose candidates through MCP.
 
 ## Composer Endpoint
 

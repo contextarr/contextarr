@@ -7,14 +7,15 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
 - Fifteen public-safe demo Context Packs, including 12 curated starter packs.
 - Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
-- Local API for packs, records, search, health, exports, collectors, composition, backup, and restore surfaces.
+- Local API for packs, records, search, health, exports, collectors, composition, Draft Intake candidates, backup, and restore surfaces.
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
-- Pack detail, record detail, Pack Health, Review Queue, Export Center, and Composer views.
+- Pack detail, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
-- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, review, brief, and query.
+- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, review, review-candidates, brief, and query.
 - Read-only MCP surfaces where implemented by the local server package.
 - Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
+- Read-only Draft Intake inventory for draft, composed, and configured quarantine Context Pack candidates; it returns metadata only and does not activate, index, export, or expose candidates through MCP.
 
 ## Current CLI Surface
 
@@ -33,6 +34,7 @@ These commands are implemented in the current checkout and covered by CLI tests 
 | `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. |
 | `contextarr health` | Current | Summarizes local index health or reports one object health without requiring the API server or MCP. |
 | `contextarr review` | Current | Lists local review items with deterministic filters, limits, text, and JSON output. |
+| `contextarr review-candidates` | Current | Lists untrusted draft/composed/quarantine Context Pack candidates with path-redacted metadata only. |
 | `contextarr brief` | Current | Builds compact local index or object briefs for packs, Skills, and Agent Kits. |
 | `contextarr query` | Current | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
 | Commands that execute pack, Skill, or Agent Kit content | Rejected | Contextarr prepares data; it does not run agents or execute content. |

@@ -103,10 +103,13 @@ import { renderRecordBodyHtml } from "./record-rendering";
 import { renderSkillDocumentHtml } from "./skill-rendering";
 import {
   filterReviewItems,
+  filterReviewCandidates,
   reviewAgentKitName,
   reviewPackName,
   reviewSkillName,
+  summarizeReviewCandidates,
   summarizeReviewItems,
+  type ReviewCandidateFilters,
   type ReviewFilters
 } from "./review";
 import {
@@ -141,6 +144,10 @@ import type {
   RecordDetail,
   RecordSummary,
   ReviewItem,
+  ReviewCandidateDetail,
+  ReviewCandidateSummary,
+  ReviewCandidateSourceKind,
+  ReviewCandidateStatus,
   Route,
   SearchResult,
   SkillDetail,
@@ -399,7 +406,7 @@ export function App() {
         ) : route.name === "skill" ? (
           <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
-          <ReviewQueuePage packs={packs} skills={skills} agentKits={agentKits} onStatusChanged={loadDashboard} />
+          <ReviewQueuePage packs={packs} skills={skills} agentKits={agentKits} initialTab={route.tab ?? "items"} onStatusChanged={loadDashboard} />
         ) : route.name === "agentKits" ? (
           <AgentKitLibraryPage
             agentKits={agentKits}
@@ -3637,13 +3644,16 @@ function ReviewQueuePage({
   packs,
   skills,
   agentKits,
+  initialTab,
   onStatusChanged
 }: {
   packs: PackSummary[];
   skills: SkillSummary[];
   agentKits: AgentKitSummary[];
+  initialTab: "items" | "drafts";
   onStatusChanged(): void;
 }) {
+  const [activeTab, setActiveTab] = useState<"items" | "drafts">(initialTab);
   const [response, setResponse] = useState<{ items: ReviewItem[] } | null>(null);
   const [filters, setFilters] = useState<ReviewFilters>({
     objectType: "all",
@@ -3652,8 +3662,25 @@ function ReviewQueuePage({
     severity: "all",
     type: "all"
   });
+  const [candidateResponse, setCandidateResponse] = useState<{
+    candidates: ReviewCandidateSummary[];
+    skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
+  } | null>(null);
+  const [candidateFilters, setCandidateFilters] = useState<ReviewCandidateFilters>({
+    sourceKind: "all",
+    status: "all",
+    query: ""
+  });
+  const [candidateDetail, setCandidateDetail] = useState<ReviewCandidateDetail | null>(null);
+  const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -3672,15 +3699,51 @@ function ReviewQueuePage({
     void loadItems();
   }, [loadItems]);
 
+  const loadCandidates = useCallback(async () => {
+    setLoadingCandidates(true);
+    setCandidateError(null);
+    try {
+      const reviewResponse = await apiClient.getReviewCandidates();
+      setCandidateResponse({
+        candidates: reviewResponse.candidates,
+        skippedRoots: reviewResponse.skippedRoots
+      });
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load draft intake.");
+    } finally {
+      setLoadingCandidates(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "drafts" && !candidateResponse && !loadingCandidates) {
+      void loadCandidates();
+    }
+  }, [activeTab, candidateResponse, loadCandidates, loadingCandidates]);
+
   async function updateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed") {
     await apiClient.updateReviewItemStatus(item.id, status);
     await loadItems();
     onStatusChanged();
   }
 
+  async function inspectCandidate(candidate: ReviewCandidateSummary) {
+    setSelectedCandidateKey(candidate.key);
+    setCandidateError(null);
+    try {
+      setCandidateDetail(await apiClient.getReviewCandidate(candidate.key));
+    } catch (loadError) {
+      setCandidateDetail(null);
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load review candidate detail.");
+    }
+  }
+
   const items = response?.items ?? [];
   const visibleItems = filterReviewItems(items, filters);
   const summary = summarizeReviewItems(items);
+  const candidates = candidateResponse?.candidates ?? [];
+  const visibleCandidates = filterReviewCandidates(candidates, candidateFilters);
+  const candidateSummary = summarizeReviewCandidates(candidates);
 
   return (
     <section className="detail-page" aria-labelledby="review-queue-title">
@@ -3691,31 +3754,87 @@ function ReviewQueuePage({
             <span>Review Queue</span>
           </div>
           <h1 id="review-queue-title">Review Queue</h1>
-      <p>SQLite-backed attention items generated from local Context Pack, Skill, and Agent Kit checks.</p>
+          <p>SQLite-backed attention items plus read-only draft intake for local untrusted Context Pack candidates.</p>
         </div>
-        <div className="summary-strip">
-          <Stat value={summary.open} label="Open" />
-          <Stat value={summary.errors} label="Errors" />
-          <Stat value={summary.warnings} label="Warnings" />
-        </div>
+        {activeTab === "drafts" ? (
+          <div className="summary-strip">
+            <Stat value={candidateSummary.ready} label="Ready" />
+            <Stat value={candidateSummary.blocked} label="Blocked" />
+            <Stat value={candidateSummary.invalid + candidateSummary.duplicates} label="Needs Fix" />
+          </div>
+        ) : (
+          <div className="summary-strip">
+            <Stat value={summary.open} label="Open" />
+            <Stat value={summary.errors} label="Errors" />
+            <Stat value={summary.warnings} label="Warnings" />
+          </div>
+        )}
       </div>
 
-      <ReviewFiltersBar filters={filters} packs={packs} skills={skills} agentKits={agentKits} onChange={setFilters} />
+      <div className="detail-tabs review-tabs" role="tablist" aria-label="Review queue sections">
+        <a className={activeTab === "items" ? "is-selected" : ""} href={reviewQueueHref()} role="tab" aria-selected={activeTab === "items"}>
+          Review Items
+        </a>
+        <a
+          className={activeTab === "drafts" ? "is-selected" : ""}
+          href={reviewQueueHref("drafts")}
+          role="tab"
+          aria-selected={activeTab === "drafts"}
+        >
+          Draft Intake
+        </a>
+      </div>
 
-      {error ? (
-        <StateCard title="Review queue unavailable" detail={error} />
-      ) : loading ? (
-        <DetailLoading />
-      ) : items.length === 0 ? (
-        <StateCard title="No review items" detail="All indexed demo packs, Skills, and Agent Kits are healthy." icon={CheckCircle2} />
-      ) : visibleItems.length === 0 ? (
-        <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
+      {activeTab === "drafts" ? (
+        <>
+          <ReviewCandidateFiltersBar filters={candidateFilters} onChange={setCandidateFilters} />
+          {candidateError ? <StateCard title="Draft intake unavailable" detail={candidateError} /> : null}
+          {loadingCandidates ? (
+            <DetailLoading />
+          ) : candidates.length === 0 ? (
+            <StateCard
+              title="No draft candidates"
+              detail="Configured draft, composed, and quarantine folders do not currently contain candidate Context Packs."
+              icon={CheckCircle2}
+            />
+          ) : visibleCandidates.length === 0 ? (
+            <StateCard title="No matching draft candidates" detail="Adjust the intake filters to see more candidates." />
+          ) : (
+            <div className="draft-intake-layout">
+              <div className="review-list">
+                {visibleCandidates.map((candidate) => (
+                  <ReviewCandidateCard
+                    candidate={candidate}
+                    selected={selectedCandidateKey === candidate.key}
+                    onInspect={inspectCandidate}
+                    key={candidate.key}
+                  />
+                ))}
+              </div>
+              <ReviewCandidateDetailPanel candidate={candidateDetail} skippedRoots={candidateResponse?.skippedRoots ?? []} />
+            </div>
+          )}
+        </>
       ) : (
-        <div className="review-list">
-          {visibleItems.map((item) => (
-            <ReviewItemCard item={item} packs={packs} skills={skills} agentKits={agentKits} onUpdateStatus={updateStatus} key={item.id} />
-          ))}
-        </div>
+        <>
+          <ReviewFiltersBar filters={filters} packs={packs} skills={skills} agentKits={agentKits} onChange={setFilters} />
+
+          {error ? (
+            <StateCard title="Review queue unavailable" detail={error} />
+          ) : loading ? (
+            <DetailLoading />
+          ) : items.length === 0 ? (
+            <StateCard title="No review items" detail="All indexed demo packs, Skills, and Agent Kits are healthy." icon={CheckCircle2} />
+          ) : visibleItems.length === 0 ? (
+            <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
+          ) : (
+            <div className="review-list">
+              {visibleItems.map((item) => (
+                <ReviewItemCard item={item} packs={packs} skills={skills} agentKits={agentKits} onUpdateStatus={updateStatus} key={item.id} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -4269,6 +4388,216 @@ function RecordDetailPage({ recordId, packs }: { recordId: string; packs: PackSu
       </div>
     </section>
   );
+}
+
+function ReviewCandidateFiltersBar({
+  filters,
+  onChange
+}: {
+  filters: ReviewCandidateFilters;
+  onChange(filters: ReviewCandidateFilters): void;
+}) {
+  return (
+    <div className="review-filters candidate-filters">
+      <label className="select-control">
+        <Layers3 size={16} aria-hidden="true" />
+        <select
+          value={filters.sourceKind}
+          onChange={(event) => onChange({ ...filters, sourceKind: event.target.value as ReviewCandidateSourceKind | "all" })}
+        >
+          <option value="all">All sources</option>
+          <option value="draft_pack">Draft packs</option>
+          <option value="composed_pack">Composed packs</option>
+          <option value="imported_pack">Imported packs</option>
+          <option value="restored_quarantine">Restored quarantine</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </label>
+      <label className="select-control">
+        <ShieldCheck size={16} aria-hidden="true" />
+        <select value={filters.status} onChange={(event) => onChange({ ...filters, status: event.target.value as ReviewCandidateStatus | "all" })}>
+          <option value="all">All status</option>
+          <option value="ready_for_review">Ready for review</option>
+          <option value="invalid">Invalid</option>
+          <option value="blocked">Blocked</option>
+          <option value="duplicate_active_id">Duplicate active ID</option>
+        </select>
+      </label>
+      <label className="select-control candidate-search">
+        <Search size={16} aria-hidden="true" />
+        <input
+          value={filters.query}
+          aria-label="Search draft candidates"
+          placeholder="Search candidates"
+          onChange={(event) => onChange({ ...filters, query: event.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ReviewCandidateCard({
+  candidate,
+  selected,
+  onInspect
+}: {
+  candidate: ReviewCandidateSummary;
+  selected: boolean;
+  onInspect(candidate: ReviewCandidateSummary): void;
+}) {
+  return (
+    <article className={`review-card candidate-card severity-${candidateSeverity(candidate.status)} ${selected ? "is-selected" : ""}`}>
+      <div className="review-card-main">
+        <div className="review-card-title">
+          <StatusPill value={candidateSeverity(candidate.status)} />
+          <span>{formatPackType(candidate.status)}</span>
+          <span>{formatPackType(candidate.sourceKind)}</span>
+          <em>{candidate.validation.status}</em>
+        </div>
+        <h2>{candidate.name}</h2>
+        <p>{candidate.recommendedAction}</p>
+        <div className="review-card-meta">
+          {candidate.packId ? <span>{candidate.packId}</span> : null}
+          <span>{candidate.pathLabel}</span>
+          <span>{candidate.counts.records} records</span>
+          <span>{candidate.counts.sources} sources</span>
+          <span>{candidate.counts.exportProfiles} exports</span>
+        </div>
+      </div>
+      <div className="review-actions">
+        <button type="button" onClick={() => onInspect(candidate)}>
+          Inspect
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ReviewCandidateDetailPanel({
+  candidate,
+  skippedRoots
+}: {
+  candidate: ReviewCandidateDetail | null;
+  skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
+}) {
+  if (!candidate) {
+    return (
+      <aside className="detail-card candidate-detail-panel" aria-label="Draft candidate detail">
+        <h2>Candidate Detail</h2>
+        <p className="muted-note">Inspect a draft candidate to review validation, security, records, sources, and export metadata.</p>
+        {skippedRoots.length > 0 ? (
+          <div className="candidate-skipped-roots">
+            <h3>Skipped Roots</h3>
+            <ul className="simple-list">
+              {skippedRoots.map((root) => (
+                <li key={`${root.rootLabel}:${root.reason}`}>
+                  <span>{root.rootLabel}</span>
+                  <strong>{formatPackType(root.reason)}</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="detail-card candidate-detail-panel" aria-label={`${candidate.name} candidate detail`}>
+      <h2>{candidate.name}</h2>
+      <div className="fact-grid">
+        <Fact label="Status" value={formatPackType(candidate.status)} />
+        <Fact label="Source" value={formatPackType(candidate.sourceKind)} />
+        <Fact label="Validation" value={formatPackType(candidate.validation.status)} />
+        <Fact label="Security" value={formatPackType(candidate.security.status)} />
+      </div>
+      <p className="muted-note">{candidate.recommendedAction}</p>
+
+      <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
+      <CandidateSecurityList findings={candidate.securityFindings} />
+
+      <h3>Records</h3>
+      {candidate.records.length === 0 ? (
+        <p className="muted-note">No record metadata available.</p>
+      ) : (
+        <ul className="simple-list candidate-metadata-list">
+          {candidate.records.slice(0, 8).map((record) => (
+            <li key={record.id}>
+              <span>{record.title}</span>
+              <strong>{formatPackType(record.reviewStatus)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3>Sources and Exports</h3>
+      <div className="stat-grid">
+        <Stat value={candidate.sources.length} label="Sources" />
+        <Stat value={candidate.exportProfiles.length} label="Profiles" />
+        <Stat value={candidate.security.findingCount} label="Findings" />
+      </div>
+    </aside>
+  );
+}
+
+function CandidateIssueList({
+  title,
+  issues
+}: {
+  title: string;
+  issues: Array<{ severity: string; code: string; message: string; file?: string }>;
+}) {
+  return (
+    <>
+      <h3>{title}</h3>
+      {issues.length === 0 ? (
+        <p className="muted-note">No validation issues reported.</p>
+      ) : (
+        <ul className="simple-list candidate-issue-list">
+          {issues.slice(0, 8).map((issue) => (
+            <li key={`${issue.code}:${issue.file ?? ""}:${issue.message}`}>
+              <span>{issue.message}</span>
+              <strong>{issue.code}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function CandidateSecurityList({
+  findings
+}: {
+  findings: ReviewCandidateDetail["securityFindings"];
+}) {
+  return (
+    <>
+      <h3>Security Findings</h3>
+      {findings.length === 0 ? (
+        <p className="muted-note">No scanner findings reported.</p>
+      ) : (
+        <ul className="simple-list candidate-issue-list">
+          {findings.slice(0, 8).map((finding) => (
+            <li key={finding.id}>
+              <span>{finding.message}</span>
+              <strong>{formatPackType(finding.severity)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function candidateSeverity(status: ReviewCandidateStatus): ReviewItem["severity"] {
+  if (status === "blocked" || status === "invalid") {
+    return "error";
+  }
+  if (status === "duplicate_active_id") {
+    return "warning";
+  }
+  return "info";
 }
 
 function ReviewFiltersBar({
