@@ -13,6 +13,7 @@ pnpm advanced-preview:verify
 pnpm limitations:verify
 pnpm screenshots:verify
 pnpm exports:verify
+pnpm exposure:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify
@@ -30,6 +31,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Confirm demo packs validate with 0 errors and 0 warnings.
 - Confirm the 12 starter Context Packs are clearly local examples, not marketplace listings.
 - Confirm starter Context Pack exports pass deterministic, redaction-aware checks with `pnpm exports:verify`.
+- Confirm Exposure Readiness reports remain read-only and path-redacted with `pnpm exposure:verify`.
 - Confirm CLI/API path-safety and draft/quarantine boundary tests are included in the latest test run.
 - Confirm no ignored local outputs are staged.
 - Confirm Docker preview opens at `http://127.0.0.1:3210`.

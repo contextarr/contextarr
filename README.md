@@ -35,8 +35,8 @@ Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, 
 - Context Pack schema, validation, and deterministic validation reports.
 - 15 public-safe demo packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index derived from local files.
-- Local Fastify API for packs, records, search, health, exports, composition, collectors, Draft Intake candidates, backup, and restore surfaces.
-- React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer.
+- Local Fastify API for packs, records, search, health, exposure readiness, exports, composition, collectors, Draft Intake candidates, backup, and restore surfaces.
+- React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, `AGENTS.md`, `CLAUDE.md`, and `llms.txt`.
 - CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, quarantine restore, rescan, list, inspect, health, review, review-candidates, brief, and query.
 - Read-only stdio MCP surfaces where implemented by the local MCP package.
@@ -112,6 +112,7 @@ pnpm demo:validate
 pnpm v1-core:verify
 pnpm advanced-preview:verify
 pnpm exports:verify
+pnpm exposure:verify
 pnpm site:verify
 ```
 
@@ -138,7 +139,7 @@ Current local index helper commands:
 ```bash
 pnpm --filter @contextarr/cli contextarr rescan --format json
 pnpm --filter @contextarr/cli contextarr list packs --format json
-pnpm --filter @contextarr/cli contextarr inspect pack ai-workstation-pack --format json
+pnpm --filter @contextarr/cli contextarr inspect ai-workstation-pack --kind pack --readiness --format json
 pnpm --filter @contextarr/cli contextarr health --format json
 pnpm --filter @contextarr/cli contextarr review --format json
 pnpm --filter @contextarr/cli contextarr brief --format json
@@ -162,6 +163,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - Validation, scanning, health, export previews, and MCP tools must not execute pack content.
 - Restores and generated drafts land in review/quarantine flows; they are not activated automatically.
 - Draft Intake shows metadata-only candidate inventories; it does not activate, index, export, or expose candidates through MCP.
+- Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - The scanner is a gate, not a guarantee; human review remains required before activation, export, registry exposure, or MCP exposure.
 
 See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security-model.md), [docs/non-goals.md](docs/non-goals.md), and [docs/known-limitations.md](docs/known-limitations.md).
@@ -174,6 +176,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Backup/restore v0 is local and quarantine-only.
 - Draft Intake v0 is read-only; it does not include approve, promote, or activate actions.
+- Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
 - Context Pack collectors and Composer save flows create private unreviewed drafts only.
 - Skills and Agent Kits are advanced-preview data objects, not runtime features.
 - Public registry, marketplace, signing implementation, remote install, cloud sync, and telemetry remain out of scope.

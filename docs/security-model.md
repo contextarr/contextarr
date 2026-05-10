@@ -89,6 +89,8 @@ Phase 7 exports are generated from validated local pack files and data-only expo
 
 MCP export previews reuse the same export engine and do not write generated files.
 
+Exposure Readiness reports combine validation status, scanner status, review state, privacy flags, redaction/export profile eligibility, and source coverage for active Context Packs. They are read-only metadata reports. They must not approve packs, mutate source files or SQLite review state, change export behavior, widen MCP visibility, return record bodies, or expose absolute local paths.
+
 Composer previews reuse the same export engine and redaction rules. They are read-only temporary artifacts: the API returns content, the browser may copy or download it locally, and Contextarr does not write composed pack files in Phase 10.
 
 ## Import Security

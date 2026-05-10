@@ -113,6 +113,9 @@ importers:
       '@contextarr/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      '@contextarr/security-scanner':
+        specifier: workspace:*
+        version: link:../../packages/security-scanner
       '@contextarr/skill-validator':
         specifier: workspace:*
         version: link:../../packages/skill-validator

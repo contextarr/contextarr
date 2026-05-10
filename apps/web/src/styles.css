@@ -1222,6 +1222,57 @@ h1 {
   border-color: rgba(242, 162, 58, 0.24);
 }
 
+.readiness-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+
+.readiness-status {
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.readiness-status.is-ready {
+  border-color: rgba(34, 197, 94, 0.36);
+  background: rgba(34, 197, 94, 0.12);
+  color: #9ae6b4;
+}
+
+.readiness-status.is-warning {
+  border-color: rgba(242, 162, 58, 0.36);
+  background: rgba(242, 162, 58, 0.12);
+  color: #f8c276;
+}
+
+.readiness-status.is-blocked {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+
+.compact-stat-grid {
+  margin-bottom: 14px;
+}
+
+.readiness-issues li {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.readiness-issues strong {
+  flex: 0 0 auto;
+  min-width: 64px;
+  color: var(--text);
+}
+
 .inline-action {
   justify-content: center;
   min-height: 34px;

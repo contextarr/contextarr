@@ -18,6 +18,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - Context Pack collectors write private unreviewed draft packs only.
 - Composer save-as-draft-pack writes private unreviewed draft Context Packs only.
 - Draft Intake v0 is a read-only metadata workbench. It does not approve, promote, activate, index, export, or expose candidate packs through MCP.
+- Exposure Readiness v0 is a read-only active-pack report. It explains default export and read-only MCP eligibility, but it does not approve packs, enforce policy, change export behavior, or widen MCP exposure.
 - Local Skill importers are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.
 - CLI/API path-redaction checks reduce accidental local path leakage in known outputs, but they are not a substitute for a full external security audit.

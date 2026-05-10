@@ -37,6 +37,7 @@ pnpm docs:verify
 pnpm demo:validate
 pnpm v1-core:verify
 pnpm advanced-preview:verify
+pnpm exposure:verify
 pnpm site:verify
 ```
 
@@ -50,7 +51,7 @@ pnpm release:verify
 
 1. Validate the demo packs.
 2. Open the dashboard.
-3. Inspect the Pack Library, Pack Health, and a record detail source map.
+3. Inspect the Pack Library, Pack Health, Exposure Readiness, and a record detail source map.
 4. Open Review Queue, then Draft Intake, to see untrusted draft/composed candidates as metadata-only review inputs.
 5. Preview a Codex or Claude export.
 6. Query through read-only MCP if needed.
@@ -60,6 +61,12 @@ List draft intake candidates from the CLI:
 
 ```bash
 pnpm --filter @contextarr/cli contextarr review-candidates --format json
+```
+
+Inspect active pack exposure readiness from the CLI:
+
+```bash
+pnpm --filter @contextarr/cli contextarr inspect ai-workstation-pack --kind pack --readiness --format json
 ```
 
 ## Backup And Restore

@@ -19,6 +19,7 @@ import type {
   ContextPackCollectorResult,
   ExportArtifact,
   PackDetail,
+  PackExposureReadiness,
   PackHealthResponse,
   PackSummary,
   RecordDetail,
@@ -58,6 +59,7 @@ export interface ApiClient {
   getHealth(): Promise<HealthResponse>;
   getPacks(): Promise<PackSummary[]>;
   getPack(id: string): Promise<PackDetail>;
+  getPackExposureReadiness(id: string): Promise<PackExposureReadiness>;
   getPackHealth(id: string): Promise<PackHealthResponse>;
   getPackRecords(id: string): Promise<RecordSummary[]>;
   getRecord(id: string): Promise<RecordDetail>;
@@ -130,6 +132,8 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.packs;
     },
     getPack: (id: string) => requestJson<PackDetail>(`/api/packs/${encodeURIComponent(id)}`),
+    getPackExposureReadiness: (id: string) =>
+      requestJson<PackExposureReadiness>(`/api/packs/${encodeURIComponent(id)}/exposure-readiness`),
     getPackHealth: (id: string) => requestJson<PackHealthResponse>(`/api/packs/${encodeURIComponent(id)}/health`),
     getPackRecords: async (id: string) => {
       const response = await requestJson<{ records: RecordSummary[] }>(`/api/packs/${encodeURIComponent(id)}/records`);

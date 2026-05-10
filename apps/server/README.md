@@ -2,7 +2,7 @@
 
 Local Fastify API server and rebuildable SQLite index for Contextarr packs and non-executable Skills.
 
-Implemented through Phase 17:
+Implemented in the current checkout:
 
 - load and validate local pack folders
 - load and validate local Skill folders
@@ -14,6 +14,7 @@ Implemented through Phase 17:
 - harden search against punctuation-heavy UI input
 - support optional loopback local API token auth via `CONTEXTARR_API_TOKEN`
 - calculate deterministic Pack Health v0
+- calculate read-only Exposure Readiness for active Context Packs
 - calculate deterministic Skill Health v0
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue, pack health, and Skill health API endpoints
@@ -39,6 +40,8 @@ The server binds to `127.0.0.1` by default and does not mutate pack or Skill fil
 Docker Compose sets `CONTEXTARR_HOST=0.0.0.0`, a fake local-preview token, and `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist` so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
 
 Export previews are generated from validated local pack files. The server does not write generated export files, fetch source URLs, call AI APIs, or upload data.
+
+`GET /api/packs/:id/exposure-readiness` is a metadata-only report for default export and read-only MCP eligibility. It combines validation, scanner status, review state, privacy flags, source coverage, and export profile readiness without mutating source files, changing export behavior, approving packs, or returning record bodies.
 
 Skill Health review items cover validation, safety rules, disallowed pattern scans, examples, sources, review status, freshness, target compatibility, and export readiness. Review status actions remain SQLite-only local app state.
 

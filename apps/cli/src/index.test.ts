@@ -194,6 +194,43 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("adds read-only exposure readiness to Context Pack inspect output when requested", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const textOutput = createIo();
+      const jsonOutput = createIo();
+      const invalidOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--readiness"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("Exposure readiness:");
+      expect(textOutput.stdout).toContain("Export:");
+      expect(textOutput.stdout).toContain("MCP:");
+      expectNoAbsolutePaths(textOutput.stdout);
+
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--readiness", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "pack",
+        id: "ai-workstation-pack",
+        exposureReadiness: {
+          packId: "ai-workstation-pack",
+          summary: {
+            recordCount: 5,
+            exportEligibleRecords: 5,
+            mcpEligibleRecords: 5
+          }
+        }
+      });
+      expect(json.exposureReadiness.records[0]).not.toHaveProperty("body");
+      expectNoAbsolutePaths(jsonOutput.stdout);
+
+      expect(await runCli(["inspect", "ai-workstation.local-ai-stack", "--kind", "record", "--readiness"], invalidOutput.io)).toBe(2);
+      expect(invalidOutput.stderr).toContain("Exposure readiness is only available for Context Packs.");
+    });
+  });
+
   it("reports local index health in summary and object formats", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();

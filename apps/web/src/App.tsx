@@ -139,6 +139,7 @@ import type {
   ContextPackCollectorPreview,
   ContextPackCollectorResult,
   PackDetail,
+  PackExposureReadiness,
   PackHealthResponse,
   PackSummary,
   RecordDetail,
@@ -2041,6 +2042,8 @@ function SkillHealthTab({ skill }: { skill: SkillDetail }) {
 function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[] }) {
   const [pack, setPack] = useState<PackDetail | null>(null);
   const [records, setRecords] = useState<RecordSummary[]>([]);
+  const [exposureReadiness, setExposureReadiness] = useState<PackExposureReadiness | null>(null);
+  const [exposureError, setExposureError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2049,17 +2052,26 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setExposureError(null);
+    setExposureReadiness(null);
     setActiveTab("overview");
 
     async function loadPackDetail() {
       try {
-        const [packResponse, recordsResponse] = await Promise.all([
+        const [packResponse, recordsResponse, exposureResponse] = await Promise.all([
           apiClient.getPack(packId),
-          apiClient.getPackRecords(packId)
+          apiClient.getPackRecords(packId),
+          apiClient.getPackExposureReadiness(packId).catch((readinessError: unknown) => {
+            if (!cancelled) {
+              setExposureError(readinessError instanceof Error ? readinessError.message : "Exposure readiness is unavailable.");
+            }
+            return null;
+          })
         ]);
         if (!cancelled) {
           setPack(packResponse);
           setRecords(recordsResponse);
+          setExposureReadiness(exposureResponse);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -2130,7 +2142,9 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
         ))}
       </div>
 
-      {activeTab === "overview" ? <PackOverview pack={pack} records={records} packs={packs} /> : null}
+      {activeTab === "overview" ? (
+        <PackOverview pack={pack} records={records} packs={packs} exposureReadiness={exposureReadiness} exposureError={exposureError} />
+      ) : null}
       {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
       {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
@@ -2141,7 +2155,19 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
   );
 }
 
-function PackOverview({ pack, records, packs }: { pack: PackDetail; records: RecordSummary[]; packs: PackSummary[] }) {
+function PackOverview({
+  pack,
+  records,
+  packs,
+  exposureReadiness,
+  exposureError
+}: {
+  pack: PackDetail;
+  records: RecordSummary[];
+  packs: PackSummary[];
+  exposureReadiness: PackExposureReadiness | null;
+  exposureError: string | null;
+}) {
   const related = packs.filter((candidate) => candidate.id !== pack.id && candidate.type === pack.type).slice(0, 3);
   const brand = resolvePackBrand(pack);
   const trustLabel = packTrustLabels[normalizePackTrustLevel(pack.trustLevel, Boolean(brand))];
@@ -2187,6 +2213,8 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
         </button>
       </article>
 
+      <ExposureReadinessPanel readiness={exposureReadiness} error={exposureError} />
+
       <article className="detail-card">
         <h2>
           <CloudDownload size={19} aria-hidden="true" />
@@ -2214,6 +2242,71 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
         )}
       </article>
     </div>
+  );
+}
+
+function ExposureReadinessPanel({ readiness, error }: { readiness: PackExposureReadiness | null; error: string | null }) {
+  if (error) {
+    return (
+      <article className="detail-card warning-card" aria-labelledby="exposure-readiness-title">
+        <h2 id="exposure-readiness-title">
+          <ShieldAlert size={19} aria-hidden="true" />
+          Exposure Readiness
+        </h2>
+        <p>{error}</p>
+      </article>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <article className="detail-card" aria-labelledby="exposure-readiness-title">
+        <h2 id="exposure-readiness-title">
+          <ShieldCheck size={19} aria-hidden="true" />
+          Exposure Readiness
+        </h2>
+        <p>Exposure readiness is loading.</p>
+      </article>
+    );
+  }
+
+  const hasBlockers = readiness.summary.blockedRecords > 0 || readiness.summary.blockedProfiles > 0 || readiness.blockers.length > 0;
+  const hasWarnings = readiness.summary.warningRecords > 0 || readiness.summary.warningProfiles > 0 || readiness.warnings.length > 0;
+  const status = hasBlockers ? "Blocked" : hasWarnings ? "Needs review" : "Ready";
+  const issues = [...readiness.blockers, ...readiness.warnings].slice(0, 3);
+
+  return (
+    <article className={hasBlockers ? "detail-card warning-card" : "detail-card"} aria-labelledby="exposure-readiness-title">
+      <h2 id="exposure-readiness-title">
+        {hasBlockers ? <ShieldAlert size={19} aria-hidden="true" /> : <ShieldCheck size={19} aria-hidden="true" />}
+        Exposure Readiness
+      </h2>
+      <div className="readiness-summary">
+        <span className={hasBlockers ? "readiness-status is-blocked" : hasWarnings ? "readiness-status is-warning" : "readiness-status is-ready"}>
+          {status}
+        </span>
+        <span>{formatPackType(readiness.security.status)}</span>
+      </div>
+      <div className="stat-grid compact-stat-grid">
+        <Stat value={`${readiness.summary.exportEligibleRecords}/${readiness.summary.recordCount}`} label="Export Records" />
+        <Stat value={`${readiness.summary.mcpEligibleRecords}/${readiness.summary.recordCount}`} label="MCP Records" />
+        <Stat value={`${readiness.summary.exportEligibleProfiles}/${readiness.summary.exportProfileCount}`} label="Profiles" />
+        <Stat value={`${readiness.summary.sourceBackedRecords}/${readiness.summary.recordCount}`} label="Source Coverage" />
+      </div>
+      {issues.length > 0 ? (
+        <ul className="simple-list readiness-issues">
+          {issues.map((issue) => (
+            <li key={`${issue.severity}-${issue.code}`}>
+              <strong>{formatPackType(issue.severity)}</strong>
+              <span>{issue.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>All active records and profiles meet the default read-only exposure policy.</p>
+      )}
+      <p className="muted-note">{readiness.policies.mcp.defaultBodyPolicy}.</p>
+    </article>
   );
 }
 

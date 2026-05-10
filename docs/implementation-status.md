@@ -7,9 +7,9 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
 - Fifteen public-safe demo Context Packs, including 12 curated starter packs.
 - Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
-- Local API for packs, records, search, health, exports, collectors, composition, Draft Intake candidates, backup, and restore surfaces.
+- Local API for packs, records, search, health, exposure readiness, exports, collectors, composition, Draft Intake candidates, backup, and restore surfaces.
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
-- Pack detail, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
+- Pack detail with Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
 - CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, review, review-candidates, brief, and query.
 - Read-only MCP surfaces where implemented by the local server package.
@@ -31,7 +31,7 @@ These commands are implemented in the current checkout and covered by CLI tests 
 | `contextarr backup` / `contextarr restore` | Current | Restore writes quarantine output, not automatic activation. |
 | `contextarr rescan` | Current | Rebuilds the derived local SQLite index without requiring the API server or MCP. |
 | `contextarr list` | Current | Lists indexed packs, Skills, and Agent Kits with deterministic text or JSON output. |
-| `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. |
+| `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. `--readiness` adds read-only Exposure Readiness for Context Packs only. |
 | `contextarr health` | Current | Summarizes local index health or reports one object health without requiring the API server or MCP. |
 | `contextarr review` | Current | Lists local review items with deterministic filters, limits, text, and JSON output. |
 | `contextarr review-candidates` | Current | Lists untrusted draft/composed/quarantine Context Pack candidates with path-redacted metadata only. |

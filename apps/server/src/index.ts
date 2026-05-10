@@ -10,6 +10,15 @@ export {
 } from "./config";
 export { createSchema, openDatabase, type ContextarrDatabase } from "./db";
 export {
+  ExposureReadinessError,
+  getPackExposureReadiness,
+  type ExposureIssue,
+  type ExposureIssueSeverity,
+  type ExposureProfileReadiness,
+  type ExposureRecordReadiness,
+  type PackExposureReadiness
+} from "./exposure-readiness";
+export {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,

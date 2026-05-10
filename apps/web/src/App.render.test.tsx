@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => {
       getHealth: vi.fn(),
       getPacks: vi.fn(),
       getPack: vi.fn(),
+      getPackExposureReadiness: vi.fn(),
       getPackRecords: vi.fn(),
       getRecord: vi.fn(),
       getSkills: vi.fn(),
@@ -109,6 +110,7 @@ describe("App Skill UI routes", () => {
     mocks.apiClient.getHealth.mockResolvedValue(healthFixture());
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getPack.mockResolvedValue(packDetailFixture());
+    mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessFixture());
     mocks.apiClient.getPackRecords.mockResolvedValue([]);
     mocks.apiClient.getRecord.mockResolvedValue({});
     mocks.apiClient.getSkills.mockResolvedValue([skillFixture()]);
@@ -340,6 +342,17 @@ describe("App Skill UI routes", () => {
     await waitForText("AI Workstation Pack");
     expect(document.body.textContent).toContain("Pack Library");
     expect(document.body.textContent).not.toContain("Local API unavailable");
+  });
+
+  it("surfaces read-only exposure readiness in pack detail", async () => {
+    mountApp("#/packs/ai-workstation-pack");
+
+    await waitForText("AI Workstation Pack");
+    await waitForText("Exposure Readiness");
+    expect(document.body.textContent).toContain("Export Records");
+    expect(document.body.textContent).toContain("MCP Records");
+    expect(document.body.textContent).toContain("Source Coverage");
+    expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
   });
 
   it("labels search and inactive shell controls for assistive technology", async () => {
@@ -1077,6 +1090,52 @@ function packDetailFixture() {
     },
     sources: [],
     exportProfiles: []
+  };
+}
+
+function packExposureReadinessFixture() {
+  return {
+    packId: "ai-workstation-pack",
+    packName: "AI Workstation Pack",
+    policies: {
+      export: {
+        defaultPrivacyMode: "redacted",
+        recordPolicy: "approved public_safe records without secret, never_export, or imported_draft tags"
+      },
+      mcp: {
+        transport: "stdio",
+        defaultBodyPolicy: "approved public_safe records only; secret bodies are never returned",
+        allowPrivateByDefault: false
+      }
+    },
+    validation: {
+      valid: true,
+      status: "valid",
+      errors: 0,
+      warnings: 0
+    },
+    security: {
+      status: "policy_clean",
+      recommendedAction: "activate",
+      blocked: false
+    },
+    summary: {
+      recordCount: 5,
+      exportEligibleRecords: 5,
+      mcpEligibleRecords: 5,
+      blockedRecords: 0,
+      warningRecords: 0,
+      sourceBackedRecords: 5,
+      recordsMissingSourceCoverage: 0,
+      exportProfileCount: 8,
+      exportEligibleProfiles: 8,
+      blockedProfiles: 0,
+      warningProfiles: 0
+    },
+    exportProfiles: [],
+    records: [],
+    blockers: [],
+    warnings: []
   };
 }
 

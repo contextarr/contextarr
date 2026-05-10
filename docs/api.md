@@ -21,6 +21,7 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local d
 - `GET /api/packs/:id/records`: record summaries with optional `q`, `tag`, and `type` filters.
 - `GET /api/records/:id`: full record body, metadata, source ids, and resolved source summaries.
 - `GET /api/packs/:id/health`: deterministic pack health and review items.
+- `GET /api/packs/:id/exposure-readiness`: read-only eligibility report for default export and read-only MCP exposure.
 - `GET /api/packs/:id/exports/:profileId/preview`: local export preview only; no files are written.
 - `GET /api/search?q=`: local search across pack and record data; supports `type=pack`, `record`, `skill`, `agent-kit`, or `all`.
 - `POST /api/rescan`: rebuilds the derived index from configured local directories only.
@@ -35,6 +36,12 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local d
 Review item status changes are SQLite app state. They must not rewrite pack files.
 
 Draft Intake candidate endpoints scan configured local candidate roots for untrusted Context Pack folders. The default roots are `CONTEXTARR_DRAFT_PACKS_DIR` and `CONTEXTARR_COMPOSED_PACKS_DIR`; optional restored/imported quarantine roots can be added with `CONTEXTARR_REVIEW_CANDIDATE_DIRS` using the platform path delimiter. Responses include validation summaries, scanner summaries, duplicate-active-pack warnings, counts, source kind, candidate status, sanitized path labels, and metadata-only record/source/export summaries. They do not return record bodies or absolute local paths, and they do not activate, index, export, or expose candidates through MCP.
+
+## Exposure Readiness
+
+`GET /api/packs/:id/exposure-readiness` reports why an active Context Pack is or is not ready for default export and read-only MCP exposure. It combines current validation status, scanner status, review state, privacy flags, redaction and export profile readiness, and source coverage into a metadata-only report.
+
+The endpoint is read-only. It does not approve packs, mutate SQLite state, change export behavior, widen MCP visibility, return record bodies, or expose absolute local paths.
 
 ## Composer Endpoint
 

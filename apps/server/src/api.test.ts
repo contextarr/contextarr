@@ -239,6 +239,71 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/packs/:id/exposure-readiness reports read-only export and MCP eligibility", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "ai-workstation-pack",
+      validation: {
+        status: "valid",
+        errors: 0
+      },
+      security: {
+        status: "policy_clean",
+        blocked: false
+      },
+      summary: {
+        recordCount: 5,
+        exportEligibleRecords: 5,
+        mcpEligibleRecords: 5,
+        exportProfileCount: 8,
+        exportEligibleProfiles: 8,
+        sourceBackedRecords: 5,
+        recordsMissingSourceCoverage: 0
+      },
+      policies: {
+        mcp: {
+          allowPrivateByDefault: false
+        }
+      }
+    });
+    expect(response.json().records[0]).not.toHaveProperty("body");
+    expect(response.json().records[0]).not.toHaveProperty("filePath");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(JSON.stringify(response.json())).not.toMatch(/[A-Za-z]:[\\/]/);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exposure-readiness reports privacy and review blockers without changing export behavior", async () => {
+    db.prepare(
+      `UPDATE records
+       SET privacy = ?, review_status = ?, tags_json = ?, tags_text = ?
+       WHERE id = ?`
+    ).run("private", "draft", JSON.stringify(["never_export"]), "never_export", "ai-workstation.local-ai-stack");
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    const record = response.json().records.find((item: { id: string }) => item.id === "ai-workstation.local-ai-stack");
+    expect(record).toMatchObject({
+      exportEligible: false,
+      mcpEligible: false
+    });
+    expect(record.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "record.review_status" }),
+        expect.objectContaining({ code: "record.privacy.not_public_safe" }),
+        expect.objectContaining({ code: "record.tag.never_export" })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs returns demo pack summaries", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/packs" });
@@ -2778,7 +2843,7 @@ describe("Contextarr API", () => {
     authedContext.db.close();
   });
 
-  it("requires token auth on review and pack health routes", async () => {
+  it("requires token auth on review, pack health, and exposure readiness routes", async () => {
     db.close();
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
@@ -2788,9 +2853,20 @@ describe("Contextarr API", () => {
       url: "/api/packs/ai-workstation-pack/health",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exposure-readiness"
+    });
+    const allowedReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exposure-readiness",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(reviewResponse.statusCode).toBe(401);
     expect(healthResponse.statusCode).toBe(200);
+    expect(blockedReadiness.statusCode).toBe(401);
+    expect(allowedReadiness.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

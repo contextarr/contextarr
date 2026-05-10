@@ -39,6 +39,7 @@ import {
 } from "./config";
 import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
 import type { ContextarrDatabase } from "./db";
+import { ExposureReadinessError, getPackExposureReadiness } from "./exposure-readiness";
 import {
   AgentKitWriteError,
   createAgentKitDraft,
@@ -764,6 +765,23 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return health;
+  });
+
+  app.get<{ Params: { id: string } }>("/api/packs/:id/exposure-readiness", async (request, reply) => {
+    try {
+      const readiness = getPackExposureReadiness(db, config, request.params.id);
+      if (!readiness) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+      }
+
+      return readiness;
+    } catch (error) {
+      if (error instanceof ExposureReadinessError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
   });
 
   app.get<{ Params: { id: string; profileId: string } }>("/api/packs/:id/exports/:profileId/preview", async (request, reply) => {

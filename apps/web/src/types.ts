@@ -450,6 +450,85 @@ export interface PackDetail extends PackSummary {
   exportProfiles: ExportProfileSummary[];
 }
 
+export interface ExposureIssue {
+  code: string;
+  severity: "blocker" | "warning";
+  message: string;
+}
+
+export interface ExposureRecordReadiness {
+  id: string;
+  packId: string;
+  title: string;
+  type: string;
+  privacy: string;
+  reviewStatus: string;
+  freshness: string;
+  sourceStatus: string;
+  tags: string[];
+  exportEligible: boolean;
+  mcpEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface ExposureProfileReadiness {
+  id: string;
+  name: string;
+  target: string;
+  format: string;
+  privacyMode: string | null;
+  tokenBudget: number | null;
+  status: string;
+  exportEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface PackExposureReadiness {
+  packId: string;
+  packName: string;
+  policies: {
+    export: {
+      defaultPrivacyMode: "redacted";
+      recordPolicy: string;
+    };
+    mcp: {
+      transport: "stdio";
+      defaultBodyPolicy: string;
+      allowPrivateByDefault: false;
+    };
+  };
+  validation: {
+    valid: boolean;
+    status: string;
+    errors: number;
+    warnings: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocked: boolean;
+  };
+  summary: {
+    recordCount: number;
+    exportEligibleRecords: number;
+    mcpEligibleRecords: number;
+    blockedRecords: number;
+    warningRecords: number;
+    sourceBackedRecords: number;
+    recordsMissingSourceCoverage: number;
+    exportProfileCount: number;
+    exportEligibleProfiles: number;
+    blockedProfiles: number;
+    warningProfiles: number;
+  };
+  exportProfiles: ExposureProfileReadiness[];
+  records: ExposureRecordReadiness[];
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
 export interface SkillDocument {
   id: string;
   skillId: string;

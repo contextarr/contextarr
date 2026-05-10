@@ -60,6 +60,7 @@ import {
   getAgentKits,
   getIndexStats,
   getPack,
+  getPackExposureReadiness,
   getPackHealth,
   getPackRecords,
   getPacks,
@@ -79,6 +80,7 @@ import {
   type AgentKitSummary,
   type ContextarrDatabase,
   type PackHealthDetail,
+  type PackExposureReadiness,
   type PackSummary,
   type RebuildIndexResult,
   type ReviewItem,
@@ -190,9 +192,10 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .description("inspect one indexed Contextarr object from the local derived index")
     .argument("<id>", "pack, record, Skill, or Agent Kit id")
     .option("--kind <kind>", "object kind: auto, pack, record, skill, or agent-kit", "auto")
+    .option("--readiness", "include read-only Context Pack exposure readiness", false)
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string, options: { kind: string; format: string; json?: boolean }) => {
+    .action((id: string, options: { kind: string; readiness?: boolean; format: string; json?: boolean }) => {
       const format = options.json ? "json" : parseFormat(options.format);
       const kind = parseInspectKind(options.kind);
 
@@ -209,9 +212,29 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
 
       try {
-        const result = withConfiguredIndex((db) => findIndexedObject(db, id, kind));
+        const result = withConfiguredIndex((db, config) => {
+          const object = findIndexedObject(db, id, kind);
+          if (!object || !options.readiness) {
+            return object;
+          }
+
+          return {
+            ...object,
+            exposureReadiness: object.kind === "pack" ? getPackExposureReadiness(db, config, object.id) : undefined
+          };
+        });
         if (!result) {
           io.stderr.write(`Indexed Contextarr object not found: ${id}\n`);
+          exitCode = 1;
+          return;
+        }
+        if (options.readiness && result.kind !== "pack") {
+          io.stderr.write("Exposure readiness is only available for Context Packs.\n");
+          exitCode = 2;
+          return;
+        }
+        if (options.readiness && !result.exposureReadiness) {
+          io.stderr.write(`Exposure readiness unavailable for Context Pack: ${id}\n`);
           exitCode = 1;
           return;
         }
@@ -993,7 +1016,7 @@ type ListResult = {
   agentKits: AgentKitSummary[];
 };
 type IndexedObjectKind = Exclude<InspectKind, "auto">;
-type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown };
+type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown; exposureReadiness?: PackExposureReadiness };
 type HealthObjectKind = Exclude<HealthKind, "auto" | "summary">;
 type HealthDetail = PackHealthDetail | SkillHealthDetail | AgentKitHealthDetail;
 type HealthObjectResult = { kind: HealthObjectKind; id: string; health: HealthDetail };
@@ -1568,7 +1591,13 @@ function formatAgentKitListLine(agentKit: AgentKitSummary): string {
   return `- ${agentKit.id}: ${agentKit.name} [${agentKit.healthStatus}; packs=${agentKit.contextPackCount}; skills=${agentKit.skillCount}; review=${agentKit.reviewQueueCount}]`;
 }
 
-function formatInspectJson(result: IndexedObject): { schemaVersion: string; kind: IndexedObjectKind; id: string; object: unknown } {
+function formatInspectJson(result: IndexedObject): {
+  schemaVersion: string;
+  kind: IndexedObjectKind;
+  id: string;
+  object: unknown;
+  exposureReadiness?: PackExposureReadiness;
+} {
   return {
     schemaVersion: "contextarr.cli.inspect.v1",
     ...result
@@ -1604,7 +1633,33 @@ function formatInspectText(result: IndexedObject): string {
     lines.push("", object.body.trim());
   }
 
+  if (result.exposureReadiness) {
+    appendExposureReadinessText(lines, result.exposureReadiness);
+  }
+
   return `${lines.join("\n")}\n`;
+}
+
+function appendExposureReadinessText(lines: string[], readiness: PackExposureReadiness): void {
+  lines.push(
+    "",
+    "Exposure readiness:",
+    `- Export: ${readiness.summary.exportEligibleRecords}/${readiness.summary.recordCount} records, ${readiness.summary.exportEligibleProfiles}/${readiness.summary.exportProfileCount} profiles eligible`,
+    `- MCP: ${readiness.summary.mcpEligibleRecords}/${readiness.summary.recordCount} records eligible`,
+    `- Validation: ${readiness.validation.status} (${readiness.validation.errors} errors, ${readiness.validation.warnings} warnings)`,
+    `- Scanner: ${readiness.security.status} (${readiness.security.recommendedAction})`,
+    `- Source coverage: ${readiness.summary.sourceBackedRecords}/${readiness.summary.recordCount} records source-backed`
+  );
+
+  if (readiness.blockers.length > 0) {
+    lines.push("Blockers:");
+    lines.push(...readiness.blockers.slice(0, 5).map((item) => `- ${item.code}: ${item.message}`));
+  }
+
+  if (readiness.warnings.length > 0) {
+    lines.push("Warnings:");
+    lines.push(...readiness.warnings.slice(0, 5).map((item) => `- ${item.code}: ${item.message}`));
+  }
 }
 
 function formatHealthJson(result: HealthResult): unknown {
