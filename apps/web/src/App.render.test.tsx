@@ -64,6 +64,7 @@ const mocks = vi.hoisted(() => {
       getReviewCandidate: vi.fn(),
       getReviewCandidateActivationPlan: vi.fn(),
       dryRunReviewCandidateActivation: vi.fn(),
+      getReviewCandidateActivations: vi.fn(),
       applyReviewCandidateActivation: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
@@ -277,6 +278,7 @@ describe("App Skill UI routes", () => {
       skippedRoots: [],
       counts: { total: 1, readyForReview: 1, invalid: 0, blocked: 0, duplicateActiveId: 0, skippedRoots: 0, filtered: 1 }
     });
+    mocks.apiClient.getReviewCandidateActivations.mockResolvedValue([]);
     mocks.apiClient.getReviewCandidate.mockResolvedValue({
       key: "candidate-key",
       sourceKind: "draft_pack",
@@ -425,6 +427,15 @@ describe("App Skill UI routes", () => {
           label: "draft-packs",
           pathLabel: "draft-packs/local-draft"
         },
+        validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+        security: {
+          status: "policy_clean",
+          recommendedAction: "review",
+          blocking: false,
+          summary: null,
+          findingCount: 0
+        },
+        warnings: [],
         target: {
           activePacksRootLabel: "demo-packs",
           packId: "local-draft-pack",
@@ -447,6 +458,7 @@ describe("App Skill UI routes", () => {
           "Activation did not perform network access."
         ]
       },
+      history: reviewCandidateActivationHistoryFixture(),
       pack: { id: "local-draft-pack", name: "Local Draft Pack" },
       index: { packsIndexed: 2 }
     });
@@ -513,9 +525,14 @@ describe("App Skill UI routes", () => {
   });
 
   it("renders Draft Intake review candidates with guarded activation proof", async () => {
+    mocks.apiClient.getReviewCandidateActivations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([reviewCandidateActivationHistoryFixture()]);
+
     mountApp("#/review-queue/drafts");
 
     await waitForMockResult(mocks.apiClient.getReviewCandidates, 0);
+    await waitForMockResult(mocks.apiClient.getReviewCandidateActivations, 0);
     await flushPendingUpdates();
     await waitForText("Draft Intake");
     await waitForText("Local Draft Pack");
@@ -544,6 +561,10 @@ describe("App Skill UI routes", () => {
       mode: "move"
     });
     await waitForText("Activation Applied");
+    await waitForMockResult(mocks.apiClient.getReviewCandidateActivations, 1);
+    await waitForText("Activation History");
+    expect(document.body.textContent).toContain("proof abc123def456abc123def456");
+    expect(document.body.textContent).toContain("indexed");
     expect(document.body.textContent).toContain("Index");
     expect(document.body.textContent).not.toContain("Approve");
     expect(document.body.textContent).not.toContain("Promote");
@@ -1579,6 +1600,73 @@ function reviewItemFixture(): ReviewItem {
     lastSeenAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     metadata: {}
+  };
+}
+
+function reviewCandidateActivationHistoryFixture() {
+  const activation = {
+    schemaVersion: "contextarr.review-candidate-activation-result.v1",
+    activatedAt: "2026-05-10T00:05:00.000Z",
+    proofId: "abc123def456abc123def456",
+    candidateKey: "candidate-key",
+    packId: "local-draft-pack",
+    name: "Local Draft Pack",
+    mode: "move",
+    source: {
+      kind: "draft_pack",
+      label: "draft-packs",
+      pathLabel: "draft-packs/local-draft"
+    },
+    validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+    security: {
+      status: "policy_clean",
+      recommendedAction: "review",
+      blocking: false,
+      summary: null,
+      findingCount: 0
+    },
+    warnings: [],
+    target: {
+      activePacksRootLabel: "demo-packs",
+      packId: "local-draft-pack",
+      pathLabel: "demo-packs/local-draft-pack",
+      activeConflict: false
+    },
+    effects: {
+      filesMoved: true,
+      filesCopied: true,
+      sourceRemoved: true,
+      exportsGenerated: false,
+      mcpExposed: false,
+      networkAccessed: false
+    },
+    nextSteps: ["Review Pack Health and Exposure Readiness before export or MCP exposure."],
+    boundaries: [
+      "Activation moved or copied files only within configured local roots.",
+      "Activation did not generate exports.",
+      "Activation did not expose MCP records.",
+      "Activation did not perform network access."
+    ]
+  };
+
+  return {
+    schemaVersion: "contextarr.review-candidate-activation-history.v1",
+    id: 1,
+    proofId: activation.proofId,
+    candidateKey: activation.candidateKey,
+    packId: activation.packId,
+    name: activation.name,
+    status: "applied",
+    mode: activation.mode,
+    activatedAt: activation.activatedAt,
+    indexRefreshedAt: "2026-05-10T00:05:01.000Z",
+    source: activation.source,
+    target: activation.target,
+    validation: activation.validation,
+    security: activation.security,
+    warnings: activation.warnings,
+    effects: activation.effects,
+    activation
   };
 }
 

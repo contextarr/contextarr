@@ -1153,6 +1153,7 @@ describe("Contextarr API", () => {
       url: "/api/review-candidates/fake-key/activation/apply",
       payload: { proofId: "000000000000000000000000" }
     });
+    const rejectedHistory = await app.inject({ method: "GET", url: "/api/review-candidate-activations" });
     const accepted = await app.inject({
       method: "GET",
       url: "/api/review-candidates",
@@ -1174,15 +1175,22 @@ describe("Contextarr API", () => {
       headers: { authorization: "Bearer candidate-token" },
       payload: { proofId: "000000000000000000000000" }
     });
+    const acceptedHistory = await app.inject({
+      method: "GET",
+      url: "/api/review-candidate-activations",
+      headers: { authorization: "Bearer candidate-token" }
+    });
 
     expect(rejected.statusCode).toBe(401);
     expect(rejectedPlan.statusCode).toBe(401);
     expect(rejectedDryRun.statusCode).toBe(401);
     expect(rejectedApply.statusCode).toBe(401);
+    expect(rejectedHistory.statusCode).toBe(401);
     expect(accepted.statusCode).toBe(200);
     expect(acceptedPlan.statusCode).toBe(404);
     expect(acceptedDryRun.statusCode).toBe(404);
     expect(acceptedApply.statusCode).toBe(404);
+    expect(acceptedHistory.statusCode).toBe(200);
 
     await app.close();
     fixtureContext.db.close();
@@ -1220,6 +1228,7 @@ describe("Contextarr API", () => {
       payload: { proofId: dryRun.json().dryRun.proofId }
     });
     const activePack = await app.inject({ method: "GET", url: "/api/packs/valid-minimal-pack" });
+    const history = await app.inject({ method: "GET", url: "/api/review-candidate-activations" });
 
     expect(rejected.statusCode).toBe(409);
     expect(rejected.json()).toMatchObject({ error: "activation.proof_mismatch" });
@@ -1239,6 +1248,16 @@ describe("Contextarr API", () => {
           networkAccessed: false
         }
       },
+      history: {
+        schemaVersion: "contextarr.review-candidate-activation-history.v1",
+        proofId: dryRun.json().dryRun.proofId,
+        packId: "valid-minimal-pack",
+        status: "applied",
+        indexRefreshedAt: expect.any(String),
+        activation: {
+          packId: "valid-minimal-pack"
+        }
+      },
       pack: {
         id: "valid-minimal-pack"
       },
@@ -1247,10 +1266,28 @@ describe("Contextarr API", () => {
       }
     });
     expect(activePack.statusCode).toBe(200);
+    expect(history.statusCode).toBe(200);
+    expect(history.json().activations).toEqual([
+      expect.objectContaining({
+        proofId: dryRun.json().dryRun.proofId,
+        packId: "valid-minimal-pack",
+        name: "Valid Minimal Pack",
+        mode: "move",
+        status: "applied",
+        indexRefreshedAt: expect.any(String),
+        source: expect.objectContaining({ kind: "draft_pack" }),
+        target: expect.objectContaining({ pathLabel: expect.stringContaining("valid-minimal-pack") }),
+        validation: expect.objectContaining({ status: "valid" }),
+        effects: expect.objectContaining({ filesMoved: true, networkAccessed: false })
+      })
+    ]);
     expect(fs.existsSync(path.join(targetPath, "contextarr-pack.json"))).toBe(true);
     expect(fs.existsSync(sourcePath)).toBe(false);
     expect(applied.body).not.toContain(activePacksDir);
     expect(applied.body).not.toContain(draftPacksDir);
+    expect(history.body).not.toContain(activePacksDir);
+    expect(history.body).not.toContain(draftPacksDir);
+    expect(history.body).not.toContain("This is a valid minimal context pack");
 
     await app.close();
     fixtureContext.db.close();

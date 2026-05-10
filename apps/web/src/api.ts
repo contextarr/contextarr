@@ -29,6 +29,7 @@ import type {
   ReviewCandidateActivationApplyRequest,
   ReviewCandidateActivationApplyResponse,
   ReviewCandidateActivationDryRun,
+  ReviewCandidateActivationHistoryItem,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewItemStatus,
@@ -106,6 +107,7 @@ export interface ApiClient {
   getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
   getReviewCandidateActivationPlan(key: string): Promise<ReviewCandidateActivationPlan>;
   dryRunReviewCandidateActivation(key: string): Promise<ReviewCandidateActivationDryRun>;
+  getReviewCandidateActivations(): Promise<ReviewCandidateActivationHistoryItem[]>;
   applyReviewCandidateActivation(
     key: string,
     request: ReviewCandidateActivationApplyRequest
@@ -279,6 +281,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         { method: "POST" }
       );
       return response.dryRun;
+    },
+    getReviewCandidateActivations: async () => {
+      const response = await requestJson<{ activations: ReviewCandidateActivationHistoryItem[] }>(
+        "/api/review-candidate-activations"
+      );
+      return response.activations;
     },
     applyReviewCandidateActivation: (key: string, body: ReviewCandidateActivationApplyRequest) =>
       requestJson<ReviewCandidateActivationApplyResponse>(

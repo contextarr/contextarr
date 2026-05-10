@@ -189,4 +189,34 @@ describe("SQLite schema migrations", () => {
       db.close();
     }
   });
+
+  it("creates local review candidate activation history storage", () => {
+    const db = new Database(":memory:");
+
+    try {
+      createSchema(db);
+
+      expect(
+        db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'review_candidate_activations'").get()
+      ).toBeTruthy();
+      const columns = db.prepare("PRAGMA table_info(review_candidate_activations)").all() as Array<{ name: string }>;
+      expect(columns.map((column) => column.name)).toEqual(
+        expect.arrayContaining([
+          "proof_id",
+          "candidate_key",
+          "pack_id",
+          "activated_at",
+          "index_refreshed_at",
+          "activation_json"
+        ])
+      );
+      expect(
+        db
+          .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_review_candidate_activations_pack'")
+          .get()
+      ).toBeTruthy();
+    } finally {
+      db.close();
+    }
+  });
 });

@@ -59,6 +59,11 @@ import {
   type ComposeDraftRecord
 } from "./composed-pack-writer";
 import {
+  listReviewCandidateActivations,
+  markReviewCandidateActivationIndexed,
+  recordReviewCandidateActivation
+} from "./review-activation-history";
+import {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,
@@ -1049,6 +1054,27 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     };
   });
 
+  app.get<{
+    Querystring: {
+      limit?: string;
+      packId?: string;
+      candidateKey?: string;
+    };
+  }>("/api/review-candidate-activations", async (request, reply) => {
+    const limit = parseReviewCandidateActivationLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Activation history limit must be an integer from 1 to 100." });
+    }
+
+    return {
+      activations: listReviewCandidateActivations(db, {
+        limit,
+        packId: request.query.packId?.trim() || undefined,
+        candidateKey: request.query.candidateKey?.trim() || undefined
+      })
+    };
+  });
+
   app.get<{ Params: { key: string } }>("/api/review-candidates/:key/activation-plan", async (request, reply) => {
     const plan = getReviewCandidateActivationPlan({
       roots: getReviewCandidateRoots(config),
@@ -1104,11 +1130,14 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
           return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
         }
 
+        const pendingHistory = recordReviewCandidateActivation(db, activation);
         const index = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
+        const history = markReviewCandidateActivationIndexed(db, pendingHistory.id, index.indexedAt) ?? pendingHistory;
 
         return reply.code(201).send({
           ok: true,
           activation,
+          history,
           pack: getPack(db, activation.packId),
           index: sanitizeRebuildResultForApi(index)
         });
@@ -1407,6 +1436,18 @@ function parseReviewCandidateStatus(value: string | undefined): ReviewCandidateS
   return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
     ? (value as ReviewCandidateStatus)
     : "invalid";
+}
+
+function parseReviewCandidateActivationLimit(value: string | undefined): number | undefined | "invalid" {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    return "invalid";
+  }
+  return parsed;
 }
 
 function parseReviewCandidateActivationApplyBody(

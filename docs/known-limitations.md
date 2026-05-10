@@ -17,7 +17,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - Backup/restore v0 writes local backup directories and restores into quarantine/review output only.
 - Context Pack collectors write private unreviewed draft packs only.
 - Composer save-as-draft-pack writes private unreviewed draft Context Packs only.
-- Draft Intake v0 includes explicit proof-gated local activation. It does not include multi-user approval workflows, remote install, publishing, export exposure, or MCP exposure for candidate packs.
+- Draft Intake v0 includes explicit proof-gated local activation and sanitized local activation history. It does not include multi-user approval workflows, remote install, publishing, export exposure, or MCP exposure for candidate packs.
 - Exposure Readiness v0 is a read-only active-pack report. It explains default export and read-only MCP eligibility, but it does not approve packs, enforce policy, change export behavior, or widen MCP exposure.
 - Local Skill importers are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.

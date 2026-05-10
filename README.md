@@ -37,7 +37,7 @@ Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, 
 - Context Pack schema, validation, and deterministic validation reports.
 - 15 public-safe demo packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index derived from local files.
-- Local Fastify API for packs, records, search, health, exposure readiness, exports, composition, collectors, Draft Intake candidates, activation plans, dry-run activation proof, proof-gated local activation, backup, and restore surfaces.
+- Local Fastify API for packs, records, search, health, exposure readiness, exports, composition, collectors, Draft Intake candidates, activation plans, dry-run activation proof, proof-gated local activation with local history, backup, and restore surfaces.
 - React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, `AGENTS.md`, `CLAUDE.md`, and `llms.txt`.
 - CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, quarantine restore, rescan, list, inspect, health, review, review-candidates, brief, and query.
@@ -168,7 +168,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - SQLite is a derived rebuildable index.
 - Validation, scanning, health, export previews, and MCP tools must not execute pack content.
 - Restores and generated drafts land in review/quarantine flows; they are not activated automatically.
-- Draft Intake shows metadata-only candidate inventories, read-only activation plans, dry-run activation proof, and explicit proof-gated local activation. Activation moves a reviewed candidate into the configured active packs root and refreshes the local index; it does not export, publish, perform network access, or expose candidates through MCP.
+- Draft Intake shows metadata-only candidate inventories, read-only activation plans, dry-run activation proof, explicit proof-gated local activation, and local activation history. Activation moves a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the local index; it does not export, publish, perform network access, or expose candidates through MCP.
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - Context Readiness is planned as a future report layer; Local Observability is planned as local evidence metadata only, not product telemetry.
@@ -183,7 +183,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Reviewed `v0.1.0-alpha.1` screenshots are committed under `docs/screenshots/v0.1.0-alpha.1/` and verified by `pnpm screenshots:verify`.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Backup/restore v0 is local and quarantine-only.
-- Draft Intake v0 includes explicit proof-gated local activation only; it does not include approval workflows, remote install, publishing, export exposure, or MCP exposure.
+- Draft Intake v0 includes explicit proof-gated local activation and sanitized local activation history only; it does not include approval workflows, remote install, publishing, export exposure, or MCP exposure.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
 - Context Readiness and Local Observability are accepted planning additions only; their schemas, API routes, UI, CLI commands, and release gates are not implemented yet.
 - Context Pack collectors and Composer save flows create private unreviewed drafts only.

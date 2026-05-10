@@ -364,8 +364,32 @@ export function createSchema(db: ContextarrDatabase): void {
       metadata_json TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS review_candidate_activations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      proof_id TEXT NOT NULL UNIQUE,
+      candidate_key TEXT NOT NULL,
+      pack_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      source_kind TEXT NOT NULL,
+      source_label TEXT NOT NULL,
+      source_path_label TEXT NOT NULL,
+      target_path_label TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      status TEXT NOT NULL,
+      activated_at TEXT NOT NULL,
+      index_refreshed_at TEXT,
+      validation_json TEXT NOT NULL,
+      security_json TEXT NOT NULL,
+      warnings_json TEXT NOT NULL,
+      effects_json TEXT NOT NULL,
+      activation_json TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_tool ON mcp_query_log(tool);
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_created_at ON mcp_query_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_pack ON review_candidate_activations(pack_id);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_candidate ON review_candidate_activations(candidate_key);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_activated_at ON review_candidate_activations(activated_at);
 
     CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
       record_id UNINDEXED,

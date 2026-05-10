@@ -147,6 +147,7 @@ import type {
   ReviewItem,
   ReviewCandidateActivationApplyResponse,
   ReviewCandidateActivationDryRun,
+  ReviewCandidateActivationHistoryItem,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewCandidateSummary,
@@ -3771,6 +3772,7 @@ function ReviewQueuePage({
   const [candidateActivationPlan, setCandidateActivationPlan] = useState<ReviewCandidateActivationPlan | null>(null);
   const [candidateActivationDryRun, setCandidateActivationDryRun] = useState<ReviewCandidateActivationDryRun | null>(null);
   const [candidateActivationApplyResult, setCandidateActivationApplyResult] = useState<ReviewCandidateActivationApplyResponse | null>(null);
+  const [candidateActivationHistory, setCandidateActivationHistory] = useState<ReviewCandidateActivationHistoryItem[]>([]);
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
   const [preparingCandidateKey, setPreparingCandidateKey] = useState<string | null>(null);
   const [applyingCandidateKey, setApplyingCandidateKey] = useState<string | null>(null);
@@ -3804,11 +3806,15 @@ function ReviewQueuePage({
     setLoadingCandidates(true);
     setCandidateError(null);
     try {
-      const reviewResponse = await apiClient.getReviewCandidates();
+      const [reviewResponse, activationHistory] = await Promise.all([
+        apiClient.getReviewCandidates(),
+        apiClient.getReviewCandidateActivations()
+      ]);
       setCandidateResponse({
         candidates: reviewResponse.candidates,
         skippedRoots: reviewResponse.skippedRoots
       });
+      setCandidateActivationHistory(activationHistory);
     } catch (loadError) {
       setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load draft intake.");
     } finally {
@@ -3961,6 +3967,7 @@ function ReviewQueuePage({
                 activationPlan={candidateActivationPlan}
                 activationDryRun={candidateActivationDryRun}
                 activationApplyResult={candidateActivationApplyResult}
+                activationHistory={candidateActivationHistory}
                 preparing={preparingCandidateKey === candidateActivationPlan?.candidateKey}
                 applying={applyingCandidateKey === candidateActivationDryRun?.candidateKey}
                 onPrepareActivation={prepareCandidateActivation}
@@ -4633,6 +4640,7 @@ function ReviewCandidateDetailPanel({
   activationPlan,
   activationDryRun,
   activationApplyResult,
+  activationHistory,
   preparing,
   applying,
   onPrepareActivation,
@@ -4643,6 +4651,7 @@ function ReviewCandidateDetailPanel({
   activationPlan: ReviewCandidateActivationPlan | null;
   activationDryRun: ReviewCandidateActivationDryRun | null;
   activationApplyResult: ReviewCandidateActivationApplyResponse | null;
+  activationHistory: ReviewCandidateActivationHistoryItem[];
   preparing: boolean;
   applying: boolean;
   onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
@@ -4667,6 +4676,7 @@ function ReviewCandidateDetailPanel({
             </ul>
           </div>
         ) : null}
+        <ReviewCandidateActivationHistoryList items={activationHistory} />
       </aside>
     );
   }
@@ -4690,6 +4700,7 @@ function ReviewCandidateDetailPanel({
         onPrepareActivation={onPrepareActivation}
         onApplyActivation={onApplyActivation}
       />
+      <ReviewCandidateActivationHistoryList items={activationHistory} candidateKey={candidate.key} packId={candidate.packId} />
 
       <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
       <CandidateSecurityList findings={candidate.securityFindings} />
@@ -4844,6 +4855,8 @@ function ReviewCandidateActivationDryRunView({ dryRun }: { dryRun: ReviewCandida
 }
 
 function ReviewCandidateActivationApplyResultView({ result }: { result: ReviewCandidateActivationApplyResponse }) {
+  const indexRefreshed = Boolean(result.history?.indexRefreshedAt || result.pack);
+
   return (
     <section className="candidate-dry-run candidate-activation-result" aria-label="Activation apply result">
       <h3>Activation Applied</h3>
@@ -4851,7 +4864,8 @@ function ReviewCandidateActivationApplyResultView({ result }: { result: ReviewCa
         <Fact label="Pack" value={result.activation.packId} />
         <Fact label="Mode" value={formatPackType(result.activation.mode)} />
         <Fact label="Target" value={result.activation.target.pathLabel} />
-        <Fact label="Index" value={result.pack ? "Refreshed" : "Needs Review"} />
+        <Fact label="History" value={result.history ? `#${result.history.id}` : "Recorded"} />
+        <Fact label="Index" value={indexRefreshed ? "Refreshed" : "Needs Review"} />
       </div>
       <ul className="simple-list candidate-plan-list">
         <li>
@@ -4863,6 +4877,45 @@ function ReviewCandidateActivationApplyResultView({ result }: { result: ReviewCa
           <strong>next</strong>
         </li>
       </ul>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationHistoryList({
+  items,
+  candidateKey,
+  packId
+}: {
+  items: ReviewCandidateActivationHistoryItem[];
+  candidateKey?: string;
+  packId?: string | null;
+}) {
+  const relevantItems =
+    candidateKey || packId
+      ? items.filter((item) => item.candidateKey === candidateKey || (packId ? item.packId === packId : false))
+      : items;
+  const visibleItems = relevantItems.slice(0, 5);
+
+  return (
+    <section className="candidate-activation-history" aria-label="Activation history">
+      <h3>Activation History</h3>
+      {visibleItems.length === 0 ? (
+        <p className="muted-note">No local activation history recorded yet.</p>
+      ) : (
+        <ul className="simple-list candidate-activation-history-list">
+          {visibleItems.map((item) => (
+            <li key={item.id}>
+              <span className="candidate-activation-history-main">
+                <span>{item.name}</span>
+                <em>
+                  {formatDate(item.activatedAt)} / proof {item.proofId}
+                </em>
+              </span>
+              <strong>{item.indexRefreshedAt ? "indexed" : "pending_index"}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

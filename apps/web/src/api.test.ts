@@ -398,6 +398,43 @@ describe("Contextarr API client", () => {
     const client = createApiClient({
       fetchImpl: async (url, init) => {
         requests.push({ url: String(url), init });
+        if (String(url).endsWith("/review-candidate-activations")) {
+          return jsonResponse({
+            activations: [
+              {
+                schemaVersion: "contextarr.review-candidate-activation-history.v1",
+                id: 1,
+                proofId: "abc123def456abc123def456",
+                candidateKey: "candidate-key",
+                packId: "draft-candidate",
+                name: "Draft Candidate",
+                status: "applied",
+                mode: "move",
+                activatedAt: "2026-05-10T00:05:00.000Z",
+                indexRefreshedAt: "2026-05-10T00:05:01.000Z",
+                source: { kind: "draft_pack", label: "drafts", pathLabel: "drafts/draft-candidate" },
+                target: {
+                  activePacksRootLabel: "demo-packs",
+                  packId: "draft-candidate",
+                  pathLabel: "demo-packs/draft-candidate",
+                  activeConflict: false
+                },
+                validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+                security: { status: "policy_clean", recommendedAction: "review", blocking: false, summary: null, findingCount: 0 },
+                warnings: [],
+                effects: {
+                  filesMoved: true,
+                  filesCopied: true,
+                  sourceRemoved: true,
+                  exportsGenerated: false,
+                  mcpExposed: false,
+                  networkAccessed: false
+                },
+                activation: { packId: "draft-candidate" }
+              }
+            ]
+          });
+        }
         if (String(url).endsWith("/activation/dry-run")) {
           return jsonResponse({
             dryRun: {
@@ -444,6 +481,9 @@ describe("Contextarr API client", () => {
               name: "Draft Candidate",
               mode: "move",
               source: { kind: "draft_pack", label: "drafts", pathLabel: "drafts/draft-candidate" },
+              validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+              security: { status: "policy_clean", recommendedAction: "review", blocking: false, summary: null, findingCount: 0 },
+              warnings: [],
               target: {
                 activePacksRootLabel: "demo-packs",
                 packId: "draft-candidate",
@@ -506,6 +546,9 @@ describe("Contextarr API client", () => {
     await expect(client.getReviewCandidate("candidate-key")).resolves.toMatchObject({ key: "candidate-key" });
     await expect(client.getReviewCandidateActivationPlan("candidate-key")).resolves.toMatchObject({ canActivate: true });
     await expect(client.dryRunReviewCandidateActivation("candidate-key")).resolves.toMatchObject({ proofId: "abc123def456abc123def456" });
+    await expect(client.getReviewCandidateActivations()).resolves.toEqual([
+      expect.objectContaining({ proofId: "abc123def456abc123def456", packId: "draft-candidate" })
+    ]);
     await expect(
       client.applyReviewCandidateActivation("candidate-key", { proofId: "abc123def456abc123def456", mode: "move" })
     ).resolves.toMatchObject({ activation: { packId: "draft-candidate" } });
@@ -514,11 +557,12 @@ describe("Contextarr API client", () => {
       "/api/review-candidates/candidate-key",
       "/api/review-candidates/candidate-key/activation-plan",
       "/api/review-candidates/candidate-key/activation/dry-run",
+      "/api/review-candidate-activations",
       "/api/review-candidates/candidate-key/activation/apply"
     ]);
     expect(requests[3].init).toMatchObject({ method: "POST" });
-    expect(requests[4].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
-    expect(JSON.parse(String(requests[4].init?.body))).toMatchObject({ proofId: "abc123def456abc123def456", mode: "move" });
+    expect(requests[5].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    expect(JSON.parse(String(requests[5].init?.body))).toMatchObject({ proofId: "abc123def456abc123def456", mode: "move" });
   });
 
   it("reads export preview routes", async () => {

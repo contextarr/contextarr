@@ -2068,6 +2068,25 @@ h1 {
   margin-top: 0;
 }
 
+.candidate-activation-history {
+  border-top: 1px solid var(--line-soft);
+  margin-top: 16px;
+  padding-top: 2px;
+}
+
+.candidate-activation-history-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.candidate-activation-history-main em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
 .candidate-next-steps {
   color: var(--muted);
   display: grid;

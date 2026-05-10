@@ -166,6 +166,9 @@ export interface ReviewCandidateActivationResult {
   name: string;
   mode: ReviewCandidateActivationMode;
   source: ReviewCandidateActivationPlan["source"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  warnings: ReviewCandidateActivationWarning[];
   target: {
     activePacksRootLabel: string;
     packId: string;
@@ -553,6 +556,9 @@ export function activateReviewCandidate(
     name: dryRun.name,
     mode,
     source: dryRun.source,
+    validation: dryRun.validation,
+    security: dryRun.security,
+    warnings: dryRun.warnings,
     target: {
       activePacksRootLabel: dryRun.target.activePacksRootLabel,
       packId: dryRun.packId,

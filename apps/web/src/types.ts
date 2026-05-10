@@ -894,6 +894,9 @@ export interface ReviewCandidateActivationResult {
   name: string;
   mode: ReviewCandidateActivationMode;
   source: ReviewCandidateActivationPlan["source"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
   target: {
     activePacksRootLabel: string;
     packId: string;
@@ -912,6 +915,26 @@ export interface ReviewCandidateActivationResult {
   boundaries: string[];
 }
 
+export interface ReviewCandidateActivationHistoryItem {
+  schemaVersion: "contextarr.review-candidate-activation-history.v1";
+  id: number;
+  proofId: string;
+  candidateKey: string;
+  packId: string;
+  name: string;
+  status: "applied";
+  mode: ReviewCandidateActivationMode;
+  activatedAt: string;
+  indexRefreshedAt: string | null;
+  source: ReviewCandidateActivationPlan["source"];
+  target: ReviewCandidateActivationResult["target"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
+  effects: ReviewCandidateActivationResult["effects"];
+  activation: ReviewCandidateActivationResult;
+}
+
 export interface ReviewCandidateActivationApplyRequest {
   proofId: string;
   mode?: ReviewCandidateActivationMode;
@@ -920,6 +943,7 @@ export interface ReviewCandidateActivationApplyRequest {
 export interface ReviewCandidateActivationApplyResponse {
   ok: boolean;
   activation: ReviewCandidateActivationResult;
+  history?: ReviewCandidateActivationHistoryItem;
   pack?: PackSummary | null;
   index: Record<string, unknown>;
 }
