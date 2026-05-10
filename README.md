@@ -113,6 +113,7 @@ pnpm v1-core:verify
 pnpm advanced-preview:verify
 pnpm exports:verify
 pnpm exposure:verify
+pnpm trust-loop:verify
 pnpm site:verify
 ```
 
@@ -163,6 +164,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - Validation, scanning, health, export previews, and MCP tools must not execute pack content.
 - Restores and generated drafts land in review/quarantine flows; they are not activated automatically.
 - Draft Intake shows metadata-only candidate inventories; it does not activate, index, export, or expose candidates through MCP.
+- `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - The scanner is a gate, not a guarantee; human review remains required before activation, export, registry exposure, or MCP exposure.
 

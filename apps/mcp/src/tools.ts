@@ -219,14 +219,10 @@ export async function queryPackContextTool(context: ContextarrMcpContext, args: 
           continue;
         }
 
-        if (record.privacy === "secret") {
-          warnings.add("Secret records were omitted.");
+        const visibility = getMcpRecordExposureBlock(record, context.config.allowPrivate);
+        if (visibility) {
+          warnings.add(visibility.warning);
           continue;
-        }
-
-        const canShowSnippet = canIncludeBody(record.privacy, context.config.allowPrivate);
-        if (!canShowSnippet) {
-          warnings.add("Non-public record snippets were omitted because private MCP access is disabled.");
         }
 
         results.push({
@@ -240,7 +236,7 @@ export async function queryPackContextTool(context: ContextarrMcpContext, args: 
           reviewStatus: record.reviewStatus,
           sourceStatus: record.sourceStatus,
           freshness: record.freshness,
-          snippet: canShowSnippet ? truncateText(String(row.snippet ?? ""), 500) : null
+          snippet: truncateText(String(row.snippet ?? ""), 500)
         });
       }
 
@@ -264,6 +260,10 @@ export async function getRecordTool(context: ContextarrMcpContext, args: unknown
     }
     if (!isApprovedRecord(record)) {
       throw new McpToolError("record_not_approved", "Record is not approved for MCP exposure.");
+    }
+    const visibility = getMcpRecordExposureBlock(record, context.config.allowPrivate);
+    if (visibility) {
+      throw new McpToolError(visibility.error, visibility.detail);
     }
 
     return {
@@ -838,14 +838,10 @@ function resultFromSearchRow(
       warnings.add("Non-approved records were omitted.");
       return undefined;
     }
-    if (record.privacy === "secret") {
-      warnings.add("Secret records were omitted.");
+    const visibility = getMcpRecordExposureBlock(record, context.config.allowPrivate);
+    if (visibility) {
+      warnings.add(visibility.warning);
       return undefined;
-    }
-
-    const canShowSnippet = canIncludeBody(record.privacy, context.config.allowPrivate);
-    if (!canShowSnippet) {
-      warnings.add("Non-public record snippets were omitted because private MCP access is disabled.");
     }
 
     return {
@@ -859,7 +855,7 @@ function resultFromSearchRow(
       reviewStatus: record.reviewStatus,
       sourceStatus: record.sourceStatus,
       freshness: record.freshness,
-      snippet: canShowSnippet ? truncateText(String(row.snippet ?? ""), 500) : null
+      snippet: truncateText(String(row.snippet ?? ""), 500)
     };
   }
 
@@ -1286,6 +1282,39 @@ function toMcpRecordDetail(record: RecordDetail, includeBody: boolean, allowPriv
 
 function isApprovedRecord(record: RecordDetail): boolean {
   return record.reviewStatus === "approved";
+}
+
+const mcpRecordExclusionTags = new Set(["secret", "never_export", "imported_draft", "ai_draft"]);
+
+function getMcpRecordExposureBlock(
+  record: Pick<RecordDetail, "privacy" | "tags">,
+  allowPrivate: boolean
+): { error: string; warning: string; detail: string } | undefined {
+  if (record.privacy === "secret") {
+    return {
+      error: "record_secret",
+      warning: "Secret records were omitted.",
+      detail: "Secret records are not exposed through MCP."
+    };
+  }
+
+  if (record.tags.some((tag) => mcpRecordExclusionTags.has(tag))) {
+    return {
+      error: "record_excluded",
+      warning: "Records with MCP exclusion tags were omitted.",
+      detail: "Records tagged secret, never_export, imported_draft, or ai_draft are not exposed through MCP."
+    };
+  }
+
+  if (!allowPrivate && record.privacy !== "public_safe") {
+    return {
+      error: "private_access_disabled",
+      warning: "Non-public records were omitted because private MCP access is disabled.",
+      detail: "Non-public records require CONTEXTARR_MCP_ALLOW_PRIVATE=true for MCP exposure."
+    };
+  }
+
+  return undefined;
 }
 
 function isApprovedSkillDocument(document: SkillDocumentDetail): boolean {

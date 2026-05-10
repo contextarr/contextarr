@@ -85,6 +85,7 @@ if (!failed) {
     "screenshots:verify",
     "exports:verify",
     "compatibility:check",
+    "trust-loop:verify",
     "security:check",
     "workflow-scope:check",
     "release:verify"
@@ -103,6 +104,7 @@ if (!failed) {
     "pnpm limitations:verify",
     "pnpm screenshots:verify",
     "pnpm exports:verify",
+    "pnpm trust-loop:verify",
     "pnpm compatibility:check",
     "pnpm security:check",
     "pnpm workflow-scope:check",

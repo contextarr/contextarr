@@ -15,6 +15,7 @@ pnpm limitations:verify
 pnpm screenshots:verify
 pnpm exports:verify
 pnpm exposure:verify
+pnpm trust-loop:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify
@@ -43,6 +44,7 @@ git status --short --branch
 - Confirm all demo packs validate with zero errors.
 - Confirm starter Context Pack exports are deterministic, redaction-aware, and path-free with `pnpm exports:verify`.
 - Confirm active Context Pack Exposure Readiness stays read-only, path-redacted, and visible in CLI inspect plus pack detail with `pnpm exposure:verify`.
+- Confirm Draft Intake, composed drafts, restored quarantine packs, private/secret records, and `never_export` records stay out of MCP/default export preview exposure with `pnpm trust-loop:verify`.
 - Confirm draft/import/restore/compose/collector outputs remain review-bound and absent from active API/export/search surfaces.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 - Confirm the Astro public site builds through `pnpm site:verify`.
@@ -56,6 +58,7 @@ The `v0.1.0-alpha.1` release notes should include:
 - Demo flow.
 - Verification commands.
 - Reviewed screenshot set.
+- Trust-loop MCP/default export preview proof.
 - Security boundaries.
 - No support guarantee yet.
 - No public registry or marketplace.

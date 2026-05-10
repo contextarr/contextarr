@@ -14,6 +14,7 @@ pnpm limitations:verify
 pnpm screenshots:verify
 pnpm exports:verify
 pnpm exposure:verify
+pnpm trust-loop:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify
@@ -32,6 +33,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Confirm the 12 starter Context Packs are clearly local examples, not marketplace listings.
 - Confirm starter Context Pack exports pass deterministic, redaction-aware checks with `pnpm exports:verify`.
 - Confirm Exposure Readiness reports remain read-only and path-redacted with `pnpm exposure:verify`.
+- Confirm Draft Intake, composed drafts, restored quarantine packs, private/secret records, and `never_export` records stay out of MCP/default export preview exposure with `pnpm trust-loop:verify`.
 - Confirm CLI/API path-safety and draft/quarantine boundary tests are included in the latest test run.
 - Confirm no ignored local outputs are staged.
 - Confirm Docker preview opens at `http://127.0.0.1:3210`.
@@ -49,6 +51,7 @@ All checks must pass before an alpha release candidate can be proposed.
 - Verification commands.
 - Reviewed screenshot requirements.
 - Starter export determinism and review/quarantine proof.
+- Trust-loop MCP/default export preview proof.
 - Security boundaries.
 - No support guarantee yet.
 - No public registry or marketplace.

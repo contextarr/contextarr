@@ -31,7 +31,7 @@ Exports and Composer previews are temporary derived artifacts. They apply profil
 
 ## MCP
 
-The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, Skills, or Agent Kits, run tools, execute Skills, run Agent Kits, call external APIs, or log raw returned context. Phase 25 extends MCP to Skills and Agent Kits with privacy-aware bodies, scoped Agent Kit context search, local export previews, and path-free responses.
+The MCP server is stdio-only and read-only. It does not host an HTTP/SSE MCP endpoint, mutate packs, Skills, or Agent Kits, run tools, execute Skills, run Agent Kits, call external APIs, or log raw returned context. By default it exposes approved public-safe Context Pack records only; secret records, `never_export` records, draft/imported/composed/quarantine candidates, and local paths stay out of MCP results. Phase 25 extends MCP to Skills and Agent Kits with privacy-aware bodies, scoped Agent Kit context search, local export previews, and path-free responses.
 
 ## Future Registry Trust
 

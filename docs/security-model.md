@@ -75,7 +75,7 @@ The MCP server is local, stdio-only, and read-only. It must not:
 - Access secrets.
 - Return raw private source dumps unless explicitly configured.
 
-`CONTEXTARR_MCP_ALLOW_PRIVATE=false` is the default. Secret record and Skill document bodies are never returned through MCP. Private, internal, or sensitive record and Skill document bodies are omitted unless private MCP access is explicitly enabled. Phase 25 extends MCP to Skills and Agent Kits with the same read-only and redaction-aware rules. MCP query logs store metadata only: tool name, ids, query hash and length, result count, timing, and sanitized flags. They must not store raw query text or returned context.
+`CONTEXTARR_MCP_ALLOW_PRIVATE=false` is the default. Secret records are never exposed through MCP. Records tagged `secret`, `never_export`, `imported_draft`, or `ai_draft` are not exposed through MCP. Private, internal, or sensitive Context Pack records are omitted unless private MCP access is explicitly enabled. Secret Skill document bodies are never returned; private, internal, or sensitive Skill document bodies are omitted unless private MCP access is explicitly enabled. Phase 25 extends MCP to Skills and Agent Kits with the same read-only and redaction-aware rules. MCP query logs store metadata only: tool name, ids, query hash and length, result count, timing, and sanitized flags. They must not store raw query text or returned context.
 
 ## Human Review
 
