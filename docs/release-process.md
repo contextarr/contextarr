@@ -10,6 +10,7 @@ pnpm demo:validate
 pnpm v1-core:verify
 pnpm v1-core:idempotent
 pnpm advanced-preview:verify
+pnpm limitations:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify
