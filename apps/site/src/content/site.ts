@@ -1,10 +1,10 @@
 export const siteMeta = {
-  title: "Contextarr | Validated context, ready for agents",
+  title: "Contextarr | Trusted AI context, locally prepared",
   description:
-    "Contextarr is the source-backed context layer for AI assistants and agents. It validates local files, records, sources, and rules into ready-to-export Context Packs.",
+    "Contextarr is a local-first Context Pack system for preparing trusted AI context. It validates, redacts, exports, and exposes approved context through read-only MCP.",
   url: "https://contextarr.com",
   ogTitle: "Contextarr",
-  ogDescription: "Validated context. Ready for agents. Not an agent runner."
+  ogDescription: "Trusted AI context. Local-first Context Packs. Not an agent runner."
 };
 
 export const links = {
@@ -19,7 +19,7 @@ export const proofChips = [
   "Source-backed",
   "Structured",
   "Validated",
-  "Agent-ready",
+  "Export-ready",
   "Developer-first",
   "Privacy-first"
 ];

@@ -26,7 +26,14 @@ const requiredFiles = [
   "docs/screenshots/README.md",
   "Dockerfile",
   "docker-compose.yml",
-  ".dockerignore"
+  ".dockerignore",
+  ".github/ISSUE_TEMPLATE/bug_report.md",
+  ".github/ISSUE_TEMPLATE/documentation_correction.md",
+  ".github/ISSUE_TEMPLATE/demo_pack_issue.md",
+  ".github/ISSUE_TEMPLATE/export_target_request.md",
+  ".github/ISSUE_TEMPLATE/pack_schema_proposal.md",
+  ".github/ISSUE_TEMPLATE/security_concern.md",
+  ".github/pull_request_template.md"
 ];
 
 let failed = false;
@@ -250,6 +257,9 @@ if (!failed) {
     "docs:verify",
     "docker:verify",
     "phase11:verify",
+    "verify:core",
+    "verify:security",
+    "verify:release",
     "site:verify",
     "screenshots:verify",
     "release:verify"

@@ -1,5 +1,7 @@
 # Contextarr Roadmap
 
+Status note: [docs/implementation-status.md](implementation-status.md) is the shipped-versus-planned source of truth. This roadmap records direction and gates, not a claim that every planned surface is shipped.
+
 ## Current Developer Preview
 
 Contextarr currently supports a working local Context Pack loop:

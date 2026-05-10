@@ -4,10 +4,10 @@ Contextarr uses a deterministic brand kit generated from `tools/brand-kit`.
 
 ## Brand Direction
 
-- Positioning: Contextarr is the context layer. Validated. Source-backed. Ready for agents. Not an agent runner.
+- Positioning: Contextarr is the context layer. Validated. Source-backed. Export-ready. Not an agent runner.
 - Primary logo colors: green `#22C55E`, blue `#2563EB`, navy `#0B1220`, slate `#111827`, white `#FFFFFF`.
 - Semantic UI-only colors: warning orange `#F59E0B`, error red `#EF4444`.
-- The product UI should use green for validation, source-backed trust, and ready states; blue for structure, selection, links, and agent-ready affordances.
+- The product UI should use green for validation, source-backed trust, and ready states; blue for structure, selection, links, and export-ready affordances.
 - Do not reintroduce the older violet/cyan brand direction. Cyan-like UI variables may remain as compatibility aliases, but their values should resolve to the approved blue.
 
 ## Assets

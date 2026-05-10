@@ -5,6 +5,8 @@ Date: 2026-05-08
 Owner: Rob
 Status: Planning document
 
+Status note: This is a historical planning document. [docs/implementation-status.md](implementation-status.md) is the shipped-versus-planned source of truth for the current checkout.
+
 ## 1. Purpose
 
 This document defines the complete product path from the current Contextarr planning and early implementation state to Contextarr v1.0.
@@ -1461,7 +1463,7 @@ docs/composer.md
 pnpm --filter @contextarr/server test
 pnpm --filter @contextarr/web test
 pnpm --filter @contextarr/cli test
-pnpm phase11:verify
+pnpm verify:core
 ```
 
 # Phase 12: v0.1 Public Preview Launch

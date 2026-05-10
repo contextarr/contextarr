@@ -1,6 +1,6 @@
 # Release Notes
 
-## v0.1.0-alpha.1 Draft
+## Context Pack Core Preview: v0.1.0-alpha.1 Draft
 
 This is a draft alpha release-note lane for Context Pack core readiness. No GitHub release, tag, package publish, deployment, registry launch, or marketplace launch has been performed.
 

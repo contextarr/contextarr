@@ -1,5 +1,7 @@
 # Contextarr Product Requirements Document and Build Plan
 
+Status note: This is a product requirements and planning document. [docs/implementation-status.md](implementation-status.md) is the shipped-versus-planned source of truth for the current checkout.
+
 ## 1. Executive Summary
 
 ### 1.1 Product Name

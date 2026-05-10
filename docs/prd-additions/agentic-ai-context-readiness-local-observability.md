@@ -2,6 +2,8 @@
 
 Version: 0.1 draft Date: 2026-05-10 Owner: Rob Status: Planning addition
 
+Status note: This PRD addition is accepted planning scope only. [../implementation-status.md](../implementation-status.md) is the shipped-versus-planned source of truth for the current checkout.
+
 ## 1. Purpose
 
 This document adds an Agentic AI Context Readiness and Local Observability layer to Contextarr.
@@ -3261,4 +3263,3 @@ It does not run agents.
 It does not phone home.
 It does not hide what was shared.
 ```
-

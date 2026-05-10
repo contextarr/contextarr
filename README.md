@@ -8,17 +8,13 @@
 
 # Contextarr
 
-Own your AI context. Contextarr is a local-first Context Pack system for turning Markdown records, source maps, review metadata, redaction rules, and export profiles into reusable AI-ready exports and read-only agent context.
+Contextarr is a local-first Context Pack system for preparing trusted AI context. It validates, renders, redacts, exports, and exposes approved context through CLI, API, dashboard, and read-only MCP. It does not run agents.
 
-Status: developer preview from `main`. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects; they do not execute, and Contextarr does not run agents.
+Status: Context Pack Core Preview from `main`. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects; they do not execute, and Contextarr does not run agents.
 
 For exact shipped-versus-planned claims, use [docs/implementation-status.md](docs/implementation-status.md) as the source of truth.
 
-The accepted Agentic AI Context Readiness and Local Observability PRD is a planning addition only. It positions future work around source-backed, governed, redacted, locally observable context for AI assistants and agents without adding telemetry, agent execution, or new runtime interfaces in the current checkout.
-
 ## What Contextarr Is
-
-Contextarr is a self-hosted tool for building and managing local Context Packs:
 
 ```text
 Local files in.
@@ -30,20 +26,17 @@ Read-only local MCP.
 
 The core object is the Context Pack: a local, source-backed, data-only folder with records, sources, validation rules, redaction rules, and export profiles.
 
-Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, registry, or agent runner.
+Contextarr is not a chatbot, hosted memory vault, managed RAG app, public marketplace, registry, or agent runner.
 
 ## Core Working Now
 
-- Context Pack schema, validation, and deterministic validation reports.
+- Context Pack schema, validation, deterministic validation reports, and local scanner reports.
 - 15 public-safe demo packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index derived from local files.
-- Local Fastify API for packs, records, search, health, exposure readiness, exports, composition, collectors, Draft Intake candidates, activation plans, dry-run activation proof, proof-gated local activation with local history, backup, and restore surfaces.
-- React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer.
-- Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, `AGENTS.md`, `CLAUDE.md`, and `llms.txt`.
-- CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, quarantine restore, rescan, list, inspect, health, review, review-candidates, brief, and query.
-- Read-only stdio MCP surfaces where implemented by the local MCP package.
-- Docker Compose local preview serving the built dashboard and API from one local origin.
-- Public-safe starter pack docs, release hardening docs, and reviewed alpha screenshot evidence.
+- Local Fastify API, React/Vite dashboard, CLI, profile-driven exports, and read-only stdio MCP surfaces where implemented.
+- Pack Library, pack detail, record detail, Pack Health, Exposure Readiness, Review Queue, Export Center, Composer, Draft Intake, backup, restore, and Docker local preview.
+- Context Pack collectors and Composer save flows that create private unreviewed drafts only.
+- Draft Intake activation planning, dry-run proof, explicit proof-gated local activation, and sanitized local activation history.
 
 ## Advanced Preview
 
@@ -52,31 +45,23 @@ These surfaces exist in the checkout, but they are not the public headline for t
 - Non-executable Skills as data-only instruction artifacts.
 - Non-executable Agent Kits as data-only compositions of Context Packs and Skills.
 - Skill and Agent Kit validation, indexing, read-only API/UI views, export previews, and read-only MCP tools where implemented.
-- Agent Kit templates that generate unreviewed local draft Agent Kits.
 - Local Skill importers, gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
-- Backup/restore v0, Context Pack collectors, Composer save-as-draft-pack, local scanner reports, and trust/registry planning docs.
-- Context Readiness and Local Observability planning, accepted as a docs-only future track after the Context Pack core stabilizes.
+- Agent Kit templates that create unreviewed local draft Agent Kits only.
 
-Skills and Agent Kits are frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
+Skills and Agent Kits are advanced-preview, data-only, non-executable, and frozen until Context Pack core stabilizes.
 
 Contextarr prepares Agent Kits. It does not run them.
 
 ## Not Included
 
 - No hosted cloud.
-- No public registry.
-- No public marketplace.
+- No public registry or public marketplace.
 - No remote install or auto-activation.
 - No creator accounts or payments.
-- No executable packs.
-- No executable Skills.
-- No Agent Kit runtime.
-- No scripts inside packs.
-- No direct Gmail, bank, or brokerage connectors.
-- No direct Slack, Google Drive, Jira, CRM, or sensitive-account connectors.
+- No executable packs, executable Skills, scripts inside packs, or Agent Kit runtime.
+- No direct Gmail, bank, brokerage, Slack, Google Drive, Jira, CRM, or sensitive-account connectors.
 - No managed AI dependency.
-- No telemetry.
-- No product analytics or hidden network calls.
+- No telemetry, product analytics, or hidden network calls.
 - No real private data in this repository.
 
 ## Quickstart
@@ -86,8 +71,6 @@ Requirements:
 - Node.js 20 or newer.
 - pnpm 10.
 - Docker Desktop, optional, for the Compose preview.
-
-Install dependencies and run the local dev stack:
 
 ```bash
 pnpm install
@@ -109,7 +92,15 @@ See [docs/quickstart.md](docs/quickstart.md), [docs/install.md](docs/install.md)
 
 ## Verification
 
-Start with the core checks:
+Recommended contributor checks:
+
+```bash
+pnpm verify:core
+pnpm verify:security
+pnpm verify:release
+```
+
+Focused checks:
 
 ```bash
 pnpm docs:verify
@@ -120,11 +111,6 @@ pnpm exports:verify
 pnpm exposure:verify
 pnpm trust-loop:verify
 pnpm site:verify
-```
-
-Run the full local release gate before proposing an alpha:
-
-```bash
 pnpm release:verify
 ```
 
@@ -138,18 +124,6 @@ pnpm --filter @contextarr/cli contextarr export demo-packs --all --out generated
 pnpm --filter @contextarr/cli contextarr scan demo-packs/ai-workstation-pack --format json
 pnpm --filter @contextarr/cli contextarr backup demo-packs --out data/backups
 pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out data/restored-packs
-```
-
-Current local index helper commands:
-
-```bash
-pnpm --filter @contextarr/cli contextarr rescan --format json
-pnpm --filter @contextarr/cli contextarr list packs --format json
-pnpm --filter @contextarr/cli contextarr inspect ai-workstation-pack --kind pack --readiness --format json
-pnpm --filter @contextarr/cli contextarr health --format json
-pnpm --filter @contextarr/cli contextarr review --format json
-pnpm --filter @contextarr/cli contextarr brief --format json
-pnpm --filter @contextarr/cli contextarr query "deployment" --type pack --format json
 ```
 
 Run the read-only MCP server:
@@ -168,7 +142,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - SQLite is a derived rebuildable index.
 - Validation, scanning, health, export previews, and MCP tools must not execute pack content.
 - Restores and generated drafts land in review/quarantine flows; they are not activated automatically.
-- Draft Intake shows metadata-only candidate inventories, read-only activation plans, dry-run activation proof, explicit proof-gated local activation, and local activation history. Activation moves a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the local index; it does not export, publish, perform network access, or expose candidates through MCP.
+- Draft Intake activation moves a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the local index; it does not export, publish, perform network access, or expose candidates through MCP.
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - Context Readiness is planned as a future report layer; Local Observability is planned as local evidence metadata only, not product telemetry.
@@ -180,47 +154,17 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 
 - No tagged GitHub release has been created.
 - The root package is still `private: true`; no npm package is published.
+- No public support guarantee is offered yet.
 - Reviewed `v0.1.0-alpha.1` screenshots are committed under `docs/screenshots/v0.1.0-alpha.1/` and verified by `pnpm screenshots:verify`.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Backup/restore v0 is local and quarantine-only.
-- Draft Intake v0 includes explicit proof-gated local activation and sanitized local activation history only; it does not include approval workflows, remote install, publishing, export exposure, or MCP exposure.
+- Draft Intake v0 records sanitized local activation history only.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
-- Context Readiness and Local Observability are accepted planning additions only; their schemas, API routes, UI, CLI commands, and release gates are not implemented yet.
-- Context Pack collectors and Composer save flows create private unreviewed drafts only.
+- Context Readiness and Local Observability are accepted planning additions only.
 - Skills and Agent Kits are advanced-preview data objects, not runtime features.
 - Public registry, marketplace, signing implementation, remote install, cloud sync, and telemetry remain out of scope.
 
 See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.md](docs/known-issues.md), [docs/release-checklist.md](docs/release-checklist.md), and [RELEASE_NOTES.md](RELEASE_NOTES.md).
-
-## Repository Layout
-
-```text
-apps/
-  web/                 React and Vite local dashboard
-  server/              Node.js Fastify API
-  cli/                 Contextarr CLI
-  mcp/                 Read-only stdio MCP server
-  site/                Astro public site
-
-packages/
-  schema/              Zod schemas
-  renderer/            Sanitized Markdown and static HTML renderer
-  pack-validator/      Pack validation engine
-  skill-validator/     Skill validation engine
-  agent-kit-validator/ Agent Kit validation engine
-  export-profiles/     Profile-driven export engine
-  importers/           Local draft pack and draft Skill importers
-  backups/             Local Context Pack backup and quarantine restore
-  brand-registry/      Local brand identifiers and safe logo assets
-
-demo-packs/            Public-safe demo Context Packs
-demo-skills/           Public-safe non-executable demo Skills
-demo-agent-kits/       Public-safe non-executable demo Agent Kits
-agent-kit-templates/   Public-safe data-only Agent Kit templates
-docs/                  Product, architecture, security, release, and roadmap docs
-assets/brand/          Contextarr brand assets
-tools/                 Local verification and launch helpers
-```
 
 ## Further Docs
 
