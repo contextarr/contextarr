@@ -174,6 +174,14 @@ const navItems = [
   { label: "Settings", icon: Settings }
 ] satisfies Array<{ label: string; icon: typeof Library; href?: string; route?: Route["name"] }>;
 
+const shellActions = [
+  { label: "Activity monitor unavailable in developer preview", icon: Activity },
+  { label: "Import shortcut unavailable in developer preview", icon: Import },
+  { label: "Notifications unavailable in developer preview", icon: Bell },
+  { label: "Help center unavailable in developer preview", icon: CircleHelp },
+  { label: "User profile unavailable in developer preview", icon: UserRound }
+] satisfies Array<{ label: string; icon: typeof Activity }>;
+
 const coverIconMap = {
   book: BookOpen,
   box: Box,
@@ -506,16 +514,26 @@ function TopBar({
         <input
           type="search"
           value={query}
+          aria-label="Search packs, tags, authors, and descriptions"
           placeholder="Search packs, tags, authors, descriptions..."
           onChange={(event) => onQueryChange(event.target.value)}
         />
-        <span className="search-status">{searching ? "..." : "/"}</span>
+        <span className="search-status" aria-hidden="true">
+          {searching ? "..." : "/"}
+        </span>
       </label>
 
       <div className="topbar-actions" aria-label="Inactive shell actions">
-        {[Activity, Import, Bell, CircleHelp, UserRound].map((Icon, index) => (
-          <button className="icon-button" type="button" disabled key={index}>
-            <Icon size={19} aria-hidden="true" />
+        {shellActions.map((action) => (
+          <button
+            className="icon-button"
+            type="button"
+            disabled
+            aria-label={action.label}
+            title={action.label}
+            key={action.label}
+          >
+            <action.icon size={19} aria-hidden="true" />
           </button>
         ))}
       </div>

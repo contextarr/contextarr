@@ -275,6 +275,25 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).not.toContain("Local API unavailable");
   });
 
+  it("labels search and inactive shell controls for assistive technology", async () => {
+    mountApp("#/library");
+
+    await waitForText("AI Workstation Pack");
+    expect(document.querySelector("input[type='search']")?.getAttribute("aria-label")).toBe(
+      "Search packs, tags, authors, and descriptions"
+    );
+
+    expect(
+      Array.from(document.querySelectorAll(".topbar-actions button")).map((button) => button.getAttribute("aria-label"))
+    ).toEqual([
+      "Activity monitor unavailable in developer preview",
+      "Import shortcut unavailable in developer preview",
+      "Notifications unavailable in developer preview",
+      "Help center unavailable in developer preview",
+      "User profile unavailable in developer preview"
+    ]);
+  });
+
   it("renders the Skill Library auth-required state when Skill loading is protected", async () => {
     mocks.apiClient.getSkills.mockRejectedValue(new mocks.ApiError(401, "API token required."));
 
