@@ -21,6 +21,7 @@ import {
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
 import {
+  dryRunReviewCandidateActivation,
   getReviewCandidate,
   getReviewCandidateActivationPlan,
   listReviewCandidates,
@@ -1059,6 +1060,22 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return { plan };
+  });
+
+  app.post<{ Params: { key: string } }>("/api/review-candidates/:key/activation/dry-run", async (request, reply) => {
+    const dryRun = dryRunReviewCandidateActivation({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      activePacksRoot: config.packsDir,
+      key: request.params.key
+    });
+
+    if (!dryRun) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { dryRun };
   });
 
   app.get<{ Params: { key: string } }>("/api/review-candidates/:key", async (request, reply) => {

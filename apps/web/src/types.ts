@@ -858,6 +858,32 @@ export interface ReviewCandidateActivationPlan {
   boundaries: string[];
 }
 
+export interface ReviewCandidateActivationDryRun {
+  schemaVersion: "contextarr.review-candidate-activation-dry-run.v1";
+  generatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: "ready" | "blocked";
+  canActivate: boolean;
+  source: ReviewCandidateActivationPlan["source"];
+  target: ReviewCandidateActivationPlan["target"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  blockers: ReviewCandidateActivationPlan["blockers"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
+  manualActions: string[];
+  effects: {
+    filesMoved: false;
+    sqliteMutated: false;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  boundaries: string[];
+}
+
 export interface ReviewCandidatesResponse {
   candidates: ReviewCandidateSummary[];
   skippedRoots: Array<{

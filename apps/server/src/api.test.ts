@@ -1089,8 +1089,10 @@ describe("Contextarr API", () => {
     const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
     const detail = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}` });
     const plan = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}/activation-plan` });
+    const dryRun = await app.inject({ method: "POST", url: `/api/review-candidates/${ready.key}/activation/dry-run` });
     expect(detail.statusCode).toBe(200);
     expect(plan.statusCode).toBe(200);
+    expect(dryRun.statusCode).toBe(200);
     expect(detail.json().candidate.records).toEqual([
       expect.objectContaining({
         id: "valid.overview",
@@ -1107,10 +1109,29 @@ describe("Contextarr API", () => {
       }
     });
     expect(plan.json().plan.boundaries).toEqual(expect.arrayContaining([expect.stringContaining("No record bodies")]));
+    expect(dryRun.json().dryRun).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+      canActivate: true,
+      status: "ready",
+      target: {
+        pathLabel: "demo-packs/valid-minimal-pack",
+        activeConflict: false
+      },
+      effects: {
+        filesMoved: false,
+        sqliteMutated: false,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      }
+    });
+    expect(dryRun.json().dryRun.proofId).toMatch(/^[a-f0-9]{24}$/);
     expect(detail.body).not.toContain("This is a valid minimal context pack");
     expect(detail.body).not.toContain(draftPacksDir);
     expect(plan.body).not.toContain("This is a valid minimal context pack");
     expect(plan.body).not.toContain(draftPacksDir);
+    expect(dryRun.body).not.toContain("This is a valid minimal context pack");
+    expect(dryRun.body).not.toContain(draftPacksDir);
 
     await app.close();
     fixtureContext.db.close();
@@ -1126,6 +1147,7 @@ describe("Contextarr API", () => {
 
     const rejected = await app.inject({ method: "GET", url: "/api/review-candidates" });
     const rejectedPlan = await app.inject({ method: "GET", url: "/api/review-candidates/fake-key/activation-plan" });
+    const rejectedDryRun = await app.inject({ method: "POST", url: "/api/review-candidates/fake-key/activation/dry-run" });
     const accepted = await app.inject({
       method: "GET",
       url: "/api/review-candidates",
@@ -1136,11 +1158,18 @@ describe("Contextarr API", () => {
       url: "/api/review-candidates/fake-key/activation-plan",
       headers: { authorization: "Bearer candidate-token" }
     });
+    const acceptedDryRun = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/dry-run",
+      headers: { authorization: "Bearer candidate-token" }
+    });
 
     expect(rejected.statusCode).toBe(401);
     expect(rejectedPlan.statusCode).toBe(401);
+    expect(rejectedDryRun.statusCode).toBe(401);
     expect(accepted.statusCode).toBe(200);
     expect(acceptedPlan.statusCode).toBe(404);
+    expect(acceptedDryRun.statusCode).toBe(404);
 
     await app.close();
     fixtureContext.db.close();

@@ -130,6 +130,32 @@ export interface ReviewCandidateActivationPlan {
   boundaries: string[];
 }
 
+export interface ReviewCandidateActivationDryRun {
+  schemaVersion: "contextarr.review-candidate-activation-dry-run.v1";
+  generatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: ReviewCandidateActivationPlanStatus;
+  canActivate: boolean;
+  source: ReviewCandidateActivationPlan["source"];
+  target: ReviewCandidateActivationPlan["target"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  blockers: ReviewCandidateActivationBlocker[];
+  warnings: ReviewCandidateActivationWarning[];
+  manualActions: string[];
+  effects: {
+    filesMoved: false;
+    sqliteMutated: false;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  boundaries: string[];
+}
+
 export interface ReviewCandidateListResult {
   candidates: ReviewCandidateSummary[];
   skippedRoots: ReviewCandidateSkippedRoot[];
@@ -324,6 +350,80 @@ export function getReviewCandidateActivationPlan(
       "No SQLite index mutation has run.",
       "No export, MCP exposure, registry publish, or network action has run.",
       "No record bodies are returned in this plan."
+    ]
+  };
+}
+
+export function dryRunReviewCandidateActivation(
+  options: ReviewCandidateOptions & { key: string; activePacksRoot?: string; now?: Date }
+): ReviewCandidateActivationDryRun | undefined {
+  const candidate = getReviewCandidate(options);
+  if (!candidate) {
+    return undefined;
+  }
+
+  const displayRoot = path.resolve(options.displayRoot ?? process.cwd());
+  const activePacksRootLabel = displayPath(path.resolve(options.activePacksRoot ?? "demo-packs"), displayRoot);
+  const targetPathLabel = candidate.packId ? normalizePath(`${activePacksRootLabel}/${candidate.packId}`) : null;
+  const blockers = activationBlockers(candidate);
+  const warnings = activationWarnings(candidate);
+  const canActivate = candidate.status === "ready_for_review" && blockers.length === 0;
+  const generatedAt = (options.now ?? new Date()).toISOString();
+  const source = {
+    kind: candidate.sourceKind,
+    label: candidate.sourceLabel,
+    pathLabel: candidate.pathLabel
+  };
+  const target = {
+    activePacksRootLabel,
+    packId: candidate.packId,
+    pathLabel: targetPathLabel,
+    activeConflict: candidate.activeConflict
+  };
+  const proofId = activationProofId({
+    candidateKey: candidate.key,
+    packId: candidate.packId,
+    sourcePathLabel: source.pathLabel,
+    targetPathLabel,
+    validationStatus: candidate.validation.status,
+    validationErrors: candidate.validation.errors,
+    validationWarnings: candidate.validation.warnings,
+    securityStatus: candidate.security.status,
+    securityRecommendedAction: candidate.security.recommendedAction,
+    securityBlocking: candidate.security.blocking,
+    activeConflict: candidate.activeConflict,
+    blockerCodes: blockers.map((blocker) => blocker.code),
+    warningCodes: warnings.map((warning) => warning.code)
+  });
+
+  return {
+    schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+    generatedAt,
+    proofId,
+    candidateKey: candidate.key,
+    packId: candidate.packId,
+    name: candidate.name,
+    status: canActivate ? "ready" : "blocked",
+    canActivate,
+    source,
+    target,
+    validation: candidate.validation,
+    security: candidate.security,
+    blockers,
+    warnings,
+    manualActions: activationNextSteps(candidate, canActivate, targetPathLabel),
+    effects: {
+      filesMoved: false,
+      sqliteMutated: false,
+      exportsGenerated: false,
+      mcpExposed: false,
+      networkAccessed: false
+    },
+    boundaries: [
+      "Dry-run only; no candidate files were moved, copied, or deleted.",
+      "Dry-run only; no SQLite index rows were inserted, updated, or deleted.",
+      "Dry-run only; no export content was generated and no MCP visibility changed.",
+      "Dry-run only; no network access occurred."
     ]
   };
 }
@@ -654,6 +754,10 @@ function activationNextSteps(candidate: ReviewCandidateDetail, canActivate: bool
     "Run contextarr rescan --format json.",
     "Check Pack Health and Exposure Readiness before export or MCP exposure."
   ];
+}
+
+function activationProofId(value: Record<string, unknown>): string {
+  return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 24);
 }
 
 function isBlockingSecurityReport(report: SecurityScannerReportV1 | undefined): boolean {

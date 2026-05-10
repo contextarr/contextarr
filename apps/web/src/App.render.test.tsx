@@ -63,6 +63,7 @@ const mocks = vi.hoisted(() => {
       getReviewCandidates: vi.fn(),
       getReviewCandidate: vi.fn(),
       getReviewCandidateActivationPlan: vi.fn(),
+      dryRunReviewCandidateActivation: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
   };
@@ -360,6 +361,54 @@ describe("App Skill UI routes", () => {
         "No record bodies are returned in this plan."
       ]
     });
+    mocks.apiClient.dryRunReviewCandidateActivation.mockResolvedValue({
+      schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+      generatedAt: "2026-05-10T00:00:00.000Z",
+      proofId: "abc123def456abc123def456",
+      candidateKey: "candidate-key",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      status: "ready",
+      canActivate: true,
+      source: {
+        kind: "draft_pack",
+        label: "draft-packs",
+        pathLabel: "draft-packs/local-draft"
+      },
+      target: {
+        activePacksRootLabel: "demo-packs",
+        packId: "local-draft-pack",
+        pathLabel: "demo-packs/local-draft-pack",
+        activeConflict: false
+      },
+      validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+      security: {
+        status: "policy_clean",
+        recommendedAction: "review",
+        blocking: false,
+        summary: null,
+        findingCount: 0
+      },
+      blockers: [],
+      warnings: [],
+      manualActions: [
+        "Inspect the candidate records, sources, export profiles, validation issues, and scanner findings.",
+        "Move or copy the reviewed folder into demo-packs/local-draft-pack."
+      ],
+      effects: {
+        filesMoved: false,
+        sqliteMutated: false,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      },
+      boundaries: [
+        "Dry-run only; no candidate files were moved, copied, or deleted.",
+        "Dry-run only; no SQLite index rows were inserted, updated, or deleted.",
+        "Dry-run only; no export content was generated and no MCP visibility changed.",
+        "Dry-run only; no network access occurred."
+      ]
+    });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
@@ -440,9 +489,16 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.getReviewCandidateActivationPlan).toHaveBeenCalledWith("candidate-key");
     expect(document.body.textContent).toContain("Manual Activation Plan");
     expect(document.body.textContent).toContain("demo-packs/local-draft-pack");
+    await clickButtonAndFlush("Prepare Activation");
+    await waitForMockResult(mocks.apiClient.dryRunReviewCandidateActivation, 0);
+    await flushPendingUpdates();
+    expect(mocks.apiClient.dryRunReviewCandidateActivation).toHaveBeenCalledWith("candidate-key");
+    await waitForText("Activation Proof");
+    expect(document.body.textContent).toContain("abc123def456abc123def456");
     expect(document.body.textContent).not.toContain("Approve");
     expect(document.body.textContent).not.toContain("Promote");
-    expect(document.body.textContent).not.toContain("Activate");
+    expect(document.body.textContent).not.toContain("Activate Now");
+    expect(document.body.textContent).not.toContain("Confirm Activation");
   });
 
   it("renders the Skill Library auth-required state when Skill loading is protected", async () => {

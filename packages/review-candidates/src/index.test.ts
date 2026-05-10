@@ -3,7 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { getReviewCandidate, getReviewCandidateActivationPlan, listReviewCandidates, type ReviewCandidateRoot } from "./index";
+import {
+  dryRunReviewCandidateActivation,
+  getReviewCandidate,
+  getReviewCandidateActivationPlan,
+  listReviewCandidates,
+  type ReviewCandidateRoot
+} from "./index";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const validPackFixture = path.join(repoRoot, "packages/pack-validator/test/fixtures/valid-minimal-pack");
@@ -98,6 +104,36 @@ describe("@contextarr/review-candidates", () => {
     expect(plan?.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "candidate.validation_warnings" })]));
     expect(plan?.boundaries.join(" ")).toContain("No record bodies");
     expect(JSON.stringify(plan)).not.toContain(root);
+
+    const dryRun = dryRunReviewCandidateActivation({
+      roots: [{ rootPath: path.join(root, "drafts"), sourceKind: "draft_pack" }],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: result.candidates[0].key,
+      now: new Date("2026-05-10T00:00:00.000Z")
+    });
+
+    expect(dryRun).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+      generatedAt: "2026-05-10T00:00:00.000Z",
+      packId: "valid-minimal-pack",
+      status: "ready",
+      canActivate: true,
+      target: {
+        pathLabel: "active-packs/valid-minimal-pack",
+        activeConflict: false
+      },
+      effects: {
+        filesMoved: false,
+        sqliteMutated: false,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      }
+    });
+    expect(dryRun?.proofId).toMatch(/^[a-f0-9]{24}$/);
+    expect(dryRun?.manualActions).toEqual(expect.arrayContaining([expect.stringContaining("contextarr rescan")]));
+    expect(JSON.stringify(dryRun)).not.toContain(root);
   });
 
   it("marks invalid, blocked, duplicate, missing-root, and quarantine candidates deterministically", () => {
@@ -163,6 +199,20 @@ describe("@contextarr/review-candidates", () => {
     expect(blockedPlan?.blockers).toEqual(expect.arrayContaining([expect.objectContaining({ code: "candidate.blocked" })]));
     expect(JSON.stringify(duplicatePlan)).not.toContain(root);
     expect(JSON.stringify(blockedPlan)).not.toContain(root);
+
+    const duplicateDryRun = dryRunReviewCandidateActivation({
+      roots,
+      activePackIds: ["valid-minimal-pack"],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: duplicate?.key ?? "",
+      now: new Date("2026-05-10T00:00:00.000Z")
+    });
+    expect(duplicateDryRun).toMatchObject({ status: "blocked", canActivate: false });
+    expect(duplicateDryRun?.blockers).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "candidate.duplicate_active_id" })])
+    );
+    expect(duplicateDryRun?.manualActions[0]).toContain("Resolve every blocker");
   });
 });
 

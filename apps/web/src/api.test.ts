@@ -394,10 +394,44 @@ describe("Contextarr API client", () => {
   });
 
   it("reads review candidate routes", async () => {
-    const requests: string[] = [];
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
     const client = createApiClient({
-      fetchImpl: async (url) => {
-        requests.push(String(url));
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (String(url).endsWith("/activation/dry-run")) {
+          return jsonResponse({
+            dryRun: {
+              schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+              generatedAt: "2026-05-10T00:00:00.000Z",
+              proofId: "abc123def456abc123def456",
+              candidateKey: "candidate-key",
+              packId: "draft-candidate",
+              name: "Draft Candidate",
+              status: "ready",
+              canActivate: true,
+              source: { kind: "draft_pack", label: "drafts", pathLabel: "drafts/draft-candidate" },
+              target: {
+                activePacksRootLabel: "demo-packs",
+                packId: "draft-candidate",
+                pathLabel: "demo-packs/draft-candidate",
+                activeConflict: false
+              },
+              validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+              security: { status: "policy_clean", recommendedAction: "review", blocking: false, summary: null, findingCount: 0 },
+              blockers: [],
+              warnings: [],
+              manualActions: [],
+              effects: {
+                filesMoved: false,
+                sqliteMutated: false,
+                exportsGenerated: false,
+                mcpExposed: false,
+                networkAccessed: false
+              },
+              boundaries: []
+            }
+          });
+        }
         if (String(url).endsWith("/activation-plan")) {
           return jsonResponse({
             plan: {
@@ -438,11 +472,14 @@ describe("Contextarr API client", () => {
     });
     await expect(client.getReviewCandidate("candidate-key")).resolves.toMatchObject({ key: "candidate-key" });
     await expect(client.getReviewCandidateActivationPlan("candidate-key")).resolves.toMatchObject({ canActivate: true });
-    expect(requests).toEqual([
+    await expect(client.dryRunReviewCandidateActivation("candidate-key")).resolves.toMatchObject({ proofId: "abc123def456abc123def456" });
+    expect(requests.map((request) => request.url)).toEqual([
       "/api/review-candidates?status=ready_for_review&q=draft",
       "/api/review-candidates/candidate-key",
-      "/api/review-candidates/candidate-key/activation-plan"
+      "/api/review-candidates/candidate-key/activation-plan",
+      "/api/review-candidates/candidate-key/activation/dry-run"
     ]);
+    expect(requests[3].init).toMatchObject({ method: "POST" });
   });
 
   it("reads export preview routes", async () => {

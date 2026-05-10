@@ -26,6 +26,7 @@ import type {
   RecordSummary,
   ReviewItemsResponse,
   ReviewCandidatesResponse,
+  ReviewCandidateActivationDryRun,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewItemStatus,
@@ -102,6 +103,7 @@ export interface ApiClient {
   getReviewCandidates(filters?: { sourceKind?: string; status?: string; q?: string }): Promise<ReviewCandidatesResponse>;
   getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
   getReviewCandidateActivationPlan(key: string): Promise<ReviewCandidateActivationPlan>;
+  dryRunReviewCandidateActivation(key: string): Promise<ReviewCandidateActivationDryRun>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -264,6 +266,13 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         `/api/review-candidates/${encodeURIComponent(key)}/activation-plan`
       );
       return response.plan;
+    },
+    dryRunReviewCandidateActivation: async (key: string) => {
+      const response = await requestJson<{ dryRun: ReviewCandidateActivationDryRun }>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation/dry-run`,
+        { method: "POST" }
+      );
+      return response.dryRun;
     },
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(

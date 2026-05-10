@@ -2043,6 +2043,31 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.candidate-plan-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.candidate-plan-actions span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.candidate-dry-run {
+  background: rgba(8, 13, 20, 0.46);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.candidate-dry-run h3 {
+  margin-top: 0;
+}
+
 .candidate-next-steps {
   color: var(--muted);
   display: grid;

@@ -145,6 +145,7 @@ import type {
   RecordDetail,
   RecordSummary,
   ReviewItem,
+  ReviewCandidateActivationDryRun,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
   ReviewCandidateSummary,
@@ -3767,7 +3768,9 @@ function ReviewQueuePage({
   });
   const [candidateDetail, setCandidateDetail] = useState<ReviewCandidateDetail | null>(null);
   const [candidateActivationPlan, setCandidateActivationPlan] = useState<ReviewCandidateActivationPlan | null>(null);
+  const [candidateActivationDryRun, setCandidateActivationDryRun] = useState<ReviewCandidateActivationDryRun | null>(null);
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
+  const [preparingCandidateKey, setPreparingCandidateKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -3827,6 +3830,7 @@ function ReviewQueuePage({
     setCandidateError(null);
     setCandidateDetail(null);
     setCandidateActivationPlan(null);
+    setCandidateActivationDryRun(null);
     try {
       const [detail, plan] = await Promise.all([
         apiClient.getReviewCandidate(candidate.key),
@@ -3837,7 +3841,21 @@ function ReviewQueuePage({
     } catch (loadError) {
       setCandidateDetail(null);
       setCandidateActivationPlan(null);
+      setCandidateActivationDryRun(null);
       setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load review candidate detail.");
+    }
+  }
+
+  async function prepareCandidateActivation(plan: ReviewCandidateActivationPlan) {
+    setPreparingCandidateKey(plan.candidateKey);
+    setCandidateActivationDryRun(null);
+    setCandidateError(null);
+    try {
+      setCandidateActivationDryRun(await apiClient.dryRunReviewCandidateActivation(plan.candidateKey));
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to prepare activation dry run.");
+    } finally {
+      setPreparingCandidateKey(null);
     }
   }
 
@@ -3917,6 +3935,9 @@ function ReviewQueuePage({
               <ReviewCandidateDetailPanel
                 candidate={candidateDetail}
                 activationPlan={candidateActivationPlan}
+                activationDryRun={candidateActivationDryRun}
+                preparing={preparingCandidateKey === candidateActivationPlan?.candidateKey}
+                onPrepareActivation={prepareCandidateActivation}
                 skippedRoots={candidateResponse?.skippedRoots ?? []}
               />
             </div>
@@ -4583,10 +4604,16 @@ function ReviewCandidateCard({
 function ReviewCandidateDetailPanel({
   candidate,
   activationPlan,
+  activationDryRun,
+  preparing,
+  onPrepareActivation,
   skippedRoots
 }: {
   candidate: ReviewCandidateDetail | null;
   activationPlan: ReviewCandidateActivationPlan | null;
+  activationDryRun: ReviewCandidateActivationDryRun | null;
+  preparing: boolean;
+  onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
   skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
 }) {
   if (!candidate) {
@@ -4621,7 +4648,12 @@ function ReviewCandidateDetailPanel({
         <Fact label="Security" value={formatPackType(candidate.security.status)} />
       </div>
       <p className="muted-note">{candidate.recommendedAction}</p>
-      <ReviewCandidateActivationPlanView plan={activationPlan} />
+      <ReviewCandidateActivationPlanView
+        plan={activationPlan}
+        dryRun={activationDryRun}
+        preparing={preparing}
+        onPrepareActivation={onPrepareActivation}
+      />
 
       <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
       <CandidateSecurityList findings={candidate.securityFindings} />
@@ -4650,7 +4682,17 @@ function ReviewCandidateDetailPanel({
   );
 }
 
-function ReviewCandidateActivationPlanView({ plan }: { plan: ReviewCandidateActivationPlan | null }) {
+function ReviewCandidateActivationPlanView({
+  plan,
+  dryRun,
+  preparing,
+  onPrepareActivation
+}: {
+  plan: ReviewCandidateActivationPlan | null;
+  dryRun: ReviewCandidateActivationDryRun | null;
+  preparing: boolean;
+  onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
+}) {
   if (!plan) {
     return null;
   }
@@ -4709,7 +4751,40 @@ function ReviewCandidateActivationPlanView({ plan }: { plan: ReviewCandidateActi
           <li key={step}>{step}</li>
         ))}
       </ol>
+
+      <div className="candidate-plan-actions">
+        <button className="secondary-action" type="button" disabled={!plan.canActivate || preparing} onClick={() => onPrepareActivation(plan)}>
+          {preparing ? "Preparing..." : "Prepare Activation"}
+        </button>
+        {!plan.canActivate ? <span>Resolve blockers before preparing activation evidence.</span> : null}
+      </div>
+
+      {dryRun ? <ReviewCandidateActivationDryRunView dryRun={dryRun} /> : null}
       <p className="muted-note">{plan.boundaries.join(" ")}</p>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationDryRunView({ dryRun }: { dryRun: ReviewCandidateActivationDryRun }) {
+  return (
+    <section className="candidate-dry-run" aria-label="Activation dry-run proof">
+      <h3>Activation Proof</h3>
+      <div className="fact-grid">
+        <Fact label="Proof" value={dryRun.proofId} />
+        <Fact label="Validation" value={formatPackType(dryRun.validation.status)} />
+        <Fact label="Security" value={formatPackType(dryRun.security.status)} />
+        <Fact label="Effects" value="None" />
+      </div>
+      <ul className="simple-list candidate-plan-list">
+        <li>
+          <span>{dryRun.target.pathLabel ?? dryRun.target.activePacksRootLabel}</span>
+          <strong>{dryRun.canActivate ? "ready" : "blocked"}</strong>
+        </li>
+        <li>
+          <span>{dryRun.boundaries.join(" ")}</span>
+          <strong>dry_run</strong>
+        </li>
+      </ul>
     </section>
   );
 }
