@@ -462,7 +462,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         io.stdout.write(format === "json" ? `${JSON.stringify(formatBackupJson(result), null, 2)}\n` : formatBackupText(result));
         exitCode = 0;
       } catch (error) {
-        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        writeCliError(io, format, error);
         exitCode = error instanceof BackupError && isBackupUsageError(error.code) ? 2 : 1;
       }
     });
@@ -490,7 +490,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         io.stdout.write(format === "json" ? `${JSON.stringify(formatRestoreJson(result), null, 2)}\n` : formatRestoreText(result));
         exitCode = result.validationErrors > 0 || result.scannerBlocked > 0 ? 1 : 0;
       } catch (error) {
-        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        writeCliError(io, format, error);
         exitCode = error instanceof BackupError && isRestoreUsageError(error.code) ? 2 : 1;
       }
     });
@@ -786,7 +786,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
           : renderPacksToStaticHtml({ packsDir: resolvedTargetPath, outputDir: resolvedOutputPath });
 
         io.stdout.write(
-          `Rendered ${result.packsRendered} pack(s), ${result.recordsRendered} record(s): ${result.entryFile}\n`
+          `Rendered ${result.packsRendered} pack(s), ${result.recordsRendered} record(s): ${displayPath(result.entryFile)}\n`
         );
         exitCode = 0;
       } catch (error) {
@@ -849,7 +849,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         );
         const writtenFiles = writeExportArtifacts(resolvedOutputPath, artifacts);
 
-        io.stdout.write(`Exported ${writtenFiles.length} file(s): ${resolvedOutputPath}\n`);
+        io.stdout.write(`Exported ${writtenFiles.length} file(s): ${displayPath(resolvedOutputPath)}\n`);
         exitCode = 0;
       } catch (error) {
         io.stderr.write(`${error instanceof ExportError ? error.message : errorMessage(error)}\n`);
@@ -2299,43 +2299,94 @@ function formatSkillImportJson(result: DraftSkillImportResult): {
 
 function formatBackupText(result: BackupResult): string {
   return [
-    `Created Context Pack backup: ${result.backupPath}`,
+    `Created Context Pack backup: ${displayPath(result.backupPath)}`,
     `Backup: ${result.backupId}`,
     `Packs: ${result.packCount}`,
     `Files: ${result.fileCount}`,
     `Bytes: ${result.byteLength}`,
     `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
-    `Manifest: ${result.manifestPath}`,
+    `Manifest: ${displayPath(result.manifestPath)}`,
     `Manifest checksum: ${result.manifestSha256}`
   ].join("\n") + "\n";
 }
 
 function formatBackupJson(result: BackupResult): BackupResult {
-  return result;
+  return {
+    ...result,
+    backupPath: displayPath(result.backupPath),
+    manifestPath: displayPath(result.manifestPath),
+    manifestSha256Path: displayPath(result.manifestSha256Path)
+  };
 }
 
 function formatRestoreText(result: RestoreResult): string {
   return [
-    `Restored Context Pack backup to quarantine: ${result.outputPath}`,
+    `Restored Context Pack backup to quarantine: ${displayPath(result.outputPath)}`,
     `Backup: ${result.backupId}`,
     `Status: ${result.status}`,
     `Packs: ${result.packCount}`,
     `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
     `Scanner blocked: ${result.scannerBlocked}`,
-    `Restore report: ${result.reportPath}`,
+    `Restore report: ${displayPath(result.reportPath)}`,
     "Activation: manual review required; no packs were activated automatically."
   ].join("\n") + "\n";
 }
 
 function formatRestoreJson(result: RestoreResult): RestoreResult {
-  return result;
+  return {
+    ...result,
+    outputPath: displayPath(result.outputPath),
+    reportPath: displayPath(result.reportPath),
+    packs: result.packs.map((pack) => ({
+      ...pack,
+      packPath: displayPath(pack.packPath)
+    }))
+  };
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function formatCliError(error: unknown): string {
+  return sanitizeCliMessage(errorMessage(error));
+}
+
+function writeCliError(io: CliIo, format: OutputFormat, error: unknown): void {
+  if (format === "json") {
+    io.stdout.write(`${JSON.stringify(formatCliErrorJson(error), null, 2)}\n`);
+    return;
+  }
+
+  io.stderr.write(`${formatCliError(error)}\n`);
+}
+
+function formatCliErrorJson(error: unknown): { ok: false; error: string; message: string } {
+  return {
+    ok: false,
+    error: error instanceof BackupError ? error.code : "cli_error",
+    message: formatCliError(error)
+  };
+}
+
+function sanitizeCliMessage(message: string): string {
+  const cwd = path.resolve(process.env.INIT_CWD ?? process.cwd());
+  const cwdVariants = [cwd, cwd.replace(/\\/g, "/")];
+  let sanitized = message;
+
+  for (const variant of cwdVariants) {
+    sanitized = sanitized.split(variant).join(".");
+  }
+
+  sanitized = sanitized.replace(/[A-Za-z]:[\\/][^\s"']+/g, (match) => displayPath(match.trim()));
+  return sanitized.replace(/\\/g, "/");
+}
+
 function displayPath(value: string): string {
+  if (!path.isAbsolute(value)) {
+    return value.replace(/\\/g, "/");
+  }
+
   const cwd = path.resolve(process.env.INIT_CWD ?? process.cwd());
   const relative = path.relative(cwd, path.resolve(value));
   if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) {

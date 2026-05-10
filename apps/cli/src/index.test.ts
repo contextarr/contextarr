@@ -69,6 +69,11 @@ function createIo() {
   };
 }
 
+function expectNoAbsolutePaths(value: string): void {
+  expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
+  expect(value).not.toContain(repoRoot);
+}
+
 async function withCliIndex(callback: () => Promise<void>): Promise<void> {
   const previousEnv = {
     INIT_CWD: process.env.INIT_CWD,
@@ -743,6 +748,10 @@ describe("contextarr CLI", () => {
       validationErrors: 0,
       validationWarnings: 0
     });
+    expect(backupJson.backupPath).toBe("cli-backup");
+    expect(backupJson.manifestPath).toBe("contextarr-backup.json");
+    expect(backupJson.manifestSha256Path).toBe("contextarr-backup.sha256");
+    expectNoAbsolutePaths(backupOutput.stdout);
     expect(fs.existsSync(path.join(backupOutDir, "cli-backup", "contextarr-backup.json"))).toBe(true);
 
     const restoreCode = await runCli(
@@ -759,6 +768,10 @@ describe("contextarr CLI", () => {
       validationErrors: 0,
       scannerBlocked: 0
     });
+    expect(restoreJson.outputPath).toBe("cli-backup");
+    expect(restoreJson.reportPath).toBe("restore-report.json");
+    expect(restoreJson.packs[0].packPath).toBe("ai-workstation-pack");
+    expectNoAbsolutePaths(restoreOutput.stdout);
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "restore-report.json"))).toBe(true);
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "ai-workstation-pack", "contextarr-pack.json"))).toBe(true);
   });
@@ -779,6 +792,7 @@ describe("contextarr CLI", () => {
     expect(await runCli(["restore", path.join(backupOutDir, "blocked-cli-backup"), "--out", restoreOutDir], restoreOutput.io)).toBe(1);
     expect(restoreOutput.stdout).toContain("Status: restored_with_security_findings");
     expect(restoreOutput.stdout).toContain("Scanner blocked: 1");
+    expectNoAbsolutePaths(restoreOutput.stdout);
   });
 
   it("scans local artifacts in text and JSON formats", async () => {
@@ -838,20 +852,41 @@ describe("contextarr CLI", () => {
 
   it("returns expected codes for backup and restore failures", async () => {
     const readOutput = createIo();
+    const readJsonOutput = createIo();
     const invalidOutput = createIo();
     const restoreReadOutput = createIo();
+    const restoreReadJsonOutput = createIo();
     const existingOutput = createIo();
     const backupOutDir = tempDir();
     const restoreOutDir = tempDir();
 
     expect(await runCli(["backup", "does-not-exist", "--out", tempDir()], readOutput.io)).toBe(2);
     expect(readOutput.stderr).toContain("Backup source is not a readable directory");
+    expectNoAbsolutePaths(readOutput.stderr);
+
+    expect(await runCli(["backup", "does-not-exist", "--out", tempDir(), "--format", "json"], readJsonOutput.io)).toBe(2);
+    expect(JSON.parse(readJsonOutput.stdout)).toMatchObject({
+      ok: false,
+      error: "backup.input_unreadable"
+    });
+    expect(readJsonOutput.stderr).toBe("");
+    expectNoAbsolutePaths(readJsonOutput.stdout);
 
     expect(await runCli(["backup", fixture("invalid-permissions-pack"), "--out", tempDir()], invalidOutput.io)).toBe(1);
     expect(invalidOutput.stderr).toContain("invalid Context Pack");
+    expectNoAbsolutePaths(invalidOutput.stderr);
 
     expect(await runCli(["restore", "does-not-exist", "--out", tempDir()], restoreReadOutput.io)).toBe(2);
     expect(restoreReadOutput.stderr).toContain("Restore source is not a readable backup directory");
+    expectNoAbsolutePaths(restoreReadOutput.stderr);
+
+    expect(await runCli(["restore", "does-not-exist", "--out", tempDir(), "--format", "json"], restoreReadJsonOutput.io)).toBe(2);
+    expect(JSON.parse(restoreReadJsonOutput.stdout)).toMatchObject({
+      ok: false,
+      error: "restore.input_unreadable"
+    });
+    expect(restoreReadJsonOutput.stderr).toBe("");
+    expectNoAbsolutePaths(restoreReadJsonOutput.stdout);
 
     expect(
       await runCli(
@@ -869,6 +904,8 @@ describe("contextarr CLI", () => {
     expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(0);
     expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(1);
     expect(existingOutput.stderr).toContain("Restore output already exists");
+    expectNoAbsolutePaths(existingOutput.stdout);
+    expectNoAbsolutePaths(existingOutput.stderr);
   });
 
   it("renders a valid pack to static HTML", async () => {
@@ -878,6 +915,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Rendered 1 pack(s), 5 record(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.readFileSync(path.join(outDir, "index.html"), "utf8")).toContain("AI Workstation Pack");
     expect(fs.existsSync(path.join(outDir, "records", "ai-workstation.local-ai-stack.html"))).toBe(true);
   });
@@ -889,6 +927,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Rendered 16 pack(s), 116 record(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.existsSync(path.join(outDir, "packs", "ai-workstation-pack", "index.html"))).toBe(true);
   });
 
@@ -911,6 +950,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Exported 1 file(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.readFileSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-chatgpt.md"), "utf8")).toContain(
       "ChatGPT Context Export"
     );
@@ -923,6 +963,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Exported 128 file(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-llms-txt.txt"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);
