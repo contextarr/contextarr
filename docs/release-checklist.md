@@ -37,7 +37,7 @@ git status --short --branch
 - Build a Composer preview.
 - Save a Composer draft pack and confirm it lands under `composed-packs/` without appearing in the active Pack Library.
 - Open Pack Health and Review Queue.
-- Open Review Queue -> Draft Intake and confirm draft/composed/quarantine candidates show metadata only, with no approve/promote/activate action.
+- Open Review Queue -> Draft Intake and confirm draft/composed/quarantine candidates show metadata, activation plans, dry-run proof, and only proof-gated local activation; no publish, export exposure, or MCP exposure action should be present.
 - Open Collectors, preview a Context Pack collector draft, and confirm a created draft lands under `draft-packs/` without appearing in the active Pack Library.
 - Run `pnpm --filter @contextarr/cli contextarr review-candidates --format json` and confirm it returns sanitized labels without local absolute paths or record bodies.
 - If `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`, confirm the preserved local Skill import lane still previews/imports only private draft Skills under `imported-skills/`.

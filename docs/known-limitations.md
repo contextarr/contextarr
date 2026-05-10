@@ -17,7 +17,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - Backup/restore v0 writes local backup directories and restores into quarantine/review output only.
 - Context Pack collectors write private unreviewed draft packs only.
 - Composer save-as-draft-pack writes private unreviewed draft Context Packs only.
-- Draft Intake v0 is a read-only metadata workbench with activation planning and dry-run proof only. It does not approve, promote, activate, index, export, or expose candidate packs through MCP.
+- Draft Intake v0 includes explicit proof-gated local activation. It does not include multi-user approval workflows, remote install, publishing, export exposure, or MCP exposure for candidate packs.
 - Exposure Readiness v0 is a read-only active-pack report. It explains default export and read-only MCP eligibility, but it does not approve packs, enforce policy, change export behavior, or widen MCP exposure.
 - Local Skill importers are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.
@@ -54,4 +54,4 @@ The alpha release screenshot set is reviewed under `docs/screenshots/v0.1.0-alph
 
 Starter Context Pack export proof is limited to the 12 curated starter packs and the canonical alpha export targets. It must continue to pass `pnpm exports:verify` before release; broader Skill and Agent Kit exports remain advanced-preview gates.
 
-Draft/quarantine proof is local and automated: tests cover imported, restored, composed, and collector-created draft outputs staying outside active API/export/search surfaces. Draft Intake makes these candidate folders easier to inspect, but manual promotion or activation workflows are still not part of this alpha release.
+Draft/quarantine proof is local and automated: tests cover imported, restored, composed, and collector-created draft outputs staying outside export and MCP surfaces until explicitly activated. Draft Intake can move a proof-gated candidate into the active packs root and refresh the local derived index, but it does not approve, publish, export, or expose candidate records through MCP.

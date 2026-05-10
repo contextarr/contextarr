@@ -740,6 +740,7 @@ export interface ReviewItemsResponse {
 
 export type ReviewCandidateSourceKind = "draft_pack" | "composed_pack" | "imported_pack" | "restored_quarantine" | "unknown";
 export type ReviewCandidateStatus = "ready_for_review" | "invalid" | "blocked" | "duplicate_active_id";
+export type ReviewCandidateActivationMode = "move" | "copy";
 
 export interface ReviewCandidateSummary {
   key: string;
@@ -882,6 +883,45 @@ export interface ReviewCandidateActivationDryRun {
     networkAccessed: false;
   };
   boundaries: string[];
+}
+
+export interface ReviewCandidateActivationResult {
+  schemaVersion: "contextarr.review-candidate-activation-result.v1";
+  activatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string;
+  name: string;
+  mode: ReviewCandidateActivationMode;
+  source: ReviewCandidateActivationPlan["source"];
+  target: {
+    activePacksRootLabel: string;
+    packId: string;
+    pathLabel: string;
+    activeConflict: false;
+  };
+  effects: {
+    filesMoved: boolean;
+    filesCopied: boolean;
+    sourceRemoved: boolean;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  nextSteps: string[];
+  boundaries: string[];
+}
+
+export interface ReviewCandidateActivationApplyRequest {
+  proofId: string;
+  mode?: ReviewCandidateActivationMode;
+}
+
+export interface ReviewCandidateActivationApplyResponse {
+  ok: boolean;
+  activation: ReviewCandidateActivationResult;
+  pack?: PackSummary | null;
+  index: Record<string, unknown>;
 }
 
 export interface ReviewCandidatesResponse {

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  activateReviewCandidate,
   dryRunReviewCandidateActivation,
   getReviewCandidate,
   getReviewCandidateActivationPlan,
@@ -134,6 +135,38 @@ describe("@contextarr/review-candidates", () => {
     expect(dryRun?.proofId).toMatch(/^[a-f0-9]{24}$/);
     expect(dryRun?.manualActions).toEqual(expect.arrayContaining([expect.stringContaining("contextarr rescan")]));
     expect(JSON.stringify(dryRun)).not.toContain(root);
+
+    const activation = activateReviewCandidate({
+      roots: [{ rootPath: path.join(root, "drafts"), sourceKind: "draft_pack" }],
+      displayRoot: root,
+      activePacksRoot: path.join(root, "active-packs"),
+      key: result.candidates[0].key,
+      proofId: dryRun?.proofId ?? "",
+      mode: "move",
+      now: new Date("2026-05-10T00:05:00.000Z")
+    });
+
+    expect(activation).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-result.v1",
+      activatedAt: "2026-05-10T00:05:00.000Z",
+      proofId: dryRun?.proofId,
+      packId: "valid-minimal-pack",
+      mode: "move",
+      target: {
+        pathLabel: "active-packs/valid-minimal-pack"
+      },
+      effects: {
+        filesMoved: true,
+        filesCopied: true,
+        sourceRemoved: true,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      }
+    });
+    expect(fs.existsSync(path.join(root, "active-packs", "valid-minimal-pack", "contextarr-pack.json"))).toBe(true);
+    expect(fs.existsSync(candidateDir)).toBe(false);
+    expect(JSON.stringify(activation)).not.toContain(root);
   });
 
   it("marks invalid, blocked, duplicate, missing-root, and quarantine candidates deterministically", () => {
@@ -213,6 +246,27 @@ describe("@contextarr/review-candidates", () => {
       expect.arrayContaining([expect.objectContaining({ code: "candidate.duplicate_active_id" })])
     );
     expect(duplicateDryRun?.manualActions[0]).toContain("Resolve every blocker");
+    expect(() =>
+      activateReviewCandidate({
+        roots,
+        activePackIds: ["valid-minimal-pack"],
+        displayRoot: root,
+        activePacksRoot: path.join(root, "active-packs"),
+        key: duplicate?.key ?? "",
+        proofId: duplicateDryRun?.proofId ?? "",
+        now: new Date("2026-05-10T00:05:00.000Z")
+      })
+    ).toThrow("Candidate is not ready for activation");
+    expect(() =>
+      activateReviewCandidate({
+        roots,
+        displayRoot: root,
+        activePacksRoot: path.join(root, "active-packs"),
+        key: blocked?.key ?? "",
+        proofId: "wrong-proof-id",
+        now: new Date("2026-05-10T00:05:00.000Z")
+      })
+    ).toThrow("Activation proof does not match");
   });
 });
 

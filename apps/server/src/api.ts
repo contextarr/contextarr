@@ -21,10 +21,13 @@ import {
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
 import {
+  activateReviewCandidate,
   dryRunReviewCandidateActivation,
   getReviewCandidate,
   getReviewCandidateActivationPlan,
   listReviewCandidates,
+  ReviewCandidateActivationError,
+  type ReviewCandidateActivationMode,
   type ReviewCandidateSourceKind,
   type ReviewCandidateStatus
 } from "@contextarr/review-candidates";
@@ -1078,6 +1081,47 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return { dryRun };
   });
 
+  app.post<{ Params: { key: string }; Body: ReviewCandidateActivationApplyBody }>(
+    "/api/review-candidates/:key/activation/apply",
+    async (request, reply) => {
+      const parsed = parseReviewCandidateActivationApplyBody(request.body ?? {});
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_activation_request", message: parsed.message });
+      }
+
+      try {
+        const activation = activateReviewCandidate({
+          roots: getReviewCandidateRoots(config),
+          activePackIds: getPacks(db).map((pack) => pack.id),
+          displayRoot: process.env.INIT_CWD ?? process.cwd(),
+          activePacksRoot: config.packsDir,
+          key: request.params.key,
+          proofId: parsed.value.proofId,
+          mode: parsed.value.mode
+        });
+
+        if (!activation) {
+          return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+        }
+
+        const index = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
+
+        return reply.code(201).send({
+          ok: true,
+          activation,
+          pack: getPack(db, activation.packId),
+          index: sanitizeRebuildResultForApi(index)
+        });
+      } catch (error) {
+        if (error instanceof ReviewCandidateActivationError) {
+          return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+        }
+
+        throw error;
+      }
+    }
+  );
+
   app.get<{ Params: { key: string } }>("/api/review-candidates/:key", async (request, reply) => {
     const candidate = getReviewCandidate({
       roots: getReviewCandidateRoots(config),
@@ -1365,6 +1409,31 @@ function parseReviewCandidateStatus(value: string | undefined): ReviewCandidateS
     : "invalid";
 }
 
+function parseReviewCandidateActivationApplyBody(
+  body: ReviewCandidateActivationApplyBody
+): { ok: true; value: { proofId: string; mode: ReviewCandidateActivationMode } } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Activation apply body must be an object." };
+  }
+
+  const allowedKeys = new Set(["proofId", "mode"]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Activation apply field is not allowed: ${unknownKey}.` };
+  }
+
+  if (typeof body.proofId !== "string" || !/^[a-f0-9]{24}$/.test(body.proofId)) {
+    return { ok: false, message: "Activation proofId must be a 24-character proof ID from dry-run." };
+  }
+
+  const mode = body.mode ?? "move";
+  if (mode !== "move" && mode !== "copy") {
+    return { ok: false, message: "Activation mode must be move or copy." };
+  }
+
+  return { ok: true, value: { proofId: body.proofId, mode } };
+}
+
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
   return typeof value === "string" && reviewItemStatuses.includes(value as ReviewItemStatus);
 }
@@ -1499,6 +1568,11 @@ interface ContextPackCollectorBody {
   description?: unknown;
   maxRecords?: unknown;
   overwrite?: unknown;
+}
+
+interface ReviewCandidateActivationApplyBody {
+  proofId?: unknown;
+  mode?: unknown;
 }
 
 interface SaveAgentKitBody {

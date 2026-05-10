@@ -18,7 +18,7 @@ Implemented in the current checkout:
 - calculate deterministic Skill Health v0
 - persist review item statuses in SQLite without mutating pack files
 - expose Review Queue, pack health, and Skill health API endpoints
-- expose read-only Draft Intake candidate endpoints for untrusted Context Pack folders
+- expose Draft Intake candidate, dry-run proof, and proof-gated local activation endpoints for untrusted Context Pack folders
 - expose local export preview API endpoints
 - expose Composer preview and Context Pack save-as-draft-pack API endpoints
 - optionally serve the built web dashboard from `CONTEXTARR_WEB_DIST_DIR`

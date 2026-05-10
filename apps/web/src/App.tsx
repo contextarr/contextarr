@@ -145,6 +145,7 @@ import type {
   RecordDetail,
   RecordSummary,
   ReviewItem,
+  ReviewCandidateActivationApplyResponse,
   ReviewCandidateActivationDryRun,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
@@ -3769,8 +3770,10 @@ function ReviewQueuePage({
   const [candidateDetail, setCandidateDetail] = useState<ReviewCandidateDetail | null>(null);
   const [candidateActivationPlan, setCandidateActivationPlan] = useState<ReviewCandidateActivationPlan | null>(null);
   const [candidateActivationDryRun, setCandidateActivationDryRun] = useState<ReviewCandidateActivationDryRun | null>(null);
+  const [candidateActivationApplyResult, setCandidateActivationApplyResult] = useState<ReviewCandidateActivationApplyResponse | null>(null);
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
   const [preparingCandidateKey, setPreparingCandidateKey] = useState<string | null>(null);
+  const [applyingCandidateKey, setApplyingCandidateKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -3831,6 +3834,7 @@ function ReviewQueuePage({
     setCandidateDetail(null);
     setCandidateActivationPlan(null);
     setCandidateActivationDryRun(null);
+    setCandidateActivationApplyResult(null);
     try {
       const [detail, plan] = await Promise.all([
         apiClient.getReviewCandidate(candidate.key),
@@ -3842,6 +3846,7 @@ function ReviewQueuePage({
       setCandidateDetail(null);
       setCandidateActivationPlan(null);
       setCandidateActivationDryRun(null);
+      setCandidateActivationApplyResult(null);
       setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load review candidate detail.");
     }
   }
@@ -3849,6 +3854,7 @@ function ReviewQueuePage({
   async function prepareCandidateActivation(plan: ReviewCandidateActivationPlan) {
     setPreparingCandidateKey(plan.candidateKey);
     setCandidateActivationDryRun(null);
+    setCandidateActivationApplyResult(null);
     setCandidateError(null);
     try {
       setCandidateActivationDryRun(await apiClient.dryRunReviewCandidateActivation(plan.candidateKey));
@@ -3856,6 +3862,24 @@ function ReviewQueuePage({
       setCandidateError(loadError instanceof Error ? loadError.message : "Unable to prepare activation dry run.");
     } finally {
       setPreparingCandidateKey(null);
+    }
+  }
+
+  async function applyCandidateActivation(dryRun: ReviewCandidateActivationDryRun) {
+    setApplyingCandidateKey(dryRun.candidateKey);
+    setCandidateError(null);
+    try {
+      const result = await apiClient.applyReviewCandidateActivation(dryRun.candidateKey, {
+        proofId: dryRun.proofId,
+        mode: "move"
+      });
+      setCandidateActivationApplyResult(result);
+      await loadCandidates();
+      onStatusChanged();
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to apply activation.");
+    } finally {
+      setApplyingCandidateKey(null);
     }
   }
 
@@ -3936,8 +3960,11 @@ function ReviewQueuePage({
                 candidate={candidateDetail}
                 activationPlan={candidateActivationPlan}
                 activationDryRun={candidateActivationDryRun}
+                activationApplyResult={candidateActivationApplyResult}
                 preparing={preparingCandidateKey === candidateActivationPlan?.candidateKey}
+                applying={applyingCandidateKey === candidateActivationDryRun?.candidateKey}
                 onPrepareActivation={prepareCandidateActivation}
+                onApplyActivation={applyCandidateActivation}
                 skippedRoots={candidateResponse?.skippedRoots ?? []}
               />
             </div>
@@ -4605,15 +4632,21 @@ function ReviewCandidateDetailPanel({
   candidate,
   activationPlan,
   activationDryRun,
+  activationApplyResult,
   preparing,
+  applying,
   onPrepareActivation,
+  onApplyActivation,
   skippedRoots
 }: {
   candidate: ReviewCandidateDetail | null;
   activationPlan: ReviewCandidateActivationPlan | null;
   activationDryRun: ReviewCandidateActivationDryRun | null;
+  activationApplyResult: ReviewCandidateActivationApplyResponse | null;
   preparing: boolean;
+  applying: boolean;
   onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
+  onApplyActivation(dryRun: ReviewCandidateActivationDryRun): void;
   skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
 }) {
   if (!candidate) {
@@ -4651,8 +4684,11 @@ function ReviewCandidateDetailPanel({
       <ReviewCandidateActivationPlanView
         plan={activationPlan}
         dryRun={activationDryRun}
+        applyResult={activationApplyResult}
         preparing={preparing}
+        applying={applying}
         onPrepareActivation={onPrepareActivation}
+        onApplyActivation={onApplyActivation}
       />
 
       <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
@@ -4685,13 +4721,19 @@ function ReviewCandidateDetailPanel({
 function ReviewCandidateActivationPlanView({
   plan,
   dryRun,
+  applyResult,
   preparing,
-  onPrepareActivation
+  applying,
+  onPrepareActivation,
+  onApplyActivation
 }: {
   plan: ReviewCandidateActivationPlan | null;
   dryRun: ReviewCandidateActivationDryRun | null;
+  applyResult: ReviewCandidateActivationApplyResponse | null;
   preparing: boolean;
+  applying: boolean;
   onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
+  onApplyActivation(dryRun: ReviewCandidateActivationDryRun): void;
 }) {
   if (!plan) {
     return null;
@@ -4753,13 +4795,25 @@ function ReviewCandidateActivationPlanView({
       </ol>
 
       <div className="candidate-plan-actions">
-        <button className="secondary-action" type="button" disabled={!plan.canActivate || preparing} onClick={() => onPrepareActivation(plan)}>
+        <button className="secondary-action" type="button" disabled={!plan.canActivate || Boolean(applyResult) || preparing} onClick={() => onPrepareActivation(plan)}>
           {preparing ? "Preparing..." : "Prepare Activation"}
         </button>
         {!plan.canActivate ? <span>Resolve blockers before preparing activation evidence.</span> : null}
       </div>
 
       {dryRun ? <ReviewCandidateActivationDryRunView dryRun={dryRun} /> : null}
+      <div className="candidate-plan-actions">
+        <button
+          className="secondary-action"
+          type="button"
+          disabled={!dryRun?.canActivate || Boolean(applyResult) || applying}
+          onClick={() => (dryRun ? onApplyActivation(dryRun) : undefined)}
+        >
+          {applying ? "Applying..." : "Apply Activation"}
+        </button>
+        {!dryRun ? <span>Prepare activation evidence before applying.</span> : null}
+      </div>
+      {applyResult ? <ReviewCandidateActivationApplyResultView result={applyResult} /> : null}
       <p className="muted-note">{plan.boundaries.join(" ")}</p>
     </section>
   );
@@ -4783,6 +4837,30 @@ function ReviewCandidateActivationDryRunView({ dryRun }: { dryRun: ReviewCandida
         <li>
           <span>{dryRun.boundaries.join(" ")}</span>
           <strong>dry_run</strong>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationApplyResultView({ result }: { result: ReviewCandidateActivationApplyResponse }) {
+  return (
+    <section className="candidate-dry-run candidate-activation-result" aria-label="Activation apply result">
+      <h3>Activation Applied</h3>
+      <div className="fact-grid">
+        <Fact label="Pack" value={result.activation.packId} />
+        <Fact label="Mode" value={formatPackType(result.activation.mode)} />
+        <Fact label="Target" value={result.activation.target.pathLabel} />
+        <Fact label="Index" value={result.pack ? "Refreshed" : "Needs Review"} />
+      </div>
+      <ul className="simple-list candidate-plan-list">
+        <li>
+          <span>{result.activation.boundaries.join(" ")}</span>
+          <strong>local_only</strong>
+        </li>
+        <li>
+          <span>Review Pack Health and Exposure Readiness before export or MCP exposure.</span>
+          <strong>next</strong>
         </li>
       </ul>
     </section>

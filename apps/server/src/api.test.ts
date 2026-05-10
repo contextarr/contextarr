@@ -1148,6 +1148,11 @@ describe("Contextarr API", () => {
     const rejected = await app.inject({ method: "GET", url: "/api/review-candidates" });
     const rejectedPlan = await app.inject({ method: "GET", url: "/api/review-candidates/fake-key/activation-plan" });
     const rejectedDryRun = await app.inject({ method: "POST", url: "/api/review-candidates/fake-key/activation/dry-run" });
+    const rejectedApply = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/apply",
+      payload: { proofId: "000000000000000000000000" }
+    });
     const accepted = await app.inject({
       method: "GET",
       url: "/api/review-candidates",
@@ -1163,17 +1168,95 @@ describe("Contextarr API", () => {
       url: "/api/review-candidates/fake-key/activation/dry-run",
       headers: { authorization: "Bearer candidate-token" }
     });
+    const acceptedApply = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/apply",
+      headers: { authorization: "Bearer candidate-token" },
+      payload: { proofId: "000000000000000000000000" }
+    });
 
     expect(rejected.statusCode).toBe(401);
     expect(rejectedPlan.statusCode).toBe(401);
     expect(rejectedDryRun.statusCode).toBe(401);
+    expect(rejectedApply.statusCode).toBe(401);
     expect(accepted.statusCode).toBe(200);
     expect(acceptedPlan.statusCode).toBe(404);
     expect(acceptedDryRun.statusCode).toBe(404);
+    expect(acceptedApply.statusCode).toBe(404);
 
     await app.close();
     fixtureContext.db.close();
     fs.rmSync(draftPacksDir, { recursive: true, force: true });
+  });
+
+  it("POST /api/review-candidates/:key/activation/apply moves a proof-gated candidate into active packs and refreshes the index", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-active-"));
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-draft-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-composed-"));
+    const sourcePath = path.join(draftPacksDir, "valid-draft");
+    const targetPath = path.join(activePacksDir, "valid-minimal-pack");
+    fs.cpSync(path.join(validatorFixturesDir, "valid-minimal-pack"), sourcePath, { recursive: true });
+
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-activation-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-activation-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-activation-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+
+    const list = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
+    const dryRun = await app.inject({ method: "POST", url: `/api/review-candidates/${ready.key}/activation/dry-run` });
+    const rejected = await app.inject({
+      method: "POST",
+      url: `/api/review-candidates/${ready.key}/activation/apply`,
+      payload: { proofId: "000000000000000000000000" }
+    });
+    const applied = await app.inject({
+      method: "POST",
+      url: `/api/review-candidates/${ready.key}/activation/apply`,
+      payload: { proofId: dryRun.json().dryRun.proofId }
+    });
+    const activePack = await app.inject({ method: "GET", url: "/api/packs/valid-minimal-pack" });
+
+    expect(rejected.statusCode).toBe(409);
+    expect(rejected.json()).toMatchObject({ error: "activation.proof_mismatch" });
+    expect(applied.statusCode).toBe(201);
+    expect(applied.json()).toMatchObject({
+      ok: true,
+      activation: {
+        schemaVersion: "contextarr.review-candidate-activation-result.v1",
+        packId: "valid-minimal-pack",
+        mode: "move",
+        effects: {
+          filesMoved: true,
+          filesCopied: true,
+          sourceRemoved: true,
+          exportsGenerated: false,
+          mcpExposed: false,
+          networkAccessed: false
+        }
+      },
+      pack: {
+        id: "valid-minimal-pack"
+      },
+      index: {
+        packsIndexed: 1
+      }
+    });
+    expect(activePack.statusCode).toBe(200);
+    expect(fs.existsSync(path.join(targetPath, "contextarr-pack.json"))).toBe(true);
+    expect(fs.existsSync(sourcePath)).toBe(false);
+    expect(applied.body).not.toContain(activePacksDir);
+    expect(applied.body).not.toContain(draftPacksDir);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(activePacksDir, { recursive: true, force: true });
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
   });
 
   it("GET /api/review-items lists and filters generated items", async () => {

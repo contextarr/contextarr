@@ -28,6 +28,7 @@ export type ReviewCandidateSourceKind = "draft_pack" | "composed_pack" | "import
 export type ReviewCandidateStatus = "ready_for_review" | "invalid" | "blocked" | "duplicate_active_id";
 export type ReviewCandidateActivationPlanStatus = "ready" | "blocked";
 export type ReviewCandidateActivationCheckStatus = "pass" | "warning" | "error";
+export type ReviewCandidateActivationMode = "move" | "copy";
 
 export interface ReviewCandidateRoot {
   rootPath: string;
@@ -156,6 +157,44 @@ export interface ReviewCandidateActivationDryRun {
   boundaries: string[];
 }
 
+export interface ReviewCandidateActivationResult {
+  schemaVersion: "contextarr.review-candidate-activation-result.v1";
+  activatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string;
+  name: string;
+  mode: ReviewCandidateActivationMode;
+  source: ReviewCandidateActivationPlan["source"];
+  target: {
+    activePacksRootLabel: string;
+    packId: string;
+    pathLabel: string;
+    activeConflict: false;
+  };
+  effects: {
+    filesMoved: boolean;
+    filesCopied: boolean;
+    sourceRemoved: boolean;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  nextSteps: string[];
+  boundaries: string[];
+}
+
+export class ReviewCandidateActivationError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = "ReviewCandidateActivationError";
+  }
+}
+
 export interface ReviewCandidateListResult {
   candidates: ReviewCandidateSummary[];
   skippedRoots: ReviewCandidateSkippedRoot[];
@@ -223,6 +262,7 @@ export interface ReviewCandidateExportProfileSummary {
 interface CandidateInspection {
   summary: ReviewCandidateSummary;
   detail: ReviewCandidateDetail;
+  resolvedPath: string;
 }
 
 export function listReviewCandidates(options: ReviewCandidateOptions): ReviewCandidateListResult {
@@ -278,6 +318,10 @@ export function listReviewCandidates(options: ReviewCandidateOptions): ReviewCan
 }
 
 export function getReviewCandidate(options: ReviewCandidateOptions & { key: string }): ReviewCandidateDetail | undefined {
+  return findReviewCandidateInspection(options)?.detail;
+}
+
+function findReviewCandidateInspection(options: ReviewCandidateOptions & { key: string }): CandidateInspection | undefined {
   const activePackIds = new Set(options.activePackIds ?? []);
   const displayRoot = path.resolve(options.displayRoot ?? process.cwd());
   const seenPaths = new Set<string>();
@@ -300,7 +344,7 @@ export function getReviewCandidate(options: ReviewCandidateOptions & { key: stri
 
       const candidate = inspectCandidate(candidatePath, root.sourceKind, rootLabel, activePackIds, displayRoot);
       if (candidate.summary.key === options.key) {
-        return candidate.detail;
+        return candidate;
       }
     }
   }
@@ -428,6 +472,111 @@ export function dryRunReviewCandidateActivation(
   };
 }
 
+export function activateReviewCandidate(
+  options: ReviewCandidateOptions & {
+    key: string;
+    activePacksRoot: string;
+    proofId: string;
+    mode?: ReviewCandidateActivationMode;
+    now?: Date;
+  }
+): ReviewCandidateActivationResult | undefined {
+  const inspection = findReviewCandidateInspection(options);
+  if (!inspection) {
+    return undefined;
+  }
+
+  const dryRun = dryRunReviewCandidateActivation(options);
+  if (!dryRun) {
+    return undefined;
+  }
+
+  if (dryRun.proofId !== options.proofId) {
+    throw new ReviewCandidateActivationError(
+      "activation.proof_mismatch",
+      "Activation proof does not match the current candidate state. Run dry-run again.",
+      409
+    );
+  }
+
+  if (!dryRun.canActivate || dryRun.blockers.length > 0 || !dryRun.packId || !dryRun.target.pathLabel) {
+    throw new ReviewCandidateActivationError(
+      "activation.blocked",
+      "Candidate is not ready for activation. Resolve blockers and run dry-run again.",
+      409
+    );
+  }
+
+  const mode = options.mode ?? "move";
+  if (mode !== "move" && mode !== "copy") {
+    throw new ReviewCandidateActivationError("activation.invalid_mode", "Activation mode must be move or copy.", 400);
+  }
+
+  const activeRoot = path.resolve(options.activePacksRoot);
+  const targetPath = path.resolve(activeRoot, dryRun.packId);
+  assertTargetInsideRoot(activeRoot, targetPath);
+  fs.mkdirSync(activeRoot, { recursive: true });
+  if (!fs.statSync(activeRoot).isDirectory()) {
+    throw new ReviewCandidateActivationError("activation.target_root_invalid", "Active packs root is not a directory.", 500);
+  }
+  if (fs.existsSync(targetPath)) {
+    throw new ReviewCandidateActivationError("activation.target_exists", "Activation target already exists.", 409);
+  }
+
+  const sourcePath = path.resolve(inspection.resolvedPath);
+  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isDirectory()) {
+    throw new ReviewCandidateActivationError("activation.source_missing", "Candidate source is no longer available.", 409);
+  }
+
+  try {
+    copyOrMoveCandidate(sourcePath, targetPath, mode);
+  } catch (error) {
+    if (fs.existsSync(targetPath)) {
+      fs.rmSync(targetPath, { recursive: true, force: true });
+    }
+    if (error instanceof ReviewCandidateActivationError) {
+      throw error;
+    }
+    throw new ReviewCandidateActivationError(
+      "activation.filesystem_failed",
+      "Activation failed while writing local files. Check filesystem permissions and retry.",
+      500
+    );
+  }
+
+  return {
+    schemaVersion: "contextarr.review-candidate-activation-result.v1",
+    activatedAt: (options.now ?? new Date()).toISOString(),
+    proofId: dryRun.proofId,
+    candidateKey: dryRun.candidateKey,
+    packId: dryRun.packId,
+    name: dryRun.name,
+    mode,
+    source: dryRun.source,
+    target: {
+      activePacksRootLabel: dryRun.target.activePacksRootLabel,
+      packId: dryRun.packId,
+      pathLabel: dryRun.target.pathLabel,
+      activeConflict: false
+    },
+    effects: {
+      filesMoved: mode === "move",
+      filesCopied: true,
+      sourceRemoved: mode === "move",
+      exportsGenerated: false,
+      mcpExposed: false,
+      networkAccessed: false
+    },
+    nextSteps: ["Local index should be rebuilt before the activated pack is used.", "Review Pack Health and Exposure Readiness before export or MCP exposure."],
+    boundaries: [
+      "Activation moved or copied files only within configured local roots.",
+      "Activation did not generate exports.",
+      "Activation did not expose MCP records.",
+      "Activation did not perform network access."
+    ]
+  };
+}
+
 function discoverCandidatePaths(rootPath: string): string[] {
   if (fs.existsSync(path.join(rootPath, "contextarr-pack.json"))) {
     return [rootPath];
@@ -493,6 +642,7 @@ function inspectCandidate(
   };
 
   return {
+    resolvedPath,
     summary,
     detail: {
       ...summary,
@@ -760,8 +910,37 @@ function activationProofId(value: Record<string, unknown>): string {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 24);
 }
 
+function assertTargetInsideRoot(activeRoot: string, targetPath: string): void {
+  const relative = path.relative(activeRoot, targetPath);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new ReviewCandidateActivationError("activation.target_outside_root", "Activation target must stay inside the active packs root.", 400);
+  }
+}
+
+function copyOrMoveCandidate(sourcePath: string, targetPath: string, mode: ReviewCandidateActivationMode): void {
+  if (mode === "copy") {
+    fs.cpSync(sourcePath, targetPath, { recursive: true, force: false, errorOnExist: true });
+    return;
+  }
+
+  try {
+    fs.renameSync(sourcePath, targetPath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "EXDEV") {
+      fs.cpSync(sourcePath, targetPath, { recursive: true, force: false, errorOnExist: true });
+      fs.rmSync(sourcePath, { recursive: true, force: false });
+      return;
+    }
+    throw error;
+  }
+}
+
 function isBlockingSecurityReport(report: SecurityScannerReportV1 | undefined): boolean {
   return report?.status === "blocked" || report?.status === "critical_findings" || report?.status === "scanning_failed";
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === "object" && error !== null && "code" in error;
 }
 
 function readManifest(packPath: string): ContextPackManifest | undefined {

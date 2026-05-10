@@ -432,6 +432,39 @@ describe("Contextarr API client", () => {
             }
           });
         }
+        if (String(url).endsWith("/activation/apply")) {
+          return jsonResponse({
+            ok: true,
+            activation: {
+              schemaVersion: "contextarr.review-candidate-activation-result.v1",
+              activatedAt: "2026-05-10T00:05:00.000Z",
+              proofId: "abc123def456abc123def456",
+              candidateKey: "candidate-key",
+              packId: "draft-candidate",
+              name: "Draft Candidate",
+              mode: "move",
+              source: { kind: "draft_pack", label: "drafts", pathLabel: "drafts/draft-candidate" },
+              target: {
+                activePacksRootLabel: "demo-packs",
+                packId: "draft-candidate",
+                pathLabel: "demo-packs/draft-candidate",
+                activeConflict: false
+              },
+              effects: {
+                filesMoved: true,
+                filesCopied: true,
+                sourceRemoved: true,
+                exportsGenerated: false,
+                mcpExposed: false,
+                networkAccessed: false
+              },
+              nextSteps: [],
+              boundaries: []
+            },
+            pack: { id: "draft-candidate" },
+            index: { packsIndexed: 1 }
+          });
+        }
         if (String(url).endsWith("/activation-plan")) {
           return jsonResponse({
             plan: {
@@ -473,13 +506,19 @@ describe("Contextarr API client", () => {
     await expect(client.getReviewCandidate("candidate-key")).resolves.toMatchObject({ key: "candidate-key" });
     await expect(client.getReviewCandidateActivationPlan("candidate-key")).resolves.toMatchObject({ canActivate: true });
     await expect(client.dryRunReviewCandidateActivation("candidate-key")).resolves.toMatchObject({ proofId: "abc123def456abc123def456" });
+    await expect(
+      client.applyReviewCandidateActivation("candidate-key", { proofId: "abc123def456abc123def456", mode: "move" })
+    ).resolves.toMatchObject({ activation: { packId: "draft-candidate" } });
     expect(requests.map((request) => request.url)).toEqual([
       "/api/review-candidates?status=ready_for_review&q=draft",
       "/api/review-candidates/candidate-key",
       "/api/review-candidates/candidate-key/activation-plan",
-      "/api/review-candidates/candidate-key/activation/dry-run"
+      "/api/review-candidates/candidate-key/activation/dry-run",
+      "/api/review-candidates/candidate-key/activation/apply"
     ]);
     expect(requests[3].init).toMatchObject({ method: "POST" });
+    expect(requests[4].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    expect(JSON.parse(String(requests[4].init?.body))).toMatchObject({ proofId: "abc123def456abc123def456", mode: "move" });
   });
 
   it("reads export preview routes", async () => {

@@ -109,7 +109,7 @@ Phase 9 importers are local-only and produce draft packs under explicit ignored 
 
 Imported records default to `privacy: private`, `review_status: draft`, `source_status: imported`, and tags including `imported_draft` and `never_export`. Imported packs must be reviewed before use. Composer excludes `imported_draft` and `never_export` records by default.
 
-Draft Intake scans `CONTEXTARR_DRAFT_PACKS_DIR`, `CONTEXTARR_COMPOSED_PACKS_DIR`, and optional path-delimited `CONTEXTARR_REVIEW_CANDIDATE_DIRS` as untrusted local candidate roots. It returns sanitized metadata, validation summaries, scanner summaries, duplicate-active-pack warnings, and counts only. It must not return record bodies, expose absolute local paths, index candidates as active packs, approve candidates, export candidates, or expose candidates through MCP.
+Draft Intake scans `CONTEXTARR_DRAFT_PACKS_DIR`, `CONTEXTARR_COMPOSED_PACKS_DIR`, and optional path-delimited `CONTEXTARR_REVIEW_CANDIDATE_DIRS` as untrusted local candidate roots. It returns sanitized metadata, validation summaries, scanner summaries, duplicate-active-pack warnings, and counts before activation. Local activation requires the current dry-run proof ID, rejects changed or blocked candidates, writes only into the configured active packs root, and refreshes the derived local index. Draft Intake must not return record bodies, expose absolute local paths, approve candidates, export candidates, publish candidates, perform network access, or expose candidates through MCP.
 
 ## Skills and Agent Kits
 

@@ -26,6 +26,8 @@ import type {
   RecordSummary,
   ReviewItemsResponse,
   ReviewCandidatesResponse,
+  ReviewCandidateActivationApplyRequest,
+  ReviewCandidateActivationApplyResponse,
   ReviewCandidateActivationDryRun,
   ReviewCandidateActivationPlan,
   ReviewCandidateDetail,
@@ -104,6 +106,10 @@ export interface ApiClient {
   getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
   getReviewCandidateActivationPlan(key: string): Promise<ReviewCandidateActivationPlan>;
   dryRunReviewCandidateActivation(key: string): Promise<ReviewCandidateActivationDryRun>;
+  applyReviewCandidateActivation(
+    key: string,
+    request: ReviewCandidateActivationApplyRequest
+  ): Promise<ReviewCandidateActivationApplyResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -274,6 +280,15 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       );
       return response.dryRun;
     },
+    applyReviewCandidateActivation: (key: string, body: ReviewCandidateActivationApplyRequest) =>
+      requestJson<ReviewCandidateActivationApplyResponse>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation/apply`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        }
+      ),
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(
         `/api/review-items/${encodeURIComponent(id)}/status`,

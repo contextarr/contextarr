@@ -64,6 +64,7 @@ const mocks = vi.hoisted(() => {
       getReviewCandidate: vi.fn(),
       getReviewCandidateActivationPlan: vi.fn(),
       dryRunReviewCandidateActivation: vi.fn(),
+      applyReviewCandidateActivation: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
   };
@@ -409,6 +410,46 @@ describe("App Skill UI routes", () => {
         "Dry-run only; no network access occurred."
       ]
     });
+    mocks.apiClient.applyReviewCandidateActivation.mockResolvedValue({
+      ok: true,
+      activation: {
+        schemaVersion: "contextarr.review-candidate-activation-result.v1",
+        activatedAt: "2026-05-10T00:05:00.000Z",
+        proofId: "abc123def456abc123def456",
+        candidateKey: "candidate-key",
+        packId: "local-draft-pack",
+        name: "Local Draft Pack",
+        mode: "move",
+        source: {
+          kind: "draft_pack",
+          label: "draft-packs",
+          pathLabel: "draft-packs/local-draft"
+        },
+        target: {
+          activePacksRootLabel: "demo-packs",
+          packId: "local-draft-pack",
+          pathLabel: "demo-packs/local-draft-pack",
+          activeConflict: false
+        },
+        effects: {
+          filesMoved: true,
+          filesCopied: true,
+          sourceRemoved: true,
+          exportsGenerated: false,
+          mcpExposed: false,
+          networkAccessed: false
+        },
+        nextSteps: ["Review Pack Health and Exposure Readiness before export or MCP exposure."],
+        boundaries: [
+          "Activation moved or copied files only within configured local roots.",
+          "Activation did not generate exports.",
+          "Activation did not expose MCP records.",
+          "Activation did not perform network access."
+        ]
+      },
+      pack: { id: "local-draft-pack", name: "Local Draft Pack" },
+      index: { packsIndexed: 2 }
+    });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
@@ -471,7 +512,7 @@ describe("App Skill UI routes", () => {
     ]);
   });
 
-  it("renders Draft Intake review candidates without activation controls", async () => {
+  it("renders Draft Intake review candidates with guarded activation proof", async () => {
     mountApp("#/review-queue/drafts");
 
     await waitForMockResult(mocks.apiClient.getReviewCandidates, 0);
@@ -495,6 +536,15 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.dryRunReviewCandidateActivation).toHaveBeenCalledWith("candidate-key");
     await waitForText("Activation Proof");
     expect(document.body.textContent).toContain("abc123def456abc123def456");
+    await clickButtonAndFlush("Apply Activation");
+    await waitForMockResult(mocks.apiClient.applyReviewCandidateActivation, 0);
+    await flushPendingUpdates();
+    expect(mocks.apiClient.applyReviewCandidateActivation).toHaveBeenCalledWith("candidate-key", {
+      proofId: "abc123def456abc123def456",
+      mode: "move"
+    });
+    await waitForText("Activation Applied");
+    expect(document.body.textContent).toContain("Index");
     expect(document.body.textContent).not.toContain("Approve");
     expect(document.body.textContent).not.toContain("Promote");
     expect(document.body.textContent).not.toContain("Activate Now");

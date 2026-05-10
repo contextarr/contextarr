@@ -7,7 +7,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
 - Fifteen public-safe demo Context Packs, including 12 curated starter packs.
 - Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
-- Local API for packs, records, search, health, exposure readiness, exports, collectors, composition, Draft Intake candidates, backup, and restore surfaces.
+- Local API for packs, records, search, health, exposure readiness, exports, collectors, composition, Draft Intake candidates, proof-gated activation, backup, and restore surfaces.
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
 - Pack detail with Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
@@ -15,7 +15,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Read-only MCP surfaces where implemented by the local server package.
 - Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
-- Read-only Draft Intake inventory for draft, composed, and configured quarantine Context Pack candidates; it returns metadata only and does not activate, index, export, or expose candidates through MCP.
+- Draft Intake inventory, activation planning, dry-run proof, and explicit proof-gated local activation for draft, composed, and configured quarantine Context Pack candidates. It returns metadata only before activation and does not export, publish, perform network access, or expose candidates through MCP.
 
 ## Current CLI Surface
 

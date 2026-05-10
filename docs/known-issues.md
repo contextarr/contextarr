@@ -8,8 +8,8 @@ For launch-facing limitations, see [known-limitations.md](known-limitations.md).
 
 - Backup/restore v0 is CLI/core only. It creates local backup directories and restores to quarantine; it does not include a web UI, cloud sync, signing, compression, or automatic activation.
 - Context Pack collectors v0 create local draft packs only. They do not activate packs, approve review status, or move drafts into the active pack directory.
-- Composer save-as-draft-pack for Context Packs is implemented as a local draft workflow only. It does not activate, approve, or publish composed packs.
-- Draft Intake v0 is read-only metadata review. It does not include approve, promote, activate, or write-back actions.
+- Composer save-as-draft-pack for Context Packs is implemented as a local draft workflow only. Draft Intake activation is a separate explicit proof-gated step; Composer itself does not activate, approve, or publish composed packs.
+- Draft Intake v0 has proof-gated local activation, but no multi-user approval workflow, publish action, export exposure, or MCP exposure for candidates.
 - Reviewed alpha screenshots exist, but no demo video has been approved.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Skills and Agent Kits exist as advanced-preview data-only work but are frozen behind the v1 bridge gate.
