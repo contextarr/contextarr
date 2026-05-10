@@ -303,7 +303,8 @@ describe("Skill health engine", () => {
           code: "filesystem.read_failed",
           message:
             "EACCES: permission denied, scandir 'D:\\private\\contextarr\\bad-skill\\instructions' and '\\\\corp-fs\\private\\skills\\bad-skill\\instructions'",
-          file: "D:\\private\\contextarr\\bad-skill\\instructions"
+          file: "D:\\private\\contextarr\\bad-skill\\instructions",
+          path: "D:\\private\\contextarr\\bad-skill\\instructions\\guide.md"
         }
       ]
     });
@@ -311,7 +312,7 @@ describe("Skill health engine", () => {
     expect(JSON.stringify(items)).not.toContain("D:\\private");
     expect(JSON.stringify(items)).not.toContain("D:/private");
     expect(JSON.stringify(items)).not.toContain("corp-fs");
-    expect(items[0].metadata).toMatchObject({ file: "instructions" });
+    expect(items[0].metadata).toMatchObject({ file: "instructions", path: "instructions/guide.md" });
   });
 });
 
