@@ -46,3 +46,7 @@ The alpha release screenshot set is reviewed under `docs/screenshots/v0.1.0-alph
 - Export preview.
 - MCP or CLI output.
 - Backup or security boundary view.
+
+## Export Proof Limits
+
+Starter Context Pack export proof is limited to the 12 curated starter packs and the canonical alpha export targets. It must continue to pass `pnpm exports:verify` before release; broader Skill and Agent Kit exports remain advanced-preview gates.

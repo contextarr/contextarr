@@ -11,6 +11,7 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 - Rebuildable SQLite index.
 - Local API and React/Vite dashboard for pack library, records, health, review, exports, composition, backup, and restore surfaces.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
+- Starter Context Pack export determinism and redaction are guarded by `pnpm exports:verify`.
 - Read-only stdio MCP surfaces where implemented.
 - Local backup/restore v0 with checksum manifests and quarantine-only restore.
 - Release hardening docs and verification scripts.

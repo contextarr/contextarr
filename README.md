@@ -111,6 +111,7 @@ pnpm docs:verify
 pnpm demo:validate
 pnpm v1-core:verify
 pnpm advanced-preview:verify
+pnpm exports:verify
 pnpm site:verify
 ```
 
