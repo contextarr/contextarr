@@ -1,0 +1,25 @@
+id: vscode-setup-llms-txt
+name: VS Code Setup Pack llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - vscode-setup-pack.editor-overview
+    - vscode-setup-pack.workspace-settings
+    - vscode-setup-pack.extension-groups
+    - vscode-setup-pack.language-tooling
+    - vscode-setup-pack.task-conventions
+    - vscode-setup-pack.debugging-notes
+    - vscode-setup-pack.accessibility-settings
+    - vscode-setup-pack.known-editor-issues
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

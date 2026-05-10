@@ -147,10 +147,10 @@ describe("Contextarr API", () => {
       status: "ok",
       authRequired: false,
       counts: {
-        packs: 5,
-        records: 25,
-        sources: 25,
-        exportProfiles: 40,
+        packs: 16,
+        records: 116,
+        sources: 116,
+        exportProfiles: 128,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -225,10 +225,45 @@ describe("Contextarr API", () => {
           exportProfileCount: 8,
           healthStatus: "healthy",
           coverImage: null,
+          starterPack: false,
           reviewQueueCount: 0
+        }),
+        expect.objectContaining({
+          id: "openai-prompt-engineering-pack",
+          recordCount: 8,
+          sourceCount: 8,
+          starterPack: true,
+          starterCategory: "ai_prompting",
+          starterSortOrder: 1
         })
       ])
     );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs filters starter packs deterministically", async () => {
+    const app = createApp({ config, db });
+    const starterResponse = await app.inject({ method: "GET", url: "/api/packs?starter=true" });
+    const categoryResponse = await app.inject({ method: "GET", url: "/api/packs?starterCategory=networking" });
+
+    expect(starterResponse.statusCode).toBe(200);
+    expect(starterResponse.json().packs.map((pack: { id: string }) => pack.id)).toEqual([
+      "openai-prompt-engineering-pack",
+      "claude-code-project-pack",
+      "google-workspace-pack",
+      "aws-infrastructure-pack",
+      "jellyfin-media-server-pack",
+      "docker-containers-pack",
+      "unifi-network-pack",
+      "vscode-setup-pack",
+      "github-workflow-pack",
+      "home-assistant-pack",
+      "tailscale-vpn-pack",
+      "obsidian-vault-pack"
+    ]);
+    expect(categoryResponse.statusCode).toBe(200);
+    expect(categoryResponse.json().packs.map((pack: { id: string }) => pack.id)).toEqual(["unifi-network-pack"]);
     await app.close();
     db.close();
   });
@@ -327,7 +362,7 @@ describe("Contextarr API", () => {
     expect(response.json().manifest).not.toHaveProperty("sourcesPath");
     expect(response.json().manifest).not.toHaveProperty("exportsPath");
     expect(response.json().manifest).not.toHaveProperty("rulesPath");
-    expect(response.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    expect(response.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     await app.close();
     db.close();
   });
@@ -453,7 +488,7 @@ describe("Contextarr API", () => {
     expect(detail.statusCode).toBe(200);
     expect(detail.json().manifest).not.toHaveProperty("localPath");
     expect(detail.json().manifest).not.toHaveProperty("secretToken");
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#38bdf8" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
     expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
     expect(instructions.statusCode).toBe(200);
@@ -1752,7 +1787,7 @@ describe("Contextarr API", () => {
     expect(detail.statusCode).toBe(200);
     expect(detail.json().manifest).not.toHaveProperty("localPath");
     expect(detail.json().manifest).not.toHaveProperty("secretToken");
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(JSON.stringify(detail.json())).not.toContain("not-a-real-token");
     expect(JSON.stringify(detail.json())).not.toContain("D:\\private");
     expect(list.statusCode).toBe(200);
@@ -1783,7 +1818,7 @@ describe("Contextarr API", () => {
 
     expect(detail.statusCode).toBe(200);
     expect(detail.json().coverImage).toBeNull();
-    expect(detail.json().manifest.assets).toEqual({ accentColor: "#f97316" });
+    expect(detail.json().manifest.assets).toEqual({ accentColor: "#2563EB" });
     expect(list.statusCode).toBe(200);
     expect(list.json().agentKits.find((kit: { id: string }) => kit.id === agentKitId).coverImage).toBeNull();
     expect(JSON.stringify(detail.json())).not.toContain("example.invalid");
@@ -2436,8 +2471,8 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       ok: true,
-      packsIndexed: 5,
-      recordsIndexed: 25,
+      packsIndexed: 16,
+      recordsIndexed: 116,
       skillsIndexed: 8,
       skillInstructionsIndexed: 24,
       agentKitsIndexed: 8,

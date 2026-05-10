@@ -1,0 +1,81 @@
+sources:
+  - id: github-workflow-pack-repository-overview-source
+    type: manual_demo_note
+    title: GitHub Workflow Pack Repository Overview Synthetic Source
+    path: ../raw/repository-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-branch-policy-source
+    type: local_markdown
+    title: GitHub Workflow Pack Branch Policy Synthetic Source
+    path: ../raw/branch-policy.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-pull-request-template-source
+    type: official_docs_reference
+    title: GitHub Workflow Pack Pull Request Template Synthetic Source
+    path: ../raw/pull-request-template.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-issue-triage-source
+    type: synthetic_example
+    title: GitHub Workflow Pack Issue Triage Synthetic Source
+    path: ../raw/issue-triage.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-actions-workflows-source
+    type: configuration_summary
+    title: GitHub Workflow Pack Actions Workflows Synthetic Source
+    path: ../raw/actions-workflows.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-release-process-source
+    type: operator_note
+    title: GitHub Workflow Pack Release Process Synthetic Source
+    path: ../raw/release-process.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-code-review-rules-source
+    type: review_checklist
+    title: GitHub Workflow Pack Code Review Rules Synthetic Source
+    path: ../raw/code-review-rules.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: github-workflow-pack-security-alerts-source
+    type: export_summary
+    title: GitHub Workflow Pack Security Alerts Synthetic Source
+    path: ../raw/security-alerts.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current

@@ -1,0 +1,16 @@
+Docker Containers Pack
+
+Public-safe starter context for fictional Docker container operations.
+
+Records:
+- docker-containers-pack.stack-overview
+- docker-containers-pack.compose-files
+- docker-containers-pack.container-inventory
+- docker-containers-pack.networks-and-ports
+- docker-containers-pack.volumes-and-storage
+- docker-containers-pack.environment-variables
+- docker-containers-pack.secrets-policy
+- docker-containers-pack.update-policy
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

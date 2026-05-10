@@ -1,0 +1,16 @@
+VS Code Setup Pack
+
+Public-safe starter context for a fictional VS Code developer setup.
+
+Records:
+- vscode-setup-pack.editor-overview
+- vscode-setup-pack.workspace-settings
+- vscode-setup-pack.extension-groups
+- vscode-setup-pack.language-tooling
+- vscode-setup-pack.task-conventions
+- vscode-setup-pack.debugging-notes
+- vscode-setup-pack.accessibility-settings
+- vscode-setup-pack.known-editor-issues
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

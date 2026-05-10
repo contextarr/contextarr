@@ -41,7 +41,7 @@ describe("@contextarr/backups", () => {
 
     expect(result).toMatchObject({
       backupId: "unit-backup",
-      packCount: 5,
+      packCount: 16,
       validationErrors: 0,
       validationWarnings: 0
     });
@@ -59,7 +59,7 @@ describe("@contextarr/backups", () => {
         automaticActivation: false
       },
       summary: {
-        packCount: 5,
+        packCount: 16,
         validationErrors: 0,
         validationWarnings: 0
       }
@@ -90,7 +90,7 @@ describe("@contextarr/backups", () => {
     expect(restore).toMatchObject({
       backupId: "unit-restore",
       status: "restored_to_quarantine",
-      packCount: 5,
+      packCount: 16,
       validationErrors: 0,
       validationWarnings: 0,
       scannerBlocked: 0

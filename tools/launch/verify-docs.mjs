@@ -13,6 +13,7 @@ const requiredFiles = [
   "docs/security.md",
   "docs/api.md",
   "docs/collectors.md",
+  "docs/implementation-status.md",
   "docs/composed-packs.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",

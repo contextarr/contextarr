@@ -127,7 +127,7 @@ describe("contextarr CLI", () => {
         infos: 0
       }
     });
-    expect(json.results).toHaveLength(5);
+    expect(json.results).toHaveLength(16);
     expect(json.results[0]).toMatchObject({
       securityScan: {
         status: "policy_clean",
@@ -468,7 +468,7 @@ describe("contextarr CLI", () => {
     expect(backupCode).toBe(0);
     expect(backupJson).toMatchObject({
       backupId: "cli-backup",
-      packCount: 5,
+      packCount: 16,
       validationErrors: 0,
       validationWarnings: 0
     });
@@ -484,7 +484,7 @@ describe("contextarr CLI", () => {
     expect(restoreJson).toMatchObject({
       backupId: "cli-backup",
       status: "restored_to_quarantine",
-      packCount: 5,
+      packCount: 16,
       validationErrors: 0,
       scannerBlocked: 0
     });
@@ -617,7 +617,7 @@ describe("contextarr CLI", () => {
     const code = await runCli(["render", demoPacksDir, "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Rendered 5 pack(s), 25 record(s)");
+    expect(output.stdout).toContain("Rendered 16 pack(s), 116 record(s)");
     expect(fs.existsSync(path.join(outDir, "packs", "ai-workstation-pack", "index.html"))).toBe(true);
   });
 
@@ -651,7 +651,7 @@ describe("contextarr CLI", () => {
     const code = await runCli(["export", demoPacksDir, "--all", "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Exported 40 file(s)");
+    expect(output.stdout).toContain("Exported 128 file(s)");
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-llms-txt.txt"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);

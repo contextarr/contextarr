@@ -2,6 +2,7 @@ import type { LibraryViewMode, PackSummary, SearchResult, SortKey } from "./type
 
 export const libraryViewStorageKey = "contextarr.library.view";
 export const libraryViewModes: LibraryViewMode[] = ["cover", "compact", "table"];
+export type LibraryPackGroup = "all" | "starter" | "local" | "imported";
 
 export interface StorageLike {
   getItem(key: string): string | null;
@@ -10,6 +11,7 @@ export interface StorageLike {
 
 export interface LibraryFilters {
   query: string;
+  group: LibraryPackGroup;
   type: string;
   trustLevel: string;
   healthStatus: string;
@@ -48,11 +50,15 @@ export function filterAndSortPacks(
 
   return packs
     .filter((pack) => {
+      if (!matchesPackGroup(pack, filters.group)) {
+        return false;
+      }
+
       if (filters.type !== "all" && pack.type !== filters.type) {
         return false;
       }
 
-      if (filters.trustLevel !== "all" && pack.trustLevel !== filters.trustLevel) {
+      if (filters.trustLevel !== "all" && normalizePackTrustForFilter(pack.trustLevel) !== filters.trustLevel) {
         return false;
       }
 
@@ -65,7 +71,7 @@ export function filterAndSortPacks(
       }
 
       const localText = normalize(
-        [pack.name, pack.description, pack.type, pack.trustLevel, pack.healthStatus, pack.visibility].join(" ")
+        [pack.name, pack.description, pack.type, normalizePackTrustForFilter(pack.trustLevel), pack.healthStatus, pack.visibility].join(" ")
       );
 
       return localText.includes(query) || searchPackIds.has(pack.id);
@@ -80,7 +86,7 @@ export function getFilterOptions(packs: PackSummary[]): {
 } {
   return {
     types: uniqueSorted(packs.map((pack) => pack.type)),
-    trustLevels: uniqueSorted(packs.map((pack) => pack.trustLevel)),
+    trustLevels: uniqueSorted(packs.map((pack) => normalizePackTrustForFilter(pack.trustLevel))),
     healthStatuses: uniqueSorted(packs.map((pack) => pack.healthStatus))
   };
 }
@@ -107,7 +113,23 @@ export function formatPackType(value: string): string {
     .join(" ");
 }
 
+function normalizePackTrustForFilter(value: string): string {
+  const normalized = value.toLowerCase();
+  if (normalized === "official") {
+    return "curated";
+  }
+  if (normalized === "deprecated") {
+    return "blocked";
+  }
+  return normalized;
+}
+
 function comparePacks(left: PackSummary, right: PackSummary, sortBy: SortKey): number {
+  const starterOrder = compareStarterOrder(left, right);
+  if (starterOrder !== 0 && sortBy === "name") {
+    return starterOrder;
+  }
+
   switch (sortBy) {
     case "health":
       return right.healthScore - left.healthScore || left.name.localeCompare(right.name);
@@ -119,6 +141,30 @@ function comparePacks(left: PackSummary, right: PackSummary, sortBy: SortKey): n
     default:
       return left.name.localeCompare(right.name);
   }
+}
+
+function matchesPackGroup(pack: PackSummary, group: LibraryPackGroup): boolean {
+  switch (group) {
+    case "starter":
+      return Boolean(pack.starterPack);
+    case "local":
+      return !pack.starterPack && normalizePackTrustForFilter(pack.trustLevel) !== "imported";
+    case "imported":
+      return normalizePackTrustForFilter(pack.trustLevel) === "imported";
+    case "all":
+    default:
+      return true;
+  }
+}
+
+function compareStarterOrder(left: PackSummary, right: PackSummary): number {
+  if (!left.starterPack || !right.starterPack) {
+    return 0;
+  }
+
+  const leftOrder = left.starterSortOrder ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = right.starterSortOrder ?? Number.MAX_SAFE_INTEGER;
+  return leftOrder - rightOrder || left.name.localeCompare(right.name);
 }
 
 function iconForPack(pack: PackSummary): CoverVisual["icon"] {

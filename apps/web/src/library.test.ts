@@ -3,6 +3,7 @@ import {
   createCoverVisual,
   filterAndSortPacks,
   formatPackType,
+  getFilterOptions,
   getInitialLibraryView,
   persistLibraryView
 } from "./library";
@@ -40,9 +41,44 @@ describe("Pack library utilities", () => {
     expect(filterAndSortPacks(packs, filters({ trustLevel: "verified" })).map((item) => item.id)).toEqual([
       "internal-support-kb-pack"
     ]);
+    expect(filterAndSortPacks(packs, filters({ trustLevel: "curated" })).map((item) => item.id)).toEqual([
+      "ai-workstation-pack",
+      "jellyfin-server-pack"
+    ]);
     expect(filterAndSortPacks(packs, filters({ healthStatus: "degraded" })).map((item) => item.id)).toEqual([
       "internal-support-kb-pack"
     ]);
+  });
+
+  it("filters starter, local, and imported pack groups", () => {
+    const groupPacks = [
+      ...packs,
+      pack({
+        id: "openai-prompt-engineering-pack",
+        name: "OpenAI Prompt Engineering Pack",
+        type: "ai_prompting",
+        starterPack: true,
+        starterCategory: "ai_prompting",
+        starterSortOrder: 1,
+        healthScore: 96,
+        recordCount: 8
+      }),
+      pack({ id: "imported-pack", name: "Imported Pack", trustLevel: "imported" })
+    ];
+
+    expect(filterAndSortPacks(groupPacks, filters({ group: "starter" })).map((item) => item.id)).toEqual([
+      "openai-prompt-engineering-pack"
+    ]);
+    expect(filterAndSortPacks(groupPacks, filters({ group: "imported" })).map((item) => item.id)).toEqual([
+      "imported-pack"
+    ]);
+    expect(filterAndSortPacks(groupPacks, filters({ group: "local" })).map((item) => item.id)).not.toContain(
+      "openai-prompt-engineering-pack"
+    );
+  });
+
+  it("normalizes official trust values out of pack filter options", () => {
+    expect(getFilterOptions(packs).trustLevels).toEqual(["curated", "verified"]);
   });
 
   it("uses search result pack ids when local summary text does not match", () => {
@@ -101,6 +137,7 @@ describe("Pack library utilities", () => {
 function filters(overrides: Partial<Parameters<typeof filterAndSortPacks>[1]> = {}) {
   return {
     query: "",
+    group: "all" as const,
     type: "all",
     trustLevel: "all",
     healthStatus: "all",
@@ -127,6 +164,9 @@ function pack(overrides: Partial<PackSummary>): PackSummary {
     exportProfileCount: 0,
     accentColor: null,
     coverImage: null,
+    starterPack: false,
+    starterCategory: null,
+    starterSortOrder: null,
     reviewQueueCount: 0,
     lastReviewedAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",

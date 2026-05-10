@@ -1,0 +1,25 @@
+id: github-workflow-chatgpt
+name: GitHub Workflow Pack ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - github-workflow-pack.repository-overview
+    - github-workflow-pack.branch-policy
+    - github-workflow-pack.pull-request-template
+    - github-workflow-pack.issue-triage
+    - github-workflow-pack.actions-workflows
+    - github-workflow-pack.release-process
+    - github-workflow-pack.code-review-rules
+    - github-workflow-pack.security-alerts
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

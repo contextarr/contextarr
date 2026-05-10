@@ -1,0 +1,16 @@
+OpenAI Prompt Engineering Pack
+
+Public-safe starter context for prompt engineering review workflows.
+
+Records:
+- openai-prompt-engineering-pack.overview
+- openai-prompt-engineering-pack.model-usage-policy
+- openai-prompt-engineering-pack.chatgpt-projects
+- openai-prompt-engineering-pack.prompt-library-conventions
+- openai-prompt-engineering-pack.api-usage-boundaries
+- openai-prompt-engineering-pack.data-handling-rules
+- openai-prompt-engineering-pack.evaluation-patterns
+- openai-prompt-engineering-pack.preferred-output-formats
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

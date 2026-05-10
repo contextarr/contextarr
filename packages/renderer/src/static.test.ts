@@ -47,7 +47,7 @@ describe("static HTML rendering", () => {
     const outDir = tempDir();
     const result = renderPacksToStaticHtml({ packsDir: demoPacksDir, outputDir: outDir });
 
-    expect(result).toMatchObject({ packsRendered: 5, recordsRendered: 25 });
+    expect(result).toMatchObject({ packsRendered: 16, recordsRendered: 116 });
     expect(fs.existsSync(path.join(outDir, "index.html"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "packs", "ai-workstation-pack", "index.html"))).toBe(true);
     expect(fs.readFileSync(path.join(outDir, "packs", "ai-workstation-pack", "records", "ai-workstation.local-ai-stack.html"), "utf8")).toContain("../../../contextarr-static.css");

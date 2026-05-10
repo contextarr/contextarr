@@ -28,6 +28,7 @@ Contextarr v0 must not include:
 
 - Hosted cloud storage.
 - Public marketplace or registry.
+- Starter packs that behave like marketplace listings.
 - Public marketplace before registry trust model is implemented.
 - Anonymous public uploads.
 - Marketplace payments.
@@ -36,6 +37,8 @@ Contextarr v0 must not include:
 - Script packs.
 - Shell commands inside packs.
 - Remote install with auto-activation.
+- Remote logo fetching.
+- Live SaaS, cloud, source-control, or workspace connectors from starter packs.
 - Hidden network calls.
 - Claims of perfect prompt-injection detection.
 - Registry items bypassing local validation.
@@ -45,6 +48,13 @@ Contextarr v0 must not include:
 - Direct banking or brokerage connector.
 - Mobile app.
 - Real private data in the public repository.
+- Copied third-party documentation in demo or starter packs.
+
+## Starter Pack Boundaries
+
+Starter packs are curated local examples. They identify familiar tools or platforms only so users can understand the shape of a pack. Third-party marks and names are identifiers only and do not imply endorsement, partnership, official status, or source ownership.
+
+Starter packs must stay data-only. They must not include credentials, install hooks, shell snippets, executable commands, telemetry, or live connector behavior.
 
 ## Why These Boundaries Exist
 

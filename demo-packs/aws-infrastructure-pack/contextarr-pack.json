@@ -1,0 +1,39 @@
+{
+  "id": "aws-infrastructure-pack",
+  "name": "AWS Infrastructure Pack",
+  "version": "1.0.0",
+  "description": "Public-safe starter context for fictional AWS infrastructure documentation.",
+  "type": "cloud_infrastructure",
+  "visibility": "local",
+  "trustLevel": "verified",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-09T00:00:00Z",
+  "updatedAt": "2026-05-09T00:00:00Z",
+  "lastReviewedAt": "2026-05-09T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "starterPack": true,
+  "starterCategory": "cloud_infrastructure",
+  "starterSortOrder": 4,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "brandId": "aws",
+    "accentColor": "#FF9900",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

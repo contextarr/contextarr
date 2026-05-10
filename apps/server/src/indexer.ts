@@ -456,7 +456,32 @@ function filterAgentKitsWithAvailableReferences(
   return { agentKits, skipped };
 }
 
-export function getPacks(db: ContextarrDatabase): PackSummary[] {
+export interface PackQueryFilters {
+  starter?: boolean;
+  starterCategory?: string;
+}
+
+export function getPacks(db: ContextarrDatabase, filters: PackQueryFilters = {}): PackSummary[] {
+  const conditions: string[] = [];
+  const params: Record<string, unknown> = {};
+
+  if (typeof filters.starter === "boolean") {
+    conditions.push("starter_pack = @starterPack");
+    params.starterPack = filters.starter ? 1 : 0;
+  }
+
+  if (filters.starterCategory?.trim()) {
+    conditions.push("starter_pack = 1");
+    conditions.push("starter_category = @starterCategory");
+    params.starterCategory = filters.starterCategory.trim();
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const orderClause =
+    filters.starter || filters.starterCategory
+      ? "ORDER BY starter_sort_order IS NULL, starter_sort_order, name"
+      : "ORDER BY name";
+
   return db
     .prepare(
       `SELECT
@@ -469,12 +494,16 @@ export function getPacks(db: ContextarrDatabase): PackSummary[] {
         license_unknown_count AS licenseUnknownCount, license_risk_count AS licenseRiskCount,
         record_count AS recordCount, source_count AS sourceCount,
         export_profile_count AS exportProfileCount, accent_color AS accentColor,
-        cover_image AS coverImage, review_queue_count AS reviewQueueCount,
+        cover_image AS coverImage, brand_id AS brandId, cover_recipe AS coverRecipe,
+        logo_variant AS logoVariant, starter_pack AS starterPack,
+        starter_category AS starterCategory, starter_sort_order AS starterSortOrder,
+        review_queue_count AS reviewQueueCount,
         last_reviewed_at AS lastReviewedAt, updated_at AS updatedAt
       FROM packs
-      ORDER BY name`
+      ${whereClause}
+      ${orderClause}`
     )
-    .all()
+    .all(params)
     .map((pack) => normalizePackSummary(pack as Row));
 }
 
@@ -528,6 +557,12 @@ export function getPack(db: ContextarrDatabase, packId: string): unknown | undef
     lastReviewedAt: pack.last_reviewed_at,
     accentColor: pack.accent_color,
     coverImage: safePublicAssetRef(typeof pack.cover_image === "string" ? pack.cover_image : undefined),
+    brandId: pack.brand_id ? String(pack.brand_id) : undefined,
+    coverRecipe: pack.cover_recipe ? String(pack.cover_recipe) : undefined,
+    logoVariant: pack.logo_variant ? String(pack.logo_variant) : undefined,
+    starterPack: Boolean(pack.starter_pack),
+    starterCategory: pack.starter_category ? String(pack.starter_category) : undefined,
+    starterSortOrder: pack.starter_sort_order === null || pack.starter_sort_order === undefined ? undefined : Number(pack.starter_sort_order),
     reviewQueueCount: pack.review_queue_count,
     packPath: displaySafePath(pack.pack_path) ?? String(pack.id),
     manifest: sanitizePackManifestForApi(JSON.parse(String(pack.manifest_json)) as Record<string, unknown>),
@@ -787,6 +822,7 @@ export function getAgentKitContextPacks(db: ContextarrDatabase, agentKitId: stri
         packs.health_status AS healthStatus, packs.record_count AS recordCount,
         packs.source_count AS sourceCount, packs.export_profile_count AS exportProfileCount,
         packs.accent_color AS accentColor, packs.cover_image AS coverImage,
+        packs.brand_id AS brandId, packs.cover_recipe AS coverRecipe, packs.logo_variant AS logoVariant,
         agent_kit_context_packs.sort_order AS sortOrder
        FROM agent_kit_context_packs
        JOIN packs ON packs.id = agent_kit_context_packs.pack_id
@@ -1142,7 +1178,8 @@ function insertPack(
     `INSERT INTO packs (
       id, name, version, description, type, visibility, trust_level, author, license,
       created_at, updated_at, last_reviewed_at, contains_personal_data,
-      contains_executable_code, requires_network, accent_color, cover_image, pack_path,
+      contains_executable_code, requires_network, accent_color, cover_image, brand_id,
+      cover_recipe, logo_variant, starter_pack, starter_category, starter_sort_order, pack_path,
       manifest_json, validation_status, export_readiness, validation_errors, validation_warnings,
       redaction_warning_count, stale_source_count, license_warning_count, license_missing_count,
       license_unknown_count, license_risk_count, health_score,
@@ -1151,7 +1188,8 @@ function insertPack(
     ) VALUES (
       @id, @name, @version, @description, @type, @visibility, @trustLevel, @author, @license,
       @createdAt, @updatedAt, @lastReviewedAt, @containsPersonalData,
-      @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @packPath,
+      @containsExecutableCode, @requiresNetwork, @accentColor, @coverImage, @brandId,
+      @coverRecipe, @logoVariant, @starterPack, @starterCategory, @starterSortOrder, @packPath,
       @manifestJson, @validationStatus, @exportReadiness, @validationErrors, @validationWarnings,
       @redactionWarningCount, @staleSourceCount, @licenseWarningCount, @licenseMissingCount,
       @licenseUnknownCount, @licenseRiskCount, @healthScore,
@@ -1176,6 +1214,12 @@ function insertPack(
     requiresNetwork: pack.manifest.requiresNetwork ? 1 : 0,
     accentColor: pack.manifest.assets.accentColor ?? null,
     coverImage: safePublicAssetRef(pack.manifest.assets.coverImage),
+    brandId: pack.manifest.assets.brandId ?? null,
+    coverRecipe: pack.manifest.assets.coverRecipe ?? null,
+    logoVariant: pack.manifest.assets.logoVariant ?? null,
+    starterPack: pack.manifest.starterPack ? 1 : 0,
+    starterCategory: pack.manifest.starterCategory ?? null,
+    starterSortOrder: pack.manifest.starterSortOrder ?? null,
     packPath: path.resolve(pack.packPath),
     manifestJson: JSON.stringify(pack.manifest),
     validationStatus: pack.validation.validationStatus,
@@ -1960,6 +2004,12 @@ function normalizePackSummary(pack: Row): PackSummary {
     exportProfileCount: Number(pack.exportProfileCount),
     accentColor: pack.accentColor ? String(pack.accentColor) : undefined,
     coverImage: safePublicAssetRef(typeof pack.coverImage === "string" ? pack.coverImage : undefined),
+    brandId: pack.brandId ? String(pack.brandId) : undefined,
+    coverRecipe: pack.coverRecipe ? String(pack.coverRecipe) : undefined,
+    logoVariant: pack.logoVariant ? String(pack.logoVariant) : undefined,
+    starterPack: Boolean(pack.starterPack),
+    starterCategory: pack.starterCategory ? String(pack.starterCategory) : undefined,
+    starterSortOrder: pack.starterSortOrder === null || pack.starterSortOrder === undefined ? undefined : Number(pack.starterSortOrder),
     reviewQueueCount: Number(pack.reviewQueueCount),
     lastReviewedAt: pack.lastReviewedAt ? String(pack.lastReviewedAt) : null,
     updatedAt: String(pack.updatedAt)
@@ -2049,6 +2099,15 @@ function sanitizePackManifestForApi(manifest: Record<string, unknown>): Record<s
   const sanitizedAssets: Record<string, unknown> = {};
   if (typeof assets.accentColor === "string") {
     sanitizedAssets.accentColor = assets.accentColor;
+  }
+  if (typeof assets.brandId === "string") {
+    sanitizedAssets.brandId = assets.brandId;
+  }
+  if (typeof assets.coverRecipe === "string") {
+    sanitizedAssets.coverRecipe = assets.coverRecipe;
+  }
+  if (typeof assets.logoVariant === "string") {
+    sanitizedAssets.logoVariant = assets.logoVariant;
   }
   const coverImage = safePublicAssetRef(typeof assets.coverImage === "string" ? assets.coverImage : undefined);
   if (coverImage) {

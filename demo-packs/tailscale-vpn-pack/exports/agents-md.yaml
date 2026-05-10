@@ -1,0 +1,25 @@
+id: tailscale-vpn-agents-md
+name: Tailscale VPN Pack AGENTS.md Export
+target: agents_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - tailscale-vpn-pack.tailnet-overview
+    - tailscale-vpn-pack.device-inventory
+    - tailscale-vpn-pack.access-controls
+    - tailscale-vpn-pack.subnet-routes
+    - tailscale-vpn-pack.exit-node-policy
+    - tailscale-vpn-pack.sharing-rules
+    - tailscale-vpn-pack.troubleshooting
+    - tailscale-vpn-pack.review-cadence
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

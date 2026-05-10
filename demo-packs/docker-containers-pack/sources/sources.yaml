@@ -1,0 +1,81 @@
+sources:
+  - id: docker-containers-pack-stack-overview-source
+    type: manual_demo_note
+    title: Docker Containers Pack Stack Overview Synthetic Source
+    path: ../raw/stack-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-compose-files-source
+    type: local_markdown
+    title: Docker Containers Pack Compose Files Synthetic Source
+    path: ../raw/compose-files.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-container-inventory-source
+    type: official_docs_reference
+    title: Docker Containers Pack Container Inventory Synthetic Source
+    path: ../raw/container-inventory.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-networks-and-ports-source
+    type: synthetic_example
+    title: Docker Containers Pack Networks And Ports Synthetic Source
+    path: ../raw/networks-and-ports.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-volumes-and-storage-source
+    type: configuration_summary
+    title: Docker Containers Pack Volumes And Storage Synthetic Source
+    path: ../raw/volumes-and-storage.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-environment-variables-source
+    type: operator_note
+    title: Docker Containers Pack Environment Variables Synthetic Source
+    path: ../raw/environment-variables.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-secrets-policy-source
+    type: review_checklist
+    title: Docker Containers Pack Secrets Policy Synthetic Source
+    path: ../raw/secrets-policy.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: docker-containers-pack-update-policy-source
+    type: export_summary
+    title: Docker Containers Pack Update Policy Synthetic Source
+    path: ../raw/update-policy.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current

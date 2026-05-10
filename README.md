@@ -12,6 +12,8 @@ Contextarr is a self-hosted context automation and agent preparation system for 
 
 It is designed to help power users and teams build, validate, review, render, compose, and export local-first context packs for tools like ChatGPT, Claude, Codex, Claude Code, OpenCode, Cursor, local agents, and read-only MCP clients.
 
+The repo includes curated local starter Context Packs for common tool and infrastructure domains. These are examples only, not marketplace listings or endorsements. Third-party marks are used only as identifiers, and packs remain data-only and non-executable.
+
 ## Status
 
 Contextarr is an early public preview and is not production ready.

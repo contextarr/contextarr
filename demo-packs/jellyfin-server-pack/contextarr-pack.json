@@ -25,7 +25,10 @@
   "exportsPath": "exports",
   "rulesPath": "rules",
   "assets": {
-    "accentColor": "#2563EB"
+    "accentColor": "#2563EB",
+    "brandId": "jellyfin",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
   },
   "compatibility": {
     "contextarr": ">=0.1.0"

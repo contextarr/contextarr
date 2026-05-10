@@ -11,10 +11,12 @@ const localDateSchema = z.preprocess(
 );
 
 export const trustLevelSchema = z.enum([
+  "curated",
   "official",
   "verified",
   "community",
   "local",
+  "imported",
   "unreviewed",
   "deprecated",
   "blocked"
@@ -37,6 +39,9 @@ export const contextPackManifestSchema = z
     containsPersonalData: z.boolean(),
     containsExecutableCode: z.boolean(),
     requiresNetwork: z.boolean(),
+    starterPack: z.boolean().optional(),
+    starterCategory: z.string().min(1).optional(),
+    starterSortOrder: z.number().int().positive().optional(),
     permissions: z
       .object({
         readVault: z.boolean(),
@@ -52,7 +57,10 @@ export const contextPackManifestSchema = z
     assets: z
       .object({
         coverImage: z.string().min(1).optional(),
-        accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional()
+        accentColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+        brandId: z.string().min(1).optional(),
+        coverRecipe: z.enum(["brand_hex_v1", "generated_v1"]).optional(),
+        logoVariant: z.enum(["auto", "light", "dark", "mono"]).optional()
       })
       .passthrough(),
     compatibility: z

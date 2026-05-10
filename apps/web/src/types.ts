@@ -47,6 +47,12 @@ export interface PackSummary {
   exportProfileCount: number;
   accentColor?: string | null;
   coverImage: string | null;
+  brandId?: string | null;
+  coverRecipe?: "brand_hex_v1" | "generated_v1" | string | null;
+  logoVariant?: "auto" | "light" | "dark" | "mono" | string | null;
+  starterPack?: boolean;
+  starterCategory?: string | null;
+  starterSortOrder?: number | null;
   reviewQueueCount: number;
   lastReviewedAt: string | null;
   updatedAt: string;
@@ -157,6 +163,9 @@ export interface AgentKitContextPackSummary {
   exportProfileCount: number;
   accentColor?: string | null;
   coverImage: string | null;
+  brandId?: string | null;
+  coverRecipe?: "brand_hex_v1" | "generated_v1" | string | null;
+  logoVariant?: "auto" | "light" | "dark" | "mono" | string | null;
   sortOrder?: number;
 }
 

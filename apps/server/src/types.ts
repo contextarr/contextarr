@@ -239,6 +239,12 @@ export interface PackSummary {
   exportProfileCount: number;
   accentColor?: string;
   coverImage: string | null;
+  brandId?: string;
+  coverRecipe?: string;
+  logoVariant?: string;
+  starterPack: boolean;
+  starterCategory?: string;
+  starterSortOrder?: number;
   reviewQueueCount: number;
   lastReviewedAt: string | null;
   updatedAt: string;

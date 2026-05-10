@@ -1,21 +1,25 @@
-id: claude-code-project-claude-md
-name: Claude Code Project CLAUDE.md Export
+﻿id: claude-code-project-claude-md
+name: Claude Code Project Pack CLAUDE.md Export
 target: claude_md
 format: markdown
 privacy_mode: redacted
 include:
   records:
-    - claude-code-project.repo-overview
+    - claude-code-project-pack.project-overview
+    - claude-code-project-pack.repo-structure
+    - claude-code-project-pack.current-phase
     - claude-code-project.agent-instructions
-    - claude-code-project.dev-workflow
-    - claude-code-project.testing-checklist
-    - claude-code-project.handoff-notes
+    - claude-code-project-pack.coding-conventions
+    - claude-code-project-pack.testing-and-validation
+    - claude-code-project-pack.forbidden-actions
+    - claude-code-project-pack.agent-final-report-format
 exclude_tags:
   - secret
   - never_export
-token_budget: 16000
+  - imported_draft
+token_budget: 12000
 sections:
   - summary
-  - instructions
-  - records
+  - key_facts
+  - constraints
   - sources

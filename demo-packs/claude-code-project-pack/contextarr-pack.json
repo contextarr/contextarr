@@ -2,18 +2,21 @@
   "id": "claude-code-project-pack",
   "name": "Claude Code Project Pack",
   "version": "1.0.0",
-  "description": "Public-safe demo context for a fictional coding-agent project.",
-  "type": "project",
+  "description": "Public-safe starter context for a fictional Claude Code repository workflow.",
+  "type": "ai_coding",
   "visibility": "local",
-  "trustLevel": "official",
+  "trustLevel": "curated",
   "author": "Contextarr Demo",
   "license": "MIT",
-  "createdAt": "2026-05-07T00:00:00Z",
-  "updatedAt": "2026-05-07T00:00:00Z",
-  "lastReviewedAt": null,
+  "createdAt": "2026-05-09T00:00:00Z",
+  "updatedAt": "2026-05-09T00:00:00Z",
+  "lastReviewedAt": "2026-05-09T00:00:00Z",
   "containsPersonalData": false,
   "containsExecutableCode": false,
   "requiresNetwork": false,
+  "starterPack": true,
+  "starterCategory": "ai_coding",
+  "starterSortOrder": 2,
   "permissions": {
     "readVault": false,
     "writeDrafts": false,
@@ -25,7 +28,10 @@
   "exportsPath": "exports",
   "rulesPath": "rules",
   "assets": {
-    "accentColor": "#2563EB"
+    "brandId": "claude",
+    "accentColor": "#D97745",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
   },
   "compatibility": {
     "contextarr": ">=0.1.0"

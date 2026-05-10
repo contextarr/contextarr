@@ -35,10 +35,10 @@ describe("Contextarr MCP tools", () => {
 
   it("lists all demo packs", async () => {
     context = createTestContext();
-    const result = await listPacksTool(context, { limit: 10 });
+    const result = await listPacksTool(context, { limit: 20 });
 
     expect(result.ok).toBe(true);
-    expect(result.count).toBe(5);
+    expect(result.count).toBe(16);
     expect(result.packs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

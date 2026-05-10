@@ -1,0 +1,25 @@
+id: google-workspace-llms-txt
+name: Google Workspace Pack llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - google-workspace-pack.workspace-overview
+    - google-workspace-pack.drive-folder-map
+    - google-workspace-pack.shared-drive-policy
+    - google-workspace-pack.docs-style-guide
+    - google-workspace-pack.sheets-and-reporting
+    - google-workspace-pack.apps-script-projects
+    - google-workspace-pack.calendar-and-meet-conventions
+    - google-workspace-pack.access-and-sharing-rules
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

@@ -1,41 +1,81 @@
-sources:
-  - id: claude-code-repo-note
-    type: markdown
-    title: Fictional Repo Overview Note
-    path: ../raw/repo-note.md
-    retrieved_at: 2026-05-07T00:00:00Z
+﻿sources:
+  - id: claude-code-project-pack-project-overview-source
+    type: manual_demo_note
+    title: Claude Code Project Pack Project Overview Synthetic Source
+    path: ../raw/project-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
-    trust: official
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
     status: current
-  - id: claude-code-agent-note
-    type: markdown
-    title: Fictional Agent Instruction Note
-    path: ../raw/agent-note.md
-    retrieved_at: 2026-05-07T00:00:00Z
+  - id: claude-code-project-pack-repo-structure-source
+    type: local_markdown
+    title: Claude Code Project Pack Repo Structure Synthetic Source
+    path: ../raw/repo-structure.md
+    retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
-    trust: official
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
     status: current
-  - id: claude-code-workflow-note
-    type: markdown
-    title: Fictional Development Workflow Note
-    path: ../raw/workflow-note.md
-    retrieved_at: 2026-05-07T00:00:00Z
+  - id: claude-code-project-pack-current-phase-source
+    type: official_docs_reference
+    title: Claude Code Project Pack Current Phase Synthetic Source
+    path: ../raw/current-phase.md
+    retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
-    trust: official
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
     status: current
-  - id: claude-code-testing-note
-    type: markdown
-    title: Fictional Testing Checklist Note
-    path: ../raw/testing-note.md
-    retrieved_at: 2026-05-07T00:00:00Z
+  - id: claude-code-project-pack-agent-instructions-source
+    type: synthetic_example
+    title: Claude Code Project Pack Agent Instructions Synthetic Source
+    path: ../raw/agent-instructions.md
+    retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
-    trust: official
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
     status: current
-  - id: claude-code-handoff-note
-    type: markdown
-    title: Fictional Handoff Note
-    path: ../raw/handoff-note.md
-    retrieved_at: 2026-05-07T00:00:00Z
+  - id: claude-code-project-pack-coding-conventions-source
+    type: configuration_summary
+    title: Claude Code Project Pack Coding Conventions Synthetic Source
+    path: ../raw/coding-conventions.md
+    retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
-    trust: official
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: claude-code-project-pack-testing-and-validation-source
+    type: operator_note
+    title: Claude Code Project Pack Testing And Validation Synthetic Source
+    path: ../raw/testing-and-validation.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: claude-code-project-pack-forbidden-actions-source
+    type: review_checklist
+    title: Claude Code Project Pack Forbidden Actions Synthetic Source
+    path: ../raw/forbidden-actions.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: claude-code-project-pack-agent-final-report-format-source
+    type: export_summary
+    title: Claude Code Project Pack Agent Final Report Format Synthetic Source
+    path: ../raw/agent-final-report-format.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
     status: current

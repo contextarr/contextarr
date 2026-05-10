@@ -23,7 +23,7 @@
     "docker:verify": "node tools/launch/verify-docker.mjs",
     "dev": "pnpm --parallel --stream -r --filter @contextarr/server --filter @contextarr/web dev",
     "phase1:verify": "pnpm typecheck && pnpm test",
-    "demo:validate": "pnpm --filter @contextarr/cli contextarr validate demo-packs/ai-workstation-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/jellyfin-server-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/claude-code-project-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/internal-support-kb-pack && pnpm --filter @contextarr/cli contextarr validate demo-packs/fake-product-line-pack",
+    "demo:validate": "pnpm --filter @contextarr/cli contextarr validate demo-packs",
     "skills:validate": "pnpm --filter @contextarr/cli contextarr validate demo-skills",
     "phase2:verify": "pnpm phase1:verify && pnpm demo:validate",
     "phase3:verify": "pnpm phase2:verify && pnpm --filter @contextarr/server rescan",

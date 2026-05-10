@@ -11,6 +11,7 @@
     "test": "vitest run --root ../.. apps/web/src"
   },
   "dependencies": {
+    "@contextarr/brand-registry": "workspace:*",
     "@contextarr/renderer": "workspace:*",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",

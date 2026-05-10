@@ -37,6 +37,12 @@ export function createSchema(db: ContextarrDatabase): void {
       requires_network INTEGER NOT NULL,
       accent_color TEXT,
       cover_image TEXT,
+      brand_id TEXT,
+      cover_recipe TEXT,
+      logo_variant TEXT,
+      starter_pack INTEGER NOT NULL DEFAULT 0,
+      starter_category TEXT,
+      starter_sort_order INTEGER,
       pack_path TEXT NOT NULL,
       manifest_json TEXT NOT NULL,
       validation_status TEXT NOT NULL DEFAULT 'valid',
@@ -387,6 +393,12 @@ export function createSchema(db: ContextarrDatabase): void {
   `);
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
+  ensureColumn(db, "packs", "brand_id", "TEXT");
+  ensureColumn(db, "packs", "cover_recipe", "TEXT");
+  ensureColumn(db, "packs", "logo_variant", "TEXT");
+  ensureColumn(db, "packs", "starter_pack", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "starter_category", "TEXT");
+  ensureColumn(db, "packs", "starter_sort_order", "INTEGER");
   ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "packs", "validation_status", "TEXT NOT NULL DEFAULT 'valid'");
   ensureColumn(db, "packs", "export_readiness", "TEXT NOT NULL DEFAULT 'ready'");

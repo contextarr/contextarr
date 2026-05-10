@@ -1,0 +1,81 @@
+sources:
+  - id: aws-infrastructure-pack-account-overview-source
+    type: manual_demo_note
+    title: AWS Infrastructure Pack Account Overview Synthetic Source
+    path: ../raw/account-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-environment-map-source
+    type: local_markdown
+    title: AWS Infrastructure Pack Environment Map Synthetic Source
+    path: ../raw/environment-map.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-regions-and-services-source
+    type: official_docs_reference
+    title: AWS Infrastructure Pack Regions And Services Synthetic Source
+    path: ../raw/regions-and-services.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-iam-boundaries-source
+    type: synthetic_example
+    title: AWS Infrastructure Pack IAM Boundaries Synthetic Source
+    path: ../raw/iam-boundaries.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-networking-overview-source
+    type: configuration_summary
+    title: AWS Infrastructure Pack Networking Overview Synthetic Source
+    path: ../raw/networking-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-deployment-patterns-source
+    type: operator_note
+    title: AWS Infrastructure Pack Deployment Patterns Synthetic Source
+    path: ../raw/deployment-patterns.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-cost-controls-source
+    type: review_checklist
+    title: AWS Infrastructure Pack Cost Controls Synthetic Source
+    path: ../raw/cost-controls.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current
+  - id: aws-infrastructure-pack-backup-and-recovery-source
+    type: export_summary
+    title: AWS Infrastructure Pack Backup And Recovery Synthetic Source
+    path: ../raw/backup-and-recovery.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: verified
+    status: current

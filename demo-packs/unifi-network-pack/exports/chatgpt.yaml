@@ -1,0 +1,25 @@
+id: unifi-network-chatgpt
+name: UniFi Network Pack ChatGPT Export
+target: chatgpt
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - unifi-network-pack.topology-overview
+    - unifi-network-pack.wan-and-gateway
+    - unifi-network-pack.vlans-and-subnets
+    - unifi-network-pack.ssid-policy
+    - unifi-network-pack.device-inventory
+    - unifi-network-pack.firewall-notes
+    - unifi-network-pack.wifi-troubleshooting
+    - unifi-network-pack.maintenance-routine
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

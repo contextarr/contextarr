@@ -1,0 +1,16 @@
+Jellyfin Media Server Pack
+
+Public-safe starter context for a fictional self-hosted Jellyfin media server.
+
+Records:
+- jellyfin-media-server-pack.server-overview
+- jellyfin-media-server-pack.hardware-and-os
+- jellyfin-media-server-pack.library-structure
+- jellyfin-media-server-pack.storage-map
+- jellyfin-media-server-pack.clients-and-users
+- jellyfin-media-server-pack.transcoding-policy
+- jellyfin-media-server-pack.network-access
+- jellyfin-media-server-pack.backup-policy
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

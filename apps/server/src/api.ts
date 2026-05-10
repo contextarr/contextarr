@@ -719,9 +719,17 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
-  app.get("/api/packs", async () => {
+  app.get<{ Querystring: { starter?: string; starterCategory?: string } }>("/api/packs", async (request, reply) => {
+    const starter = parseBooleanQuery(request.query.starter);
+    if (starter === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "starter must be true or false." });
+    }
+
     return {
-      packs: getPacks(db)
+      packs: getPacks(db, {
+        starter,
+        starterCategory: request.query.starterCategory
+      })
     };
   });
 
@@ -1151,6 +1159,21 @@ function getRequestToken(request: FastifyRequest): string | undefined {
 
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function parseBooleanQuery(value: string | undefined): boolean | "invalid" | undefined {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no"].includes(normalized)) {
+    return false;
+  }
+  return "invalid";
 }
 
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {

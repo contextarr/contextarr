@@ -17,6 +17,7 @@
       "@contextarr/schema": ["packages/schema/src/index.ts"],
       "@contextarr/backups": ["packages/backups/src/index.ts"],
       "@contextarr/collectors": ["packages/collectors/src/index.ts"],
+      "@contextarr/brand-registry": ["packages/brand-registry/src/index.ts"],
       "@contextarr/security-scanner": ["packages/security-scanner/src/index.ts"],
       "@contextarr/pack-validator": ["packages/pack-validator/src/index.ts"],
       "@contextarr/skill-validator": ["packages/skill-validator/src/index.ts"],

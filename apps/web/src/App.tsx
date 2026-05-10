@@ -44,6 +44,16 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
 import {
+  PackCard as BrandPackCard,
+  PackCardMenu,
+  PackCover as BrandPackCover,
+  PackHealthPill,
+  PackTrustBadge,
+  normalizePackTrustLevel,
+  packTrustLabels,
+  resolvePackBrand
+} from "./components/pack-card";
+import {
   createAgentKitCoverVisual,
   filterAndSortAgentKits,
   getAgentKitFilterOptions,
@@ -86,6 +96,7 @@ import {
   formatPackType,
   getFilterOptions,
   getInitialLibraryView,
+  type LibraryPackGroup,
   persistLibraryView
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
@@ -192,6 +203,7 @@ export function App() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [viewMode, setViewMode] = useState<LibraryViewMode>(() => getInitialLibraryView());
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [packGroup, setPackGroup] = useState<LibraryPackGroup>("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [trustFilter, setTrustFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
@@ -310,6 +322,7 @@ export function App() {
         packs,
         {
           query: debouncedQuery,
+          group: packGroup,
           type: typeFilter,
           trustLevel: trustFilter,
           healthStatus: healthFilter,
@@ -317,7 +330,7 @@ export function App() {
         },
         searchResults
       ),
-    [debouncedQuery, healthFilter, packs, searchResults, sortBy, trustFilter, typeFilter]
+    [debouncedQuery, healthFilter, packGroup, packs, searchResults, sortBy, trustFilter, typeFilter]
   );
   const visibleSkills = useMemo(
     () =>
@@ -409,6 +422,7 @@ export function App() {
             authError={authError}
             viewMode={viewMode}
             sortBy={sortBy}
+            packGroup={packGroup}
             typeFilter={typeFilter}
             trustFilter={trustFilter}
             healthFilter={healthFilter}
@@ -416,11 +430,13 @@ export function App() {
             onRetry={loadDashboard}
             onViewModeChange={handleViewModeChange}
             onSortChange={setSortBy}
+            onPackGroupChange={setPackGroup}
             onTypeFilterChange={setTypeFilter}
             onTrustFilterChange={setTrustFilter}
             onHealthFilterChange={setHealthFilter}
           />
         )}
+        <footer className="third-party-marks-note">Third-party marks shown for identification only.</footer>
       </main>
     </div>
   );
@@ -515,6 +531,7 @@ interface LibraryPageProps {
   authError: boolean;
   viewMode: LibraryViewMode;
   sortBy: SortKey;
+  packGroup: LibraryPackGroup;
   typeFilter: string;
   trustFilter: string;
   healthFilter: string;
@@ -522,6 +539,7 @@ interface LibraryPageProps {
   onRetry(): void;
   onViewModeChange(mode: LibraryViewMode): void;
   onSortChange(sort: SortKey): void;
+  onPackGroupChange(value: LibraryPackGroup): void;
   onTypeFilterChange(value: string): void;
   onTrustFilterChange(value: string): void;
   onHealthFilterChange(value: string): void;
@@ -534,12 +552,14 @@ function LibraryPage(props: LibraryPageProps) {
         packCount={props.packs.length}
         viewMode={props.viewMode}
         sortBy={props.sortBy}
+        packGroup={props.packGroup}
         typeFilter={props.typeFilter}
         trustFilter={props.trustFilter}
         healthFilter={props.healthFilter}
         filterOptions={props.filterOptions}
         onViewModeChange={props.onViewModeChange}
         onSortChange={props.onSortChange}
+        onPackGroupChange={props.onPackGroupChange}
         onTypeFilterChange={props.onTypeFilterChange}
         onTrustFilterChange={props.onTrustFilterChange}
         onHealthFilterChange={props.onHealthFilterChange}
@@ -564,12 +584,14 @@ interface LibraryHeaderProps {
   packCount: number;
   viewMode: LibraryViewMode;
   sortBy: SortKey;
+  packGroup: LibraryPackGroup;
   typeFilter: string;
   trustFilter: string;
   healthFilter: string;
   filterOptions: ReturnType<typeof getFilterOptions>;
   onViewModeChange(mode: LibraryViewMode): void;
   onSortChange(sort: SortKey): void;
+  onPackGroupChange(value: LibraryPackGroup): void;
   onTypeFilterChange(value: string): void;
   onTrustFilterChange(value: string): void;
   onHealthFilterChange(value: string): void;
@@ -601,6 +623,16 @@ function LibraryHeader(props: LibraryHeaderProps) {
             <option value="health">Health</option>
             <option value="lastReviewed">Last reviewed</option>
             <option value="records">Records</option>
+          </select>
+        </label>
+
+        <label className="select-control">
+          <Package size={16} aria-hidden="true" />
+          <select value={props.packGroup} onChange={(event) => props.onPackGroupChange(event.target.value as LibraryPackGroup)}>
+            <option value="all">All packs</option>
+            <option value="starter">Starter packs</option>
+            <option value="local">Local packs</option>
+            <option value="imported">Imported packs</option>
           </select>
         </label>
 
@@ -688,27 +720,7 @@ function CoverGrid({ packs }: { packs: PackSummary[] }) {
   return (
     <div className="cover-grid">
       {packs.map((pack) => (
-        <article className="cover-card" key={pack.id}>
-          <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <PackCover pack={pack} variant="large" />
-          </a>
-          <div className="cover-card-body">
-            <h2>
-              <a className="pack-title-link" href={packHref(pack.id)}>
-                {pack.name}
-              </a>
-            </h2>
-            <span className="pack-type">{formatPackType(pack.type)}</span>
-            <div className="badge-row">
-              <HealthBadge pack={pack} />
-              <TrustBadge pack={pack} />
-            </div>
-            <div className="card-footer">
-              <span>{formatDate(pack.lastReviewedAt)}</span>
-              <ExternalLink size={17} aria-hidden="true" />
-            </div>
-          </div>
-        </article>
+        <BrandPackCard pack={pack} key={pack.id} />
       ))}
     </div>
   );
@@ -717,32 +729,33 @@ function CoverGrid({ packs }: { packs: PackSummary[] }) {
 function CompactCards({ packs }: { packs: PackSummary[] }) {
   return (
     <div className="compact-grid">
-      {packs.map((pack) => (
-        <article className="compact-card" key={pack.id}>
-          <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <PackCover pack={pack} variant="thumb" />
-          </a>
-          <div className="compact-main">
-            <h2>
-              <a className="pack-title-link" href={packHref(pack.id)}>
-                {pack.name}
-              </a>
-            </h2>
-            <p>{pack.description}</p>
-            <span className="pack-type">{formatPackType(pack.type)}</span>
-          </div>
-          <div className="compact-metrics">
-            <HealthBadge pack={pack} />
-            <TrustBadge pack={pack} />
-            <span>{pack.sourceCount} sources</span>
-            <span>{pack.recordCount} records</span>
-            <span>{formatDate(pack.lastReviewedAt)}</span>
-          </div>
-          <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <MoreVertical size={17} aria-hidden="true" />
-          </a>
-        </article>
-      ))}
+      {packs.map((pack) => {
+        const brand = resolvePackBrand(pack);
+        return (
+          <article className="compact-card" key={pack.id}>
+            <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
+              <BrandPackCover pack={pack} variant="compact" />
+            </a>
+            <div className="compact-main">
+              <h2>
+                <a className="pack-title-link" href={packHref(pack.id)}>
+                  {pack.name}
+                </a>
+              </h2>
+              <p>{pack.description}</p>
+              <span className="pack-type">{formatPackType(pack.type)}</span>
+            </div>
+            <div className="compact-metrics">
+              <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+              <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(brand)} />
+              <span>{pack.sourceCount} sources</span>
+              <span>{pack.recordCount} records</span>
+              <span>{formatDate(pack.lastReviewedAt)}</span>
+            </div>
+            <PackCardMenu href={packHref(pack.id)} packName={pack.name} compact />
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -766,44 +779,47 @@ function DenseTable({ packs }: { packs: PackSummary[] }) {
           </tr>
         </thead>
         <tbody>
-          {packs.map((pack) => (
-            <tr key={pack.id}>
-              <td>
-                <div className="table-pack">
-                  <PackCover pack={pack} variant="mini" />
-                  <div>
-                    <strong>
-                      <a className="pack-title-link" href={packHref(pack.id)}>
-                        {pack.name}
-                      </a>
-                    </strong>
-                    <span>{pack.description}</span>
+          {packs.map((pack) => {
+            const brand = resolvePackBrand(pack);
+            return (
+              <tr key={pack.id}>
+                <td>
+                  <div className="table-pack">
+                    <BrandPackCover pack={pack} variant="mini" />
+                    <div>
+                      <strong>
+                        <a className="pack-title-link" href={packHref(pack.id)}>
+                          {pack.name}
+                        </a>
+                      </strong>
+                      <span>{pack.description}</span>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td>{formatPackType(pack.type)}</td>
-              <td>
-                <TrustBadge pack={pack} />
-              </td>
-              <td>
-                <HealthBadge pack={pack} />
-              </td>
-              <td>{pack.recordCount}</td>
-              <td>{pack.sourceCount}</td>
-              <td>
-                <span className={pack.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
-                  {pack.reviewQueueCount}
-                </span>
-              </td>
-              <td>{formatDate(pack.lastReviewedAt)}</td>
-              <td>{pack.version}</td>
-              <td>
-                <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-                  <ExternalLink size={17} aria-hidden="true" />
-                </a>
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td>{formatPackType(pack.type)}</td>
+                <td>
+                  <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(brand)} />
+                </td>
+                <td>
+                  <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+                </td>
+                <td>{pack.recordCount}</td>
+                <td>{pack.sourceCount}</td>
+                <td>
+                  <span className={pack.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
+                    {pack.reviewQueueCount}
+                  </span>
+                </td>
+                <td>{formatDate(pack.lastReviewedAt)}</td>
+                <td>{pack.version}</td>
+                <td>
+                  <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
+                    <ExternalLink size={17} aria-hidden="true" />
+                  </a>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -2050,11 +2066,13 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
     );
   }
 
+  const detailBrand = resolvePackBrand(pack);
+
   return (
     <section className="detail-page" aria-labelledby="pack-detail-title">
       <BackLink href="#/library" label="Pack Library" />
       <div className="pack-detail-hero">
-        <PackCover pack={pack} variant="large" />
+        <BrandPackCover pack={pack} />
         <div>
           <div className="eyebrow">
             <Package size={16} aria-hidden="true" />
@@ -2063,8 +2081,8 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
           <h1 id="pack-detail-title">{pack.name}</h1>
           <p>{pack.description}</p>
           <div className="hero-badges">
-            <HealthBadge pack={pack} />
-            <TrustBadge pack={pack} />
+            <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+            <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(detailBrand)} />
             <span className="version-pill">{pack.version}</span>
           </div>
           <div className="last-reviewed">
@@ -2100,6 +2118,8 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
 
 function PackOverview({ pack, records, packs }: { pack: PackDetail; records: RecordSummary[]; packs: PackSummary[] }) {
   const related = packs.filter((candidate) => candidate.id !== pack.id && candidate.type === pack.type).slice(0, 3);
+  const brand = resolvePackBrand(pack);
+  const trustLabel = packTrustLabels[normalizePackTrustLevel(pack.trustLevel, Boolean(brand))];
 
   return (
     <div className="detail-grid">
@@ -2109,7 +2129,7 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
           Summary
         </h2>
         <p>{pack.description}</p>
-        <TagList values={[pack.type, pack.visibility, pack.trustLevel]} />
+        <TagList values={[pack.type, pack.visibility, trustLabel]} />
         <dl className="fact-grid">
           <Fact label="Author" value={pack.author} />
           <Fact label="License" value={pack.license} />
@@ -4739,7 +4759,8 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "UTC"
   }).format(new Date(value));
 }
 

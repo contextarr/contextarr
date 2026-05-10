@@ -1,0 +1,81 @@
+sources:
+  - id: openai-prompt-engineering-pack-overview-source
+    type: manual_demo_note
+    title: OpenAI Prompt Engineering Pack Pack Overview Synthetic Source
+    path: ../raw/overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-model-usage-policy-source
+    type: local_markdown
+    title: OpenAI Prompt Engineering Pack Model Usage Policy Synthetic Source
+    path: ../raw/model-usage-policy.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-chatgpt-projects-source
+    type: official_docs_reference
+    title: OpenAI Prompt Engineering Pack ChatGPT Projects Synthetic Source
+    path: ../raw/chatgpt-projects.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-prompt-library-conventions-source
+    type: synthetic_example
+    title: OpenAI Prompt Engineering Pack Prompt Library Conventions Synthetic Source
+    path: ../raw/prompt-library-conventions.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-api-usage-boundaries-source
+    type: configuration_summary
+    title: OpenAI Prompt Engineering Pack API Usage Boundaries Synthetic Source
+    path: ../raw/api-usage-boundaries.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-data-handling-rules-source
+    type: operator_note
+    title: OpenAI Prompt Engineering Pack Data Handling Rules Synthetic Source
+    path: ../raw/data-handling-rules.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-evaluation-patterns-source
+    type: review_checklist
+    title: OpenAI Prompt Engineering Pack Evaluation Patterns Synthetic Source
+    path: ../raw/evaluation-patterns.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: openai-prompt-engineering-pack-preferred-output-formats-source
+    type: export_summary
+    title: OpenAI Prompt Engineering Pack Preferred Output Formats Synthetic Source
+    path: ../raw/preferred-output-formats.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current

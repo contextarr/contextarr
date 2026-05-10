@@ -53,6 +53,8 @@
 
 - Build local dashboard shell.
 - Add pack library views.
+- Add starter/local/imported Context Pack grouping.
+- Keep starter packs local-only examples, not marketplace listings.
 
 ## Phase 5: Renderer and Static HTML
 

@@ -1,0 +1,25 @@
+id: obsidian-vault-codex
+name: Obsidian Vault Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - obsidian-vault-pack.vault-overview
+    - obsidian-vault-pack.folder-map
+    - obsidian-vault-pack.note-conventions
+    - obsidian-vault-pack.frontmatter-rules
+    - obsidian-vault-pack.linking-patterns
+    - obsidian-vault-pack.daily-notes
+    - obsidian-vault-pack.import-boundaries
+    - obsidian-vault-pack.export-rules
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources
