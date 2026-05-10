@@ -24,6 +24,12 @@ const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const scannerFixturesDir = path.join(repoRoot, "packages/security-scanner/test/fixtures");
 const tempDirs: string[] = [];
+const expectedDemoCounts = {
+  packs: 16,
+  records: 116,
+  skills: 8,
+  agentKits: 8
+};
 
 function fixture(name: string): string {
   return path.join(fixturesDir, name);
@@ -63,6 +69,43 @@ function createIo() {
   };
 }
 
+async function withCliIndex(callback: () => Promise<void>): Promise<void> {
+  const previousEnv = {
+    INIT_CWD: process.env.INIT_CWD,
+    CONTEXTARR_DATABASE_PATH: process.env.CONTEXTARR_DATABASE_PATH,
+    CONTEXTARR_PACKS_DIR: process.env.CONTEXTARR_PACKS_DIR,
+    CONTEXTARR_SKILLS_DIR: process.env.CONTEXTARR_SKILLS_DIR,
+    CONTEXTARR_IMPORTED_SKILLS_DIR: process.env.CONTEXTARR_IMPORTED_SKILLS_DIR,
+    CONTEXTARR_AGENT_KITS_DIR: process.env.CONTEXTARR_AGENT_KITS_DIR,
+    CONTEXTARR_DEMO_AGENT_KITS_DIR: process.env.CONTEXTARR_DEMO_AGENT_KITS_DIR
+  };
+  const root = tempDir();
+
+  process.env.INIT_CWD = repoRoot;
+  process.env.CONTEXTARR_DATABASE_PATH = path.join(root, "contextarr.db");
+  process.env.CONTEXTARR_PACKS_DIR = "./demo-packs";
+  process.env.CONTEXTARR_SKILLS_DIR = "./demo-skills";
+  process.env.CONTEXTARR_IMPORTED_SKILLS_DIR = path.join(root, "imported-skills");
+  process.env.CONTEXTARR_AGENT_KITS_DIR = path.join(root, "agent-kits");
+  process.env.CONTEXTARR_DEMO_AGENT_KITS_DIR = "./demo-agent-kits";
+
+  try {
+    await callback();
+  } finally {
+    restoreEnv(previousEnv);
+  }
+}
+
+function restoreEnv(values: Record<string, string | undefined>): void {
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+}
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -70,6 +113,234 @@ afterEach(() => {
 });
 
 describe("contextarr CLI", () => {
+  it("rescans the configured local index with deterministic JSON output", async () => {
+    await withCliIndex(async () => {
+      const output = createIo();
+      const code = await runCli(["rescan", "--json"], output.io);
+      const json = JSON.parse(output.stdout);
+
+      expect(code).toBe(0);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.rescan.v1",
+        packsIndexed: expectedDemoCounts.packs,
+        recordsIndexed: expectedDemoCounts.records,
+        skillsIndexed: expectedDemoCounts.skills,
+        agentKitsIndexed: expectedDemoCounts.agentKits
+      });
+      expect(output.stderr).toBe("");
+      expect(output.stdout).not.toContain(repoRoot);
+    });
+  });
+
+  it("lists indexed packs without requiring MCP or the API server", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const listOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["list", "packs", "--json"], listOutput.io)).toBe(0);
+      const json = JSON.parse(listOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.list.v1",
+        kind: "packs",
+        stats: {
+          packs: expectedDemoCounts.packs,
+          records: expectedDemoCounts.records,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
+        }
+      });
+      expect(json.packs).toHaveLength(expectedDemoCounts.packs);
+      expect(json.packs.map((pack: { id: string }) => pack.id)).toContain("ai-workstation-pack");
+      expect(json.skills).toEqual([]);
+      expect(json.agentKits).toEqual([]);
+    });
+  });
+
+  it("inspects indexed objects in JSON and text formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const skillOutput = createIo();
+      const recordOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["inspect", "support-ticket-writing-skill", "--kind", "skill", "--json"], skillOutput.io)).toBe(0);
+      expect(JSON.parse(skillOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "skill",
+        id: "support-ticket-writing-skill",
+        object: {
+          id: "support-ticket-writing-skill",
+          name: "Support Ticket Writing Skill"
+        }
+      });
+
+      expect(await runCli(["inspect", "ai-workstation.local-ai-stack", "--kind", "record"], recordOutput.io)).toBe(0);
+      expect(recordOutput.stdout).toContain("Record: Local AI Stack");
+      expect(recordOutput.stdout).toContain("Review status: approved");
+      expect(recordOutput.stderr).toBe("");
+    });
+  });
+
+  it("reports local index health in summary and object formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const summaryOutput = createIo();
+      const packOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["health", "--json"], summaryOutput.io)).toBe(0);
+      const summary = JSON.parse(summaryOutput.stdout);
+
+      expect(summary).toMatchObject({
+        schemaVersion: "contextarr.cli.health.v1",
+        kind: "summary",
+        counts: {
+          packs: expectedDemoCounts.packs,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
+        },
+        reviewItems: {
+          total: expect.any(Number),
+          open: expect.any(Number)
+        }
+      });
+      expect(summaryOutput.stdout).not.toContain(repoRoot);
+
+      expect(await runCli(["health", "ai-workstation-pack", "--kind", "pack"], packOutput.io)).toBe(0);
+      expect(packOutput.stdout).toContain("Context Pack health: ai-workstation-pack");
+      expect(packOutput.stdout).toContain("Score:");
+      expect(packOutput.stdout).toContain("Review queue:");
+      expect(packOutput.stderr).toBe("");
+    });
+  });
+
+  it("lists local review items with deterministic filters", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const reviewOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["review", "--status", "all", "--object-type", "agent-kit", "--limit", "2", "--json"], reviewOutput.io)).toBe(0);
+      const json = JSON.parse(reviewOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.review.v1",
+        filters: {
+          objectType: "agent_kit"
+        },
+        limit: 2,
+        total: expect.any(Number),
+        returned: expect.any(Number)
+      });
+      expect(json.returned).toBeLessThanOrEqual(2);
+      expect(Array.isArray(json.items)).toBe(true);
+      expect(reviewOutput.stdout).not.toContain(repoRoot);
+      expect(reviewOutput.stderr).toBe("");
+    });
+  });
+
+  it("builds local briefs without requiring MCP or the API server", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const summaryOutput = createIo();
+      const packOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["brief", "--limit", "2", "--json"], summaryOutput.io)).toBe(0);
+      const summary = JSON.parse(summaryOutput.stdout);
+
+      expect(summary).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "summary",
+        limit: 2,
+        stats: {
+          packs: expectedDemoCounts.packs,
+          records: expectedDemoCounts.records,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
+        }
+      });
+      expect(summary.packs).toHaveLength(2);
+      expect(summary.skills).toHaveLength(2);
+      expect(summary.agentKits).toHaveLength(2);
+      expect(summaryOutput.stdout).not.toContain(repoRoot);
+
+      expect(await runCli(["brief", "ai-workstation-pack", "--kind", "pack", "--limit", "3", "--json"], packOutput.io)).toBe(0);
+      const packBrief = JSON.parse(packOutput.stdout);
+
+      expect(packBrief).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "pack",
+        id: "ai-workstation-pack",
+        limit: 3,
+        summary: {
+          id: "ai-workstation-pack",
+          name: "AI Workstation Pack"
+        }
+      });
+      expect(packBrief.sections.find((section: { id: string }) => section.id === "records").items).toHaveLength(3);
+      expect(packOutput.stdout).not.toContain(repoRoot);
+      expect(packOutput.stderr).toBe("");
+    });
+  });
+
+  it("queries the local index with deterministic type and limit filters", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const queryOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["query", "workstation", "--type", "record", "--limit", "3", "--json"], queryOutput.io)).toBe(0);
+      const json = JSON.parse(queryOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.query.v1",
+        query: "workstation",
+        type: "record",
+        limit: 3,
+        total: expect.any(Number),
+        returned: expect.any(Number)
+      });
+      expect(json.returned).toBeLessThanOrEqual(3);
+      expect(Array.isArray(json.results)).toBe(true);
+      expect(queryOutput.stdout).not.toContain(repoRoot);
+      expect(queryOutput.stderr).toBe("");
+    });
+  });
+
+  it("returns expected codes for read-only index command usage and misses", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const listOutput = createIo();
+      const inspectOutput = createIo();
+      const healthOutput = createIo();
+      const reviewOutput = createIo();
+      const briefOutput = createIo();
+      const queryOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["list", "widgets"], listOutput.io)).toBe(2);
+      expect(listOutput.stderr).toContain("Unsupported list kind");
+
+      expect(await runCli(["inspect", "missing-object", "--json"], inspectOutput.io)).toBe(1);
+      expect(inspectOutput.stderr).toContain("Indexed Contextarr object not found");
+
+      expect(await runCli(["health", "missing-object", "--json"], healthOutput.io)).toBe(1);
+      expect(healthOutput.stderr).toContain("Indexed Contextarr health target not found");
+
+      expect(await runCli(["review", "--status", "bogus"], reviewOutput.io)).toBe(2);
+      expect(reviewOutput.stderr).toContain("Unsupported review filter value");
+
+      expect(await runCli(["brief", "missing-object", "--json"], briefOutput.io)).toBe(1);
+      expect(briefOutput.stderr).toContain("Indexed Contextarr brief target not found");
+
+      expect(await runCli(["query", "workstation", "--type", "widgets"], queryOutput.io)).toBe(2);
+      expect(queryOutput.stderr).toContain("Unsupported query type");
+    });
+  });
+
   it("returns 0 for a valid pack", async () => {
     const output = createIo();
     const code = await runCli(["validate", fixture("valid-minimal-pack")], output.io);

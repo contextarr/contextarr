@@ -16,8 +16,7 @@ Contextarr reads configuration from environment variables and local defaults. Pa
 | `CONTEXTARR_DRAFT_PACKS_DIR` | `./draft-packs` | Local draft Context Pack output root for collectors. Not indexed as active packs automatically. |
 | `CONTEXTARR_COMPOSED_PACKS_DIR` | `./composed-packs` | Local draft Context Pack output root for Composer save-as-draft-pack. Not indexed as active packs automatically. |
 | `CONTEXTARR_WEB_DIST_DIR` | empty | Optional built web asset directory for same-origin serving. |
-| `CONTEXTARR_API_TOKEN` | empty | Optional local API token. |
-| `CONTEXTARR_LAN_MODE` | `false` | Local network mode flag. |
+| `CONTEXTARR_API_TOKEN` | empty | Optional local API token for loopback development; required for non-loopback binds. |
 | `CONTEXTARR_TELEMETRY` | `false` | Must remain false; telemetry is not part of v1 core. |
 
 ## Advanced Preview Directories
@@ -47,6 +46,7 @@ These exist because the advanced checkout already includes Skills and Agent Kits
 | `CONTEXTARR_MCP_RESCAN_ON_START` | `true` | Rebuild derived index on MCP start. |
 | `CONTEXTARR_MCP_MAX_RESULTS` | `8` | Default MCP result limit. |
 | `CONTEXTARR_MCP_MAX_RECORD_CHARS` | `12000` | Maximum returned record body characters. |
+| `CONTEXTARR_MCP_MAX_PREVIEW_CHARS` | `24000` | Maximum returned export-preview content characters. |
 | `CONTEXTARR_MCP_ALLOW_PRIVATE` | `false` | Conservative privacy default for MCP bodies. |
 
 ## Safety Defaults

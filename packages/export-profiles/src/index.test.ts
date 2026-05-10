@@ -348,6 +348,56 @@ describe("export profile engine", () => {
     );
   });
 
+  it("redacts excluded safety record metadata in Agent Kit exports", () => {
+    const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
+    const excludedRecord = path.join(packsDir, "internal-support-kb-pack", "records", "ticket-intake.md");
+    fs.writeFileSync(
+      excludedRecord,
+      fs
+        .readFileSync(excludedRecord, "utf8")
+        .replace("title: Ticket Intake", "title: Sensitive Agent Kit Excluded Title")
+        .replace("tags:\n  - support\n  - intake", "tags:\n  - support\n  - never_export")
+        .replace("  - support-intake-note", "  - agent-kit-sensitive-source"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packsDir, "internal-support-kb-pack", "sources", "sources.yaml"),
+      `${fs.readFileSync(path.join(packsDir, "internal-support-kb-pack", "sources", "sources.yaml"), "utf8").trimEnd()}
+  - id: agent-kit-sensitive-source
+    type: markdown
+    title: Agent Kit Sensitive Source
+    path: ../raw/agent-kit-sensitive.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+`,
+      "utf8"
+    );
+
+    const artifact = buildAgentKitExport({
+      agentKitPath,
+      contextPacksDir: packsDir,
+      skillsDir,
+      profileId: "support-ticket-writing-kit-codex"
+    });
+    const excluded = artifact.excludedRecords.find((record) => record.id === "internal-support.ticket-intake");
+
+    expect(excluded).toEqual(
+      expect.objectContaining({
+        title: "[redacted]",
+        type: "[redacted]",
+        tags: [],
+        sources: [],
+        reason: "Excluded by export safety policy."
+      })
+    );
+    expect(JSON.stringify(excluded)).not.toContain("Sensitive Agent Kit Excluded Title");
+    expect(JSON.stringify(excluded)).not.toContain("never_export");
+    expect(JSON.stringify(excluded)).not.toContain("agent-kit-sensitive-source");
+    expect(artifact.content).not.toContain("Sensitive Agent Kit Excluded Title");
+  });
+
   it("keeps private Context Pack records in redacted Agent Kit exports unless blocked by tags or rules", () => {
     const { agentKitPath, packsDir, skillsDir } = copyDemoObjectSet();
     const privateRecord = path.join(packsDir, "internal-support-kb-pack", "records", "ticket-intake.md");
@@ -556,7 +606,16 @@ describe("export profile engine", () => {
 
     expect(artifact.includedRecords).toHaveLength(0);
     expect(artifact.excludedRecords).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "valid.overview", reason: expect.stringContaining("secret") })])
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.overview",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
+      ])
     );
   });
 
@@ -595,8 +654,22 @@ describe("export profile engine", () => {
     expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
     expect(artifact.excludedRecords).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "valid.private", reason: expect.stringContaining("private") }),
-        expect.objectContaining({ id: "valid.sensitive", reason: expect.stringContaining("sensitive") })
+        expect.objectContaining({
+          id: "valid.private",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        }),
+        expect.objectContaining({
+          id: "valid.sensitive",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
       ])
     );
   });
@@ -626,6 +699,58 @@ describe("export profile engine", () => {
       expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("review status is draft") })])
     );
     expect(artifact.content).not.toContain("Draft Context");
+  });
+
+  it("redacts excluded safety record metadata in pack exports", () => {
+    const packPath = copyFixture();
+    const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
+    fs.writeFileSync(
+      path.join(packPath, "records", "safety-excluded.md"),
+      baseRecord
+        .replace("id: valid.overview", "id: valid.safety-excluded")
+        .replace("title: Valid Overview", "title: Sensitive Pack Excluded Title")
+        .replace("tags:\n  - test", "tags:\n  - secret")
+        .replace("  - manual-source", "  - pack-sensitive-source"),
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "sources", "sources.yaml"),
+      `${fs.readFileSync(path.join(packPath, "sources", "sources.yaml"), "utf8").trimEnd()}
+  - id: pack-sensitive-source
+    type: markdown
+    title: Pack Sensitive Source
+    path: ../raw/pack-sensitive.md
+    retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: local
+    status: current
+`,
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs
+        .readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8")
+        .replace("    - valid.overview", "    - valid.overview\n    - valid.safety-excluded"),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+    const excluded = artifact.excludedRecords.find((record) => record.id === "valid.safety-excluded");
+
+    expect(excluded).toEqual(
+      expect.objectContaining({
+        title: "[redacted]",
+        type: "[redacted]",
+        tags: [],
+        sources: [],
+        reason: "Excluded by export safety policy."
+      })
+    );
+    expect(JSON.stringify(excluded)).not.toContain("Sensitive Pack Excluded Title");
+    expect(JSON.stringify(excluded)).not.toContain("secret");
+    expect(JSON.stringify(excluded)).not.toContain("pack-sensitive-source");
+    expect(artifact.content).not.toContain("Sensitive Pack Excluded Title");
   });
 
   it("omits local source paths from pack exports", () => {
@@ -727,8 +852,19 @@ describe("export profile engine", () => {
 
     expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
     expect(artifact.excludedRecords).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "valid.draft", reason: expect.stringContaining("imported_draft") })])
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "valid.draft",
+          title: "[redacted]",
+          type: "[redacted]",
+          tags: [],
+          sources: [],
+          reason: "Excluded by export safety policy."
+        })
+      ])
     );
+    expect(JSON.stringify(artifact.excludedRecords)).not.toContain("Draft Import");
+    expect(JSON.stringify(artifact.excludedRecords)).not.toContain("imported_draft");
     expect(artifact.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "token_budget.exceeded" })]));
   });
 

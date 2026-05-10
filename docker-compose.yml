@@ -4,6 +4,8 @@ services:
   app:
     build:
       context: .
+      args:
+        VITE_CONTEXTARR_API_TOKEN: ${CONTEXTARR_DOCKER_API_TOKEN:-contextarr-local-preview-token}
     image: contextarr:local-preview
     ports:
       - "127.0.0.1:${CONTEXTARR_DOCKER_PORT:-3210}:3210"
@@ -17,7 +19,7 @@ services:
       CONTEXTARR_COMPOSED_PACKS_DIR: /app/composed-packs
       CONTEXTARR_DATABASE_PATH: /app/data/contextarr.db
       CONTEXTARR_WEB_DIST_DIR: /app/apps/web/dist
-      CONTEXTARR_API_TOKEN: ""
+      CONTEXTARR_API_TOKEN: ${CONTEXTARR_DOCKER_API_TOKEN:-contextarr-local-preview-token}
     volumes:
       - ./demo-packs:/app/demo-packs:ro
       - ./demo-skills:/app/demo-skills:ro

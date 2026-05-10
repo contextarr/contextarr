@@ -13,7 +13,7 @@ jobs:
   credibility-gates:
     name: Credibility Gates
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
@@ -62,3 +62,9 @@ jobs:
 
       - name: Docker smoke
         run: pnpm docker:verify
+
+      - name: Run security gate
+        run: pnpm security:verify
+
+      - name: Verify release docs
+        run: node tools/launch/verify-release-docs.mjs

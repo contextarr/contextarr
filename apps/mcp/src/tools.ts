@@ -316,7 +316,7 @@ export async function buildExportPreviewTool(context: ContextarrMcpContext, args
       const artifact = buildPackExport({ packPath, profileId: input.profileId });
       return {
         ok: true,
-        artifact: toMcpExportArtifact(artifact)
+        artifact: toMcpExportArtifact(artifact, context.config.maxPreviewChars)
       };
     }
   );
@@ -524,7 +524,7 @@ export async function buildAgentKitExportPreviewTool(context: ContextarrMcpConte
       return {
         ok: true,
         agentKitId: input.agentKitId,
-        artifact: toMcpExportArtifact(artifact)
+        artifact: toMcpExportArtifact(artifact, context.config.maxPreviewChars)
       };
     }
   );
@@ -834,6 +834,10 @@ function resultFromSearchRow(
     if (!agentKitRecordMatchesFilters(record, input)) {
       return undefined;
     }
+    if (!isApprovedRecord(record)) {
+      warnings.add("Non-approved records were omitted.");
+      return undefined;
+    }
     if (record.privacy === "secret") {
       warnings.add("Secret records were omitted.");
       return undefined;
@@ -885,6 +889,11 @@ function resultFromSearchRow(
     }
     const document = findSkillDocument(context.db, skillId, String(row.id), kind);
     if (!document || !skillDocumentMatchesFilters(document, input)) {
+      return undefined;
+    }
+
+    if (!isApprovedSkillDocument(document)) {
+      warnings.add("Non-approved Skill documents were omitted.");
       return undefined;
     }
 
@@ -1113,6 +1122,10 @@ function toMcpSkillDocumentIfVisible(
   maxRecordChars: number,
   warnings: Set<string>
 ): JsonObject[] {
+  if (!isApprovedSkillDocument(document)) {
+    warnings.add("Non-approved Skill documents were omitted.");
+    return [];
+  }
   if (document.privacy === "secret") {
     warnings.add("Secret Skill documents were omitted.");
     return [];
@@ -1275,6 +1288,10 @@ function isApprovedRecord(record: RecordDetail): boolean {
   return record.reviewStatus === "approved";
 }
 
+function isApprovedSkillDocument(document: SkillDocumentDetail): boolean {
+  return document.reviewStatus === "approved";
+}
+
 function toMcpSourceSummary(source: JsonObject): JsonObject {
   return {
     id: source.id,
@@ -1304,7 +1321,9 @@ function toMcpExportProfile(profile: JsonObject): JsonObject {
   };
 }
 
-function toMcpExportArtifact(artifact: ExportArtifact): JsonObject {
+function toMcpExportArtifact(artifact: ExportArtifact, maxPreviewChars: number): JsonObject {
+  const preview = truncatePreviewContent(artifact.content, maxPreviewChars);
+
   return {
     packId: artifact.packId,
     profileId: artifact.profileId,
@@ -1312,11 +1331,21 @@ function toMcpExportArtifact(artifact: ExportArtifact): JsonObject {
     format: artifact.format,
     filename: artifact.filename,
     mimeType: artifact.mimeType,
-    content: artifact.content,
+    content: preview.content,
+    contentTruncated: preview.truncated,
+    contentOriginalLength: artifact.content.length,
     includedRecords: artifact.includedRecords,
     excludedRecords: artifact.excludedRecords,
     sources: artifact.sources.map((source) => toMcpSourceSummary(source as unknown as JsonObject)),
-    warnings: artifact.warnings,
+    warnings: preview.truncated
+      ? [
+          ...artifact.warnings,
+          {
+            code: "mcp.preview_truncated",
+            message: `Export preview content was truncated to ${maxPreviewChars} characters.`
+          }
+        ]
+      : artifact.warnings,
     generatedAt: artifact.generatedAt,
     byteLength: artifact.byteLength,
     estimatedTokens: artifact.estimatedTokens
@@ -1351,6 +1380,22 @@ function truncateText(value: string, maxLength: number): string {
   }
 
   return `${value.slice(0, maxLength)}\n\n[truncated]`;
+}
+
+function truncatePreviewContent(value: string, maxLength: number): { content: string; truncated: boolean } {
+  const marker = "\n\n[truncated]";
+  if (value.length <= maxLength) {
+    return { content: value, truncated: false };
+  }
+
+  if (maxLength <= marker.length) {
+    return { content: value.slice(0, maxLength), truncated: true };
+  }
+
+  return {
+    content: `${value.slice(0, maxLength - marker.length)}${marker}`,
+    truncated: true
+  };
 }
 
 function normalizeLimit(value: number | undefined, defaultValue: number): number {

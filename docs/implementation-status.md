@@ -11,10 +11,31 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
 - Pack detail, record detail, Pack Health, Review Queue, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
-- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, and quarantine restore.
+- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, review, brief, and query.
 - Read-only MCP surfaces where implemented by the local server package.
 - Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
+
+## Current CLI Surface
+
+These commands are implemented in the current checkout and covered by CLI tests unless noted otherwise:
+
+| Command | Status | Boundary |
+|---|---|---|
+| `contextarr validate` | Current | Unified validation for supported local object types. |
+| `contextarr render` | Current | Derived static rendering only. |
+| `contextarr export` | Current | Profile-driven exports for Context Packs, Skills, and Agent Kits where profiles support them. |
+| `contextarr import` / `contextarr import-skill` | Current | Writes draft local objects only under caller-selected output roots. |
+| `contextarr scan` | Current | Deterministic local scanner; not a hosted registry scanner. |
+| `contextarr backup` / `contextarr restore` | Current | Restore writes quarantine output, not automatic activation. |
+| `contextarr rescan` | Current | Rebuilds the derived local SQLite index without requiring the API server or MCP. |
+| `contextarr list` | Current | Lists indexed packs, Skills, and Agent Kits with deterministic text or JSON output. |
+| `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. |
+| `contextarr health` | Current | Summarizes local index health or reports one object health without requiring the API server or MCP. |
+| `contextarr review` | Current | Lists local review items with deterministic filters, limits, text, and JSON output. |
+| `contextarr brief` | Current | Builds compact local index or object briefs for packs, Skills, and Agent Kits. |
+| `contextarr query` | Current | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
+| Commands that execute pack, Skill, or Agent Kit content | Rejected | Contextarr prepares data; it does not run agents or execute content. |
 
 ## Advanced Preview, Data-Only, Frozen
 
@@ -43,6 +64,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Signing implementation.
 - Agent runtime behavior.
 - Executable packs, executable Skills, or executable Agent Kits.
+- Benchmark fixtures and context-quality package from PR #2.
 
 ## Starter Pack Status
 

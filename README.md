@@ -38,7 +38,7 @@ Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, 
 - Local Fastify API for packs, records, search, health, exports, composition, collectors, backup, and restore surfaces.
 - React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, record detail, Pack Health, Review Queue, Export Center, and Composer.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, `AGENTS.md`, `CLAUDE.md`, and `llms.txt`.
-- CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, and quarantine restore.
+- CLI commands for Context Pack validation, rendering, export generation, local import drafts, scanner reports, backup, quarantine restore, rescan, list, inspect, health, review, brief, and query.
 - Read-only stdio MCP surfaces where implemented by the local MCP package.
 - Docker Compose local preview serving the built dashboard and API from one local origin.
 - Public-safe starter pack docs, release hardening docs, and screenshot placeholders.
@@ -131,6 +131,18 @@ pnpm --filter @contextarr/cli contextarr backup demo-packs --out data/backups
 pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out data/restored-packs
 ```
 
+Current local index helper commands:
+
+```bash
+pnpm --filter @contextarr/cli contextarr rescan --format json
+pnpm --filter @contextarr/cli contextarr list packs --format json
+pnpm --filter @contextarr/cli contextarr inspect pack ai-workstation-pack --format json
+pnpm --filter @contextarr/cli contextarr health --format json
+pnpm --filter @contextarr/cli contextarr review --format json
+pnpm --filter @contextarr/cli contextarr brief --format json
+pnpm --filter @contextarr/cli contextarr query "deployment" --type pack --format json
+```
+
 Run the read-only MCP server:
 
 ```bash
@@ -205,10 +217,14 @@ tools/                 Local verification and launch helpers
 - [docs/export-profiles.md](docs/export-profiles.md)
 - [docs/faq.md](docs/faq.md)
 - [docs/implementation-status.md](docs/implementation-status.md)
+- [docs/install.md](docs/install.md)
+- [docs/known-issues.md](docs/known-issues.md)
+- [docs/known-limitations.md](docs/known-limitations.md)
 - [docs/mcp.md](docs/mcp.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/pack-migrations.md](docs/pack-migrations.md)
 - [docs/quickstart.md](docs/quickstart.md)
+- [docs/release-checklist.md](docs/release-checklist.md)
 - [docs/release-process.md](docs/release-process.md)
 - [docs/restore.md](docs/restore.md)
 - [docs/roadmap.md](docs/roadmap.md)

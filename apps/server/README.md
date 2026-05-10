@@ -12,7 +12,7 @@ Implemented through Phase 17:
 - return UI-ready pack summary fields for cover metadata and review queue counts
 - return UI-ready Skill summary fields for targets, inputs, outputs, health, and review queue counts
 - harden search against punctuation-heavy UI input
-- support optional local API token auth via `CONTEXTARR_API_TOKEN`
+- support optional loopback local API token auth via `CONTEXTARR_API_TOKEN`
 - calculate deterministic Pack Health v0
 - calculate deterministic Skill Health v0
 - persist review item statuses in SQLite without mutating pack files
@@ -33,9 +33,9 @@ Rebuild the derived index:
 pnpm --filter @contextarr/server rescan
 ```
 
-The server binds to `127.0.0.1` by default and does not mutate pack or Skill files.
+The server binds to `127.0.0.1` by default and does not mutate pack or Skill files. Non-loopback binds require `CONTEXTARR_API_TOKEN`.
 
-Docker Compose sets `CONTEXTARR_HOST=0.0.0.0` and `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist` so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
+Docker Compose sets `CONTEXTARR_HOST=0.0.0.0`, a fake local-preview token, and `CONTEXTARR_WEB_DIST_DIR=/app/apps/web/dist` so the built web app and `/api/*` routes are served from `http://127.0.0.1:3210`.
 
 Export previews are generated from validated local pack files. The server does not write generated export files, fetch source URLs, call AI APIs, or upload data.
 
@@ -50,4 +50,4 @@ When `CONTEXTARR_API_TOKEN` is set, protected API routes require either:
 - `Authorization: Bearer <token>`
 - `X-Contextarr-Token: <token>`
 
-`GET /api/health` remains unauthenticated and reports whether auth is required.
+`GET /api/health` remains unauthenticated and reports path-redacted local status plus whether auth is required.
