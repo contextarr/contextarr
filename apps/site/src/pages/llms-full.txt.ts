@@ -1,7 +1,8 @@
 import { futureDirectionLines, links } from "../content/site";
 import {
+  advancedPreview,
+  coreWorkingNow,
   exactSecurityBoundaryBullets,
-  implementedFeatures,
   notIncludedYet
 } from "../content/status";
 
@@ -13,17 +14,11 @@ const body = `# Contextarr
 
 ## Product summary
 
-Contextarr is the source-backed context layer for AI assistants and agents. Validated. Ready for agents. Not an agent runner.
+Contextarr is a local-first Context Pack system for AI assistants and agents. Validated context files in, AI-ready exports out, human-readable dashboard, and read-only local MCP.
 
-It turns local files, records, source maps, validation rules, redaction rules, and export profiles into validated Context Packs.
+It turns local Markdown records, source maps, validation rules, redaction rules, review metadata, and export profiles into validated Context Packs.
 
-The first product shape is:
-
-Local sources in.
-Validated Context Packs out.
-Human-readable dashboard.
-Profile-driven AI exports.
-Read-only local MCP.
+Contextarr is not a chatbot, hosted memory vault, public marketplace, managed RAG app, or agent runner.
 
 ## Core object definitions
 
@@ -41,17 +36,21 @@ A local stdio read-only interface for pack summaries, record lookups, search, pr
 
 ## Current status
 
-Phase 12: Skills and Agent Kits terminology planning.
+Developer preview from main. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects and do not execute.
 
-The original PRD through Phase 11 is implemented locally. Phase 12 is documentation and terminology only. It does not add schema code, app functionality, runtime behavior, or execution capability.
+The repo currently includes 16 public-safe demo Context Packs, including 12 curated starter Context Packs.
 
-Contextarr is early-stage software and is not production ready.
+## Core working now
 
-## Implemented features
+${list(coreWorkingNow)}
 
-${list(implementedFeatures)}
+## Advanced preview
 
-## Not included yet
+${list(advancedPreview)}
+
+Contextarr prepares Agent Kits. It does not run them.
+
+## Not included
 
 ${list(notIncludedYet)}
 
@@ -61,14 +60,14 @@ ${list(exactSecurityBoundaryBullets)}
 - no telemetry
 - no hosted cloud vault
 - no public marketplace
-- no agent runner
+- no public registry
 - AI-drafted content requires human review
 
-## Future Skills and Agent Kits note
+## Skills and Agent Kits note
 
 ${futureDirectionLines.join("\n")}
 
-This is planned after the core Context Pack system is stable. Contextarr will prepare Agent Kits, not run them.
+These objects are data-only and frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
 
 ## Repository
 

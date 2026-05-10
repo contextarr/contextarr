@@ -25,6 +25,7 @@ const requiredFiles = [
   "docs/restore.md",
   "docs/troubleshooting.md",
   "docs/faq.md",
+  "docs/known-limitations.md",
   "docs/known-issues.md",
   "RELEASE_NOTES.md"
 ];
@@ -39,9 +40,20 @@ if (!failed) {
   const readme = read("README.md");
   const roadmap = read("docs/roadmap.md");
   const releaseProcess = read("docs/release-process.md");
+  const releaseChecklist = read("docs/release-checklist.md");
+  const knownLimitations = read("docs/known-limitations.md");
   const knownIssues = read("docs/known-issues.md");
   const packageJson = JSON.parse(read("package.json"));
-  const combined = [readme, roadmap, releaseProcess, knownIssues, read("docs/faq.md"), read("RELEASE_NOTES.md")].join("\n");
+  const combined = [
+    readme,
+    roadmap,
+    releaseProcess,
+    releaseChecklist,
+    knownLimitations,
+    knownIssues,
+    read("docs/faq.md"),
+    read("RELEASE_NOTES.md")
+  ].join("\n");
 
   const requiredReadmeLinks = [
     "docs/install.md",
@@ -52,6 +64,7 @@ if (!failed) {
     "docs/restore.md",
     "docs/troubleshooting.md",
     "docs/faq.md",
+    "docs/known-limitations.md",
     "docs/known-issues.md",
     "RELEASE_NOTES.md"
   ];
@@ -61,7 +74,7 @@ if (!failed) {
     }
   }
 
-  const requiredScripts = ["demo:verify", "ui:verify", "backup:verify", "release:verify"];
+  const requiredScripts = ["demo:verify", "ui:verify", "site:verify", "backup:verify", "release:verify"];
   for (const script of requiredScripts) {
     if (!packageJson.scripts?.[script]) {
       fail(`Root package scripts must include ${script}.`);
@@ -77,6 +90,7 @@ if (!failed) {
     "pnpm docker:verify",
     "pnpm demo:verify",
     "pnpm ui:verify",
+    "pnpm site:verify",
     "pnpm backup:verify",
     "verify-release-docs.mjs"
   ]) {
@@ -86,13 +100,18 @@ if (!failed) {
   }
 
   const requiredText = [
+    "v0.1.0-alpha.1",
     "No GitHub release",
     "No package publishing",
     "No public marketplace",
+    "No public registry",
     "No signing implementation",
+    "No support guarantee",
     "SQLite is a derived",
-    "Context Pack core v1.0 readiness",
-    "frozen behind the v1 bridge PRD gate"
+    "Context Pack core readiness",
+    "advanced-preview",
+    "frozen behind the v1 bridge gate",
+    "Contextarr prepares Agent Kits. It does not run them."
   ];
   for (const text of requiredText) {
     if (!combined.includes(text)) {
@@ -104,5 +123,5 @@ if (!failed) {
 if (failed) {
   process.exitCode = 1;
 } else {
-  console.log("Contextarr v1 release hardening docs verified.");
+  console.log("Contextarr alpha release hardening docs verified.");
 }

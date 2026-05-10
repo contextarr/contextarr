@@ -2,7 +2,7 @@
 
 Status: v1 core contract candidate.
 
-SQLite is derived state. Context Pack folders are source of truth.
+SQLite is a derived rebuildable index. Context Pack folders are source of truth.
 
 Default database path:
 
@@ -39,7 +39,7 @@ Research Delta fields are stored in derived tables, including:
 
 ## Advanced Preview Tables
 
-The current repo also has Skills, Agent Kits, and MCP metadata tables. They are completed advanced-preview work and remain frozen behind the v1 bridge gate:
+The current repo also has Skills, Agent Kits, and MCP metadata tables. They are advanced-preview data-only work and remain frozen behind the v1 bridge gate:
 
 - `skills`
 - `skill_instructions`
@@ -58,12 +58,13 @@ Do not add registry tables while Phase 29 is blocked.
 
 `pnpm --filter @contextarr/server rescan` rebuilds derived state from configured local directories.
 
-The v1 clean-rescan gate expects:
+The v1 clean-rescan gate derives its expected Context Pack counts from `demo-packs/`. In the current checkout, that means:
 
-- 5 demo packs indexed.
-- 25 records indexed.
-- 25 sources indexed.
-- 40 Context Pack export profiles indexed.
+- 16 demo Context Packs indexed.
+- 12 curated starter Context Packs among those demos.
+- 116 records indexed.
+- 116 sources indexed.
+- 128 Context Pack export profiles indexed.
 - 0 skipped Context Packs.
 - 0 skipped Skills.
 - 0 skipped Agent Kits.
@@ -86,4 +87,3 @@ SQLite must not become:
 - telemetry storage
 - marketplace cache
 - registry storage before Phase 29 is explicitly approved
-

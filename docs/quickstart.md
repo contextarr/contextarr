@@ -1,6 +1,6 @@
 # Contextarr Quickstart
 
-Contextarr is a local-first context pack manager for AI assistants and agents. The repository ships with five fake, public-safe demo packs so you can test the workflow without private data.
+Contextarr is a local-first Context Pack manager for AI assistants and agents. The repository ships with 16 public-safe demo Context Packs, including 12 curated starter Context Packs, so you can test the workflow without private data.
 
 ## Requirements
 
@@ -33,16 +33,26 @@ Docker serves the built web app and the API from the same local Fastify server. 
 ## Verify
 
 ```bash
+pnpm docs:verify
+pnpm demo:validate
+pnpm v1-core:verify
+pnpm site:verify
+```
+
+For the full local release gate, run:
+
+```bash
 pnpm release:verify
 ```
 
-For the latest second-PRD verification chain, run:
+## Demo Flow
 
-```bash
-pnpm phase21:verify
-```
-
-This runs the original launch verification chain plus Skill validation, demo Skill validation, Skill API checks, Skill Library web checks, and deterministic Skill Health/Review Queue checks.
+1. Validate the demo packs.
+2. Open the dashboard.
+3. Inspect the Pack Library, Pack Health, and a record detail source map.
+4. Preview a Codex or Claude export.
+5. Query through read-only MCP if needed.
+6. Delete the local SQLite database and rescan to confirm the index is rebuildable.
 
 ## Backup And Restore
 

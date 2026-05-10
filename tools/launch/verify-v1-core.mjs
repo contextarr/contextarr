@@ -38,6 +38,59 @@ function run(command, env = {}) {
   });
 }
 
+function countFiles(directory, predicate) {
+  if (!fs.existsSync(directory)) {
+    return 0;
+  }
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && predicate(entry.name))
+    .length;
+}
+
+function expectedDemoCounts() {
+  const demoRoot = path.join(repoRoot, "demo-packs");
+  const packDirs = fs
+    .readdirSync(demoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(demoRoot, entry.name))
+    .filter((packDir) => fs.existsSync(path.join(packDir, "contextarr-pack.json")))
+    .sort();
+
+  let recordsIndexed = 0;
+  let sourcesIndexed = 0;
+  let exportProfilesIndexed = 0;
+  let starterPacks = 0;
+
+  for (const packDir of packDirs) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(packDir, "contextarr-pack.json"), "utf8"));
+    if (manifest.starterPack === true) {
+      starterPacks += 1;
+    }
+
+    recordsIndexed += countFiles(path.join(packDir, "records"), (name) => name.endsWith(".md"));
+    exportProfilesIndexed += countFiles(path.join(packDir, "exports"), (name) => name.endsWith(".yaml") || name.endsWith(".yml"));
+
+    const sourcesPath = path.join(packDir, "sources", "sources.yaml");
+    if (fs.existsSync(sourcesPath)) {
+      const sourcesYaml = fs.readFileSync(sourcesPath, "utf8");
+      sourcesIndexed += sourcesYaml.match(/^\s*-\s+id:/gm)?.length ?? 0;
+    }
+  }
+
+  if (starterPacks !== 12) {
+    fail(`Expected 12 curated starter Context Packs, got ${starterPacks}.`);
+  }
+
+  return {
+    packsIndexed: packDirs.length,
+    recordsIndexed,
+    sourcesIndexed,
+    exportProfilesIndexed
+  };
+}
+
 removeIfExists("imported-skills/phase26-smoke");
 removeIfExists(".contextarr-cache/v1-core");
 fs.mkdirSync(path.join(cacheRoot, "imported-skills"), { recursive: true });
@@ -60,11 +113,8 @@ if (jsonStart === -1) {
   const result = JSON.parse(output.slice(jsonStart));
 
   const expectedCounts = {
-    packsIndexed: 5,
+    ...expectedDemoCounts(),
     packsSkipped: 0,
-    recordsIndexed: 25,
-    sourcesIndexed: 25,
-    exportProfilesIndexed: 40,
     skillsIndexed: 8,
     skillsSkipped: 0,
     agentKitsIndexed: 8,

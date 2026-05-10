@@ -29,6 +29,44 @@ function run(args) {
   }
 }
 
+function countFiles(directory, predicate) {
+  if (!fs.existsSync(directory)) {
+    return 0;
+  }
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && predicate(entry.name))
+    .length;
+}
+
+function expectedDemoCounts() {
+  const demoRoot = path.join(repoRoot, "demo-packs");
+  const packDirs = fs
+    .readdirSync(demoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(demoRoot, entry.name))
+    .filter((packDir) => fs.existsSync(path.join(packDir, "contextarr-pack.json")))
+    .sort();
+
+  let records = 0;
+  let starterPacks = 0;
+
+  for (const packDir of packDirs) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(packDir, "contextarr-pack.json"), "utf8"));
+    if (manifest.starterPack === true) {
+      starterPacks += 1;
+    }
+    records += countFiles(path.join(packDir, "records"), (name) => name.endsWith(".md"));
+  }
+
+  if (starterPacks !== 12) {
+    throw new Error(`Expected 12 curated starter Context Packs, got ${starterPacks}.`);
+  }
+
+  return { packs: packDirs.length, records };
+}
+
 async function getJson(path) {
   const { statusCode, body } = await request(path);
   if (statusCode < 200 || statusCode >= 300) {
@@ -118,11 +156,12 @@ async function verify() {
   run(["build"]);
   run(["up", "-d"]);
 
+  const expected = expectedDemoCounts();
   const health = await waitForHealth();
   if (
     health.status !== "ok" ||
-    health.counts?.packs !== 5 ||
-    health.counts?.records !== 25 ||
+    health.counts?.packs !== expected.packs ||
+    health.counts?.records !== expected.records ||
     health.counts?.skills !== 8 ||
     health.counts?.skillInstructions !== 24 ||
     health.counts?.agentKits !== 8 ||

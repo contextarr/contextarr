@@ -1,6 +1,8 @@
 # Known Issues
 
-This list tracks known v1 core readiness gaps. It is not a roadmap expansion request.
+Known issues are tracked separately from public launch limitations.
+
+For launch-facing limitations, see [known-limitations.md](known-limitations.md).
 
 ## Current Gaps
 
@@ -9,10 +11,11 @@ This list tracks known v1 core readiness gaps. It is not a roadmap expansion req
 - Composer save-as-draft-pack for Context Packs is implemented as a local draft workflow only. It does not activate, approve, or publish composed packs.
 - Screenshots are placeholders only.
 - Docker Compose is a local preview path, not a hardened production deployment.
-- Skills and Agent Kits exist as advanced-preview work but are frozen behind the v1 bridge PRD gate.
+- Skills and Agent Kits exist as advanced-preview data-only work but are frozen behind the v1 bridge gate.
 
 ## Not Bugs
 
 - SQLite can be deleted and rebuilt.
-- Ignored generated exports, rendered output, local databases, imported drafts, and local Agent Kits should not appear in Git.
+- The repo currently contains 16 public-safe demo Context Packs, including 12 curated starter Context Packs and legacy/non-starter demo packs.
+- Ignored generated exports, rendered output, local databases, imported drafts, restored packs, and local Agent Kits should not appear in Git.
 - API token auth is optional in local development and disabled when `CONTEXTARR_API_TOKEN` is empty.

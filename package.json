@@ -64,8 +64,9 @@
     "workflow-scope:verify": "pnpm v1-core:verify && node tools/launch/verify-v1-decisions.mjs",
     "demo:verify": "pnpm demo:validate && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && node tools/launch/verify-v1-core.mjs",
     "ui:verify": "pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
+    "site:verify": "pnpm --filter @contextarr/site check && pnpm --filter @contextarr/site build",
     "backup:verify": "node tools/launch/verify-backups.mjs prepare && pnpm --filter @contextarr/backups test && pnpm --filter @contextarr/cli contextarr backup demo-packs --out .contextarr-cache/backup-smoke/backups --backup-id backup-smoke --format json && pnpm --filter @contextarr/cli contextarr restore .contextarr-cache/backup-smoke/backups/backup-smoke --out .contextarr-cache/backup-smoke/restored --format json && node tools/launch/verify-backups.mjs validate-restored && node tools/launch/verify-backups.mjs check",
-    "release:verify": "pnpm v1-core:verify && pnpm compatibility:verify && pnpm security:verify && pnpm workflow-scope:verify && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
+    "release:verify": "pnpm v1-core:verify && pnpm compatibility:verify && pnpm security:verify && pnpm workflow-scope:verify && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm site:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

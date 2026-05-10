@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  credibility-gates:
+    name: Credibility Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify docs
+        run: pnpm docs:verify
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Validate demo packs
+        run: pnpm demo:validate
+
+      - name: Build web dashboard
+        run: pnpm --filter @contextarr/web build
+
+      - name: Verify public site
+        run: pnpm site:verify
+
+      - name: Run server tests
+        run: pnpm --filter @contextarr/server test
+
+      - name: Run CLI tests
+        run: pnpm --filter @contextarr/cli test
+
+      - name: Run MCP tests
+        run: pnpm --filter @contextarr/mcp test
+
+      - name: Docker smoke
+        run: pnpm docker:verify

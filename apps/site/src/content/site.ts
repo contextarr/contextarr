@@ -26,14 +26,15 @@ export const proofChips = [
 
 export const contextPackExamples = [
   "AI Workstation Pack",
-  "Jellyfin Server Pack",
+  "OpenAI Prompt Engineering Pack",
   "Claude Code Project Pack",
-  "Internal Support KB Pack",
-  "Fake Product Line Pack"
+  "Docker Containers Pack",
+  "Obsidian Vault Pack"
 ];
 
 export const futureDirectionLines = [
   "Skills tell agents how to work.",
   "Context Packs tell agents what to know.",
-  "Agent Kits combine both for a specific task."
+  "Agent Kits combine both for a specific task.",
+  "Contextarr prepares Agent Kits. It does not run them."
 ];
