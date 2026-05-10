@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
+import { importToDraftPack } from "@contextarr/importers";
 import { validatePack } from "@contextarr/pack-validator";
 import { createApp } from "./api";
 import { getAgentKitIndexDirs, getSkillIndexDirs } from "./config";
@@ -811,6 +812,112 @@ describe("Contextarr API", () => {
       await app.close();
       fixtureContext.db.close();
       fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps draft, imported, composed, and restored packs outside active API surfaces after rescan", async () => {
+    db.close();
+    const activePacksDir = copyDemoPacksFixture("contextarr-active-boundary-");
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-boundary-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-boundary-"));
+    const importedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-import-boundary-"));
+    const restoreOutDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-restore-boundary-"));
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+    const hiddenPackIds = [
+      "boundary-collector-draft",
+      "boundary-imported-draft",
+      "boundary-composed-draft",
+      "valid-minimal-pack"
+    ];
+
+    try {
+      const collector = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/markdown-folder/run",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+          packId: "boundary-collector-draft",
+          name: "Boundary Collector Draft"
+        }
+      });
+      importToDraftPack({
+        inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+        kind: "markdown",
+        packId: "boundary-imported-draft",
+        outputDir: importedPacksDir
+      });
+      const composed = await app.inject({
+        method: "POST",
+        url: "/api/compose/save-pack",
+        payload: {
+          packId: "boundary-composed-draft",
+          name: "Boundary Composed Draft",
+          target: "codex",
+          format: "markdown",
+          privacyMode: "redacted",
+          selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+        }
+      });
+      const restoredPackRoot = path.join(restoreOutDir, "boundary-restore", "valid-minimal-pack");
+      fs.mkdirSync(path.dirname(restoredPackRoot), { recursive: true });
+      fs.cpSync(path.join(repoRoot, "packages/pack-validator/test/fixtures/valid-minimal-pack"), restoredPackRoot, {
+        recursive: true
+      });
+      fs.writeFileSync(
+        path.join(restoreOutDir, "boundary-restore", "restore-report.json"),
+        `${JSON.stringify(
+          {
+            schemaVersion: "contextarr.restore-report.v1",
+            status: "restored_to_quarantine",
+            activation: { automaticActivation: false, requiresManualReview: true },
+            packs: [{ packId: "valid-minimal-pack", quarantineStatus: "review_required" }]
+          },
+          null,
+          2
+        )}\n`,
+        "utf8"
+      );
+      const rescan = await app.inject({ method: "POST", url: "/api/rescan" });
+      const list = await app.inject({ method: "GET", url: "/api/packs" });
+      const search = await app.inject({ method: "GET", url: "/api/search?q=boundary" });
+
+      expect(collector.statusCode).toBe(201);
+      expect(collector.json()).toMatchObject({ draft: { indexed: false, status: "review_required" } });
+      expect(composed.statusCode).toBe(201);
+      expect(composed.json()).toMatchObject({ draft: { indexed: false, status: "review_required" } });
+      expect(fs.existsSync(path.join(restoredPackRoot, "contextarr-pack.json"))).toBe(true);
+      expect(rescan.statusCode).toBe(200);
+      expect(list.statusCode).toBe(200);
+      expect(search.statusCode).toBe(200);
+      expect(JSON.stringify(list.json())).not.toContain("boundary");
+
+      for (const packId of hiddenPackIds) {
+        const detail = await app.inject({ method: "GET", url: `/api/packs/${packId}` });
+        const preview = await app.inject({ method: "GET", url: `/api/packs/${packId}/exports/not-real/preview` });
+
+        expect(search.json().results).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ packId })])
+        );
+        expect(search.json().results).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: packId })])
+        );
+        expect(detail.statusCode).toBe(404);
+        expect(preview.statusCode).toBe(404);
+        expect(preview.json()).toMatchObject({ error: "not_found" });
+      }
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      for (const dir of [activePacksDir, draftPacksDir, composedPacksDir, importedPacksDir, restoreOutDir]) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
     }
   });
 
