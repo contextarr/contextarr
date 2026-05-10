@@ -56,6 +56,7 @@
     "phase27:verify": "pnpm phase26:verify && pnpm agent-kit-templates:validate && pnpm --filter @contextarr/server test && pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "phase28:verify": "pnpm docs:verify && node tools/launch/verify-phase28-docs.mjs",
     "v1-core:verify": "pnpm docs:verify && pnpm typecheck && pnpm test && pnpm demo:validate && pnpm --filter @contextarr/cli contextarr validate demo-packs --json && node tools/launch/verify-v1-core.mjs && pnpm --filter @contextarr/web build",
+    "advanced-preview:verify": "pnpm skills:validate && pnpm agent-kits:validate && pnpm --filter @contextarr/skill-validator test && pnpm --filter @contextarr/agent-kit-validator test && node tools/launch/verify-advanced-preview.mjs",
     "compatibility:verify": "pnpm v1-core:verify && vitest run packages/pack-validator/src/compatibility.test.ts",
     "security:verify": "pnpm v1-core:verify && pnpm scanner:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts && node tools/launch/verify-security.mjs",
     "scanner:verify": "pnpm --filter @contextarr/security-scanner typecheck && pnpm --filter @contextarr/security-scanner test && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/clean-context-pack --format json && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/suspicious-but-reviewable-pack --format json && node tools/launch/verify-scanner.mjs",
@@ -66,7 +67,7 @@
     "ui:verify": "pnpm --filter @contextarr/web test && pnpm --filter @contextarr/web build",
     "site:verify": "pnpm --filter @contextarr/site check && pnpm --filter @contextarr/site build",
     "backup:verify": "node tools/launch/verify-backups.mjs prepare && pnpm --filter @contextarr/backups test && pnpm --filter @contextarr/cli contextarr backup demo-packs --out .contextarr-cache/backup-smoke/backups --backup-id backup-smoke --format json && pnpm --filter @contextarr/cli contextarr restore .contextarr-cache/backup-smoke/backups/backup-smoke --out .contextarr-cache/backup-smoke/restored --format json && node tools/launch/verify-backups.mjs validate-restored && node tools/launch/verify-backups.mjs check",
-    "release:verify": "pnpm v1-core:verify && pnpm compatibility:verify && pnpm security:verify && pnpm workflow-scope:verify && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm site:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
+    "release:verify": "pnpm v1-core:verify && pnpm advanced-preview:verify && pnpm compatibility:verify && pnpm security:verify && pnpm workflow-scope:verify && pnpm docker:verify && pnpm demo:verify && pnpm ui:verify && pnpm site:verify && pnpm backup:verify && pnpm composer:verify && node tools/launch/verify-release-docs.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

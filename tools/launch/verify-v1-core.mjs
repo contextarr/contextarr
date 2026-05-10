@@ -93,16 +93,18 @@ function expectedDemoCounts() {
 
 removeIfExists("imported-skills/phase26-smoke");
 removeIfExists(".contextarr-cache/v1-core");
+fs.mkdirSync(path.join(cacheRoot, "skills"), { recursive: true });
 fs.mkdirSync(path.join(cacheRoot, "imported-skills"), { recursive: true });
+fs.mkdirSync(path.join(cacheRoot, "demo-agent-kits"), { recursive: true });
 fs.mkdirSync(path.join(cacheRoot, "agent-kits"), { recursive: true });
 fs.mkdirSync(path.join(cacheRoot, "data"), { recursive: true });
 
 const output = run("pnpm --filter @contextarr/server rescan", {
   CONTEXTARR_PACKS_DIR: "./demo-packs",
   CONTEXTARR_DATABASE_PATH: path.join(cacheRoot, "data", "contextarr.db"),
-  CONTEXTARR_SKILLS_DIR: "./demo-skills",
+  CONTEXTARR_SKILLS_DIR: path.join(cacheRoot, "skills"),
   CONTEXTARR_IMPORTED_SKILLS_DIR: path.join(cacheRoot, "imported-skills"),
-  CONTEXTARR_DEMO_AGENT_KITS_DIR: "./demo-agent-kits",
+  CONTEXTARR_DEMO_AGENT_KITS_DIR: path.join(cacheRoot, "demo-agent-kits"),
   CONTEXTARR_AGENT_KITS_DIR: path.join(cacheRoot, "agent-kits")
 });
 
@@ -115,9 +117,9 @@ if (jsonStart === -1) {
   const expectedCounts = {
     ...expectedDemoCounts(),
     packsSkipped: 0,
-    skillsIndexed: 8,
+    skillsIndexed: 0,
     skillsSkipped: 0,
-    agentKitsIndexed: 8,
+    agentKitsIndexed: 0,
     agentKitsSkipped: 0,
     reviewItemsGenerated: 0
   };

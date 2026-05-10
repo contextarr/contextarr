@@ -41,6 +41,7 @@ These commands are implemented in the current checkout and covered by CLI tests 
 
 - Non-executable Skills as data-only instruction artifacts.
 - Non-executable Agent Kits as data-only compositions of Context Packs and Skills.
+- Skills and Agent Kits are data-only and non-executable.
 - Skill and Agent Kit validation, demo fixtures, SQLite/API indexing, search, health/review items, read-only UI views, export previews, and read-only MCP tools where implemented.
 - Local Skill importers gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Agent Kit templates that create unreviewed local draft Agent Kits only.

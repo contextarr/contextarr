@@ -8,6 +8,7 @@ This repository is preparing for `v0.1.0-alpha.1` developer preview. These steps
 pnpm docs:verify
 pnpm demo:validate
 pnpm v1-core:verify
+pnpm advanced-preview:verify
 pnpm compatibility:verify
 pnpm security:verify
 pnpm site:verify

@@ -74,7 +74,14 @@ if (!failed) {
     }
   }
 
-  const requiredScripts = ["demo:verify", "ui:verify", "site:verify", "backup:verify", "release:verify"];
+  const requiredScripts = [
+    "demo:verify",
+    "ui:verify",
+    "site:verify",
+    "backup:verify",
+    "advanced-preview:verify",
+    "release:verify"
+  ];
   for (const script of requiredScripts) {
     if (!packageJson.scripts?.[script]) {
       fail(`Root package scripts must include ${script}.`);
@@ -84,6 +91,7 @@ if (!failed) {
   const releaseScript = packageJson.scripts?.["release:verify"] ?? "";
   for (const required of [
     "pnpm v1-core:verify",
+    "pnpm advanced-preview:verify",
     "pnpm compatibility:verify",
     "pnpm security:verify",
     "pnpm workflow-scope:verify",
