@@ -1,5 +1,5 @@
 id: fake-product-line-chatgpt
-name: Fake Product Line ChatGPT Export
+name: Product Line ChatGPT Export
 target: chatgpt
 format: markdown
 privacy_mode: redacted

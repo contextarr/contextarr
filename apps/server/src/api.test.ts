@@ -153,10 +153,10 @@ describe("Contextarr API", () => {
       status: "ok",
       authRequired: false,
       counts: {
-        packs: 16,
-        records: 116,
-        sources: 116,
-        exportProfiles: 128,
+        packs: 15,
+        records: 111,
+        sources: 111,
+        exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -2663,8 +2663,8 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       ok: true,
-      packsIndexed: 16,
-      recordsIndexed: 116,
+      packsIndexed: 15,
+      recordsIndexed: 111,
       skillsIndexed: 8,
       skillInstructionsIndexed: 24,
       agentKitsIndexed: 8,

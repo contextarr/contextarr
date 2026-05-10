@@ -7,7 +7,7 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 ### Core Working Now
 
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
-- Sixteen public-safe demo Context Packs, including 12 curated starter Context Packs.
+- Fifteen public-safe demo Context Packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index.
 - Local API and React/Vite dashboard for pack library, records, health, review, exports, composition, backup, and restore surfaces.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.

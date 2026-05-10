@@ -23,7 +23,7 @@
     "toolExecution": false
   },
   "contextPacks": [
-    "jellyfin-server-pack",
+    "jellyfin-media-server-pack",
     "ai-workstation-pack"
   ],
   "skills": [

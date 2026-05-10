@@ -492,10 +492,10 @@ A new user can immediately understand the product without connecting private dat
 Create five demo packs:
 
 1. AI Workstation Pack.
-2. Jellyfin Server Pack.
+2. Jellyfin Media Server Pack.
 3. Claude Code Project Pack.
 4. Internal Support KB Pack.
-5. Fake Product Line Pack.
+5. Product Line Pack.
 
 Each demo pack includes:
 
@@ -552,7 +552,7 @@ Create or update:
 
 ```text
 demo-packs/ai-workstation-pack/**
-demo-packs/jellyfin-server-pack/**
+demo-packs/jellyfin-media-server-pack/**
 demo-packs/claude-code-project-pack/**
 demo-packs/internal-support-kb-pack/**
 demo-packs/fake-product-line-pack/**

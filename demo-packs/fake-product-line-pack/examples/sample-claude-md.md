@@ -1,6 +1,6 @@
-# Fake Product Line CLAUDE.md Sample
+# Product Line CLAUDE.md Sample
 
-This fake public-safe sample shows how Fake Product Line context can be prepared for Claude-style project guidance.
+This public-safe sample shows how Product Line context can be prepared for Claude-style project guidance.
 
 ## Boundaries
 

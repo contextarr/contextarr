@@ -28,7 +28,7 @@
     "goal": "Prepare a troubleshooting brief from fake Jellyfin and workstation context.",
     "description": "Combines fake homelab server and workstation context with troubleshooting and support-writing Skills.",
     "contextPacks": [
-      "jellyfin-server-pack",
+      "jellyfin-media-server-pack",
       "ai-workstation-pack"
     ],
     "skills": [

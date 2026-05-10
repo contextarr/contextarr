@@ -1,6 +1,6 @@
-# Fake Product Line AGENTS.md Sample
+# Product Line AGENTS.md Sample
 
-Use this fake public-safe sample as an assistant handoff outline for Fake Product Line.
+Use this public-safe sample as an assistant handoff outline for Product Line.
 
 - Respect Contextarr redaction tags.
 - Use only approved records from this demo pack.

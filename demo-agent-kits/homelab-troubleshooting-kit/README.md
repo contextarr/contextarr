@@ -12,7 +12,7 @@ Prepare a calm troubleshooting brief without requesting credentials or remote ac
 
 ## Included Context Packs
 
-- jellyfin-server-pack
+- jellyfin-media-server-pack
 - ai-workstation-pack
 
 ## Included Skills

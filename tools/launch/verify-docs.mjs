@@ -80,7 +80,7 @@ if (!failed) {
     "Contextarr prepares Agent Kits. It does not run them.",
     "Skills and Agent Kits are advanced-preview data objects",
     "12 curated starter Context Packs",
-    "16 public-safe demo packs",
+    "15 public-safe demo packs",
     "docs/implementation-status.md",
     "docs/known-limitations.md",
     "docs/quickstart.md",

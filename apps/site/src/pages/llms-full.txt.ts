@@ -38,7 +38,7 @@ A local stdio read-only interface for pack summaries, record lookups, search, pr
 
 Developer preview from main. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects and do not execute.
 
-The repo currently includes 16 public-safe demo Context Packs, including 12 curated starter Context Packs.
+The repo currently includes 15 public-safe demo Context Packs, including 12 curated starter Context Packs.
 
 ## Core working now
 

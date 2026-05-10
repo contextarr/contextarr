@@ -7,10 +7,20 @@ These packs are data-only examples used to exercise the validator and provide la
 Included packs:
 
 - `ai-workstation-pack`
-- `jellyfin-server-pack`
+- `aws-infrastructure-pack`
 - `claude-code-project-pack`
-- `internal-support-kb-pack`
+- `docker-containers-pack`
 - `fake-product-line-pack`
+- `github-workflow-pack`
+- `google-workspace-pack`
+- `home-assistant-pack`
+- `internal-support-kb-pack`
+- `jellyfin-media-server-pack`
+- `obsidian-vault-pack`
+- `openai-prompt-engineering-pack`
+- `tailscale-vpn-pack`
+- `unifi-network-pack`
+- `vscode-setup-pack`
 
 Validate them with:
 

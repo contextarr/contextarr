@@ -30,11 +30,11 @@ describe("SQLite indexer", () => {
       const stats = getIndexStats(db);
 
       expect(result).toMatchObject({
-        packsIndexed: 16,
+        packsIndexed: 15,
         packsSkipped: 0,
-        recordsIndexed: 116,
-        sourcesIndexed: 116,
-        exportProfilesIndexed: 128,
+        recordsIndexed: 111,
+        sourcesIndexed: 111,
+        exportProfilesIndexed: 120,
         skillsIndexed: 8,
         skillsSkipped: 0,
         skillInstructionsIndexed: 24,
@@ -48,10 +48,10 @@ describe("SQLite indexer", () => {
         agentKitExportProfilesIndexed: 24
       });
       expect(stats).toMatchObject({
-        packs: 16,
-        records: 116,
-        sources: 116,
-        exportProfiles: 128,
+        packs: 15,
+        records: 111,
+        sources: 111,
+        exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -77,10 +77,10 @@ describe("SQLite indexer", () => {
       rebuildIndex(db, demoPacksDir, demoSkillsDir, demoAgentKitsDir);
 
       expect(getIndexStats(db)).toMatchObject({
-        packs: 16,
-        records: 116,
-        sources: 116,
-        exportProfiles: 128,
+        packs: 15,
+        records: 111,
+        sources: 111,
+        exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,

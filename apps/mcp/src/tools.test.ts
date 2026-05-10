@@ -47,7 +47,7 @@ describe("Contextarr MCP tools", () => {
     const result = await listPacksTool(context, { limit: 20 });
 
     expect(result.ok).toBe(true);
-    expect(result.count).toBe(16);
+    expect(result.count).toBe(15);
     expect(result.packs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

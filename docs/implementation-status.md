@@ -5,7 +5,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 ## Core Working Now
 
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
-- Sixteen public-safe demo Context Packs, including 12 curated starter packs.
+- Fifteen public-safe demo Context Packs, including 12 curated starter packs.
 - Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
 - Local API for packs, records, search, health, exports, collectors, composition, backup, and restore surfaces.
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
@@ -84,4 +84,4 @@ Current starter packs are curated local examples, not marketplace listings. The 
 11. Tailscale VPN Pack
 12. Obsidian Vault Pack
 
-The repository also keeps legacy/non-starter demo packs for fixture coverage. Third-party marks are identifiers only and do not imply endorsement, partnership, official status, or ownership of pack content.
+The repository also keeps non-starter demo packs for fixture coverage. Third-party marks are identifiers only and do not imply endorsement, partnership, official status, or ownership of pack content.

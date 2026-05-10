@@ -1,5 +1,5 @@
 id: fake-product-line-codex
-name: Fake Product Line Codex Export
+name: Product Line Codex Export
 target: codex
 format: markdown
 privacy_mode: redacted

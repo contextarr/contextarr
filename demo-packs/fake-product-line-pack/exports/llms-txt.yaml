@@ -1,5 +1,5 @@
 id: fake-product-line-llms-txt
-name: Fake Product Line llms.txt Export
+name: Product Line llms.txt Export
 target: llms_txt
 format: text
 privacy_mode: redacted

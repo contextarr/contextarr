@@ -3,7 +3,7 @@ supported_targets:
   - claude
   - codex
 required_context_packs:
-  - jellyfin-server-pack
+  - jellyfin-media-server-pack
   - ai-workstation-pack
 required_skills:
   - homelab-troubleshooting-skill
@@ -13,11 +13,11 @@ blocked_trust_levels:
   - blocked
   - deprecated
 pairings:
-  - context_pack: jellyfin-server-pack
+  - context_pack: jellyfin-media-server-pack
     skill: homelab-troubleshooting-skill
     target: codex
     status: supported
-  - context_pack: jellyfin-server-pack
+  - context_pack: jellyfin-media-server-pack
     skill: support-ticket-writing-skill
     target: codex
     status: supported

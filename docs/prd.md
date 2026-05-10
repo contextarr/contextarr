@@ -1102,7 +1102,7 @@ contextarr/
 
   demo-packs/
     ai-workstation-pack/
-    jellyfin-server-pack/
+    jellyfin-media-server-pack/
     claude-code-project-pack/
     internal-support-kb-pack/
     fake-product-line-pack/
@@ -1204,10 +1204,10 @@ Goals:
 Create realistic fake packs:
 
 1. AI Workstation Pack.
-2. Jellyfin Server Pack.
+2. Jellyfin Media Server Pack.
 3. Claude Code Project Pack.
 4. Internal Support KB Pack.
-5. Fake Product Line Pack.
+5. Product Line Pack.
 
 Deliverables:
 
@@ -1490,7 +1490,7 @@ Create realistic fake demo packs for Contextarr.
 
 Create these packs under demo-packs:
 1. ai-workstation-pack
-2. jellyfin-server-pack
+2. jellyfin-media-server-pack
 3. claude-code-project-pack
 4. internal-support-kb-pack
 5. fake-product-line-pack

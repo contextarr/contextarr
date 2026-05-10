@@ -20,7 +20,6 @@ const expectedPackIds = [
   "home-assistant-pack",
   "internal-support-kb-pack",
   "jellyfin-media-server-pack",
-  "jellyfin-server-pack",
   "obsidian-vault-pack",
   "openai-prompt-engineering-pack",
   "tailscale-vpn-pack",

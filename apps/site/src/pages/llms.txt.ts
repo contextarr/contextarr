@@ -9,7 +9,7 @@ It turns local Markdown records, source maps, validation rules, redaction rules,
 Core status:
 - developer preview from main
 - core Context Pack workflows are being stabilized
-- 16 public-safe demo Context Packs
+- 15 public-safe demo Context Packs
 - 12 curated starter Context Packs
 - SQLite is a rebuildable derived index
 - dashboard, Pack Health, exports, CLI, and read-only MCP exist

@@ -41,7 +41,7 @@ describe("Context Pack v1 security fixture coverage", () => {
   it("keeps public-safe demo packs free of security issues", () => {
     const demoPacks = [
       "ai-workstation-pack",
-      "jellyfin-server-pack",
+      "jellyfin-media-server-pack",
       "claude-code-project-pack",
       "internal-support-kb-pack",
       "fake-product-line-pack"

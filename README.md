@@ -33,7 +33,7 @@ Contextarr is not a chatbot, hosted memory vault, managed RAG app, marketplace, 
 ## Core Working Now
 
 - Context Pack schema, validation, and deterministic validation reports.
-- 16 public-safe demo packs, including 12 curated starter Context Packs.
+- 15 public-safe demo packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index derived from local files.
 - Local Fastify API for packs, records, search, health, exports, composition, collectors, backup, and restore surfaces.
 - React/Vite dashboard with Pack Library, starter/local/imported grouping, pack detail, record detail, Pack Health, Review Queue, Export Center, and Composer.

@@ -1,6 +1,6 @@
 # Contextarr Quickstart
 
-Contextarr is a local-first Context Pack manager for AI assistants and agents. The repository ships with 16 public-safe demo Context Packs, including 12 curated starter Context Packs, so you can test the workflow without private data.
+Contextarr is a local-first Context Pack manager for AI assistants and agents. The repository ships with 15 public-safe demo Context Packs, including 12 curated starter Context Packs, so you can test the workflow without private data.
 
 ## Requirements
 

@@ -60,11 +60,11 @@ Do not add registry tables while Phase 29 is blocked.
 
 The v1 clean-rescan gate derives its expected Context Pack counts from `demo-packs/`. In the current checkout, that means:
 
-- 16 demo Context Packs indexed.
+- 15 demo Context Packs indexed.
 - 12 curated starter Context Packs among those demos.
-- 116 records indexed.
-- 116 sources indexed.
-- 128 Context Pack export profiles indexed.
+- 111 records indexed.
+- 111 sources indexed.
+- 120 Context Pack export profiles indexed.
 - 0 skipped Context Packs.
 - 0 skipped Skills.
 - 0 skipped Agent Kits.

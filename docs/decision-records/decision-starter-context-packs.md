@@ -16,7 +16,7 @@ The repo already includes non-executable Skills and Agent Kits as data-only obje
 - Use `starterPack`, `starterCategory`, and `starterSortOrder` as manifest metadata and derived SQLite/API/UI fields.
 - Replace the Notion starter with an Obsidian starter.
 - Keep legacy demo packs as non-starter examples unless explicitly flagged later.
-- Keep Jellyfin Server Pack as legacy demo content and use Jellyfin Media Server Pack for the starter set.
+- Retire the legacy Jellyfin demo from the indexed demo set and use Jellyfin Media Server Pack as the canonical Jellyfin example.
 - Use brand IDs and local logo assets only as identifiers.
 - Keep all starter content synthetic, original, source-backed, public-safe, and non-executable.
 

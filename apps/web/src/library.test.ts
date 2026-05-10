@@ -10,7 +10,13 @@ import {
 import type { PackSummary } from "./types";
 
 const packs: PackSummary[] = [
-  pack({ id: "jellyfin-server-pack", name: "Jellyfin Server Pack", type: "server", healthScore: 88, recordCount: 5 }),
+  pack({
+    id: "jellyfin-media-server-pack",
+    name: "Jellyfin Media Server Pack",
+    type: "self_hosted_media",
+    healthScore: 88,
+    recordCount: 8
+  }),
   pack({
     id: "ai-workstation-pack",
     name: "AI Workstation Pack",
@@ -35,15 +41,15 @@ describe("Pack library utilities", () => {
     expect(filterAndSortPacks(packs, filters({ query: "workstation" })).map((item) => item.id)).toEqual([
       "ai-workstation-pack"
     ]);
-    expect(filterAndSortPacks(packs, filters({ type: "server" })).map((item) => item.id)).toEqual([
-      "jellyfin-server-pack"
+    expect(filterAndSortPacks(packs, filters({ type: "self_hosted_media" })).map((item) => item.id)).toEqual([
+      "jellyfin-media-server-pack"
     ]);
     expect(filterAndSortPacks(packs, filters({ trustLevel: "verified" })).map((item) => item.id)).toEqual([
       "internal-support-kb-pack"
     ]);
     expect(filterAndSortPacks(packs, filters({ trustLevel: "curated" })).map((item) => item.id)).toEqual([
       "ai-workstation-pack",
-      "jellyfin-server-pack"
+      "jellyfin-media-server-pack"
     ]);
     expect(filterAndSortPacks(packs, filters({ healthStatus: "degraded" })).map((item) => item.id)).toEqual([
       "internal-support-kb-pack"
@@ -82,23 +88,23 @@ describe("Pack library utilities", () => {
   });
 
   it("uses search result pack ids when local summary text does not match", () => {
-    const results = [{ id: "record-1", kind: "record" as const, title: "Record", packId: "jellyfin-server-pack" }];
+    const results = [{ id: "record-1", kind: "record" as const, title: "Record", packId: "jellyfin-media-server-pack" }];
 
     expect(filterAndSortPacks(packs, filters({ query: "playback" }), results).map((item) => item.id)).toEqual([
-      "jellyfin-server-pack"
+      "jellyfin-media-server-pack"
     ]);
   });
 
   it("sorts by health and records", () => {
     expect(filterAndSortPacks(packs, filters({ sortBy: "health" })).map((item) => item.id)).toEqual([
       "ai-workstation-pack",
-      "jellyfin-server-pack",
+      "jellyfin-media-server-pack",
       "internal-support-kb-pack"
     ]);
     expect(filterAndSortPacks(packs, filters({ sortBy: "records" })).map((item) => item.id)).toEqual([
       "ai-workstation-pack",
-      "internal-support-kb-pack",
-      "jellyfin-server-pack"
+      "jellyfin-media-server-pack",
+      "internal-support-kb-pack"
     ]);
   });
 

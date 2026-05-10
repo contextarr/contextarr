@@ -24,7 +24,6 @@ describe("loadPacks", () => {
         "home-assistant-pack",
         "internal-support-kb-pack",
         "jellyfin-media-server-pack",
-        "jellyfin-server-pack",
         "obsidian-vault-pack",
         "openai-prompt-engineering-pack",
         "tailscale-vpn-pack",
@@ -37,9 +36,9 @@ describe("loadPacks", () => {
   it("loads expected demo totals", () => {
     const result = loadPacks(demoPacksDir);
 
-    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(116);
-    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(116);
-    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(128);
+    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(111);
+    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(111);
+    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(120);
   });
 
   it("skips invalid packs without failing the whole load", () => {

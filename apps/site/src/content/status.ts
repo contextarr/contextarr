@@ -1,6 +1,6 @@
 export const coreWorkingNow = [
   "Context Pack schema and validator",
-  "16 public-safe demo Context Packs",
+  "15 public-safe demo Context Packs",
   "12 curated starter Context Packs",
   "SQLite derived index",
   "Fastify local API",

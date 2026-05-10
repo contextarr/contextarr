@@ -5,7 +5,7 @@
 Contextarr currently supports a working local Context Pack loop:
 
 - Context Pack schema validation, CLI validation, deterministic validation reports, and local scanner reports.
-- Sixteen public-safe demo Context Packs, including 12 curated starter Context Packs.
+- Fifteen public-safe demo Context Packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index and local Fastify API.
 - React/Vite dashboard with Library, pack detail, record detail, Pack Health, Skill Health, Review Queue, Exports, and Composer.
 - Sanitized Markdown rendering and static HTML rendering.
@@ -54,7 +54,7 @@ The core readiness lane is:
 
 ## Near-Term
 
-- Repair stale release gates for the 16-pack demo set and 12 starter Context Packs.
+- Repair stale release gates for the 15-pack demo set and 12 starter Context Packs.
 - Finish `v0.1.0-alpha.1` release docs and known limitations.
 - Keep reviewed screenshots current and add a short demo video.
 - Improve public-site and README framing around Core Now vs Advanced Preview.
