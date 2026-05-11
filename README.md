@@ -150,7 +150,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - Draft Intake activation moves a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the local index; it does not export, publish, perform network access, or expose candidates through MCP.
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
-- Context Readiness is planned as a future report layer; Local Observability is planned as local evidence metadata only, not product telemetry.
+- Context Readiness is a read-only report layer; Local Observability exposes bounded local evidence metadata only, not product telemetry.
 - The scanner is a gate, not a guarantee; human review remains required before activation, export, or MCP exposure. No registry or marketplace exposure exists in the current product.
 
 See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security-model.md), [docs/non-goals.md](docs/non-goals.md), and [docs/known-limitations.md](docs/known-limitations.md).
@@ -165,7 +165,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Backup/restore v0 is local and quarantine-only.
 - Draft Intake v0 records sanitized local activation history only.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
-- Context Readiness and Local Observability are accepted planning additions only.
+- Context Readiness currently has a per-pack read-only API report; Local Observability currently has bounded metadata-only event and MCP query-log reads.
 - Skills and Agent Kits are advanced-preview data objects; they are data-only, not runtime features.
 - Public registry, marketplace, signing implementation, remote install, package publishing, cloud sync, and telemetry remain out of scope.
 

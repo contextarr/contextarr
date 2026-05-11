@@ -179,6 +179,160 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/events returns bounded newest-first sanitized metadata without writing rows", async () => {
+    db.prepare("DELETE FROM events").run();
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.old",
+      "Old event",
+      "2026-05-11T00:00:00.000Z",
+      JSON.stringify({ ok: true })
+    );
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.middle",
+      `Middle event from ${repoRoot}`,
+      "2026-05-11T00:01:00.000Z",
+      JSON.stringify({
+        ok: true,
+        repoRoot,
+        packsDir: demoPacksDir,
+        body: "raw-private-context-body",
+        nested: {
+          safe: "kept",
+          filePath: path.join(repoRoot, "secret.md")
+        }
+      })
+    );
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.new",
+      "New event",
+      "2026-05-11T00:02:00.000Z",
+      JSON.stringify({
+        count: 2,
+        summary: "metadata only"
+      })
+    );
+    const eventCountBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const mcpCountBefore = db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get();
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/events?limit=2" });
+    const body = response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.events.map((event: { type: string }) => event.type)).toEqual(["local.new", "local.middle"]);
+    expect(body.events[1].message).toContain("[local path]");
+    expect(body.events[1].metadata).toEqual({
+      ok: true,
+      nested: {
+        safe: "kept"
+      }
+    });
+    expect(serialized).not.toContain(repoRoot);
+    expect(serialized).not.toContain("raw-private-context-body");
+    expectNoLocalPaths(serialized);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
+    expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/mcp/query-log returns bounded newest-first sanitized metadata without query text or returned content", async () => {
+    const rawQuery = "private-query-token-workstation";
+    const returnedContext = "returned-context-body-content";
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run("get_pack_summary", "old-pack", null, null, "ok", 1, "hash-old", 4, 8, "2026-05-11T00:00:00.000Z", "{}");
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "query_pack_context",
+      "ai-workstation-pack",
+      "ai-workstation.local-ai-stack",
+      "ai-workstation-codex",
+      "ok",
+      2,
+      "hash-middle",
+      rawQuery.length,
+      12,
+      "2026-05-11T00:01:00.000Z",
+      JSON.stringify({
+        ok: true,
+        query: rawQuery,
+        returnedContext,
+        repoRoot,
+        outputPath: path.join(repoRoot, "exports", "context.md"),
+        resultKinds: ["record"]
+      })
+    );
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run("get_record", "new-pack", "new-record", null, "error", 0, null, null, 4, "2026-05-11T00:02:00.000Z", "{}");
+    const eventCountBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const mcpCountBefore = db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get();
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=2" });
+    const body = response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.queries.map((query: { tool: string }) => query.tool)).toEqual(["get_record", "query_pack_context"]);
+    expect(body.queries[1]).toMatchObject({
+      tool: "query_pack_context",
+      packId: "ai-workstation-pack",
+      recordId: "ai-workstation.local-ai-stack",
+      profileId: "ai-workstation-codex",
+      status: "ok",
+      resultCount: 2,
+      queryHash: "hash-middle",
+      queryLength: rawQuery.length,
+      durationMs: 12,
+      createdAt: "2026-05-11T00:01:00.000Z",
+      metadata: {
+        ok: true,
+        resultKinds: ["record"]
+      }
+    });
+    expect(serialized).not.toContain(rawQuery);
+    expect(serialized).not.toContain(returnedContext);
+    expect(serialized).not.toContain(repoRoot);
+    expect(serialized).not.toContain("context.md");
+    expectNoLocalPaths(serialized);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
+    expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("rejects malformed or excessive Local Observability limits", async () => {
+    const app = createApp({ config, db });
+    const malformedEvents = await app.inject({ method: "GET", url: "/api/events?limit=abc" });
+    const excessiveEvents = await app.inject({ method: "GET", url: "/api/events?limit=101" });
+    const malformedMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=1.5" });
+    const excessiveMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=0" });
+
+    for (const response of [malformedEvents, excessiveEvents, malformedMcp, excessiveMcp]) {
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: "invalid_query",
+        message: "Local observability limit must be an integer from 1 to 100."
+      });
+    }
+
+    await app.close();
+    db.close();
+  });
+
   it("serves the built web app when webDistDir is configured", async () => {
     const webDistDir = createWebDistFixture();
     const app = createApp({ config: { ...config, webDistDir }, db });
@@ -3094,7 +3248,7 @@ describe("Contextarr API", () => {
     authedContext.db.close();
   });
 
-  it("requires token auth on review, pack health, exposure readiness, and context readiness routes", async () => {
+  it("requires token auth on review, pack health, exposure readiness, context readiness, and observability routes", async () => {
     db.close();
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
@@ -3122,6 +3276,24 @@ describe("Contextarr API", () => {
       url: "/api/packs/ai-workstation-pack/readiness",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedEvents = await app.inject({
+      method: "GET",
+      url: "/api/events"
+    });
+    const allowedEvents = await app.inject({
+      method: "GET",
+      url: "/api/events",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedMcpQueryLog = await app.inject({
+      method: "GET",
+      url: "/api/mcp/query-log"
+    });
+    const allowedMcpQueryLog = await app.inject({
+      method: "GET",
+      url: "/api/mcp/query-log",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(reviewResponse.statusCode).toBe(401);
     expect(healthResponse.statusCode).toBe(200);
@@ -3129,6 +3301,10 @@ describe("Contextarr API", () => {
     expect(allowedReadiness.statusCode).toBe(200);
     expect(blockedContextReadiness.statusCode).toBe(401);
     expect(allowedContextReadiness.statusCode).toBe(200);
+    expect(blockedEvents.statusCode).toBe(401);
+    expect(allowedEvents.statusCode).toBe(200);
+    expect(blockedMcpQueryLog.statusCode).toBe(401);
+    expect(allowedMcpQueryLog.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

@@ -104,6 +104,10 @@ import type {
   ServerConfig
 } from "./types";
 
+const LOCAL_OBSERVABILITY_DEFAULT_LIMIT = 25;
+const LOCAL_OBSERVABILITY_MAX_LIMIT = 100;
+const LOCAL_OBSERVABILITY_MAX_STRING_LENGTH = 240;
+
 export interface CreateAppOptions {
   config: ServerConfig;
   db: ContextarrDatabase;
@@ -813,6 +817,32 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
+  app.get<{ Querystring: { limit?: string } }>("/api/events", async (request, reply) => {
+    const limit = parseLocalObservabilityLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply
+        .code(400)
+        .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
+    }
+
+    return {
+      events: listLocalEvents(db, config, limit)
+    };
+  });
+
+  app.get<{ Querystring: { limit?: string } }>("/api/mcp/query-log", async (request, reply) => {
+    const limit = parseLocalObservabilityLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply
+        .code(400)
+        .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
+    }
+
+    return {
+      queries: listMcpQueryLog(db, config, limit)
+    };
+  });
+
   app.get<{ Params: { id: string; profileId: string } }>("/api/packs/:id/exports/:profileId/preview", async (request, reply) => {
     const packPath = getPackPath(db, request.params.id);
     if (!packPath) {
@@ -1478,6 +1508,195 @@ function parseReviewCandidateActivationLimit(value: string | undefined): number 
     return "invalid";
   }
   return parsed;
+}
+
+function parseLocalObservabilityLimit(value: string | undefined): number | "invalid" {
+  if (!value) {
+    return LOCAL_OBSERVABILITY_DEFAULT_LIMIT;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > LOCAL_OBSERVABILITY_MAX_LIMIT) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+interface LocalEventRow {
+  id: number;
+  type: string;
+  message: string;
+  created_at: string;
+  metadata_json: string;
+}
+
+interface LocalMcpQueryLogRow {
+  tool: string;
+  pack_id: string | null;
+  record_id: string | null;
+  profile_id: string | null;
+  status: string;
+  result_count: number;
+  query_hash: string | null;
+  query_length: number | null;
+  duration_ms: number;
+  created_at: string;
+  metadata_json: string;
+}
+
+function listLocalEvents(db: ContextarrDatabase, config: ServerConfig, limit: number) {
+  const rows = db
+    .prepare(
+      `SELECT id, type, message, created_at, metadata_json
+       FROM events
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`
+    )
+    .all(limit) as LocalEventRow[];
+
+  return rows.map((row) => {
+    const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+    return {
+      id: row.id,
+      type: row.type,
+      message: sanitizeLocalObservabilityMessage(row.message, config),
+      createdAt: row.created_at,
+      ...(metadata ? { metadata } : {})
+    };
+  });
+}
+
+function listMcpQueryLog(db: ContextarrDatabase, config: ServerConfig, limit: number) {
+  const rows = db
+    .prepare(
+      `SELECT tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+       FROM mcp_query_log
+       ORDER BY created_at DESC, rowid DESC
+       LIMIT ?`
+    )
+    .all(limit) as LocalMcpQueryLogRow[];
+
+  return rows.map((row) => {
+    const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+    return {
+      tool: row.tool,
+      packId: row.pack_id,
+      recordId: row.record_id,
+      profileId: row.profile_id,
+      status: row.status,
+      resultCount: row.result_count,
+      queryHash: row.query_hash,
+      queryLength: row.query_length,
+      durationMs: row.duration_ms,
+      createdAt: row.created_at,
+      ...(metadata ? { metadata } : {})
+    };
+  });
+}
+
+function sanitizeLocalObservabilityMessage(value: string, config: ServerConfig): string {
+  const sanitized = sanitizeLocalObservabilityString("message", value, config);
+  return sanitized ?? "[redacted]";
+}
+
+function sanitizeLocalObservabilityMetadata(value: string, config: ServerConfig): Record<string, unknown> | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+
+  const sanitized = sanitizeLocalObservabilityValue(parsed, config);
+  if (!isRecord(sanitized)) {
+    return undefined;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
+function sanitizeLocalObservabilityValue(value: unknown, config: ServerConfig, key = "", depth = 0): unknown {
+  if (isSensitiveLocalObservabilityKey(key)) {
+    return undefined;
+  }
+
+  if (value === null || typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return sanitizeLocalObservabilityString(key, value, config);
+  }
+
+  if (Array.isArray(value)) {
+    if (depth >= 4) {
+      return undefined;
+    }
+
+    const items = value
+      .slice(0, 20)
+      .map((item) => sanitizeLocalObservabilityValue(item, config, key, depth + 1))
+      .filter((item) => item !== undefined);
+    return items.length > 0 ? items : undefined;
+  }
+
+  if (isRecord(value)) {
+    if (depth >= 4) {
+      return undefined;
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [childKey, childValue] of Object.entries(value)) {
+      const sanitizedValue = sanitizeLocalObservabilityValue(childValue, config, childKey, depth + 1);
+      if (sanitizedValue !== undefined) {
+        sanitized[childKey] = sanitizedValue;
+      }
+    }
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+  }
+
+  return undefined;
+}
+
+function sanitizeLocalObservabilityString(key: string, value: string, config: ServerConfig): string | undefined {
+  if (isSensitiveLocalObservabilityStringKey(key)) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > LOCAL_OBSERVABILITY_MAX_STRING_LENGTH || trimmed.split(/\r?\n/).length > 3) {
+    return undefined;
+  }
+
+  return sanitizeLocalPathText(trimmed, config.packsDir);
+}
+
+function isSensitiveLocalObservabilityKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return (
+    normalized === "q" ||
+    normalized.includes("query") ||
+    normalized.includes("prompt") ||
+    normalized.includes("input") ||
+    normalized.includes("body") ||
+    normalized.includes("content") ||
+    normalized.includes("context") ||
+    normalized.includes("secret") ||
+    normalized.includes("token") ||
+    normalized.includes("password") ||
+    normalized.includes("credential") ||
+    normalized.includes("reporoot") ||
+    normalized.includes("root") ||
+    normalized.includes("path") ||
+    normalized.includes("dir") ||
+    normalized.includes("file")
+  );
+}
+
+function isSensitiveLocalObservabilityStringKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return normalized === "text" || normalized === "raw" || isSensitiveLocalObservabilityKey(key);
 }
 
 function parseReviewCandidateActivationApplyBody(

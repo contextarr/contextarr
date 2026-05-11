@@ -190,7 +190,7 @@ pnpm security:verify
 
 ### Stage 3: Context Readiness and Local Observability
 
-Status: accepted planning track, not runtime scope until explicitly started.
+Status: runtime foundation started. Current scope is a per-pack read-only readiness report plus bounded metadata-only Local Observability reads.
 
 Goal:
 

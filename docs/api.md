@@ -56,17 +56,28 @@ Statuses are `ready`, `review_needed`, and `blocked`. Dimensions are `source`, `
 
 This slice is read-only. It does not mutate pack files, write readiness events, recalculate the index, generate exports, call AI or external services, execute pack content, upload telemetry, or widen MCP access. Governance is presence-only here; missing `rules/governance.yaml` is reported as a warning, not enforced.
 
+## Local Observability
+
+- `GET /api/events?limit=25`
+- `GET /api/mcp/query-log?limit=25`
+
+These endpoints expose bounded local observability metadata from SQLite. They are protected by the same optional API token rule as other non-health `/api/*` routes. `limit` must be an integer from 1 to 100.
+
+`GET /api/events` returns newest-first local event rows with `id`, `type`, `message`, `createdAt`, and sanitized metadata when available.
+
+`GET /api/mcp/query-log` returns newest-first local MCP query metadata with `tool`, `packId`, `recordId`, `profileId`, `status`, `resultCount`, `queryHash`, `queryLength`, `durationMs`, `createdAt`, and sanitized metadata when available.
+
+Local Observability is not telemetry. These routes do not upload data, call external services, mutate event or MCP log tables, run agents, generate exports, or widen MCP access. Responses do not expose raw query text, returned context bodies, export bodies, raw private source dumps, secrets, or absolute local paths.
+
 ## Planned Context Readiness And Local Observability
 
-The Agentic AI Context Readiness and Local Observability PRD is accepted as a planning addition. Wave 2 adds only the read-only per-pack Context Readiness route above.
+The Agentic AI Context Readiness and Local Observability PRD is accepted as a planning addition. Current implemented slices are the read-only per-pack Context Readiness route and bounded metadata-only Local Observability reads.
 
 Later scoped phases may add:
 
 - `POST /api/packs/:id/readiness/recalculate`
 - `GET /api/readiness`
-- `GET /api/events`
 - `GET /api/exports/history`
-- `GET /api/mcp/query-log`
 - `GET /api/governance/:packId`
 - `GET /api/token-budget/:packId`
 

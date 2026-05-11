@@ -18,6 +18,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
 - Draft Intake inventory, activation planning, dry-run proof, explicit proof-gated local activation, and sanitized local activation history for draft, composed, and configured quarantine Context Pack candidates. It returns metadata only before activation and does not export, publish, perform network access, or expose candidates through MCP.
 - `GET /api/packs/:id/readiness` as a read-only report composed from existing Pack Health, Exposure Readiness, review items, governance-file presence, redaction, export, and MCP metadata. It does not replace Pack Health or Exposure Readiness, write events, mutate pack files, generate exports, execute content, upload telemetry, or widen MCP access.
+- `GET /api/events` and `GET /api/mcp/query-log` as bounded metadata-only Local Observability reads. They are local SQLite views, not telemetry, and do not expose raw query text, returned context bodies, export bodies, raw private source dumps, secrets, or absolute local paths.
 
 ## Current CLI Surface
 
@@ -72,7 +73,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Agent runtime behavior.
 - Executable packs, executable Skills, or executable Agent Kits.
 - Benchmark fixtures and context-quality package from PR #2.
-- Context Readiness list, recalculation, persisted evidence events, governance parsing/enforcement, token-budget reports, export history, and MCP query logs.
+- Context Readiness list, recalculation, persisted evidence event writers, governance parsing/enforcement, token-budget reports, and export history.
 
 ## Starter Pack Status
 

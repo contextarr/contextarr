@@ -69,7 +69,7 @@ Context Readiness may strengthen Pack Health, Exposure Readiness, export preview
 - Improve public-site and README framing around Core Now vs Advanced Preview.
 - Keep public feedback focused on pack format, validation rules, export profiles, and the local dashboard loop.
 - Complete v1 core release-hardening gates before any frozen expansion resumes.
-- Keep Agentic AI Context Readiness and Local Observability in AR0 docs-only status until a later scoped phase adds schemas and tests.
+- Keep the new Context Readiness and Local Observability runtime slices narrow: per-pack read-only readiness, bounded metadata-only local evidence reads, and no policy enforcement, telemetry, or export/MCP widening.
 - Usability polish around pack authoring.
 - Keep Private Context, External Skill artifact preservation, and Local Event Hooks documented as future scoped tracks without expanding the current runtime.
 
