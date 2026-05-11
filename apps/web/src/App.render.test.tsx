@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
       getPacks: vi.fn(),
       getPack: vi.fn(),
       getPackExposureReadiness: vi.fn(),
+      getPackReadiness: vi.fn(),
       getPackRecords: vi.fn(),
       getRecord: vi.fn(),
       getSkills: vi.fn(),
@@ -115,6 +116,7 @@ describe("App Skill UI routes", () => {
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getPack.mockResolvedValue(packDetailFixture());
     mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessFixture());
+    mocks.apiClient.getPackReadiness.mockResolvedValue(packReadinessFixture());
     mocks.apiClient.getExportPreview.mockResolvedValue(packExportArtifactFixture());
     mocks.apiClient.getPackRecords.mockResolvedValue([]);
     mocks.apiClient.getRecord.mockResolvedValue({});
@@ -500,10 +502,15 @@ describe("App Skill UI routes", () => {
 
     await waitForText("AI Workstation Pack");
     await waitForText("Exposure Readiness");
+    await waitForText("Context Readiness");
     expect(document.body.textContent).toContain("Export Records");
     expect(document.body.textContent).toContain("MCP Records");
     expect(document.body.textContent).toContain("Source Coverage");
+    expect(document.body.textContent).toContain("Read-only report");
+    expect(document.body.textContent).toContain("Source Ready");
+    expect(document.body.textContent).toContain("Review needed");
     expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(mocks.apiClient.getPackReadiness).toHaveBeenCalledWith("ai-workstation-pack");
   });
 
   it("clarifies Export Center readiness, privacy mode, and preview record exclusions", async () => {
@@ -1375,6 +1382,50 @@ function packExposureReadinessWithExclusionsFixture() {
         message: "Three records remain outside the default export policy."
       }
     ]
+  };
+}
+
+function packReadinessFixture() {
+  return {
+    schemaVersion: "contextarr.readiness-report.v1" as const,
+    packId: "ai-workstation-pack",
+    status: "review_needed" as const,
+    score: 88,
+    generatedAt: "2026-05-11T00:00:00.000Z",
+    dimensions: {
+      source: readinessDimensionFixture("source", "Source", "ready", 100),
+      review: readinessDimensionFixture("review", "Review", "review_needed", 78),
+      governance: readinessDimensionFixture("governance", "Governance", "review_needed", 80),
+      redaction: readinessDimensionFixture("redaction", "Redaction", "ready", 100),
+      export: readinessDimensionFixture("export", "Export", "ready", 95),
+      mcp: readinessDimensionFixture("mcp", "MCP", "ready", 95)
+    },
+    issues: [
+      {
+        code: "readiness.governance_missing",
+        severity: "warning" as const,
+        message: "Governance rules are not present for this pack.",
+        evidence: {
+          dimension: "governance",
+          rulesFile: "rules/governance.yaml"
+        }
+      }
+    ]
+  };
+}
+
+function readinessDimensionFixture(
+  id: "source" | "review" | "governance" | "redaction" | "export" | "mcp",
+  label: string,
+  status: "ready" | "review_needed" | "blocked",
+  score: number
+) {
+  return {
+    id,
+    label,
+    status,
+    score,
+    evidence: {}
   };
 }
 

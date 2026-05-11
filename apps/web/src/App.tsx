@@ -141,6 +141,7 @@ import type {
   PackDetail,
   PackExposureReadiness,
   PackHealthResponse,
+  PackReadinessReport,
   PackSummary,
   RecordDetail,
   RecordSummary,
@@ -207,6 +208,7 @@ const coverIconMap = {
 
 const detailTabs = ["overview", "records", "sources", "exports", "health", "activity", "changelog"] as const;
 type DetailTab = (typeof detailTabs)[number];
+const readinessDimensionOrder = ["source", "review", "governance", "redaction", "export", "mcp"] as const;
 const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exports", "health"] as const;
 type SkillDetailTab = (typeof skillDetailTabs)[number];
 const agentKitDetailTabs = ["overview", "context-packs", "skills", "rules", "exports", "health"] as const;
@@ -2050,6 +2052,8 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
   const [records, setRecords] = useState<RecordSummary[]>([]);
   const [exposureReadiness, setExposureReadiness] = useState<PackExposureReadiness | null>(null);
   const [exposureError, setExposureError] = useState<string | null>(null);
+  const [contextReadiness, setContextReadiness] = useState<PackReadinessReport | null>(null);
+  const [contextReadinessError, setContextReadinessError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2060,16 +2064,26 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
     setError(null);
     setExposureError(null);
     setExposureReadiness(null);
+    setContextReadinessError(null);
+    setContextReadiness(null);
     setActiveTab("overview");
 
     async function loadPackDetail() {
       try {
-        const [packResponse, recordsResponse, exposureResponse] = await Promise.all([
+        const [packResponse, recordsResponse, exposureResponse, contextReadinessResponse] = await Promise.all([
           apiClient.getPack(packId),
           apiClient.getPackRecords(packId),
           apiClient.getPackExposureReadiness(packId).catch((readinessError: unknown) => {
             if (!cancelled) {
               setExposureError(readinessError instanceof Error ? readinessError.message : "Exposure readiness is unavailable.");
+            }
+            return null;
+          }),
+          apiClient.getPackReadiness(packId).catch((readinessError: unknown) => {
+            if (!cancelled) {
+              setContextReadinessError(
+                readinessError instanceof Error ? readinessError.message : "Context Readiness is unavailable."
+              );
             }
             return null;
           })
@@ -2078,6 +2092,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
           setPack(packResponse);
           setRecords(recordsResponse);
           setExposureReadiness(exposureResponse);
+          setContextReadiness(contextReadinessResponse);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -2149,7 +2164,15 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       </div>
 
       {activeTab === "overview" ? (
-        <PackOverview pack={pack} records={records} packs={packs} exposureReadiness={exposureReadiness} exposureError={exposureError} />
+        <PackOverview
+          pack={pack}
+          records={records}
+          packs={packs}
+          exposureReadiness={exposureReadiness}
+          exposureError={exposureError}
+          contextReadiness={contextReadiness}
+          contextReadinessError={contextReadinessError}
+        />
       ) : null}
       {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
@@ -2166,13 +2189,17 @@ function PackOverview({
   records,
   packs,
   exposureReadiness,
-  exposureError
+  exposureError,
+  contextReadiness,
+  contextReadinessError
 }: {
   pack: PackDetail;
   records: RecordSummary[];
   packs: PackSummary[];
   exposureReadiness: PackExposureReadiness | null;
   exposureError: string | null;
+  contextReadiness: PackReadinessReport | null;
+  contextReadinessError: string | null;
 }) {
   const related = packs.filter((candidate) => candidate.id !== pack.id && candidate.type === pack.type).slice(0, 3);
   const brand = resolvePackBrand(pack);
@@ -2220,6 +2247,8 @@ function PackOverview({
       </article>
 
       <ExposureReadinessPanel readiness={exposureReadiness} error={exposureError} />
+
+      <ContextReadinessPanel readiness={contextReadiness} error={contextReadinessError} />
 
       <article className="detail-card">
         <h2>
@@ -2314,6 +2343,88 @@ function ExposureReadinessPanel({ readiness, error }: { readiness: PackExposureR
       <p className="muted-note">{readiness.policies.mcp.defaultBodyPolicy}.</p>
     </article>
   );
+}
+
+function ContextReadinessPanel({ readiness, error }: { readiness: PackReadinessReport | null; error: string | null }) {
+  if (error) {
+    return (
+      <article className="detail-card warning-card" aria-labelledby="context-readiness-title">
+        <h2 id="context-readiness-title">
+          <ShieldAlert size={19} aria-hidden="true" />
+          Context Readiness
+        </h2>
+        <p>{error}</p>
+      </article>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <article className="detail-card" aria-labelledby="context-readiness-title">
+        <h2 id="context-readiness-title">
+          <ShieldCheck size={19} aria-hidden="true" />
+          Context Readiness
+        </h2>
+        <p>Context Readiness is loading.</p>
+      </article>
+    );
+  }
+
+  const topIssues = readiness.issues.slice(0, 3);
+  const isBlocked = readiness.status === "blocked";
+
+  return (
+    <article className={isBlocked ? "detail-card warning-card" : "detail-card"} aria-labelledby="context-readiness-title">
+      <h2 id="context-readiness-title">
+        {isBlocked ? <ShieldAlert size={19} aria-hidden="true" /> : <ShieldCheck size={19} aria-hidden="true" />}
+        Context Readiness
+      </h2>
+      <div className="readiness-summary">
+        <span className={readinessStatusClass(readiness.status)}>{formatReadinessStatus(readiness.status)}</span>
+        <span>{readiness.score}/100 score</span>
+        <span>Read-only report</span>
+      </div>
+      <div className="stat-grid compact-stat-grid">
+        {readinessDimensionOrder.map((dimensionId) => {
+          const dimension = readiness.dimensions[dimensionId];
+          return <Stat value={dimension.score} label={`${dimension.label} ${formatReadinessStatus(dimension.status)}`} key={dimension.id} />;
+        })}
+      </div>
+      {topIssues.length > 0 ? (
+        <ul className="simple-list readiness-issues">
+          {topIssues.map((issue, index) => (
+            <li key={`${issue.severity}-${issue.code}-${index}`}>
+              <strong>{formatPackType(issue.severity)}</strong>
+              <span>{issue.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No top issues reported by Context Readiness.</p>
+      )}
+      <p className="muted-note">Does not approve, export, enforce policy, or run pack content.</p>
+    </article>
+  );
+}
+
+function formatReadinessStatus(status: PackReadinessReport["status"]): string {
+  if (status === "review_needed") {
+    return "Review needed";
+  }
+
+  return formatPackType(status);
+}
+
+function readinessStatusClass(status: PackReadinessReport["status"]): string {
+  if (status === "blocked") {
+    return "readiness-status is-blocked";
+  }
+
+  if (status === "review_needed") {
+    return "readiness-status is-warning";
+  }
+
+  return "readiness-status is-ready";
 }
 
 function RecordsTab({ pack, records }: { pack: PackDetail; records: RecordSummary[] }) {

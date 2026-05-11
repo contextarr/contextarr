@@ -264,6 +264,70 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("reports Context Pack readiness in text, JSON, and agent formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const textOutput = createIo();
+      const jsonOutput = createIo();
+      const agentOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+
+      expect(await runCli(["readiness", "ai-workstation-pack"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("Context Readiness: ai-workstation-pack");
+      expect(textOutput.stdout).toContain("Status:");
+      expect(textOutput.stdout).toContain("Score:");
+      expect(textOutput.stdout).toContain("Dimensions:");
+      expect(textOutput.stdout).toContain("Top issues:");
+      expectNoAbsolutePaths(textOutput.stdout);
+      expect(textOutput.stderr).toBe("");
+
+      expect(await runCli(["readiness", "ai-workstation-pack", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.readiness.v1",
+        reportSchemaVersion: "contextarr.readiness-report.v1",
+        packId: "ai-workstation-pack",
+        readiness: {
+          schemaVersion: "contextarr.readiness-report.v1",
+          packId: "ai-workstation-pack",
+          status: expect.any(String),
+          score: expect.any(Number),
+          dimensions: expect.any(Object),
+          issues: expect.any(Array)
+        }
+      });
+      expect(Object.keys(json.readiness.dimensions).sort()).toEqual(["export", "governance", "mcp", "redaction", "review", "source"]);
+      expectNoAbsolutePaths(jsonOutput.stdout);
+      expect(jsonOutput.stderr).toBe("");
+
+      expect(await runCli(["readiness", "ai-workstation-pack", "--format", "text", "--agent"], agentOutput.io)).toBe(0);
+      const agentJson = JSON.parse(agentOutput.stdout);
+      expect(agentJson).toMatchObject({
+        schemaVersion: "contextarr.cli.readiness.v1",
+        packId: "ai-workstation-pack",
+        readiness: {
+          schemaVersion: "contextarr.readiness-report.v1"
+        }
+      });
+      expect(agentOutput.stdout).not.toContain("Context Readiness:");
+      expect(agentOutput.stdout).not.toMatch(/\u001b\[/);
+      expectNoAbsolutePaths(agentOutput.stdout);
+      expect(agentOutput.stderr).toBe("");
+    });
+  });
+
+  it("returns 1 with a clear stderr message when readiness pack is missing", async () => {
+    await withCliIndex(async () => {
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+
+      const output = createIo();
+      expect(await runCli(["readiness", "missing-pack", "--json"], output.io)).toBe(1);
+      expect(output.stdout).toBe("");
+      expect(output.stderr).toContain("Context Pack not found in local index: missing-pack");
+    });
+  });
+
   it("lists local review items with deterministic filters", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();

@@ -19,6 +19,16 @@ export {
   type PackExposureReadiness
 } from "./exposure-readiness";
 export {
+  getPackReadinessReport,
+  READINESS_REPORT_SCHEMA_VERSION,
+  ReadinessReportError,
+  type ContextReadinessReport,
+  type ReadinessDimension,
+  type ReadinessDimensions,
+  type ReadinessIssue,
+  type ReadinessIssueSeverity
+} from "./readiness/readiness-engine";
+export {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitExportProfilePreview,

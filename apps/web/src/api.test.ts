@@ -44,7 +44,7 @@ describe("Contextarr API client", () => {
     expect(requests[0].init?.headers).toEqual({});
   });
 
-  it("reads pack detail, exposure readiness, pack records, and record detail", async () => {
+  it("reads pack detail, exposure readiness, context readiness, pack records, and record detail", async () => {
     const requests: string[] = [];
     const client = createApiClient({
       fetchImpl: async (url) => {
@@ -55,6 +55,17 @@ describe("Contextarr API client", () => {
         if (String(url).includes("/exposure-readiness")) {
           return jsonResponse({ packId: "pack-1", summary: { exportEligibleRecords: 1 } });
         }
+        if (String(url).endsWith("/readiness")) {
+          return jsonResponse({
+            schemaVersion: "contextarr.readiness-report.v1",
+            packId: "pack-1",
+            status: "ready",
+            score: 100,
+            dimensions: {},
+            issues: [],
+            generatedAt: "2026-05-11T00:00:00.000Z"
+          });
+        }
         if (String(url).includes("/records")) {
           return jsonResponse({ records: [{ id: "record-1" }] });
         }
@@ -64,11 +75,16 @@ describe("Contextarr API client", () => {
 
     await expect(client.getPack("pack-1")).resolves.toMatchObject({ id: "pack-1" });
     await expect(client.getPackExposureReadiness("pack-1")).resolves.toMatchObject({ packId: "pack-1" });
+    await expect(client.getPackReadiness("pack-1")).resolves.toMatchObject({
+      schemaVersion: "contextarr.readiness-report.v1",
+      score: 100
+    });
     await expect(client.getPackRecords("pack-1")).resolves.toEqual([{ id: "record-1" }]);
     await expect(client.getRecord("record-1")).resolves.toMatchObject({ body: "# Record" });
     expect(requests).toEqual([
       "/api/packs/pack-1",
       "/api/packs/pack-1/exposure-readiness",
+      "/api/packs/pack-1/readiness",
       "/api/packs/pack-1/records",
       "/api/records/record-1"
     ]);

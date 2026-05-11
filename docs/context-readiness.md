@@ -10,6 +10,18 @@ Context Readiness is a metadata-only report that summarizes whether an indexed C
 
 The response schema version is `contextarr.readiness-report.v1`.
 
+## CLI
+
+Use the local derived SQLite index to inspect one active pack without rescanning or generating exports:
+
+```bash
+pnpm --filter @contextarr/cli contextarr readiness ai-workstation-pack
+pnpm --filter @contextarr/cli contextarr readiness ai-workstation-pack --json
+pnpm --filter @contextarr/cli contextarr readiness ai-workstation-pack --agent
+```
+
+The CLI JSON wrapper uses `contextarr.cli.readiness.v1` and includes the metadata-only readiness report under `readiness`.
+
 Top-level fields:
 
 - `packId`

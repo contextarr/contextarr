@@ -529,6 +529,34 @@ export interface PackExposureReadiness {
   warnings: ExposureIssue[];
 }
 
+export type PackReadinessStatus = "ready" | "review_needed" | "blocked";
+export type PackReadinessDimensionId = "source" | "review" | "governance" | "redaction" | "export" | "mcp";
+
+export interface PackReadinessIssue {
+  code: string;
+  severity: "blocker" | "warning";
+  message: string;
+  evidence: Record<string, unknown>;
+}
+
+export interface PackReadinessDimension {
+  id: PackReadinessDimensionId;
+  label: string;
+  status: PackReadinessStatus;
+  score: number;
+  evidence: Record<string, unknown>;
+}
+
+export interface PackReadinessReport {
+  schemaVersion: "contextarr.readiness-report.v1";
+  packId: string;
+  status: PackReadinessStatus;
+  score: number;
+  dimensions: Record<PackReadinessDimensionId, PackReadinessDimension>;
+  issues: PackReadinessIssue[];
+  generatedAt: string;
+}
+
 export interface SkillDocument {
   id: string;
   skillId: string;

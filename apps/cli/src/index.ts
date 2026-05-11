@@ -62,6 +62,7 @@ import {
   getPack,
   getPackExposureReadiness,
   getPackHealth,
+  getPackReadinessReport,
   getPackRecords,
   getPacks,
   getRecord,
@@ -78,11 +79,13 @@ import {
   searchIndex,
   type AgentKitHealthDetail,
   type AgentKitSummary,
+  type ContextReadinessReport,
   type ContextarrDatabase,
   type PackHealthDetail,
   type PackExposureReadiness,
   type PackSummary,
   type RebuildIndexResult,
+  READINESS_REPORT_SCHEMA_VERSION,
   type ReviewItem,
   type ReviewItemFilters,
   type ServerConfig,
@@ -294,6 +297,52 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         }
 
         io.stdout.write(format === "json" ? `${JSON.stringify(formatHealthJson(result), null, 2)}\n` : formatHealthText(result));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
+    .command("readiness")
+    .description("summarize read-only Context Readiness for one indexed Context Pack")
+    .argument("<pack-id>", "Context Pack id")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((packId: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db, config) => {
+          const pack = getPack(db, packId);
+          if (!pack) {
+            return { packFound: false, report: undefined };
+          }
+
+          return { packFound: true, report: getPackReadinessReport(db, config, packId) };
+        });
+
+        if (!result.packFound) {
+          io.stderr.write(`Context Pack not found in local index: ${packId}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        if (!result.report) {
+          io.stderr.write(`Readiness report unavailable for Context Pack: ${packId}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatReadinessJson(result.report), null, 2)}\n` : formatReadinessText(result.report));
         exitCode = 0;
       } catch (error) {
         io.stderr.write(`${errorMessage(error)}\n`);
@@ -1040,6 +1089,12 @@ type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown; exp
 type HealthObjectKind = Exclude<HealthKind, "auto" | "summary">;
 type HealthDetail = PackHealthDetail | SkillHealthDetail | AgentKitHealthDetail;
 type HealthObjectResult = { kind: HealthObjectKind; id: string; health: HealthDetail };
+type ReadinessCommandJson = {
+  schemaVersion: "contextarr.cli.readiness.v1";
+  reportSchemaVersion: typeof READINESS_REPORT_SCHEMA_VERSION;
+  packId: string;
+  readiness: ContextReadinessReport;
+};
 type HealthSummaryResult = {
   kind: "summary";
   status: "healthy" | "review_required";
@@ -1741,6 +1796,52 @@ function formatHealthText(result: HealthResult): string {
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function formatReadinessJson(report: ContextReadinessReport): ReadinessCommandJson {
+  return {
+    schemaVersion: "contextarr.cli.readiness.v1",
+    reportSchemaVersion: READINESS_REPORT_SCHEMA_VERSION,
+    packId: report.packId,
+    readiness: report
+  };
+}
+
+function formatReadinessText(report: ContextReadinessReport): string {
+  const lines = [
+    `Context Readiness: ${report.packId}`,
+    `Status: ${report.status}`,
+    `Score: ${report.score}/100`,
+    `Report schema: ${report.schemaVersion}`,
+    `Generated: ${report.generatedAt}`,
+    "",
+    "Dimensions:"
+  ];
+
+  lines.push(
+    ...Object.values(report.dimensions).map(
+      (dimension) => `- ${dimension.id}: ${dimension.status} (${dimension.score}/100) - ${dimension.label}`
+    )
+  );
+
+  lines.push("", "Top issues:");
+  if (report.issues.length === 0) {
+    lines.push("- None");
+  } else {
+    lines.push(...topReadinessIssues(report).map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}`));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function topReadinessIssues(report: ContextReadinessReport): ContextReadinessReport["issues"] {
+  return [...report.issues]
+    .sort((left, right) => readinessIssueSeverityRank(left.severity) - readinessIssueSeverityRank(right.severity))
+    .slice(0, 5);
+}
+
+function readinessIssueSeverityRank(severity: ContextReadinessReport["issues"][number]["severity"]): number {
+  return severity === "blocker" ? 0 : 1;
 }
 
 function appendHealthSummarySection(
