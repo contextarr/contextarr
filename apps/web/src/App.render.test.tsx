@@ -64,6 +64,8 @@ const mocks = vi.hoisted(() => {
       saveExportBrief: vi.fn(),
       listExportBriefs: vi.fn(),
       getExportBrief: vi.fn(),
+      getEvents: vi.fn(),
+      getMcpQueryLog: vi.fn(),
       getReviewItems: vi.fn(),
       getReviewCandidates: vi.fn(),
       getReviewCandidate: vi.fn(),
@@ -263,6 +265,48 @@ describe("App Skill UI routes", () => {
       exportBriefFixture(`brief-${request.objectType}`, request.artifact, request.objectType, request.objectId, request.privacyMode)
     );
     mocks.apiClient.getExportBrief.mockResolvedValue(exportBriefFixture("brief-pack", packExportArtifactFixture()));
+    mocks.apiClient.getEvents.mockResolvedValue([
+      {
+        id: 1,
+        type: "export_brief.saved",
+        message: "Saved local export brief metadata.",
+        createdAt: "2026-05-11T00:00:00.000Z",
+        metadata: {
+          briefId: "brief-pack",
+          objectType: "pack",
+          objectId: "ai-workstation-pack",
+          packId: "ai-workstation-pack",
+          profileId: "ai-workstation-codex",
+          target: "codex",
+          warningCodes: []
+        }
+      },
+      {
+        id: 2,
+        type: "export_brief.saved",
+        message: "Saved unrelated local export brief metadata.",
+        createdAt: "2026-05-11T00:00:30.000Z",
+        metadata: {
+          objectId: "other-pack",
+          packId: "other-pack"
+        }
+      }
+    ]);
+    mocks.apiClient.getMcpQueryLog.mockResolvedValue([
+      {
+        tool: "get_pack_summary",
+        packId: "ai-workstation-pack",
+        recordId: null,
+        profileId: null,
+        status: "ok",
+        resultCount: 1,
+        queryHash: "hash-ai-workstation-pack",
+        queryLength: 18,
+        durationMs: 7,
+        createdAt: "2026-05-11T00:01:00.000Z",
+        metadata: { resultKinds: ["pack"] }
+      }
+    ]);
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
     mocks.apiClient.getReviewCandidates.mockResolvedValue({
       candidates: [
@@ -530,6 +574,15 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("Review needed");
     expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
     expect(mocks.apiClient.getPackReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+
+    clickButton("Activity");
+    await waitForText("Activity v0");
+    await waitForText("Saved local export brief metadata.");
+    await waitForText("MCP Queries");
+    await waitForText("Get Pack Summary");
+    expect(mocks.apiClient.getEvents).toHaveBeenCalledWith({ limit: 100, packId: "ai-workstation-pack" });
+    expect(mocks.apiClient.getMcpQueryLog).toHaveBeenCalledWith({ limit: 100, packId: "ai-workstation-pack" });
+    expect(document.body.textContent).not.toContain("Saved unrelated local export brief metadata.");
   });
 
   it("clarifies Export Center readiness, privacy mode, and preview record exclusions", async () => {

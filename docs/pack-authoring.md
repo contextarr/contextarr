@@ -60,6 +60,28 @@ The adoption path is intentionally review-first:
 
 Use one of these paths instead of starting from an empty directory by hand.
 
+## Local First-Pack Verifier
+
+Before handing the first-user path to someone else, run:
+
+```bash
+pnpm first-pack:verify
+```
+
+The verifier is local-only and deterministic. It writes only to `.contextarr-cache/first-pack-verify/`, reads the public-safe demo packs and test fixtures, and does not activate packs, publish, call a registry, start MCP, run telemetry, or touch private runtimes.
+
+It checks:
+
+- starter selection through the four local collector definitions and the 12 curated active starter packs
+- cache-only collector draft creation from Support KB Starter
+- cache-only Markdown import draft creation from the importer fixture
+- Draft Intake candidate visibility with sanitized labels
+- activation plan and dry-run proof on a fixture-backed activation-capable draft candidate
+- generated draft dry-run behavior without moving files, mutating SQLite, generating exports, exposing MCP records, or accessing the network
+- default non-exposure before activation through active index/search absence and default export exclusion
+
+Current gap: generated collector/import drafts validate and appear in Draft Intake, but they do not currently include export profiles. The verifier therefore uses a fixture-backed draft candidate with an export profile to prove the activation dry-run path, while also confirming generated drafts report the current readiness blocker instead of activating silently.
+
 ### 1. Blank Starter
 
 Use this when the source material is still in your head or scattered across notes.

@@ -25,6 +25,11 @@ import type {
   PackHealthResponse,
   PackReadinessReport,
   PackSummary,
+  LocalEvent,
+  LocalEventsResponse,
+  LocalObservabilityQuery,
+  McpQueryLogEntry,
+  McpQueryLogResponse,
   RecordDetail,
   RecordSummary,
   ReviewItemsResponse,
@@ -101,6 +106,8 @@ export interface ApiClient {
   saveExportBrief(request: SaveExportBriefRequest): Promise<ExportBrief>;
   listExportBriefs(query?: ExportBriefListQuery): Promise<ExportBrief[]>;
   getExportBrief(id: string): Promise<ExportBrief>;
+  getEvents(query?: LocalObservabilityQuery): Promise<LocalEvent[]>;
+  getMcpQueryLog(query?: LocalObservabilityQuery): Promise<McpQueryLogEntry[]>;
   getReviewItems(filters?: {
     status?: string;
     severity?: string;
@@ -293,6 +300,18 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     getExportBrief: async (id: string) => {
       const response = await requestJson<{ brief: ExportBrief }>(`/api/export-briefs/${encodeURIComponent(id)}`);
       return response.brief;
+    },
+    getEvents: async (query = {}) => {
+      const response = await requestJson<LocalEventsResponse>(
+        `/api/events${toQueryString({ limit: query.limit ?? 50, packId: query.packId, recordId: query.recordId })}`
+      );
+      return response.events;
+    },
+    getMcpQueryLog: async (query = {}) => {
+      const response = await requestJson<McpQueryLogResponse>(
+        `/api/mcp/query-log${toQueryString({ limit: query.limit ?? 50, packId: query.packId, recordId: query.recordId })}`
+      );
+      return response.queries;
     },
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
     getReviewCandidates: (filters = {}) =>

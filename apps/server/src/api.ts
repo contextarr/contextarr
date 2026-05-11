@@ -116,6 +116,7 @@ import type {
 const LOCAL_OBSERVABILITY_DEFAULT_LIMIT = 25;
 const LOCAL_OBSERVABILITY_MAX_LIMIT = 100;
 const LOCAL_OBSERVABILITY_MAX_STRING_LENGTH = 240;
+const LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT = 5000;
 const EXPORT_BRIEF_DEFAULT_LIMIT = 25;
 const EXPORT_BRIEF_MAX_LIMIT = 100;
 
@@ -828,29 +829,37 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
-  app.get<{ Querystring: { limit?: string } }>("/api/events", async (request, reply) => {
+  app.get<{ Querystring: { limit?: string; packId?: string; recordId?: string } }>("/api/events", async (request, reply) => {
     const limit = parseLocalObservabilityLimit(request.query.limit);
     if (limit === "invalid") {
       return reply
         .code(400)
         .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
     }
+    const scope = parseLocalObservabilityScope(request.query);
+    if (scope === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Local observability scope must use safe object IDs." });
+    }
 
     return {
-      events: listLocalEvents(db, config, limit)
+      events: listLocalEvents(db, config, limit, scope)
     };
   });
 
-  app.get<{ Querystring: { limit?: string } }>("/api/mcp/query-log", async (request, reply) => {
+  app.get<{ Querystring: { limit?: string; packId?: string; recordId?: string } }>("/api/mcp/query-log", async (request, reply) => {
     const limit = parseLocalObservabilityLimit(request.query.limit);
     if (limit === "invalid") {
       return reply
         .code(400)
         .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
     }
+    const scope = parseLocalObservabilityScope(request.query);
+    if (scope === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Local observability scope must use safe object IDs." });
+    }
 
     return {
-      queries: listMcpQueryLog(db, config, limit)
+      queries: listMcpQueryLog(db, config, limit, scope)
     };
   });
 
@@ -1580,6 +1589,34 @@ function parseLocalObservabilityLimit(value: string | undefined): number | "inva
   return parsed;
 }
 
+interface LocalObservabilityScope {
+  packId?: string;
+  recordId?: string;
+}
+
+function parseLocalObservabilityScope(query: { packId?: string; recordId?: string }): LocalObservabilityScope | "invalid" {
+  const packId = parseLocalObservabilityScopeId(query.packId);
+  const recordId = parseLocalObservabilityScopeId(query.recordId);
+  if (packId === "invalid" || recordId === "invalid") {
+    return "invalid";
+  }
+  return {
+    ...(packId ? { packId } : {}),
+    ...(recordId ? { recordId } : {})
+  };
+}
+
+function parseLocalObservabilityScopeId(value: string | undefined): string | undefined | "invalid" {
+  const id = value?.trim();
+  if (!id) {
+    return undefined;
+  }
+  if (!/^[A-Za-z0-9_.:-]{1,200}$/.test(id)) {
+    return "invalid";
+  }
+  return id;
+}
+
 function parseExportBriefListLimit(value: string | undefined): number | "invalid" {
   if (!value) {
     return EXPORT_BRIEF_DEFAULT_LIMIT;
@@ -1627,7 +1664,8 @@ interface LocalMcpQueryLogRow {
   metadata_json: string;
 }
 
-function listLocalEvents(db: ContextarrDatabase, config: ServerConfig, limit: number) {
+function listLocalEvents(db: ContextarrDatabase, config: ServerConfig, limit: number, scope: LocalObservabilityScope = {}) {
+  const scoped = hasLocalObservabilityScope(scope);
   const rows = db
     .prepare(
       `SELECT id, type, message, created_at, metadata_json
@@ -1635,21 +1673,25 @@ function listLocalEvents(db: ContextarrDatabase, config: ServerConfig, limit: nu
        ORDER BY created_at DESC, id DESC
        LIMIT ?`
     )
-    .all(limit) as LocalEventRow[];
+    .all(scoped ? LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT : limit) as LocalEventRow[];
 
-  return rows.map((row) => {
-    const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
-    return {
-      id: row.id,
-      type: row.type,
-      message: sanitizeLocalObservabilityMessage(row.message, config),
-      createdAt: row.created_at,
-      ...(metadata ? { metadata } : {})
-    };
-  });
+  return rows
+    .filter((row) => !scoped || localObservabilityMetadataMatchesScope(row.metadata_json, scope))
+    .slice(0, limit)
+    .map((row) => {
+      const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+      return {
+        id: row.id,
+        type: row.type,
+        message: sanitizeLocalObservabilityMessage(row.message, config),
+        createdAt: row.created_at,
+        ...(metadata ? { metadata } : {})
+      };
+    });
 }
 
-function listMcpQueryLog(db: ContextarrDatabase, config: ServerConfig, limit: number) {
+function listMcpQueryLog(db: ContextarrDatabase, config: ServerConfig, limit: number, scope: LocalObservabilityScope = {}) {
+  const scoped = hasLocalObservabilityScope(scope);
   const rows = db
     .prepare(
       `SELECT tool, pack_id, record_id, profile_id, status, result_count,
@@ -1658,24 +1700,84 @@ function listMcpQueryLog(db: ContextarrDatabase, config: ServerConfig, limit: nu
        ORDER BY created_at DESC, rowid DESC
        LIMIT ?`
     )
-    .all(limit) as LocalMcpQueryLogRow[];
+    .all(scoped ? LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT : limit) as LocalMcpQueryLogRow[];
 
-  return rows.map((row) => {
-    const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
-    return {
-      tool: row.tool,
-      packId: row.pack_id,
-      recordId: row.record_id,
-      profileId: row.profile_id,
-      status: row.status,
-      resultCount: row.result_count,
-      queryHash: row.query_hash,
-      queryLength: row.query_length,
-      durationMs: row.duration_ms,
-      createdAt: row.created_at,
-      ...(metadata ? { metadata } : {})
-    };
-  });
+  return rows
+    .filter((row) => !scoped || localMcpQueryMatchesScope(row, scope))
+    .slice(0, limit)
+    .map((row) => {
+      const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+      return {
+        tool: row.tool,
+        packId: row.pack_id,
+        recordId: row.record_id,
+        profileId: row.profile_id,
+        status: row.status,
+        resultCount: row.result_count,
+        queryHash: row.query_hash,
+        queryLength: row.query_length,
+        durationMs: row.duration_ms,
+        createdAt: row.created_at,
+        ...(metadata ? { metadata } : {})
+      };
+    });
+}
+
+function hasLocalObservabilityScope(scope: LocalObservabilityScope): boolean {
+  return Boolean(scope.packId || scope.recordId);
+}
+
+function localMcpQueryMatchesScope(row: LocalMcpQueryLogRow, scope: LocalObservabilityScope): boolean {
+  if (scope.packId && row.pack_id === scope.packId) {
+    return true;
+  }
+  if (scope.recordId && row.record_id === scope.recordId) {
+    return true;
+  }
+  return localObservabilityMetadataMatchesScope(row.metadata_json, scope);
+}
+
+function localObservabilityMetadataMatchesScope(value: string, scope: LocalObservabilityScope): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return false;
+  }
+  return localObservabilityValueMatchesScope(parsed, scope);
+}
+
+function localObservabilityValueMatchesScope(value: unknown, scope: LocalObservabilityScope, key = "", depth = 0): boolean {
+  if (depth > 4) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return localObservabilityStringMatchesScope(key, value, scope);
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => localObservabilityValueMatchesScope(item, scope, key, depth + 1));
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value).some(([childKey, childValue]) =>
+      localObservabilityValueMatchesScope(childValue, scope, childKey, depth + 1)
+    );
+  }
+
+  return false;
+}
+
+function localObservabilityStringMatchesScope(key: string, value: string, scope: LocalObservabilityScope): boolean {
+  const normalizedKey = key.toLowerCase();
+  if (scope.packId && ["packid", "objectid", "subjectid", "pack", "packids", "objectids"].includes(normalizedKey)) {
+    return value === scope.packId;
+  }
+  if (scope.recordId && ["recordid", "recordids"].includes(normalizedKey)) {
+    return value === scope.recordId;
+  }
+  return false;
 }
 
 function sanitizeLocalObservabilityMessage(value: string, config: ServerConfig): string {
@@ -1757,6 +1859,10 @@ function sanitizeLocalObservabilityString(key: string, value: string, config: Se
 
 function isSensitiveLocalObservabilityKey(key: string): boolean {
   const normalized = key.toLowerCase();
+  if (normalized === "profile" || normalized === "profileid" || normalized === "estimatedtokens") {
+    return false;
+  }
+
   return (
     normalized === "q" ||
     normalized.includes("query") ||
@@ -1767,7 +1873,8 @@ function isSensitiveLocalObservabilityKey(key: string): boolean {
     normalized.includes("content") ||
     normalized.includes("context") ||
     normalized.includes("secret") ||
-    normalized.includes("token") ||
+    normalized === "token" ||
+    normalized.endsWith("token") ||
     normalized.includes("password") ||
     normalized.includes("credential") ||
     normalized.includes("reporoot") ||
@@ -1883,6 +1990,10 @@ function sanitizeLocalPathText(value: string, rootPath: string): string {
 
   return normalizedMessage
     .replace(/\b[A-Za-z]:\/[^\s"'`<>|]+/g, "[local path]")
+    .replace(
+      /(^|[\s"'`([{=,:;])\/(?:__w|app|github|home|tmp|var|Users|mnt|workspace|workspaces|runner|private|opt)\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g,
+      "$1[local path]"
+    )
     .replace(/(?<!:)\/\/[^/\s"'`<>|]+\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g, "[local path]")
     .replace(/\\\\[^\s"'`<>|]+/g, "[local path]");
 }

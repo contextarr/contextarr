@@ -719,6 +719,43 @@ describe("Contextarr API client", () => {
             }
           });
         }
+        if (String(url) === "/api/events?limit=50" || String(url) === "/api/events?limit=6&packId=pack-1") {
+          return jsonResponse({
+            events: [
+              {
+                id: 1,
+                type: "export_brief.saved",
+                message: "Saved local export brief metadata.",
+                createdAt: "2026-05-11T00:00:00.000Z",
+                metadata: {
+                  briefId: "brief-1",
+                  objectType: "pack",
+                  objectId: "pack-1",
+                  packId: "pack-1",
+                  profileId: artifact.profileId
+                }
+              }
+            ]
+          });
+        }
+        if (String(url) === "/api/mcp/query-log?limit=50" || String(url) === "/api/mcp/query-log?limit=6&packId=pack-1") {
+          return jsonResponse({
+            queries: [
+              {
+                tool: "get_pack_summary",
+                packId: "pack-1",
+                recordId: null,
+                profileId: null,
+                status: "ok",
+                resultCount: 1,
+                queryHash: "hash-1",
+                queryLength: 12,
+                durationMs: 4,
+                createdAt: "2026-05-11T00:01:00.000Z"
+              }
+            ]
+          });
+        }
         return jsonResponse({
           briefs: [
             {
@@ -761,12 +798,24 @@ describe("Contextarr API client", () => {
       expect.objectContaining({ id: "brief-1" })
     ]);
     await expect(client.getExportBrief("brief-1")).resolves.toMatchObject({ objectId: "pack-1" });
+    await expect(client.getEvents()).resolves.toEqual([expect.objectContaining({ type: "export_brief.saved" })]);
+    await expect(client.getMcpQueryLog()).resolves.toEqual([expect.objectContaining({ tool: "get_pack_summary" })]);
+    await expect(client.getEvents({ limit: 6, packId: "pack-1" })).resolves.toEqual([
+      expect.objectContaining({ type: "export_brief.saved" })
+    ]);
+    await expect(client.getMcpQueryLog({ limit: 6, packId: "pack-1" })).resolves.toEqual([
+      expect.objectContaining({ tool: "get_pack_summary" })
+    ]);
 
     expect(requests.map((request) => request.url)).toEqual([
       "/api/export-briefs",
       "/api/export-briefs",
       "/api/export-briefs?limit=6&objectType=agent_kit&objectId=kit-1",
-      "/api/export-briefs/brief-1"
+      "/api/export-briefs/brief-1",
+      "/api/events?limit=50",
+      "/api/mcp/query-log?limit=50",
+      "/api/events?limit=6&packId=pack-1",
+      "/api/mcp/query-log?limit=6&packId=pack-1"
     ]);
     expect(requests[0].init).toMatchObject({
       method: "POST",

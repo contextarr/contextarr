@@ -8,6 +8,7 @@ This checklist prepares `v0.1.0-alpha.1`. It does not publish, tag, deploy, crea
 pnpm install
 pnpm docs:verify
 pnpm demo:validate
+pnpm first-pack:verify
 pnpm v1-core:verify
 pnpm v1-core:idempotent
 pnpm advanced-preview:verify
@@ -54,6 +55,7 @@ git status --short --branch
 - Confirm starter Context Pack exports are deterministic, redaction-aware, and path-free with `pnpm exports:verify`.
 - Confirm active Context Pack Exposure Readiness stays read-only, path-redacted, and visible in CLI inspect plus pack detail with `pnpm exposure:verify`.
 - Confirm Draft Intake, composed drafts, restored quarantine packs, private/secret records, and `never_export` records stay out of MCP/default export preview exposure with `pnpm trust-loop:verify`.
+- Confirm the first-pack adoption path stays local and review-first with `pnpm first-pack:verify`: starter selection, cache-only collector/import drafts, Draft Intake visibility, dry-run proof, and default non-exposure before activation.
 - Confirm draft/import/restore/compose/collector outputs remain review-bound and absent from active API/export/search surfaces.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 - Confirm the Astro public site builds through `pnpm site:verify`.

@@ -135,6 +135,8 @@ import type {
   HealthCheck,
   HealthResponse,
   LibraryViewMode,
+  LocalEvent,
+  McpQueryLogEntry,
   ComposeSavePackResponse,
   ContextPackCollectorDefinition,
   ContextPackCollectorId,
@@ -2230,7 +2232,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
       {activeTab === "exports" ? <ExportsTab pack={pack} exposureReadiness={exposureReadiness} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
-      {activeTab === "activity" ? <PlaceholderTab title="Activity" detail="Activity timelines arrive after pack health and review workflows are implemented." /> : null}
+      {activeTab === "activity" ? <ActivityTab pack={pack} records={records} /> : null}
       {activeTab === "changelog" ? <PlaceholderTab title="Changelog" detail="Static HTML can render CHANGELOG.md; API-backed changelog content remains a later read endpoint." /> : null}
     </section>
   );
@@ -4231,6 +4233,263 @@ function agentKitPreviewToArtifact(preview: AgentKitExportPreview, fallbackName:
   };
 }
 
+function ActivityTab({ pack, records }: { pack: PackDetail; records: RecordSummary[] }) {
+  const [events, setEvents] = useState<LocalEvent[]>([]);
+  const [queries, setQueries] = useState<McpQueryLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const recordIds = useMemo(() => new Set(records.map((record) => record.id)), [records]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEvents([]);
+    setQueries([]);
+    setError(null);
+    setLoading(true);
+
+    async function loadActivity() {
+      try {
+        const [eventResponse, queryResponse] = await Promise.all([
+          apiClient.getEvents({ limit: 100, packId: pack.id }),
+          apiClient.getMcpQueryLog({ limit: 100, packId: pack.id })
+        ]);
+        if (!cancelled) {
+          setEvents(eventResponse.filter((event) => isLocalEventRelevantToPack(event, pack.id, recordIds)).slice(0, 8));
+          setQueries(queryResponse.filter((query) => isMcpQueryRelevantToPack(query, pack.id, recordIds)).slice(0, 8));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load local activity.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadActivity();
+    return () => {
+      cancelled = true;
+    };
+  }, [pack.id, recordIds]);
+
+  if (error) {
+    return <StateCard title="Activity unavailable" detail={error} />;
+  }
+
+  if (loading) {
+    return <div className="detail-card skeleton-detail" />;
+  }
+
+  return (
+    <div className="activity-tab">
+      <article className="detail-card activity-panel">
+        <h2>
+          <Activity size={19} aria-hidden="true" />
+          Activity v0
+        </h2>
+        <p>Read-only local events and MCP query metadata for this pack.</p>
+        {events.length === 0 ? <p className="muted-note">No local events yet for this pack.</p> : null}
+        {events.length > 0 ? (
+          <div className="activity-list">
+            {events.map((event) => (
+              <ActivityEntry
+                key={event.id}
+                title={formatActivityLabel(event.type)}
+                detail={event.message}
+                createdAt={event.createdAt}
+                metadata={event.metadata ?? {}}
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+      <article className="detail-card activity-panel">
+        <h2>
+          <Server size={19} aria-hidden="true" />
+          MCP Queries
+        </h2>
+        <p>Sanitized query log rows already stored by the local MCP runtime.</p>
+        {queries.length === 0 ? <p className="muted-note">No MCP query metadata yet for this pack.</p> : null}
+        {queries.length > 0 ? (
+          <div className="activity-list">
+            {queries.map((query, index) => (
+              <ActivityEntry
+                key={`${query.createdAt}-${query.tool}-${query.recordId ?? query.packId ?? index}`}
+                title={formatActivityLabel(query.tool)}
+                detail={`${formatPackType(query.status)} / ${query.resultCount} results / ${query.durationMs} ms`}
+                createdAt={query.createdAt}
+                metadata={buildMcpQueryActivityMetadata(query)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+    </div>
+  );
+}
+
+function ActivityEntry({
+  title,
+  detail,
+  createdAt,
+  metadata
+}: {
+  title: string;
+  detail: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+}) {
+  const entries = formatActivityMetadata(metadata);
+
+  return (
+    <div className="activity-entry">
+      <div className="activity-entry-heading">
+        <strong>{title}</strong>
+        <time dateTime={createdAt}>{formatDateTime(createdAt)}</time>
+      </div>
+      <p>{detail}</p>
+      {entries.length > 0 ? (
+        <dl className="activity-metadata">
+          {entries.map(([key, value]) => (
+            <div key={key}>
+              <dt>{formatActivityLabel(key)}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
+  );
+}
+
+const activityMetadataOrder = [
+  "briefId",
+  "objectType",
+  "objectId",
+  "packId",
+  "recordId",
+  "profile",
+  "profileId",
+  "target",
+  "format",
+  "privacyMode",
+  "status",
+  "resultCount",
+  "queryHash",
+  "queryLength",
+  "durationMs",
+  "sha256",
+  "byteLength",
+  "estimatedTokens",
+  "includedCount",
+  "excludedCount",
+  "sourceCount",
+  "warningCount",
+  "warningCodes",
+  "resultKinds",
+  "ok",
+  "generatedAt",
+  "savedAt"
+];
+
+const activityMetadataKeys = new Set(activityMetadataOrder);
+
+function buildMcpQueryActivityMetadata(query: McpQueryLogEntry): Record<string, unknown> {
+  return compactMetadata({
+    packId: query.packId,
+    recordId: query.recordId,
+    profileId: query.profileId,
+    queryHash: query.queryHash,
+    queryLength: query.queryLength,
+    ...(query.metadata ?? {})
+  });
+}
+
+function isLocalEventRelevantToPack(event: LocalEvent, packId: string, recordIds: Set<string>): boolean {
+  const metadata = event.metadata ?? {};
+  return metadataMatchesPack(metadata, packId, recordIds);
+}
+
+function isMcpQueryRelevantToPack(query: McpQueryLogEntry, packId: string, recordIds: Set<string>): boolean {
+  if (query.packId === packId) {
+    return true;
+  }
+  if (query.recordId && recordIds.has(query.recordId)) {
+    return true;
+  }
+  return metadataMatchesPack(query.metadata ?? {}, packId, recordIds);
+}
+
+function metadataMatchesPack(metadata: Record<string, unknown>, packId: string, recordIds: Set<string>): boolean {
+  const packCandidates = ["packId", "objectId", "pack", "subjectId"];
+  if (packCandidates.some((key) => getMetadataString(metadata, key) === packId)) {
+    return true;
+  }
+
+  const recordCandidate = getMetadataString(metadata, "recordId");
+  if (recordCandidate && recordIds.has(recordCandidate)) {
+    return true;
+  }
+
+  return metadataArrayIncludes(metadata, "packIds", packId) || [...recordIds].some((recordId) => metadataArrayIncludes(metadata, "recordIds", recordId));
+}
+
+function getMetadataString(metadata: Record<string, unknown>, key: string): string | undefined {
+  const value = metadata[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function metadataArrayIncludes(metadata: Record<string, unknown>, key: string, expected: string): boolean {
+  const value = metadata[key];
+  return Array.isArray(value) && value.some((item) => item === expected);
+}
+
+function compactMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const compacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value !== null && value !== undefined) {
+      compacted[key] = value;
+    }
+  }
+  return compacted;
+}
+
+function formatActivityMetadata(metadata: Record<string, unknown>): Array<[string, string]> {
+  return Object.entries(metadata)
+    .filter(([key]) => activityMetadataKeys.has(key))
+    .sort(([left], [right]) => activityMetadataOrder.indexOf(left) - activityMetadataOrder.indexOf(right))
+    .map(([key, value]) => [key, formatActivityMetadataValue(key, value)] as [string, string])
+    .filter(([, value]) => value.length > 0);
+}
+
+function formatActivityMetadataValue(key: string, value: unknown): string {
+  if (typeof value === "string") {
+    if ((key === "sha256" || key === "queryHash") && value.length > 16) {
+      return `${value.slice(0, 16)}...`;
+    }
+    if (key === "generatedAt" || key === "savedAt") {
+      return formatDateTime(value);
+    }
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string | number | boolean => ["string", "number", "boolean"].includes(typeof item)).join(", ");
+  }
+
+  return "";
+}
+
+function formatActivityLabel(value: string): string {
+  return formatPackType(value.replace(/[.:]/g, "_"));
+}
+
 function HealthTab({ pack }: { pack: PackDetail }) {
   const [health, setHealth] = useState<PackHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -6039,6 +6298,17 @@ function formatDate(value: string | null): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     timeZone: "UTC"
   }).format(new Date(value));
 }

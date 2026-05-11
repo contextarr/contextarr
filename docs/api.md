@@ -62,9 +62,13 @@ This slice is read-only. It does not mutate pack files, write readiness events, 
 ## Local Observability
 
 - `GET /api/events?limit=25`
+- `GET /api/events?limit=25&packId=ai-workstation-pack`
 - `GET /api/mcp/query-log?limit=25`
+- `GET /api/mcp/query-log?limit=25&packId=ai-workstation-pack`
 
 These endpoints expose bounded local observability metadata from SQLite. They are protected by the same optional API token rule as other non-health `/api/*` routes. `limit` must be an integer from 1 to 100.
+
+Optional `packId` and `recordId` filters scope rows before applying the response limit. They are intended for local Activity views and do not change the response shape.
 
 `GET /api/events` returns newest-first local event rows with `id`, `type`, `message`, `createdAt`, and sanitized metadata when available.
 

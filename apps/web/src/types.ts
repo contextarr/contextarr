@@ -420,6 +420,42 @@ export interface SaveExportBriefRequest {
   artifact: ExportArtifact;
 }
 
+export interface LocalEvent {
+  id: number;
+  type: string;
+  message: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LocalEventsResponse {
+  events: LocalEvent[];
+}
+
+export interface LocalObservabilityQuery {
+  limit?: number;
+  packId?: string;
+  recordId?: string;
+}
+
+export interface McpQueryLogEntry {
+  tool: string;
+  packId: string | null;
+  recordId: string | null;
+  profileId: string | null;
+  status: string;
+  resultCount: number;
+  queryHash: string | null;
+  queryLength: number | null;
+  durationMs: number;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface McpQueryLogResponse {
+  queries: McpQueryLogEntry[];
+}
+
 export interface ComposeSelection {
   packId: string;
   recordIds: string[];

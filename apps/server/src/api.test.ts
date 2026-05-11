@@ -135,6 +135,7 @@ function expectPathInside(root: string, value: string): void {
 function expectNoLocalPaths(value: string): void {
   expect(value).not.toContain(repoRoot);
   expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
+  expect(value).not.toMatch(/\/(?:__w|app|github|home|tmp|var|Users|mnt|workspace|workspaces|runner|private|opt)\/[A-Za-z0-9._/-]+/);
 }
 
 function insertExportBriefFixture(
@@ -238,6 +239,11 @@ describe("Contextarr API", () => {
     const exportBody = "export-body-confidential-content";
     const secretValue = "api_key=ctxarr_observability_secret_1234567890";
     const nestedLocalPath = path.join(repoRoot, "exports", "secret-event.md");
+    const ciLinuxLocalPath = "/home/runner/work/contextarr/contextarr/exports/secret-event.md";
+    const tmpLinuxLocalPath = "/tmp/contextarr-secret/event.md";
+    const githubWorkspacePath = "/github/workspace/contextarr/exports/secret-event.md";
+    const containerAppPath = "/app/data/exports/secret-event.md";
+    const hostedRunnerPath = "/__w/contextarr/contextarr/exports/secret-event.md";
     db.prepare("DELETE FROM events").run();
     db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
       "local.old",
@@ -247,11 +253,17 @@ describe("Contextarr API", () => {
     );
     db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
       "local.middle",
-      `Middle event from ${repoRoot}`,
+      `Middle event from ${repoRoot} and ${ciLinuxLocalPath}`,
       "2026-05-11T00:01:00.000Z",
       JSON.stringify({
         ok: true,
         repoRoot,
+        ciLinuxLocalPath,
+        tmpLinuxLocalPath,
+        githubWorkspacePath,
+        containerAppPath,
+        hostedRunnerPath,
+        safeRoute: "/api/events",
         packsDir: demoPacksDir,
         body: "raw-private-context-body",
         nested: {
@@ -267,7 +279,7 @@ describe("Contextarr API", () => {
             secrets: {
               apiKey: secretValue
             },
-            localPaths: [nestedLocalPath]
+            localPaths: [nestedLocalPath, ciLinuxLocalPath, tmpLinuxLocalPath, githubWorkspacePath, containerAppPath, hostedRunnerPath]
           }
         }
       })
@@ -294,6 +306,7 @@ describe("Contextarr API", () => {
     expect(body.events[1].message).toContain("[local path]");
     expect(body.events[1].metadata).toEqual({
       ok: true,
+      safeRoute: "/api/events",
       nested: {
         safe: "kept",
         audit: {
@@ -308,6 +321,12 @@ describe("Contextarr API", () => {
     expect(serialized).not.toContain(exportBody);
     expect(serialized).not.toContain(secretValue);
     expect(serialized).not.toContain(nestedLocalPath);
+    expect(serialized).not.toContain(ciLinuxLocalPath);
+    expect(serialized).not.toContain(tmpLinuxLocalPath);
+    expect(serialized).not.toContain(githubWorkspacePath);
+    expect(serialized).not.toContain(containerAppPath);
+    expect(serialized).not.toContain(hostedRunnerPath);
+    expect(serialized).toContain("/api/events");
     expectNoLocalPaths(serialized);
     expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
     expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
@@ -321,6 +340,11 @@ describe("Contextarr API", () => {
     const exportBody = "export-body-confidential-content";
     const secretValue = "api_key=ctxarr_mcp_observability_secret_1234567890";
     const nestedLocalPath = path.join(repoRoot, "exports", "secret-query.md");
+    const ciLinuxLocalPath = "/home/runner/work/contextarr/contextarr/exports/query.md";
+    const tmpLinuxLocalPath = "/tmp/contextarr-secret/query.md";
+    const githubWorkspacePath = "/github/workspace/contextarr/exports/query.md";
+    const containerAppPath = "/app/data/exports/query.md";
+    const hostedRunnerPath = "/__w/contextarr/contextarr/exports/query.md";
     db.prepare(
       `INSERT INTO mcp_query_log (
         tool, pack_id, record_id, profile_id, status, result_count,
@@ -348,6 +372,12 @@ describe("Contextarr API", () => {
         query: rawQuery,
         returnedContext,
         repoRoot,
+        ciLinuxLocalPath,
+        tmpLinuxLocalPath,
+        githubWorkspacePath,
+        containerAppPath,
+        hostedRunnerPath,
+        safeRoute: "/api/mcp/query-log",
         outputPath: path.join(repoRoot, "exports", "context.md"),
         resultKinds: ["record"],
         nested: {
@@ -363,7 +393,7 @@ describe("Contextarr API", () => {
           },
           diagnostics: {
             secretValue,
-            absoluteLocalPaths: [nestedLocalPath]
+            absoluteLocalPaths: [nestedLocalPath, ciLinuxLocalPath, tmpLinuxLocalPath, githubWorkspacePath, containerAppPath, hostedRunnerPath]
           }
         }
       })
@@ -398,6 +428,7 @@ describe("Contextarr API", () => {
       metadata: {
         ok: true,
         resultKinds: ["record"],
+        safeRoute: "/api/mcp/query-log",
         nested: {
           safe: "kept"
         }
@@ -408,11 +439,95 @@ describe("Contextarr API", () => {
     expect(serialized).not.toContain(exportBody);
     expect(serialized).not.toContain(secretValue);
     expect(serialized).not.toContain(nestedLocalPath);
+    expect(serialized).not.toContain(ciLinuxLocalPath);
+    expect(serialized).not.toContain(tmpLinuxLocalPath);
+    expect(serialized).not.toContain(githubWorkspacePath);
+    expect(serialized).not.toContain(containerAppPath);
+    expect(serialized).not.toContain(hostedRunnerPath);
     expect(serialized).not.toContain(repoRoot);
     expect(serialized).not.toContain("context.md");
+    expect(serialized).toContain("/api/mcp/query-log");
     expectNoLocalPaths(serialized);
     expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
     expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("scopes Local Observability rows before applying response limits", async () => {
+    db.prepare("DELETE FROM events").run();
+    db.prepare("DELETE FROM mcp_query_log").run();
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "export_brief.saved",
+      "Saved local export brief metadata.",
+      "2026-05-10T23:00:00.000Z",
+      JSON.stringify({
+        objectType: "pack",
+        objectId: "ai-workstation-pack",
+        packId: "ai-workstation-pack",
+        profileId: "ai-workstation-codex"
+      })
+    );
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "get_record",
+      "ai-workstation-pack",
+      "ai-workstation.local-ai-stack",
+      null,
+      "ok",
+      1,
+      "scoped-hash",
+      18,
+      5,
+      "2026-05-10T23:00:01.000Z",
+      JSON.stringify({ resultKinds: ["record"] })
+    );
+
+    for (let index = 0; index < 105; index += 1) {
+      const createdAt = new Date(Date.UTC(2026, 4, 11, 0, 0, index)).toISOString();
+      db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+        "local.noise",
+        `Noise event ${index}`,
+        createdAt,
+        JSON.stringify({ packId: `noise-pack-${index}` })
+      );
+      db.prepare(
+        `INSERT INTO mcp_query_log (
+          tool, pack_id, record_id, profile_id, status, result_count,
+          query_hash, query_length, duration_ms, created_at, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run("get_pack_summary", `noise-pack-${index}`, null, null, "ok", 1, `noise-${index}`, 5, 2, createdAt, "{}");
+    }
+
+    const app = createApp({ config, db });
+    const scopedEvents = await app.inject({ method: "GET", url: "/api/events?limit=1&packId=ai-workstation-pack" });
+    const scopedMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=1&packId=ai-workstation-pack" });
+    const invalidScope = await app.inject({ method: "GET", url: "/api/events?packId=../../secret" });
+
+    expect(scopedEvents.statusCode).toBe(200);
+    expect(scopedEvents.json().events).toEqual([
+      expect.objectContaining({
+        type: "export_brief.saved",
+        metadata: expect.objectContaining({
+          packId: "ai-workstation-pack",
+          profileId: "ai-workstation-codex"
+        })
+      })
+    ]);
+    expect(scopedMcp.statusCode).toBe(200);
+    expect(scopedMcp.json().queries).toEqual([
+      expect.objectContaining({
+        tool: "get_record",
+        packId: "ai-workstation-pack",
+        recordId: "ai-workstation.local-ai-stack"
+      })
+    ]);
+    expect(invalidScope.statusCode).toBe(400);
+    expect(invalidScope.json()).toMatchObject({ error: "invalid_query" });
     await app.close();
     db.close();
   });
@@ -2138,6 +2253,35 @@ describe("Contextarr API", () => {
     expect(list.json().briefs[0]).not.toHaveProperty("contentSnapshot");
     expect(fetch.statusCode).toBe(200);
     expect(fetch.json().brief).toEqual(saved);
+    const event = db
+      .prepare("SELECT type, message, metadata_json FROM events WHERE type = ? ORDER BY id DESC LIMIT 1")
+      .get("export_brief.saved") as { type: string; message: string; metadata_json: string };
+    const eventMetadata = JSON.parse(event.metadata_json);
+    expect(event).toMatchObject({
+      type: "export_brief.saved",
+      message: "Saved local export brief metadata."
+    });
+    expect(eventMetadata).toMatchObject({
+      briefId: saved.id,
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      packId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex",
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      sha256: saved.sha256,
+      byteLength: saved.byteLength,
+      estimatedTokens: saved.estimatedTokens,
+      includedCount: saved.includedCount,
+      excludedCount: saved.excludedCount,
+      sourceCount: saved.sourceCount,
+      warningCount: saved.warningCount,
+      generatedAt: saved.generatedAt,
+      savedAt: saved.savedAt
+    });
+    expect(JSON.stringify(eventMetadata)).not.toContain(artifact.content);
+    expect(eventMetadata).not.toHaveProperty("contentSnapshot");
     await app.close();
     db.close();
   });

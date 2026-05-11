@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { ExportArtifact } from "@contextarr/export-profiles";
 import type { ContextarrDatabase } from "./db";
+import { writeExportBriefSavedEvent } from "./events";
 
 const CONTENT_SNAPSHOT_MAX_CHARS = 4096;
 
@@ -151,24 +152,29 @@ export function saveExportBrief(db: ContextarrDatabase, body: SaveExportBriefBod
     contentSnapshotTruncated: snapshot.contentSnapshotTruncated
   };
 
-  db.prepare(
-    `INSERT INTO export_briefs (
-      id, object_type, object_id, profile_id, target, format, privacy_mode,
-      filename, mime_type, sha256, byte_length, estimated_tokens,
-      included_count, excluded_count, source_count, warning_count, warning_codes_json,
-      generated_at, saved_at, content_snapshot, content_snapshot_truncated
-    ) VALUES (
-      @id, @objectType, @objectId, @profileId, @target, @format, @privacyMode,
-      @filename, @mimeType, @sha256, @byteLength, @estimatedTokens,
-      @includedCount, @excludedCount, @sourceCount, @warningCount, @warningCodesJson,
-      @generatedAt, @savedAt, @contentSnapshot, @contentSnapshotTruncated
-    )`
-  ).run({
-    ...brief,
-    warningCodesJson: JSON.stringify(warningCodes),
-    contentSnapshot: brief.contentSnapshot ?? null,
-    contentSnapshotTruncated: brief.contentSnapshotTruncated ? 1 : 0
+  const saveBrief = db.transaction((briefToSave: SavedExportBrief) => {
+    db.prepare(
+      `INSERT INTO export_briefs (
+        id, object_type, object_id, profile_id, target, format, privacy_mode,
+        filename, mime_type, sha256, byte_length, estimated_tokens,
+        included_count, excluded_count, source_count, warning_count, warning_codes_json,
+        generated_at, saved_at, content_snapshot, content_snapshot_truncated
+      ) VALUES (
+        @id, @objectType, @objectId, @profileId, @target, @format, @privacyMode,
+        @filename, @mimeType, @sha256, @byteLength, @estimatedTokens,
+        @includedCount, @excludedCount, @sourceCount, @warningCount, @warningCodesJson,
+        @generatedAt, @savedAt, @contentSnapshot, @contentSnapshotTruncated
+      )`
+    ).run({
+      ...briefToSave,
+      warningCodesJson: JSON.stringify(briefToSave.warningCodes),
+      contentSnapshot: briefToSave.contentSnapshot ?? null,
+      contentSnapshotTruncated: briefToSave.contentSnapshotTruncated ? 1 : 0
+    });
+    writeExportBriefSavedEvent(db, briefToSave);
   });
+
+  saveBrief(brief);
 
   return brief;
 }

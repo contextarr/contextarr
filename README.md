@@ -92,6 +92,8 @@ First-pack path:
 5. Activate only after human review; activation is local and does not export, publish, call external services, or expose the candidate through MCP.
 6. Open Export Center, preview a Codex or Claude profile, and save or export the local brief.
 
+Run `pnpm first-pack:verify` for a local deterministic smoke of this adoption path. It creates cache-only draft candidates under `.contextarr-cache/first-pack-verify/`, checks Draft Intake visibility and activation dry-run proof, and confirms drafts stay out of the active index/search and default export content before activation.
+
 Docker local preview:
 
 ```bash
@@ -119,6 +121,7 @@ Focused checks:
 pnpm docs:verify
 pnpm demo:validate
 pnpm v1-core:verify
+pnpm first-pack:verify
 pnpm advanced-preview:verify
 pnpm exports:verify
 pnpm exposure:verify
