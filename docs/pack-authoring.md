@@ -49,6 +49,15 @@ Sources should include clear provenance. Source metadata can include optional li
 
 ## Choose A First-Pack Path
 
+The adoption path is intentionally review-first:
+
+1. Choose one starter path below.
+2. Run the collector or local import to create a private draft.
+3. Inspect the candidate in Draft Intake.
+4. Prepare the activation plan and dry-run proof.
+5. Activate only after human review.
+6. Export a Codex or Claude brief from the active, reviewed pack.
+
 Use one of these paths instead of starting from an empty directory by hand.
 
 ### 1. Blank Starter
@@ -143,7 +152,8 @@ Keep the adapted pack private and unreviewed until every copied record has been 
 6. Confirm every record has at least one source.
 7. Keep draft records private, unreviewed, and out of export until approved.
 8. Run validation.
-9. Hand the draft to Draft Intake for review and activation planning.
+9. Hand the draft to Draft Intake for review, activation planning, and dry-run proof.
+10. Activate only after review, then export a Codex or Claude brief from the active pack if the intended records meet review and exposure rules.
 
 ## Validate
 
@@ -160,7 +170,7 @@ Avoid absolute local paths in `sources/sources.yaml`. The validator warns on the
 
 Collector output and other draft packs stay outside the active Pack Library until review. Use Draft Intake to inspect candidate metadata, validation summaries, scanner summaries, duplicate warnings, activation plans, dry-run proof, and local activation history.
 
-Draft Intake activation is proof-gated and local. It does not approve content, publish content, generate exports, perform network access, or expose candidate records through MCP. Activation only moves or copies a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the derived local index.
+Draft Intake activation is proof-gated and local. Review the candidate first, prepare the activation plan, generate dry-run proof, and apply activation only after the proof still matches the reviewed candidate. It does not approve content, publish content, generate exports, perform network access, or expose candidate records through MCP. Activation only moves or copies a reviewed candidate into the configured active packs root, records sanitized local evidence, and refreshes the derived local index.
 
 After activation, exposure still depends on the pack and record review state, privacy, redaction, export profile readiness, and MCP/read-only exposure rules.
 

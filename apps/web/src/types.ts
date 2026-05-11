@@ -407,6 +407,12 @@ export interface ExportBrief {
   contentSnapshotTruncated: boolean;
 }
 
+export interface ExportBriefListQuery {
+  limit?: number;
+  objectType?: ExportBriefObjectType;
+  objectId?: string;
+}
+
 export interface SaveExportBriefRequest {
   objectType: ExportBriefObjectType;
   objectId: string;

@@ -11,8 +11,8 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
 - Pack detail with Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
-- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, review, review-candidates, brief, and query.
-- Explicit CLI `--agent` mode for read-oriented commands only: validate, scan, list, inspect, health, review, review-candidates, brief, and query.
+- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, readiness, review, review-candidates, brief, and query.
+- Explicit CLI `--agent` mode for read-oriented commands only: validate, scan, list, inspect, health, readiness, review, review-candidates, brief, and query.
 - Read-only MCP surfaces where implemented by the local server package.
 - Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
@@ -37,11 +37,12 @@ These commands are implemented in the current checkout and covered by CLI tests 
 | `contextarr list` | Current | Lists indexed packs, Skills, and Agent Kits with deterministic text or JSON output. |
 | `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. `--readiness` adds read-only Exposure Readiness for Context Packs only. |
 | `contextarr health` | Current | Summarizes local index health or reports one object health without requiring the API server or MCP. |
+| `contextarr readiness` | Current | Summarizes read-only Context Readiness for one indexed Context Pack. Supports text, `--json`, and automation-safe `--agent` output without recalculating readiness, writing events, generating exports, or widening MCP access. |
 | `contextarr review` | Current | Lists local review items with deterministic filters, limits, text, and JSON output. |
 | `contextarr review-candidates` | Current | Lists untrusted draft/composed/quarantine Context Pack candidates with path-redacted metadata only. |
 | `contextarr brief` | Current | Builds compact local index or object briefs for packs, Skills, and Agent Kits. |
 | `contextarr query` | Current | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
-| Read-oriented `--agent` CLI mode | Current | Available on validate, scan, list, inspect, health, review, review-candidates, brief, and query. It emits deterministic JSON with no color/progress and preserves existing sanitization, redaction, and limits. |
+| Read-oriented `--agent` CLI mode | Current | Available on validate, scan, list, inspect, health, readiness, review, review-candidates, brief, and query. It emits deterministic JSON with no color/progress and preserves existing sanitization, redaction, and limits. |
 | Write-heavy `--agent` CLI mode | Rejected | `import`, `import-skill`, `render`, `export`, `backup`, `restore`, and `rescan` reject `--agent` instead of silently writing. |
 | Commands that execute pack, Skill, or Agent Kit content | Rejected | Contextarr prepares data; it does not run agents or execute content. |
 
@@ -75,7 +76,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Executable packs, executable Skills, or executable Agent Kits.
 - Benchmark fixtures and context-quality package from PR #2.
 - Context Readiness list, recalculation, persisted evidence event writers, governance parsing/enforcement, token-budget reports, and export history.
-- Derived Index Adapter export profiles for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes.
+- Derived Index Adapter export profiles for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. These remain docs/spec-only future work, with no current runtime adapter promises.
 - Built-in vector database, built-in graph database, code graph engine, managed RAG app, hidden embedding calls, always-on external indexer, and external database sync service are not implemented and are not part of the current product.
 
 ## Starter Pack Status

@@ -9,6 +9,7 @@ It is available only on commands that inspect local data without writing files, 
 - `contextarr list [kind] --agent`
 - `contextarr inspect <id> --agent`
 - `contextarr health [id] --agent`
+- `contextarr readiness <pack-id> --agent`
 - `contextarr review --agent`
 - `contextarr review-candidates --agent`
 - `contextarr brief [id] --agent`
@@ -24,7 +25,7 @@ It is available only on commands that inspect local data without writing files, 
 - Existing path display sanitization, source redaction, and secret redaction remain in force.
 - Existing command limits remain in force where the command already supports limits.
 
-For commands that also support `--json`, `--agent` is equivalent to JSON output plus the explicit no-color/no-progress automation contract. For `scan`, `--agent` selects JSON output even though the command otherwise uses `--format json`.
+For commands that also support `--json`, including `readiness`, `--agent` is equivalent to JSON output plus the explicit no-color/no-progress automation contract. For `scan`, `--agent` selects JSON output even though the command otherwise uses `--format json`.
 
 ## Non-Goals
 

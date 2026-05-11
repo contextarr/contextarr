@@ -19,6 +19,7 @@ import type {
   ContextPackCollectorResult,
   ExportArtifact,
   ExportBrief,
+  ExportBriefListQuery,
   PackDetail,
   PackExposureReadiness,
   PackHealthResponse,
@@ -98,7 +99,7 @@ export interface ApiClient {
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   saveComposedPack(request: ComposeSavePackRequest): Promise<ComposeSavePackResponse>;
   saveExportBrief(request: SaveExportBriefRequest): Promise<ExportBrief>;
-  listExportBriefs(): Promise<ExportBrief[]>;
+  listExportBriefs(query?: ExportBriefListQuery): Promise<ExportBrief[]>;
   getExportBrief(id: string): Promise<ExportBrief>;
   getReviewItems(filters?: {
     status?: string;
@@ -279,8 +280,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       });
       return response.brief;
     },
-    listExportBriefs: async () => {
-      const response = await requestJson<{ briefs: ExportBrief[] }>("/api/export-briefs");
+    listExportBriefs: async (query = {}) => {
+      const response = await requestJson<{ briefs: ExportBrief[] }>(
+        `/api/export-briefs${toQueryString({
+          limit: query.limit,
+          objectType: query.objectType,
+          objectId: query.objectId
+        })}`
+      );
       return response.briefs;
     },
     getExportBrief: async (id: string) => {
@@ -350,11 +357,11 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, "");
 }
 
-function toQueryString(filters: Record<string, string | undefined>): string {
+function toQueryString(filters: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
-    if (value) {
-      params.set(key, value);
+    if (value !== undefined && value !== "") {
+      params.set(key, String(value));
     }
   }
 

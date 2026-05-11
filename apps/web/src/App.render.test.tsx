@@ -504,6 +504,15 @@ describe("App Skill UI routes", () => {
 
     await waitForText("AI Workstation Pack");
     expect(document.body.textContent).toContain("Pack Library");
+    expect(document.body.textContent).toContain("Collect, review, export");
+    expect(Array.from(document.querySelectorAll(".first-pack-step")).map((link) => link.getAttribute("href"))).toEqual([
+      "#/collectors",
+      "#/review-queue/drafts",
+      "#/exports"
+    ]);
+    expect(document.querySelector(".first-pack-path")?.textContent).not.toMatch(
+      /Private Context|registry|skill-runtime|Derived Index Adapter/
+    );
     expect(document.body.textContent).not.toContain("Local API unavailable");
   });
 
@@ -531,6 +540,7 @@ describe("App Skill UI routes", () => {
 
     await waitForText("Export Center");
     await waitForText("Local Export Briefs");
+    expect(mocks.apiClient.listExportBriefs).toHaveBeenCalledWith({ limit: 6 });
     expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
     await waitForText("Codex Pack Export");
     await waitForText("Exposure Readiness includes 2 of 5 records");

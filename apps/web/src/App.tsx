@@ -600,6 +600,7 @@ function LibraryPage(props: LibraryPageProps) {
         onTrustFilterChange={props.onTrustFilterChange}
         onHealthFilterChange={props.onHealthFilterChange}
       />
+      <FirstPackPath />
 
       {props.error ? (
         <ErrorState authError={props.authError} onRetry={props.onRetry} />
@@ -708,14 +709,63 @@ function LibraryHeader(props: LibraryHeaderProps) {
           </select>
         </label>
 
-        <button className="primary-action" type="button" disabled>
+        <a className="primary-action" href={collectorsHref()}>
           <Sparkles size={18} aria-hidden="true" />
-          <span>New Pack</span>
-        </button>
+          <span>First Pack</span>
+        </a>
       </div>
 
       <div className="library-count">{props.packCount} packs</div>
     </div>
+  );
+}
+
+const firstPackSteps = [
+  {
+    label: "Collectors",
+    href: collectorsHref(),
+    detail: "Preview local notes or starter templates into a private draft pack.",
+    icon: Layers3
+  },
+  {
+    label: "Draft Intake",
+    href: reviewQueueHref("drafts"),
+    detail: "Inspect candidate metadata, scanner results, and dry-run proof before activation.",
+    icon: ShieldCheck
+  },
+  {
+    label: "Export Center",
+    href: exportsHref(),
+    detail: "Preview redacted profile output and save a local export brief.",
+    icon: CloudDownload
+  }
+] satisfies Array<{ label: string; href: string; detail: string; icon: typeof Layers3 }>;
+
+function FirstPackPath() {
+  return (
+    <section className="first-pack-path" aria-labelledby="first-pack-title">
+      <div className="first-pack-copy">
+        <div className="eyebrow">
+          <Sparkles size={16} aria-hidden="true" />
+          <span>First Pack</span>
+        </div>
+        <h2 id="first-pack-title">Collect, review, export</h2>
+        <p>
+          Library stays the read-only catalog. Start with local drafts, review them in Draft Intake, then preview an export
+          before saving a brief.
+        </p>
+      </div>
+      <div className="first-pack-steps" aria-label="First pack workflow">
+        {firstPackSteps.map((step, index) => (
+          <a className="first-pack-step" href={step.href} key={step.label}>
+            <span className="first-pack-step-index">{index + 1}</span>
+            <step.icon size={18} aria-hidden="true" />
+            <strong>{step.label}</strong>
+            <span>{step.detail}</span>
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2582,7 +2632,7 @@ function useLocalExportBriefs() {
     setLoading(true);
     setError(null);
     try {
-      setBriefs(await apiClient.listExportBriefs());
+      setBriefs(await apiClient.listExportBriefs({ limit: 6 }));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load local export briefs.");
     } finally {

@@ -83,6 +83,15 @@ pnpm dev
 
 Open the dashboard at `http://127.0.0.1:5173`.
 
+First-pack path:
+
+1. Choose a starter: Blank Pack Starter, Markdown Folder, Project Notes, Support KB Starter, or one of the curated starter packs.
+2. Run a dashboard collector, or run `contextarr import` for local folders, Markdown folders, Obsidian vaults, ChatGPT exports, or Claude exports.
+3. Inspect the result in Draft Intake before it becomes active.
+4. Prepare the Draft Intake activation plan and dry-run proof.
+5. Activate only after human review; activation is local and does not export, publish, call external services, or expose the candidate through MCP.
+6. Open Export Center, preview a Codex or Claude profile, and save or export the local brief.
+
 Docker local preview:
 
 ```bash

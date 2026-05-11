@@ -757,11 +757,15 @@ describe("Contextarr API client", () => {
       })
     ).resolves.toMatchObject({ id: "brief-1", filename: "pack-1-codex.md" });
     await expect(client.listExportBriefs()).resolves.toEqual([expect.objectContaining({ id: "brief-1" })]);
+    await expect(client.listExportBriefs({ limit: 6, objectType: "agent_kit", objectId: "kit-1" })).resolves.toEqual([
+      expect.objectContaining({ id: "brief-1" })
+    ]);
     await expect(client.getExportBrief("brief-1")).resolves.toMatchObject({ objectId: "pack-1" });
 
     expect(requests.map((request) => request.url)).toEqual([
       "/api/export-briefs",
       "/api/export-briefs",
+      "/api/export-briefs?limit=6&objectType=agent_kit&objectId=kit-1",
       "/api/export-briefs/brief-1"
     ]);
     expect(requests[0].init).toMatchObject({
