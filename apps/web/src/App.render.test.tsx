@@ -115,6 +115,7 @@ describe("App Skill UI routes", () => {
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getPack.mockResolvedValue(packDetailFixture());
     mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessFixture());
+    mocks.apiClient.getExportPreview.mockResolvedValue(packExportArtifactFixture());
     mocks.apiClient.getPackRecords.mockResolvedValue([]);
     mocks.apiClient.getRecord.mockResolvedValue({});
     mocks.apiClient.getSkills.mockResolvedValue([skillFixture()]);
@@ -503,6 +504,29 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("MCP Records");
     expect(document.body.textContent).toContain("Source Coverage");
     expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+  });
+
+  it("clarifies Export Center readiness, privacy mode, and preview record exclusions", async () => {
+    mocks.apiClient.getPack.mockResolvedValue(packDetailWithExportProfilesFixture());
+    mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessWithExclusionsFixture());
+
+    mountApp("#/exports");
+
+    await waitForText("Export Center");
+    await waitForText("Codex Pack Export");
+    await waitForText("Exposure Readiness includes 2 of 5 records");
+    expect(document.body.textContent).toContain(
+      "Draft Intake, composed, restored quarantine, private, secret, and never_export content remains excluded by default."
+    );
+
+    clickButton("Preview");
+    await waitForText("Pack Export Preview Body");
+
+    expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(mocks.apiClient.getExportPreview).toHaveBeenCalledWith("ai-workstation-pack", "ai-workstation-codex");
+    expect(document.body.textContent).toContain("Privacy mode: Redacted");
+    expect(document.body.textContent).toContain("This preview includes 2 records and excludes 3 records.");
+    expect(document.body.textContent).toContain("Excluded reasons: private record, secret tag, never_export tag.");
   });
 
   it("labels search and inactive shell controls for assistive technology", async () => {
@@ -1271,6 +1295,24 @@ function packDetailFixture() {
   };
 }
 
+function packExportProfileFixture() {
+  return {
+    id: "ai-workstation-codex",
+    name: "Codex Pack Export",
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    tokenBudget: 4000
+  };
+}
+
+function packDetailWithExportProfilesFixture() {
+  return {
+    ...packDetailFixture(),
+    exportProfiles: [packExportProfileFixture()]
+  };
+}
+
 function packExposureReadinessFixture() {
   return {
     packId: "ai-workstation-pack",
@@ -1314,6 +1356,97 @@ function packExposureReadinessFixture() {
     records: [],
     blockers: [],
     warnings: []
+  };
+}
+
+function packExposureReadinessWithExclusionsFixture() {
+  const readiness = packExposureReadinessFixture();
+  return {
+    ...readiness,
+    summary: {
+      ...readiness.summary,
+      exportEligibleRecords: 2,
+      blockedRecords: 3
+    },
+    blockers: [
+      {
+        code: "record.default_export_excluded",
+        severity: "blocker" as const,
+        message: "Three records remain outside the default export policy."
+      }
+    ]
+  };
+}
+
+function packExportArtifactFixture() {
+  return {
+    packId: "ai-workstation-pack",
+    packName: "AI Workstation Pack",
+    profileId: "ai-workstation-codex",
+    profileName: "Codex Pack Export",
+    target: "codex",
+    format: "markdown",
+    filename: "ai-workstation-codex.md",
+    mimeType: "text/markdown",
+    content: "# Pack Export Preview Body",
+    includedRecords: [
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        title: "Local AI Stack",
+        type: "runbook",
+        privacy: "public_safe",
+        tags: ["local"],
+        sources: ["source-a"]
+      },
+      {
+        id: "ai-workstation-pack.browser-lane",
+        title: "Browser Lane",
+        type: "runbook",
+        privacy: "public_safe",
+        tags: ["browser"],
+        sources: ["source-b"]
+      }
+    ],
+    excludedRecords: [
+      {
+        id: "ai-workstation-pack.private-note",
+        title: "Private Note",
+        type: "note",
+        privacy: "private",
+        tags: [],
+        sources: ["source-c"],
+        reason: "private record"
+      },
+      {
+        id: "ai-workstation-pack.secret-note",
+        title: "Secret Note",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["secret"],
+        sources: ["source-d"],
+        reason: "secret tag"
+      },
+      {
+        id: "ai-workstation-pack.draft-note",
+        title: "Draft Note",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["never_export"],
+        sources: ["source-e"],
+        reason: "never_export tag"
+      }
+    ],
+    sources: [
+      {
+        id: "source-a",
+        title: "Source A",
+        type: "markdown"
+      }
+    ],
+    warnings: [],
+    generatedAt: "2026-05-07T00:00:00.000Z",
+    byteLength: 26,
+    estimatedTokens: 7
   };
 }
 

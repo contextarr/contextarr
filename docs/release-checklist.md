@@ -27,18 +27,27 @@ git status --short --branch
 
 ## Manual Smoke
 
-- Open `http://127.0.0.1:3210` through Docker Compose.
+- Open `http://127.0.0.1:3210` through Docker Compose, or record the alternate local port when an existing `contextarr-app-1` already occupies `3210`.
+- Confirm the static UI loads.
+- Confirm `/api/health` is ok and `authRequired` is `true`.
 - Confirm the Library shows the demo pack set, including 12 curated starter Context Packs.
+- Confirm the Library shows 15 total packs.
 - Confirm legacy/non-starter demo packs do not present as marketplace listings.
 - Open AI Workstation Pack.
+- Confirm `ai-workstation` health is healthy.
 - Open one starter Context Pack.
 - Open one record detail page and confirm the source map is visible.
 - Preview a Codex export.
+- Confirm the Codex export preview endpoint responds.
 - Build a Composer preview.
+- Confirm the Composer preview endpoint responds.
 - Save a Composer draft pack and confirm it lands under `composed-packs/` without appearing in the active Pack Library.
 - Open Pack Health and Review Queue.
+- Confirm Review Queue shows 0 review items for the alpha smoke.
 - Open Review Queue -> Draft Intake and confirm draft/composed/quarantine candidates show metadata, activation plans, dry-run proof, local activation history, and only proof-gated local activation; no publish, export exposure, or MCP exposure action should be present.
+- Confirm Draft Intake shows 0 draft candidates for the alpha smoke.
 - Open Collectors, preview a Context Pack collector draft, and confirm a created draft lands under `draft-packs/` without appearing in the active Pack Library.
+- Confirm Collectors shows 4 collectors.
 - Run `pnpm --filter @contextarr/cli contextarr review-candidates --format json` and confirm it returns sanitized labels without local absolute paths or record bodies.
 - If `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`, confirm the preserved local Skill import lane still previews/imports only private draft Skills under `imported-skills/`.
 - Confirm all demo packs validate with zero errors.
@@ -48,6 +57,7 @@ git status --short --branch
 - Confirm draft/import/restore/compose/collector outputs remain review-bound and absent from active API/export/search surfaces.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
 - Confirm the Astro public site builds through `pnpm site:verify`.
+- Clean up smoke-only containers and volumes after verification.
 
 ## Alpha Release Artifact
 
@@ -57,6 +67,7 @@ The `v0.1.0-alpha.1` release notes should include:
 - Install path.
 - Demo flow.
 - Verification commands.
+- Latest local gate evidence, including Docker smoke port and cleanup status.
 - Reviewed screenshot set.
 - Trust-loop MCP/default export preview proof.
 - Security boundaries.
@@ -87,6 +98,7 @@ Do not commit generated screenshots unless they are intentionally reviewed and a
 - No Docker volumes committed.
 - No package publishing.
 - No GitHub release/tag unless explicitly approved.
+- No telemetry action.
 
 ## Before Publishing Later
 

@@ -1820,6 +1820,47 @@ h1 {
   text-align: center;
 }
 
+.export-clarity-panel {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(14, 22, 32, 0.58);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.export-clarity-panel p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.export-clarity-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.export-clarity-grid div {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(8, 13, 20, 0.38);
+  padding: 9px;
+}
+
+.export-clarity-grid span {
+  color: var(--faint);
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.export-clarity-grid strong {
+  color: var(--text);
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
 .export-preview {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
@@ -1871,6 +1912,22 @@ h1 {
   gap: 10px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 14px;
+}
+
+.export-preview-explainer {
+  border-top: 1px solid var(--line-soft);
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  padding: 13px 14px;
+}
+
+.export-preview-explainer strong {
+  color: var(--text);
+}
+
+.export-preview-explainer p {
+  margin: 0;
 }
 
 .export-warning-list {
@@ -2353,6 +2410,7 @@ h1 {
 
   .summary-strip,
   .export-stats,
+  .export-clarity-grid,
   .review-filters,
   .candidate-filters,
   .agent-kit-filters,
@@ -2468,6 +2526,7 @@ h1 {
 
   .summary-strip,
   .export-stats,
+  .export-clarity-grid,
   .review-filters,
   .candidate-filters,
   .agent-kit-filters,

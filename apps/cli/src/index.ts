@@ -154,8 +154,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .argument("[kind]", "object kind: all, packs, skills, or agent-kits", "all")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((kindValue: string, options: { format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((kindValue: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseListKind(kindValue);
 
       if (!format) {
@@ -195,8 +196,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--readiness", "include read-only Context Pack exposure readiness", false)
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string, options: { kind: string; readiness?: boolean; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string, options: { kind: string; readiness?: boolean } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseInspectKind(options.kind);
 
       if (!format) {
@@ -254,8 +256,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--kind <kind>", "health target kind: auto, summary, pack, skill, or agent-kit", "auto")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string | undefined, options: { kind: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string | undefined, options: { kind: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseHealthKind(options.kind);
 
       if (!format) {
@@ -312,6 +315,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum items to return", "50")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
     .action(
       (options: {
         status: string;
@@ -325,8 +329,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         limit: string;
         format: string;
         json?: boolean;
+        agent?: boolean;
       }) => {
-        const format = options.json ? "json" : parseFormat(options.format);
+        const format = parseAgentOutputFormat(options);
         const filters = parseReviewFilters(options);
         const limit = parsePositiveInteger(options.limit);
 
@@ -372,8 +377,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum candidates to return", "50")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((options: { sourceKind: string; status: string; q?: string; limit: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((options: { sourceKind: string; status: string; q?: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const sourceKind = parseReviewCandidateSourceKind(options.sourceKind);
       const status = parseReviewCandidateStatus(options.status);
       const limit = parsePositiveInteger(options.limit);
@@ -430,8 +436,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum child items per brief section", "5")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string | undefined, options: { kind: string; limit: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string | undefined, options: { kind: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseBriefKind(options.kind);
       const limit = parsePositiveInteger(options.limit);
 
@@ -489,8 +496,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum results to return", "10")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((queryParts: string[], options: { type: string; limit: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((queryParts: string[], options: { type: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const type = parseQueryKind(options.type);
       const limit = parsePositiveInteger(options.limit);
       const query = queryParts.join(" ").trim();
@@ -721,8 +729,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .command("scan")
     .argument("<path>", "local Contextarr artifact file or directory to scan")
     .option("--format <format>", "output format: text or json", "text")
-    .action((targetPath: string, options: { format: string }) => {
-      const format = parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((targetPath: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
 
       if (!format) {
         io.stderr.write(`Unsupported output format: ${options.format}\n`);
@@ -745,8 +754,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .argument("<path>", "pack, Skill, Agent Kit, or directory of child objects to validate")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON validation report", false)
-    .action((targetPath: string, options: { format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((targetPath: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
 
       if (!format) {
         io.stderr.write(`Unsupported output format: ${options.format}\n`);
@@ -771,7 +781,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
               ? validateAgentKit(target.path)
               : validatePack(target.path)
         );
-        const validationJson = formatValidationJson(resolvedTargetPath, results);
+        const validationJson = formatValidationJson(resolvedTargetPath, results, { sanitizePaths: Boolean(options.agent) });
         if (format === "json") {
           io.stdout.write(`${JSON.stringify(validationJson, null, 2)}\n`);
         } else {
@@ -963,6 +973,16 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
 function parseFormat(value: string): OutputFormat | undefined {
   return value === "text" || value === "json" ? value : undefined;
+}
+
+type AgentOutputOptions = {
+  format: string;
+  json?: boolean;
+  agent?: boolean;
+};
+
+function parseAgentOutputFormat(options: AgentOutputOptions): OutputFormat | undefined {
+  return options.agent || options.json ? "json" : parseFormat(options.format);
 }
 
 function parseImportKind(value: string): ImporterKind | undefined {
@@ -2326,13 +2346,21 @@ type FormattedValidationJson = AnyValidationResult | FormattedPackValidationJson
   summary: { errors: number; warnings: number; infos: number };
 };
 
-function formatValidationJson(targetPath: string, results: AnyValidationResult[]): FormattedValidationJson {
+function formatValidationJson(
+  targetPath: string,
+  results: AnyValidationResult[],
+  options: { sanitizePaths?: boolean } = {}
+): FormattedValidationJson {
   if (results.length === 1) {
-    return "packPath" in results[0] ? formatPackValidationJson(results[0]) : results[0];
+    const formatted = "packPath" in results[0] ? formatPackValidationJson(results[0]) : results[0];
+    return options.sanitizePaths ? sanitizeValidationPaths(formatted) : formatted;
   }
 
   const displayTargetPath = displayPath(targetPath);
-  const formattedResults = results.map((result) => ("packPath" in result ? formatPackValidationJson(result) : result));
+  const formattedResults = results.map((result) => {
+    const formatted = "packPath" in result ? formatPackValidationJson(result) : result;
+    return options.sanitizePaths ? sanitizeValidationPaths(formatted) : formatted;
+  });
   const aggregate = {
     targetPath: displayTargetPath,
     valid: formattedResults.every((result) => result.valid),
@@ -2357,6 +2385,26 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   }
 
   return aggregate;
+}
+
+function sanitizeValidationPaths<T>(value: T): T {
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValidationPaths(item)) as T;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    sanitized[key] =
+      (key === "packPath" || key === "skillPath" || key === "agentKitPath" || key === "targetPath") && typeof item === "string"
+        ? displayPath(item)
+        : sanitizeValidationPaths(item);
+  }
+
+  return sanitized as T;
 }
 
 function formatPackValidationJson(result: ValidationResult): FormattedPackValidationJson {

@@ -128,6 +128,8 @@ pnpm --filter @contextarr/cli contextarr backup demo-packs --out data/backups
 pnpm --filter @contextarr/cli contextarr restore data/backups/<backup-id> --out data/restored-packs
 ```
 
+Read-oriented CLI commands also support explicit automation-safe `--agent` output. See [docs/cli-agent-mode.md](docs/cli-agent-mode.md).
+
 Run the read-only MCP server:
 
 ```bash
@@ -173,6 +175,7 @@ See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.m
 - [docs/api.md](docs/api.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/backups.md](docs/backups.md)
+- [docs/cli-agent-mode.md](docs/cli-agent-mode.md)
 - [docs/collectors.md](docs/collectors.md)
 - [docs/composed-packs.md](docs/composed-packs.md)
 - [docs/config-reference.md](docs/config-reference.md)

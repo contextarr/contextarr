@@ -429,6 +429,164 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("treats --agent as JSON output for read-oriented path commands", async () => {
+    const validateOutput = createIo();
+    const scanOutput = createIo();
+
+    expect(await runCli(["validate", fixture("valid-minimal-pack"), "--format", "text", "--agent"], validateOutput.io)).toBe(0);
+    expect(JSON.parse(validateOutput.stdout)).toMatchObject({
+      schemaVersion: "contextarr.validation-report.v1",
+      valid: true
+    });
+    expect(validateOutput.stderr).toBe("");
+    expectNoAbsolutePaths(validateOutput.stdout);
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "clean-context-pack"), "--format", "text", "--agent"], scanOutput.io)).toBe(0);
+    expect(JSON.parse(scanOutput.stdout)).toMatchObject({
+      status: "policy_clean",
+      recommendedAction: "activate"
+    });
+    expect(scanOutput.stderr).toBe("");
+    expect(scanOutput.stdout).not.toContain("Status: policy_clean");
+  });
+
+  it("treats --agent as JSON output for read-only index commands", async () => {
+    await withCliIndex(async () => {
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+
+      const listOutput = createIo();
+      expect(await runCli(["list", "packs", "--format", "text", "--agent"], listOutput.io)).toBe(0);
+      expect(JSON.parse(listOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.list.v1",
+        kind: "packs"
+      });
+      expectNoAbsolutePaths(listOutput.stdout);
+
+      const inspectOutput = createIo();
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--agent"], inspectOutput.io)).toBe(0);
+      expect(JSON.parse(inspectOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "pack",
+        id: "ai-workstation-pack"
+      });
+
+      const healthOutput = createIo();
+      expect(await runCli(["health", "--agent"], healthOutput.io)).toBe(0);
+      expect(JSON.parse(healthOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.health.v1",
+        kind: "summary"
+      });
+
+      const reviewOutput = createIo();
+      expect(await runCli(["review", "--status", "all", "--limit", "2", "--agent"], reviewOutput.io)).toBe(0);
+      const reviewJson = JSON.parse(reviewOutput.stdout);
+      expect(reviewJson).toMatchObject({
+        schemaVersion: "contextarr.cli.review.v1",
+        limit: 2
+      });
+      expect(reviewJson.returned).toBeLessThanOrEqual(2);
+
+      const candidatesOutput = createIo();
+      expect(await runCli(["review-candidates", "--limit", "2", "--agent"], candidatesOutput.io)).toBe(0);
+      expect(JSON.parse(candidatesOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        limit: 2
+      });
+      expectNoAbsolutePaths(candidatesOutput.stdout);
+
+      const briefOutput = createIo();
+      expect(await runCli(["brief", "--limit", "2", "--agent"], briefOutput.io)).toBe(0);
+      const briefJson = JSON.parse(briefOutput.stdout);
+      expect(briefJson).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "summary",
+        limit: 2
+      });
+      expect(briefJson.packs).toHaveLength(2);
+
+      const queryOutput = createIo();
+      expect(await runCli(["query", "workstation", "--type", "record", "--limit", "2", "--agent"], queryOutput.io)).toBe(0);
+      const queryJson = JSON.parse(queryOutput.stdout);
+      expect(queryJson).toMatchObject({
+        schemaVersion: "contextarr.cli.query.v1",
+        query: "workstation",
+        type: "record",
+        limit: 2
+      });
+      expect(queryJson.returned).toBeLessThanOrEqual(2);
+      expectNoAbsolutePaths(queryOutput.stdout);
+    });
+  });
+
+  it("keeps --agent unsupported on commands that can write files or indexes", async () => {
+    const cases: Array<{ args: string[]; outputDir?: string; forbiddenPath?: string }> = [];
+    const importOut = tempDir();
+    const importSkillOut = tempDir();
+    const renderOut = tempDir();
+    const exportOut = tempDir();
+    const backupOut = tempDir();
+    const restoreOut = tempDir();
+
+    cases.push(
+      { args: ["rescan", "--agent"] },
+      {
+        args: ["import", path.join(importFixturesDir, "markdown-folder"), "--kind", "markdown", "--out", importOut, "--pack-id", "agent-import", "--agent"],
+        outputDir: importOut
+      },
+      {
+        args: [
+          "import-skill",
+          path.join(importFixturesDir, "skill-markdown-folder"),
+          "--kind",
+          "markdown",
+          "--out",
+          importSkillOut,
+          "--skill-id",
+          "agent-import-skill",
+          "--agent"
+        ],
+        outputDir: importSkillOut
+      },
+      {
+        args: ["render", path.join(demoPacksDir, "ai-workstation-pack"), "--out", renderOut, "--agent"],
+        forbiddenPath: path.join(renderOut, "index.html")
+      },
+      {
+        args: [
+          "export",
+          path.join(demoPacksDir, "ai-workstation-pack"),
+          "--profile",
+          "ai-workstation-chatgpt",
+          "--out",
+          exportOut,
+          "--agent"
+        ],
+        outputDir: exportOut
+      },
+      {
+        args: ["backup", path.join(demoPacksDir, "ai-workstation-pack"), "--out", backupOut, "--backup-id", "agent-backup", "--agent"],
+        outputDir: backupOut
+      },
+      {
+        args: ["restore", "does-not-exist", "--out", restoreOut, "--agent"],
+        outputDir: restoreOut
+      }
+    );
+
+    for (const testCase of cases) {
+      const output = createIo();
+      expect(await runCli(testCase.args, output.io)).toBe(2);
+      expect(output.stderr).toContain("unknown option '--agent'");
+      expect(output.stdout).toBe("");
+      if (testCase.outputDir) {
+        expect(fs.readdirSync(testCase.outputDir)).toEqual([]);
+      }
+      if (testCase.forbiddenPath) {
+        expect(fs.existsSync(testCase.forbiddenPath)).toBe(false);
+      }
+    }
+  });
+
   it("returns expected codes for read-only index command usage and misses", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();

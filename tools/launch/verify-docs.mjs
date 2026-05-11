@@ -12,6 +12,7 @@ const requiredFiles = [
   "docs/docker.md",
   "docs/security.md",
   "docs/api.md",
+  "docs/cli-agent-mode.md",
   "docs/collectors.md",
   "docs/implementation-status.md",
   "docs/known-limitations.md",
@@ -81,6 +82,7 @@ if (!failed) {
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
   const releaseChecklist = read("docs/release-checklist.md");
+  const cliAgentMode = read("docs/cli-agent-mode.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
   const combinedDocs = [readme, mcp, docker].join("\n");
@@ -103,6 +105,7 @@ if (!failed) {
     "docs/quickstart.md",
     "docs/docker.md",
     "docs/security.md",
+    "docs/cli-agent-mode.md",
     "docs/pack-authoring.md",
     "docs/export-profiles.md",
     "docs/release-checklist.md"
@@ -134,6 +137,22 @@ if (!failed) {
   for (const text of requiredStatusText) {
     if (!implementationStatus.includes(text)) {
       fail(`Implementation status is missing text: ${text}`);
+    }
+  }
+
+  const requiredCliAgentModeText = [
+    "`--agent` is an explicit automation mode",
+    "read-oriented Contextarr CLI commands",
+    "JSON output",
+    "No color output",
+    "No progress animation output",
+    "`contextarr export`",
+    "must reject `--agent`",
+    "`--agent` does not execute Context Packs, Skills, or Agent Kits"
+  ];
+  for (const text of requiredCliAgentModeText) {
+    if (!cliAgentMode.includes(text)) {
+      fail(`CLI agent mode docs are missing text: ${text}`);
     }
   }
 

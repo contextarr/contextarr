@@ -19,11 +19,14 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 
 ### Alpha Evidence
 
+- Latest recorded checkpoint: on branch `codex/contextarr-overnight-alpha`, the Stage 1 release gate passed, `pnpm release:verify` passed, and `pnpm docs:verify` plus `pnpm screenshots:verify` passed after the checkpoint.
+- Live Docker smoke passed on alternate port `http://127.0.0.1:33211` because an existing `contextarr-app-1` occupied `3210`; the smoke proved the static UI loaded, `/api/health` was ok, `authRequired` was `true`, 15 packs and 12 starters were visible, `ai-workstation` health was healthy, Review Queue had 0 items, Draft Intake had 0 candidates, Collectors showed 4 collectors, and the Codex export preview and Composer preview endpoints responded.
+- Smoke-only container and volume cleanup was completed after verification.
 - Reviewed screenshots live under `docs/screenshots/v0.1.0-alpha.1/` and are checked by `pnpm screenshots:verify`.
 - Starter exports are checked for deterministic output, redaction-aware inclusion, stable warning metadata, and no local absolute path leakage by `pnpm exports:verify`.
 - CLI and API error paths have tests for sanitized local paths and controlled JSON error bodies.
 - Draft, imported, composed, and restored/quarantine-shaped Context Pack outputs are tested to remain outside active API/export/search surfaces after rescan.
-- `pnpm release:verify` is the local alpha candidate gate. It does not tag, publish, push, deploy, or create a GitHub release.
+- `pnpm release:verify` is the local alpha candidate gate. It does not tag, publish, push, deploy, create a GitHub release, update a public registry or marketplace, or enable telemetry.
 - `docs/audits/v0.1.0-alpha.1-release-candidate-evidence.md` records the local release candidate path and the explicit-approval boundary for tags or public release actions.
 
 ### Planning Additions

@@ -211,6 +211,8 @@ const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exp
 type SkillDetailTab = (typeof skillDetailTabs)[number];
 const agentKitDetailTabs = ["overview", "context-packs", "skills", "rules", "exports", "health"] as const;
 type AgentKitDetailTab = (typeof agentKitDetailTabs)[number];
+const defaultExportExclusionNote =
+  "Draft Intake, composed, restored quarantine, private, secret, and never_export content remains excluded by default.";
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => currentRoute());
@@ -2151,7 +2153,7 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
       ) : null}
       {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
-      {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
+      {activeTab === "exports" ? <ExportsTab pack={pack} exposureReadiness={exposureReadiness} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
       {activeTab === "activity" ? <PlaceholderTab title="Activity" detail="Activity timelines arrive after pack health and review workflows are implemented." /> : null}
       {activeTab === "changelog" ? <PlaceholderTab title="Changelog" detail="Static HTML can render CHANGELOG.md; API-backed changelog content remains a later read endpoint." /> : null}
@@ -2432,9 +2434,9 @@ function SourcesTab({ sources }: { sources: SourceSummary[] }) {
   );
 }
 
-function ExportsTab({ pack }: { pack: PackDetail }) {
+function ExportsTab({ pack, exposureReadiness }: { pack: PackDetail; exposureReadiness: PackExposureReadiness | null }) {
   return (
-    <ExportWorkbench subject={pack} subjectKind="pack" compact />
+    <ExportWorkbench subject={pack} subjectKind="pack" exposureReadiness={exposureReadiness} compact />
   );
 }
 
@@ -3347,7 +3349,19 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
       </div>
 
       {artifact ? (
-        <ExportPreview artifact={artifact} onCopy={copyComposition} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+        <ExportPreview
+          artifact={artifact}
+          profile={{
+            name: title,
+            target,
+            format: selectedTarget.format,
+            privacyMode,
+            tokenBudget: tokenBudgetValue ?? null
+          }}
+          onCopy={copyComposition}
+          onDownload={() => downloadExportArtifact(artifact)}
+          copied={copied}
+        />
       ) : null}
     </section>
   );
@@ -3457,7 +3471,10 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
             <span>Exports</span>
           </div>
           <h1 id="exports-title">Export Center</h1>
-          <p>Generate local, profile-driven pack and Skill artifacts for assistant and agent targets.</p>
+          <p>
+            Generate local, profile-driven artifacts with visible privacy mode, record counts, and default exclusion policy before
+            download.
+          </p>
         </div>
         <div className="inline-actions">
           <label className="select-control export-pack-select">
@@ -3499,10 +3516,12 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
 function ExportWorkbench({
   subject,
   subjectKind,
+  exposureReadiness,
   compact = false
 }: {
   subject: PackDetail | SkillDetail;
   subjectKind: "pack" | "skill";
+  exposureReadiness?: PackExposureReadiness | null;
   compact?: boolean;
 }) {
   const [target, setTarget] = useState("all");
@@ -3511,9 +3530,12 @@ function ExportWorkbench({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fetchedExposureReadiness, setFetchedExposureReadiness] = useState<PackExposureReadiness | null>(null);
+  const [fetchedExposureError, setFetchedExposureError] = useState<string | null>(null);
   const targets = getExportTargets(subject.exportProfiles);
   const options = buildExportOptions(subject, target);
   const selectedProfile = options.find((option) => option.profile.id === profileId)?.profile ?? options[0]?.profile;
+  const activeExposureReadiness = subjectKind === "pack" ? exposureReadiness ?? fetchedExposureReadiness : null;
 
   useEffect(() => {
     setTarget("all");
@@ -3530,6 +3552,35 @@ function ExportWorkbench({
       setProfileId(selectedProfile.id);
     }
   }, [options, profileId, selectedProfile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFetchedExposureReadiness(null);
+    setFetchedExposureError(null);
+
+    if (subjectKind !== "pack" || exposureReadiness !== undefined) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    apiClient.getPackExposureReadiness(subject.id).then(
+      (readiness) => {
+        if (!cancelled) {
+          setFetchedExposureReadiness(readiness);
+        }
+      },
+      (readinessError: unknown) => {
+        if (!cancelled) {
+          setFetchedExposureError(readinessError instanceof Error ? readinessError.message : "Exposure Readiness is unavailable.");
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [exposureReadiness, subject.id, subjectKind]);
 
   async function previewExport() {
     if (!selectedProfile) {
@@ -3604,37 +3655,149 @@ function ExportWorkbench({
 
       <ProfileList profiles={options.map((option) => option.profile)} />
 
+      <ExportClarityPanel
+        subjectKind={subjectKind}
+        selectedProfile={selectedProfile}
+        readiness={activeExposureReadiness}
+        readinessError={fetchedExposureError}
+      />
+
       {error ? <StateCard title="Export failed" detail={error} icon={ShieldAlert} /> : null}
       {artifact ? (
-        <ExportPreview artifact={artifact} onCopy={copyExport} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+        <ExportPreview
+          artifact={artifact}
+          profile={selectedProfile}
+          onCopy={copyExport}
+          onDownload={() => downloadExportArtifact(artifact)}
+          copied={copied}
+        />
       ) : (
         <div className="export-placeholder">
           <CloudDownload size={26} aria-hidden="true" />
           <h2>No preview loaded</h2>
-          <p>{selectedProfile ? `${selectedProfile.name} is ready.` : "No export profile matches this target."}</p>
+          <p>
+            {selectedProfile
+              ? `${selectedProfile.name} is ready. Preview to see exact included and excluded records.`
+              : "No export profile matches this target."}
+          </p>
         </div>
       )}
     </article>
   );
 }
 
+interface ExportPreviewProfileMetadata {
+  name?: string;
+  target?: string;
+  format?: string;
+  privacyMode?: string | null;
+  tokenBudget?: number | null;
+}
+
+function ExportClarityPanel({
+  subjectKind,
+  selectedProfile,
+  readiness,
+  readinessError
+}: {
+  subjectKind: "pack" | "skill";
+  selectedProfile?: ExportProfileSummary;
+  readiness: PackExposureReadiness | null;
+  readinessError: string | null;
+}) {
+  const privacyMode = selectedProfile?.privacyMode ?? readiness?.policies.export.defaultPrivacyMode ?? "redacted";
+
+  if (subjectKind === "skill") {
+    return (
+      <div className="export-clarity-panel">
+        <div className="export-clarity-grid">
+          <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+          <ExportClarityFact label="Target" value={selectedProfile ? formatPackType(selectedProfile.target) : "No profile"} />
+          <ExportClarityFact label="Format" value={selectedProfile?.format ?? "No profile"} />
+        </div>
+        <p>
+          Skill exports use the selected profile metadata and exclude private, draft, secret, and never_export Skill material by
+          default.
+        </p>
+        <p>{defaultExportExclusionNote}</p>
+      </div>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <div className="export-clarity-panel">
+        <div className="export-clarity-grid">
+          <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+          <ExportClarityFact label="Target" value={selectedProfile ? formatPackType(selectedProfile.target) : "No profile"} />
+          <ExportClarityFact label="Format" value={selectedProfile?.format ?? "No profile"} />
+        </div>
+        <p>
+          {readinessError
+            ? `Exposure Readiness is unavailable: ${readinessError}`
+            : "Exposure Readiness is loading for this pack."} Preview will still show returned included and excluded record
+          counts.
+        </p>
+        <p>{defaultExportExclusionNote}</p>
+      </div>
+    );
+  }
+
+  const includedRecords = readiness.summary.exportEligibleRecords;
+  const totalRecords = readiness.summary.recordCount;
+  const excludedRecords = Math.max(0, totalRecords - includedRecords);
+
+  return (
+    <div className="export-clarity-panel">
+      <div className="export-clarity-grid">
+        <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+        <ExportClarityFact label="Readiness Includes" value={`${includedRecords} of ${totalRecords} records`} />
+        <ExportClarityFact label="Readiness Excludes" value={formatRecordCount(excludedRecords)} />
+      </div>
+      <p>
+        Exposure Readiness includes {includedRecords} of {totalRecords} records for default export;{" "}
+        {formatRecordCount(excludedRecords)} remain excluded before a preview is built.
+      </p>
+      <p>Policy: {readiness.policies.export.recordPolicy}.</p>
+      <p>{defaultExportExclusionNote}</p>
+    </div>
+  );
+}
+
+function ExportClarityFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function ExportPreview({
   artifact,
+  profile,
   copied,
   onCopy,
   onDownload
 }: {
   artifact: ExportArtifact;
+  profile?: ExportPreviewProfileMetadata;
   copied: boolean;
   onCopy(): void;
   onDownload(): void;
 }) {
+  const privacyMode = profile?.privacyMode ?? "redacted";
+  const excludedReasonSummary = summarizeExcludedReasons(artifact.excludedRecords);
+
   return (
     <div className="export-preview">
       <div className="export-preview-toolbar">
         <div>
           <strong>{artifact.filename}</strong>
-          <span>{formatPackType(artifact.target)} / {artifact.estimatedTokens} estimated tokens / {artifact.byteLength} bytes</span>
+          <span>
+            {formatPackType(artifact.target)} / {artifact.format} / Privacy mode: {formatPrivacyMode(privacyMode)} /{" "}
+            {artifact.estimatedTokens} estimated tokens / {artifact.byteLength} bytes
+          </span>
         </div>
         <div className="export-actions">
           <button type="button" onClick={onCopy}>
@@ -3648,10 +3811,15 @@ function ExportPreview({
         </div>
       </div>
       <div className="export-stats">
-        <Stat value={artifact.includedRecords.length} label="Included" />
-        <Stat value={artifact.excludedRecords.length} label="Excluded" />
+        <Stat value={artifact.includedRecords.length} label="Included Records" />
+        <Stat value={artifact.excludedRecords.length} label="Excluded Records" />
         <Stat value={artifact.sources.length} label="Sources" />
         <Stat value={artifact.warnings.length} label="Warnings" />
+      </div>
+      <div className="export-preview-explainer">
+        <strong>{formatPreviewRecordSummary(artifact)}</strong>
+        <p>Privacy mode: {formatPrivacyMode(privacyMode)}. {defaultExportExclusionNote}</p>
+        {excludedReasonSummary ? <p>Excluded reasons: {excludedReasonSummary}.</p> : null}
       </div>
       {artifact.warnings.length > 0 ? (
         <ul className="export-warning-list">
@@ -3663,6 +3831,39 @@ function ExportPreview({
       <pre className="export-code"><code>{artifact.content}</code></pre>
     </div>
   );
+}
+
+function formatPrivacyMode(mode?: string | null): string {
+  return formatPackType(mode ?? "redacted");
+}
+
+function formatRecordCount(count: number): string {
+  return `${count} ${count === 1 ? "record" : "records"}`;
+}
+
+function formatPreviewRecordSummary(artifact: ExportArtifact): string {
+  const included = artifact.includedRecords.length;
+  const excluded = artifact.excludedRecords.length;
+
+  if (included + excluded === 0) {
+    return "This preview does not report record-level includes or exclusions.";
+  }
+
+  return `This preview includes ${formatRecordCount(included)} and excludes ${formatRecordCount(excluded)}.`;
+}
+
+function summarizeExcludedReasons(excludedRecords: ExportArtifact["excludedRecords"]): string {
+  const counts = new Map<string, number>();
+
+  for (const record of excludedRecords) {
+    const reason = record.reason || "not export eligible";
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .slice(0, 4)
+    .map(([reason, count]) => (count > 1 ? `${reason} (${count})` : reason))
+    .join(", ");
 }
 
 function agentKitPreviewToArtifact(preview: AgentKitExportPreview, fallbackName: string): ExportArtifact {
@@ -4430,6 +4631,13 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
               {preview.content ? (
                 <ExportPreview
                   artifact={agentKitPreviewToArtifact(preview, agentKit.name)}
+                  profile={{
+                    name: preview.profileName ?? preview.profileId,
+                    target: preview.target,
+                    format: preview.format,
+                    privacyMode: preview.privacyMode ?? "redacted",
+                    tokenBudget: preview.tokenBudget ?? null
+                  }}
                   copied={copied}
                   onCopy={() => void copyAgentKitExport()}
                   onDownload={() => downloadExportArtifact(agentKitPreviewToArtifact(preview, agentKit.name))}
