@@ -73,7 +73,11 @@ if (!failed) {
     "No hosted vault",
     "Contextarr never executes them",
     "not a separate personal memory vault",
+    "private, sensitive, secret, and never_export records are excluded from default export and MCP",
+    "There is no `approved_for_execution` state in Contextarr",
+    "Script-bearing imported Skills remain untrusted",
     "No hooks, webhooks, remote delivery, or event-triggered actions are implemented",
+    "Current code implements no Local Event Hook API endpoints",
     "Context Packs, Skills, Agent Kits, and registry artifacts must not define hooks"
   ];
 

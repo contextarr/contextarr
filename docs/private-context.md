@@ -21,6 +21,19 @@ Current repository behavior already supports part of the idea:
 - Draft, composed, imported, and restored quarantine content is not exposed through default export or MCP surfaces.
 - `containsPersonalData` exists on Context Packs, Skills, and Agent Kits.
 
+## Current Boundary Matrix
+
+| Classification | Default export | Default MCP | Private MCP enabled |
+|---|---|---|---|
+| `public_safe` approved content | Eligible when selected by profile. | Eligible. | Eligible. |
+| `internal` | Excluded from redacted/default export. | Excluded. | May be returned if explicitly allowed by MCP policy. |
+| `private` | Excluded from redacted/default export. | Excluded. | May be returned if explicitly allowed by MCP policy. |
+| `sensitive` | Excluded from redacted/default export. | Excluded. | May be returned if explicitly allowed by MCP policy. |
+| `secret` | Hard excluded. | Hard excluded. | Still hard excluded. |
+| `never_export` tag | Hard excluded. | Hard excluded. | Still hard excluded. |
+
+In short: private, sensitive, secret, and never_export records are excluded from default export and MCP. Secret and never_export content remain blocked even when private MCP access is enabled.
+
 ## Future Pack Modes
 
 The UI should eventually expose simple modes:
@@ -104,4 +117,3 @@ Protected records should not appear through MCP unless the user explicitly enabl
 - Near term: add better Private Context filters, badges, and export-preflight counts.
 - Later: app lock, protected-pack unlock, encrypted backup/export bundle support, restore safety checks.
 - Post-v1: team policy and private registry interaction.
-

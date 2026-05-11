@@ -88,6 +88,8 @@ External Skills should move through states:
 
 There should be no `approved for execution` state in Contextarr.
 
+There is no `approved_for_execution` state in Contextarr. Script-bearing imported Skills remain untrusted source material or data-only drafts; Contextarr may classify, warn, preserve later, and export compatible bundles later, but it must not turn script-bearing Skills into executable local capabilities.
+
 ## Export Modes
 
 Future external Skill exports should support:
@@ -129,4 +131,3 @@ Agent Kits intentionally pair the two.
 ## Current Boundary
 
 Do not change current validation to allow executable Contextarr Native Skills without a separate scoped implementation plan. The next step should be an external artifact archive and classifier, not weakening the Native Skill schema.
-

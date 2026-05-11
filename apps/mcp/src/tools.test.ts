@@ -109,7 +109,7 @@ describe("Contextarr MCP tools", () => {
     );
   });
 
-  it("omits private, secret, and never_export records from MCP unless private access is enabled", async () => {
+  it("omits private, sensitive, secret, and never_export records from MCP unless private access is enabled", async () => {
     context = createTestContext();
     insertSyntheticRecord(context.db, {
       id: "ai-workstation.secret-note",
@@ -124,6 +124,12 @@ describe("Contextarr MCP tools", () => {
       body: "mcptrustprivatealphaone"
     });
     insertSyntheticRecord(context.db, {
+      id: "ai-workstation.sensitive-note",
+      title: "Sensitive Note",
+      privacy: "sensitive",
+      body: "mcptrustsensitivealphaone"
+    });
+    insertSyntheticRecord(context.db, {
       id: "ai-workstation.never-export-note",
       title: "Never Export Note",
       privacy: "public_safe",
@@ -133,24 +139,31 @@ describe("Contextarr MCP tools", () => {
 
     const secretResult = await getRecordTool(context, { recordId: "ai-workstation.secret-note" });
     const privateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
+    const sensitiveResult = await getRecordTool(context, { recordId: "ai-workstation.sensitive-note" });
     const neverExportResult = await getRecordTool(context, { recordId: "ai-workstation.never-export-note" });
     const secretQuery = await queryPackContextTool(context, { query: "mcptrustsecretalphaone", limit: 10 });
     const privateQuery = await queryPackContextTool(context, { query: "mcptrustprivatealphaone", limit: 10 });
+    const sensitiveQuery = await queryPackContextTool(context, { query: "mcptrustsensitivealphaone", limit: 10 });
     const neverExportQuery = await queryPackContextTool(context, { query: "mcptrustneverexportalphaone", limit: 10 });
 
     expect(secretResult).toEqual(expect.objectContaining({ ok: false, error: "record_secret" }));
     expect(privateResult).toEqual(expect.objectContaining({ ok: false, error: "private_access_disabled" }));
+    expect(sensitiveResult).toEqual(expect.objectContaining({ ok: false, error: "private_access_disabled" }));
     expect(neverExportResult).toEqual(expect.objectContaining({ ok: false, error: "record_excluded" }));
     expect(secretQuery.results).toEqual([]);
     expect(privateQuery.results).toEqual([]);
+    expect(sensitiveQuery.results).toEqual([]);
     expect(neverExportQuery.results).toEqual([]);
     expect(secretQuery.warnings).toEqual(expect.arrayContaining(["Secret records were omitted."]));
     expect(privateQuery.warnings).toEqual(expect.arrayContaining(["Non-public records were omitted because private MCP access is disabled."]));
+    expect(sensitiveQuery.warnings).toEqual(expect.arrayContaining(["Non-public records were omitted because private MCP access is disabled."]));
     expect(neverExportQuery.warnings).toEqual(expect.arrayContaining(["Records with MCP exclusion tags were omitted."]));
 
     context.config.allowPrivate = true;
     const allowedPrivateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
     const allowedPrivateQuery = await queryPackContextTool(context, { query: "mcptrustprivatealphaone", limit: 10 });
+    const allowedSensitiveResult = await getRecordTool(context, { recordId: "ai-workstation.sensitive-note" });
+    const allowedSensitiveQuery = await queryPackContextTool(context, { query: "mcptrustsensitivealphaone", limit: 10 });
     const stillSecretResult = await getRecordTool(context, { recordId: "ai-workstation.secret-note" });
     const stillNeverExportResult = await getRecordTool(context, { recordId: "ai-workstation.never-export-note" });
 
@@ -159,6 +172,12 @@ describe("Contextarr MCP tools", () => {
     );
     expect(allowedPrivateQuery.results).toEqual([
       expect.objectContaining({ id: "ai-workstation.private-note", snippet: expect.stringContaining("mcptrustprivatealphaone") })
+    ]);
+    expect(allowedSensitiveResult.record).toEqual(
+      expect.objectContaining({ bodyIncluded: true, body: "mcptrustsensitivealphaone" })
+    );
+    expect(allowedSensitiveQuery.results).toEqual([
+      expect.objectContaining({ id: "ai-workstation.sensitive-note", snippet: expect.stringContaining("mcptrustsensitivealphaone") })
     ]);
     expect(stillSecretResult).toEqual(expect.objectContaining({ ok: false, error: "record_secret" }));
     expect(stillNeverExportResult).toEqual(expect.objectContaining({ ok: false, error: "record_excluded" }));

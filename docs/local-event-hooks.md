@@ -2,6 +2,8 @@
 
 Status: future automation design. No hooks, webhooks, remote delivery, or event-triggered actions are implemented by this document.
 
+Current code implements no Local Event Hook API endpoints, no outbound webhook delivery, and no event-triggered automation runtime. Any future hook support must be app-level configuration, disabled by default, and metadata-first.
+
 ## Core Rule
 
 ```text
@@ -107,4 +109,3 @@ Local Event Hooks
 ```
 
 Avoid generic "webhooks" copy in the main UI because it implies remote automation and weakens the local-first trust story.
-

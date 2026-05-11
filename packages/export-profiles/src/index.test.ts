@@ -674,7 +674,7 @@ describe("export profile engine", () => {
     );
   });
 
-  it("keeps private, secret, and never_export records out of default Context Pack export previews", () => {
+  it("keeps private, sensitive, secret, and never_export records out of default Context Pack export previews", () => {
     const packPath = copyFixture();
     const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
     const cases = [
@@ -691,6 +691,13 @@ describe("export profile engine", () => {
         filename: "secret-default-preview.md",
         body: "SECRET DEFAULT EXPORT TOKEN",
         transform: (record: string) => record.replace("privacy: public_safe", "privacy: secret")
+      },
+      {
+        id: "valid.sensitive-default-preview",
+        title: "Sensitive Default Preview",
+        filename: "sensitive-default-preview.md",
+        body: "SENSITIVE DEFAULT EXPORT TOKEN",
+        transform: (record: string) => record.replace("privacy: public_safe", "privacy: sensitive")
       },
       {
         id: "valid.never-export-default-preview",
