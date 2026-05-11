@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1983,6 +1984,127 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("POST /api/export-briefs saves, lists, and fetches a pack export preview brief", async () => {
+    const app = createApp({ config, db });
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const artifact = preview.json();
+    const save = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        artifact
+      }
+    });
+    const saved = save.json().brief;
+    const list = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const fetch = await app.inject({ method: "GET", url: `/api/export-briefs/${saved.id}` });
+
+    expect(preview.statusCode).toBe(200);
+    expect(save.statusCode).toBe(201);
+    expect(saved).toMatchObject({
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex",
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      filename: "ai-workstation-codex.md",
+      mimeType: "text/markdown",
+      byteLength: artifact.byteLength,
+      estimatedTokens: artifact.estimatedTokens,
+      includedCount: artifact.includedRecords.length,
+      excludedCount: artifact.excludedRecords.length,
+      sourceCount: artifact.sources.length,
+      warningCount: artifact.warnings.length,
+      warningCodes: []
+    });
+    expect(saved.id).toMatch(/^export_brief_[0-9a-f-]+$/);
+    expect(saved.sha256).toBe(crypto.createHash("sha256").update(artifact.content, "utf8").digest("hex"));
+    expect(saved.generatedAt).toBe(artifact.generatedAt);
+    expect(new Date(saved.savedAt).toString()).not.toBe("Invalid Date");
+    expect(saved.contentSnapshot).toContain("Codex Context Export");
+    expect(saved.contentSnapshot.length).toBeLessThanOrEqual(4096);
+    expect(saved.contentSnapshotTruncated).toBe(artifact.content.length > 4096);
+    expect(list.statusCode).toBe(200);
+    expect(list.json().briefs).toHaveLength(1);
+    const { contentSnapshot: _contentSnapshot, ...savedSummary } = saved;
+    expect(list.json().briefs[0]).toEqual(savedSummary);
+    expect(list.json().briefs[0]).not.toHaveProperty("contentSnapshot");
+    expect(fetch.statusCode).toBe(200);
+    expect(fetch.json().brief).toEqual(saved);
+    await app.close();
+    db.close();
+  });
+
+  it("export preview endpoints remain stateless and do not save export briefs implicitly", async () => {
+    const app = createApp({ config, db });
+    const countBefore = db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get();
+    const packPreview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const composePreview = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: {
+        title: "Stateless Preview",
+        target: "codex",
+        format: "markdown",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+      }
+    });
+    const list = await app.inject({ method: "GET", url: "/api/export-briefs" });
+
+    expect(packPreview.statusCode).toBe(200);
+    expect(composePreview.statusCode).toBe(200);
+    expect(db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get()).toBe(countBefore);
+    expect(list.json().briefs).toEqual([]);
+    await app.close();
+    db.close();
+  });
+
+  it("POST /api/export-briefs rejects unsafe privacy modes and invalid artifacts", async () => {
+    const app = createApp({ config, db });
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const artifact = preview.json();
+    const unsafe = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        privacyMode: "private",
+        artifact
+      }
+    });
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        artifact: {
+          ...artifact,
+          byteLength: artifact.byteLength + 1
+        }
+      }
+    });
+
+    expect(preview.statusCode).toBe(200);
+    expect(unsafe.statusCode).toBe(400);
+    expect(unsafe.json()).toMatchObject({ error: "unsafe_privacy_mode" });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json()).toMatchObject({ error: "invalid_export_artifact" });
+    expect(db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get()).toBe(0);
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs/:id/exports/:profileId/preview excludes unsafe record bodies", async () => {
     db.close();
     const tempRoot = copyDemoPacksFixture("contextarr-api-export-boundary-");
@@ -3325,6 +3447,56 @@ describe("Contextarr API", () => {
 
     expect(blocked.statusCode).toBe(401);
     expect(allowed.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on export brief routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const payload = {
+      objectType: "pack",
+      artifact: preview.json()
+    };
+    const blockedList = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const blockedFetch = await app.inject({ method: "GET", url: "/api/export-briefs/export_brief_missing" });
+    const blockedSave = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload
+    });
+    const allowedSave = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      headers: { authorization: "Bearer test-token" },
+      payload
+    });
+    const allowedList = await app.inject({
+      method: "GET",
+      url: "/api/export-briefs",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const allowedFetch = await app.inject({
+      method: "GET",
+      url: `/api/export-briefs/${allowedSave.json().brief.id}`,
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(preview.statusCode).toBe(200);
+    expect(blockedList.statusCode).toBe(401);
+    expect(blockedFetch.statusCode).toBe(401);
+    expect(blockedSave.statusCode).toBe(401);
+    expect(allowedSave.statusCode).toBe(201);
+    expect(allowedList.statusCode).toBe(200);
+    expect(allowedList.json().briefs).toHaveLength(1);
+    expect(allowedFetch.statusCode).toBe(200);
+    expect(allowedFetch.json().brief.id).toBe(allowedSave.json().brief.id);
     await app.close();
     authedContext.db.close();
   });

@@ -659,6 +659,123 @@ describe("Contextarr API client", () => {
     expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({ name: "Handoff Draft", target: "codex" });
   });
 
+  it("saves, lists, and fetches export briefs", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    const artifact = exportArtifactFixture();
+    const client = createApiClient({
+      fetchImpl: async (url, init) => {
+        requests.push({ url: String(url), init });
+        if (init?.method === "POST") {
+          return jsonResponse({
+            brief: {
+              id: "brief-1",
+              objectType: "pack",
+              objectId: "pack-1",
+              profileId: artifact.profileId,
+              target: artifact.target,
+              format: artifact.format,
+              privacyMode: "redacted",
+              filename: artifact.filename,
+              mimeType: artifact.mimeType,
+              sha256: "abc123",
+              byteLength: artifact.byteLength,
+              estimatedTokens: artifact.estimatedTokens,
+              includedCount: artifact.includedRecords.length,
+              excludedCount: artifact.excludedRecords.length,
+              sourceCount: artifact.sources.length,
+              warningCount: artifact.warnings.length,
+              warningCodes: [],
+              generatedAt: artifact.generatedAt,
+              savedAt: "2026-05-11T00:00:00.000Z",
+              contentSnapshot: artifact.content,
+              contentSnapshotTruncated: false
+            }
+          });
+        }
+        if (String(url).endsWith("/brief-1")) {
+          return jsonResponse({
+            brief: {
+              id: "brief-1",
+              objectType: "pack",
+              objectId: "pack-1",
+              profileId: artifact.profileId,
+              target: artifact.target,
+              format: artifact.format,
+              privacyMode: "redacted",
+              filename: artifact.filename,
+              mimeType: artifact.mimeType,
+              sha256: "abc123",
+              byteLength: artifact.byteLength,
+              estimatedTokens: artifact.estimatedTokens,
+              includedCount: artifact.includedRecords.length,
+              excludedCount: artifact.excludedRecords.length,
+              sourceCount: artifact.sources.length,
+              warningCount: artifact.warnings.length,
+              warningCodes: [],
+              generatedAt: artifact.generatedAt,
+              savedAt: "2026-05-11T00:00:00.000Z",
+              contentSnapshot: artifact.content,
+              contentSnapshotTruncated: false
+            }
+          });
+        }
+        return jsonResponse({
+          briefs: [
+            {
+              id: "brief-1",
+              objectType: "pack",
+              objectId: "pack-1",
+              profileId: artifact.profileId,
+              target: artifact.target,
+              format: artifact.format,
+              privacyMode: "redacted",
+              filename: artifact.filename,
+              mimeType: artifact.mimeType,
+              sha256: "abc123",
+              byteLength: artifact.byteLength,
+              estimatedTokens: artifact.estimatedTokens,
+              includedCount: artifact.includedRecords.length,
+              excludedCount: artifact.excludedRecords.length,
+              sourceCount: artifact.sources.length,
+              warningCount: artifact.warnings.length,
+              warningCodes: [],
+              generatedAt: artifact.generatedAt,
+              savedAt: "2026-05-11T00:00:00.000Z",
+              contentSnapshotTruncated: false
+            }
+          ]
+        });
+      }
+    });
+
+    await expect(
+      client.saveExportBrief({
+        objectType: "pack",
+        objectId: "pack-1",
+        privacyMode: "redacted",
+        artifact
+      })
+    ).resolves.toMatchObject({ id: "brief-1", filename: "pack-1-codex.md" });
+    await expect(client.listExportBriefs()).resolves.toEqual([expect.objectContaining({ id: "brief-1" })]);
+    await expect(client.getExportBrief("brief-1")).resolves.toMatchObject({ objectId: "pack-1" });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "/api/export-briefs",
+      "/api/export-briefs",
+      "/api/export-briefs/brief-1"
+    ]);
+    expect(requests[0].init).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({
+      objectType: "pack",
+      objectId: "pack-1",
+      privacyMode: "redacted",
+      artifact: { filename: "pack-1-codex.md", content: "# Export" }
+    });
+  });
+
   it("throws ApiError for failed responses", async () => {
     const client = createApiClient({
       fetchImpl: async () => jsonResponse({ message: "API token required." }, 401)
@@ -674,4 +791,25 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     json: async () => body
   } as Response;
+}
+
+function exportArtifactFixture() {
+  return {
+    packId: "pack-1",
+    packName: "Pack One",
+    profileId: "pack-1-codex",
+    profileName: "Pack One Codex",
+    target: "codex",
+    format: "markdown",
+    filename: "pack-1-codex.md",
+    mimeType: "text/markdown",
+    content: "# Export",
+    includedRecords: [],
+    excludedRecords: [],
+    sources: [],
+    warnings: [],
+    generatedAt: "2026-05-11T00:00:00.000Z",
+    byteLength: 8,
+    estimatedTokens: 2
+  };
 }

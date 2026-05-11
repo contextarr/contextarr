@@ -18,6 +18,7 @@ import type {
   ContextPackCollectorRequest,
   ContextPackCollectorResult,
   ExportArtifact,
+  ExportBrief,
   PackDetail,
   PackExposureReadiness,
   PackHealthResponse,
@@ -35,6 +36,7 @@ import type {
   ReviewCandidateDetail,
   ReviewItemStatus,
   SaveAgentKitResponse,
+  SaveExportBriefRequest,
   SearchResponse,
   SkillDetail,
   SkillDocument,
@@ -95,6 +97,9 @@ export interface ApiClient {
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   saveComposedPack(request: ComposeSavePackRequest): Promise<ComposeSavePackResponse>;
+  saveExportBrief(request: SaveExportBriefRequest): Promise<ExportBrief>;
+  listExportBriefs(): Promise<ExportBrief[]>;
+  getExportBrief(id: string): Promise<ExportBrief>;
   getReviewItems(filters?: {
     status?: string;
     severity?: string;
@@ -266,6 +271,22 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       }),
+    saveExportBrief: async (body: SaveExportBriefRequest) => {
+      const response = await requestJson<{ brief: ExportBrief }>("/api/export-briefs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      return response.brief;
+    },
+    listExportBriefs: async () => {
+      const response = await requestJson<{ briefs: ExportBrief[] }>("/api/export-briefs");
+      return response.briefs;
+    },
+    getExportBrief: async (id: string) => {
+      const response = await requestJson<{ brief: ExportBrief }>(`/api/export-briefs/${encodeURIComponent(id)}`);
+      return response.brief;
+    },
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
     getReviewCandidates: (filters = {}) =>
       requestJson<ReviewCandidatesResponse>(`/api/review-candidates${toQueryString(filters)}`),

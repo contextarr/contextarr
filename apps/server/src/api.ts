@@ -45,6 +45,7 @@ import {
 } from "./config";
 import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
 import type { ContextarrDatabase } from "./db";
+import { ExportBriefError, getExportBrief, listExportBriefs, saveExportBrief, type SaveExportBriefBody } from "./export-briefs";
 import { ExposureReadinessError, getPackExposureReadiness } from "./exposure-readiness";
 import { getPackReadinessReport, ReadinessReportError } from "./readiness/readiness-engine";
 import {
@@ -841,6 +842,36 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     return {
       queries: listMcpQueryLog(db, config, limit)
     };
+  });
+
+  app.post<{ Body: SaveExportBriefBody }>("/api/export-briefs", async (request, reply) => {
+    try {
+      return reply.code(201).send({
+        ok: true,
+        brief: saveExportBrief(db, request.body ?? {})
+      });
+    } catch (error) {
+      if (error instanceof ExportBriefError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.get("/api/export-briefs", async () => {
+    return {
+      briefs: listExportBriefs(db)
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/export-briefs/:id", async (request, reply) => {
+    const brief = getExportBrief(db, request.params.id);
+    if (!brief) {
+      return reply.code(404).send({ error: "not_found", message: `Export brief not found: ${request.params.id}` });
+    }
+
+    return { brief };
   });
 
   app.get<{ Params: { id: string; profileId: string } }>("/api/packs/:id/exports/:profileId/preview", async (request, reply) => {

@@ -19,6 +19,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Draft Intake inventory, activation planning, dry-run proof, explicit proof-gated local activation, and sanitized local activation history for draft, composed, and configured quarantine Context Pack candidates. It returns metadata only before activation and does not export, publish, perform network access, or expose candidates through MCP.
 - `GET /api/packs/:id/readiness` as a read-only report composed from existing Pack Health, Exposure Readiness, review items, governance-file presence, redaction, export, and MCP metadata. It does not replace Pack Health or Exposure Readiness, write events, mutate pack files, generate exports, execute content, upload telemetry, or widen MCP access.
 - `GET /api/events` and `GET /api/mcp/query-log` as bounded metadata-only Local Observability reads. They are local SQLite views, not telemetry, and do not expose raw query text, returned context bodies, export bodies, raw private source dumps, secrets, or absolute local paths.
+- `POST /api/export-briefs`, `GET /api/export-briefs`, and `GET /api/export-briefs/:id` as explicit local Saved Export Brief persistence for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots. Preview routes remain stateless, and saved briefs are not exposed through MCP.
 
 ## Current CLI Surface
 

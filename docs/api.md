@@ -24,6 +24,9 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local d
 - `GET /api/packs/:id/exposure-readiness`: read-only eligibility report for default export and read-only MCP exposure.
 - `GET /api/packs/:id/readiness`: read-only Context Readiness report composed from health, exposure, review, governance presence, redaction, export, and MCP metadata.
 - `GET /api/packs/:id/exports/:profileId/preview`: local export preview only; no files are written.
+- `POST /api/export-briefs`: explicitly saves metadata for a generated export preview artifact.
+- `GET /api/export-briefs`: lists saved export brief metadata from local SQLite.
+- `GET /api/export-briefs/:id`: fetches one saved export brief.
 - `GET /api/search?q=`: local search across pack and record data; supports `type=pack`, `record`, `skill`, `agent-kit`, or `all`.
 - `POST /api/rescan`: rebuilds the derived index from configured local directories only.
 
@@ -68,6 +71,18 @@ These endpoints expose bounded local observability metadata from SQLite. They ar
 `GET /api/mcp/query-log` returns newest-first local MCP query metadata with `tool`, `packId`, `recordId`, `profileId`, `status`, `resultCount`, `queryHash`, `queryLength`, `durationMs`, `createdAt`, and sanitized metadata when available.
 
 Local Observability is not telemetry. These routes do not upload data, call external services, mutate event or MCP log tables, run agents, generate exports, or widen MCP access. Responses do not expose raw query text, returned context bodies, export bodies, raw private source dumps, secrets, or absolute local paths.
+
+## Saved Export Briefs
+
+- `POST /api/export-briefs`
+- `GET /api/export-briefs`
+- `GET /api/export-briefs/:id`
+
+Saved Export Briefs are explicit local SQLite records created from an export preview artifact. `POST /api/export-briefs` accepts `{ objectType, objectId?, privacyMode?, artifact }`, where `objectType` is `pack`, `skill`, `agent_kit`, or `composed`; `artifact` is the generated preview artifact; and `objectId` defaults to the artifact object ID. The server computes the SHA-256 content hash, byte length, counts, warning codes, and save timestamp.
+
+The save route accepts only `redacted` or `public_safe` privacy modes. It rejects unsafe modes such as `private`, `sensitive`, `secret`, and `never_export`. It stores a bounded content snapshot only when the artifact is safe for snapshotting and never stores unbounded export bodies.
+
+Export preview routes remain stateless. Saved Export Briefs are not exposed through MCP and do not add deletion, sync, sharing, registry, publish, external calls, telemetry, or execution behavior.
 
 ## Planned Context Readiness And Local Observability
 

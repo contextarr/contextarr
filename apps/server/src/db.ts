@@ -364,6 +364,30 @@ export function createSchema(db: ContextarrDatabase): void {
       metadata_json TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS export_briefs (
+      id TEXT PRIMARY KEY,
+      object_type TEXT NOT NULL,
+      object_id TEXT NOT NULL,
+      profile_id TEXT NOT NULL,
+      target TEXT NOT NULL,
+      format TEXT NOT NULL,
+      privacy_mode TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      byte_length INTEGER NOT NULL,
+      estimated_tokens INTEGER NOT NULL,
+      included_count INTEGER NOT NULL,
+      excluded_count INTEGER NOT NULL,
+      source_count INTEGER NOT NULL,
+      warning_count INTEGER NOT NULL,
+      warning_codes_json TEXT NOT NULL,
+      generated_at TEXT NOT NULL,
+      saved_at TEXT NOT NULL,
+      content_snapshot TEXT,
+      content_snapshot_truncated INTEGER NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS review_candidate_activations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       proof_id TEXT NOT NULL UNIQUE,
@@ -387,6 +411,8 @@ export function createSchema(db: ContextarrDatabase): void {
 
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_tool ON mcp_query_log(tool);
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_created_at ON mcp_query_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_export_briefs_object ON export_briefs(object_type, object_id);
+    CREATE INDEX IF NOT EXISTS idx_export_briefs_saved_at ON export_briefs(saved_at);
     CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_pack ON review_candidate_activations(pack_id);
     CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_candidate ON review_candidate_activations(candidate_key);
     CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_activated_at ON review_candidate_activations(activated_at);

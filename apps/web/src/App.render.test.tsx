@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentKitHealthResponse,
   AgentKitTemplateSummary,
+  ExportArtifact,
   HealthResponse,
   PackSummary,
   ReviewItem,
@@ -60,6 +61,9 @@ const mocks = vi.hoisted(() => {
       getSkillExportPreview: vi.fn(),
       composePreview: vi.fn(),
       saveComposedPack: vi.fn(),
+      saveExportBrief: vi.fn(),
+      listExportBriefs: vi.fn(),
+      getExportBrief: vi.fn(),
       getReviewItems: vi.fn(),
       getReviewCandidates: vi.fn(),
       getReviewCandidate: vi.fn(),
@@ -253,6 +257,12 @@ describe("App Skill UI routes", () => {
       validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
       draft: { status: "review_required", indexed: false }
     });
+    mocks.apiClient.composePreview.mockResolvedValue(composedExportArtifactFixture());
+    mocks.apiClient.listExportBriefs.mockResolvedValue([exportBriefFixture("brief-pack", packExportArtifactFixture())]);
+    mocks.apiClient.saveExportBrief.mockImplementation(async (request) =>
+      exportBriefFixture(`brief-${request.objectType}`, request.artifact, request.objectType, request.objectId, request.privacyMode)
+    );
+    mocks.apiClient.getExportBrief.mockResolvedValue(exportBriefFixture("brief-pack", packExportArtifactFixture()));
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
     mocks.apiClient.getReviewCandidates.mockResolvedValue({
       candidates: [
@@ -520,6 +530,8 @@ describe("App Skill UI routes", () => {
     mountApp("#/exports");
 
     await waitForText("Export Center");
+    await waitForText("Local Export Briefs");
+    expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
     await waitForText("Codex Pack Export");
     await waitForText("Exposure Readiness includes 2 of 5 records");
     expect(document.body.textContent).toContain(
@@ -534,6 +546,18 @@ describe("App Skill UI routes", () => {
     expect(document.body.textContent).toContain("Privacy mode: Redacted");
     expect(document.body.textContent).toContain("This preview includes 2 records and excludes 3 records.");
     expect(document.body.textContent).toContain("Excluded reasons: private record, secret tag, never_export tag.");
+
+    await clickButtonAndFlush("Save Brief");
+    await waitForText("Saved local brief ai-workstation-codex.md.");
+    expect(mocks.apiClient.saveExportBrief).toHaveBeenCalledWith({
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      privacyMode: "redacted",
+      artifact: expect.objectContaining({
+        filename: "ai-workstation-codex.md",
+        content: "# Pack Export Preview Body"
+      })
+    });
   });
 
   it("labels search and inactive shell controls for assistive technology", async () => {
@@ -1058,6 +1082,65 @@ describe("App Skill UI routes", () => {
     await waitForText("Draft pack saved for review");
   });
 
+  it("saves composed export previews as local briefs", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        type: "runbook",
+        confidence: "high",
+        sourceStatus: "verified",
+        freshness: "current",
+        privacy: "public_safe",
+        lastReviewed: "2026-05-07T00:00:00.000Z",
+        reviewStatus: "approved",
+        tags: ["local"],
+        sources: [],
+        filePath: "records/local-ai-stack.md"
+      }
+    ]);
+    const artifact = composedExportArtifactFixture();
+    mocks.apiClient.composePreview.mockResolvedValue(artifact);
+    mocks.apiClient.saveExportBrief.mockResolvedValue(
+      exportBriefFixture("brief-composed", artifact, "composed", "composed-context-export", "redacted")
+    );
+
+    mountApp("#/composer/record-export");
+
+    await waitForText("Local AI Stack");
+    expect(document.body.textContent).toContain("Local Export Briefs");
+    expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
+    const checkbox = Array.from(document.querySelectorAll<HTMLInputElement>(".composer-record input[type='checkbox']")).find(
+      (item) => !item.checked
+    );
+    expect(checkbox).toBeTruthy();
+    await act(async () => {
+      checkbox?.click();
+      await Promise.resolve();
+    });
+
+    await clickButtonAndFlush("Build Preview");
+    await waitForText("Composed Export Preview Body");
+    await clickButtonAndFlush("Save Brief");
+
+    expect(mocks.apiClient.composePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Composed Context Export",
+        target: "codex",
+        privacyMode: "redacted",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation-pack.local-ai-stack"] }]
+      })
+    );
+    expect(mocks.apiClient.saveExportBrief).toHaveBeenCalledWith({
+      objectType: "composed",
+      objectId: "composed-context-export",
+      privacyMode: "redacted",
+      artifact
+    });
+    await waitForText("Saved local brief composed-context-export.md.");
+  });
+
   it("shows Composer save-as-draft errors", async () => {
     mocks.apiClient.getPackRecords.mockResolvedValue([
       {
@@ -1429,7 +1512,7 @@ function readinessDimensionFixture(
   };
 }
 
-function packExportArtifactFixture() {
+function packExportArtifactFixture(): ExportArtifact {
   return {
     packId: "ai-workstation-pack",
     packName: "AI Workstation Pack",
@@ -1498,6 +1581,50 @@ function packExportArtifactFixture() {
     generatedAt: "2026-05-07T00:00:00.000Z",
     byteLength: 26,
     estimatedTokens: 7
+  };
+}
+
+function composedExportArtifactFixture() {
+  return {
+    ...packExportArtifactFixture(),
+    packId: "composed-context-export",
+    packName: "Composed Context Export",
+    profileId: "composed-preview",
+    profileName: "Composed Preview",
+    filename: "composed-context-export.md",
+    content: "# Composed Export Preview Body",
+    generatedAt: "2026-05-11T00:00:00.000Z"
+  };
+}
+
+function exportBriefFixture(
+  id: string,
+  artifact = packExportArtifactFixture(),
+  objectType: "pack" | "skill" | "agent_kit" | "composed" = "pack",
+  objectId = artifact.packId,
+  privacyMode: "redacted" | "public_safe" = "redacted"
+) {
+  return {
+    id,
+    objectType,
+    objectId,
+    profileId: artifact.profileId,
+    target: artifact.target,
+    format: artifact.format,
+    privacyMode,
+    filename: artifact.filename,
+    mimeType: artifact.mimeType,
+    sha256: "abc123",
+    byteLength: artifact.byteLength,
+    estimatedTokens: artifact.estimatedTokens,
+    includedCount: artifact.includedRecords.length,
+    excludedCount: artifact.excludedRecords.length,
+    sourceCount: artifact.sources.length,
+    warningCount: artifact.warnings.length,
+    warningCodes: artifact.warnings.map((warning) => warning.code),
+    generatedAt: artifact.generatedAt,
+    savedAt: "2026-05-11T00:00:00.000Z",
+    contentSnapshotTruncated: false
   };
 }
 

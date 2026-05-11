@@ -380,6 +380,40 @@ export interface ExportArtifact {
   estimatedTokens: number;
 }
 
+export type ExportBriefObjectType = "pack" | "skill" | "agent_kit" | "composed";
+export type ExportBriefPrivacyMode = "redacted" | "public_safe";
+
+export interface ExportBrief {
+  id: string;
+  objectType: ExportBriefObjectType;
+  objectId: string;
+  profileId: string;
+  target: string;
+  format: string;
+  privacyMode: ExportBriefPrivacyMode;
+  filename: string;
+  mimeType: string;
+  sha256: string;
+  byteLength: number;
+  estimatedTokens: number;
+  includedCount: number;
+  excludedCount: number;
+  sourceCount: number;
+  warningCount: number;
+  warningCodes: string[];
+  generatedAt: string;
+  savedAt: string;
+  contentSnapshot?: string;
+  contentSnapshotTruncated: boolean;
+}
+
+export interface SaveExportBriefRequest {
+  objectType: ExportBriefObjectType;
+  objectId: string;
+  privacyMode: ExportBriefPrivacyMode;
+  artifact: ExportArtifact;
+}
+
 export interface ComposeSelection {
   packId: string;
   recordIds: string[];

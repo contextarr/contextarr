@@ -129,6 +129,8 @@ import {
 import { createSkillCoverVisual, filterAndSortSkills, getSkillFilterOptions } from "./skills";
 import type {
   ExportArtifact,
+  ExportBrief,
+  ExportBriefPrivacyMode,
   ExportProfileSummary,
   HealthCheck,
   HealthResponse,
@@ -2571,6 +2573,34 @@ function ComposerPage({ packs, skills, mode }: { packs: PackSummary[]; skills: S
   );
 }
 
+function useLocalExportBriefs() {
+  const [briefs, setBriefs] = useState<ExportBrief[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshBriefs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setBriefs(await apiClient.listExportBriefs());
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load local export briefs.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBriefs();
+  }, [refreshBriefs]);
+
+  const addBrief = useCallback((brief: ExportBrief) => {
+    setBriefs((current) => [brief, ...current.filter((item) => item.id !== brief.id)]);
+  }, []);
+
+  return { briefs, loading, error, addBrief };
+}
+
 function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSummary[] }) {
   const [name, setName] = useState("Implementation Support Kit");
   const [goal, setGoal] = useState("Prepare a safe, source-backed assistant brief for a specific task.");
@@ -3096,6 +3126,15 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
   const [saveResult, setSaveResult] = useState<ComposeSavePackResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefSaveMessage, setBriefSaveMessage] = useState<string | null>(null);
+  const [briefSaveError, setBriefSaveError] = useState<string | null>(null);
+  const {
+    briefs,
+    loading: briefsLoading,
+    error: briefsError,
+    addBrief
+  } = useLocalExportBriefs();
 
   useEffect(() => {
     if (!activePackId && packs[0]) {
@@ -3164,6 +3203,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function toggleRecord(packId: string, recordId: string) {
@@ -3179,6 +3220,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function selectVisibleRecords() {
@@ -3192,12 +3235,16 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function clearActivePackRecords() {
     setSelectedByPack((current) => ({ ...current, [activePackId]: [] }));
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   async function previewComposition() {
@@ -3209,6 +3256,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     setLoadingPreview(true);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
     try {
       const request = buildComposePreviewRequest({
         title,
@@ -3266,6 +3315,30 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     }
 
     setCopied(await copyTextToClipboard(artifact.content));
+  }
+
+  async function saveCompositionBrief() {
+    if (!artifact) {
+      return;
+    }
+
+    setSavingBrief(true);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
+    try {
+      const brief = await apiClient.saveExportBrief({
+        objectType: "composed",
+        objectId: artifact.packId || "composed",
+        privacyMode,
+        artifact
+      });
+      addBrief(brief);
+      setBriefSaveMessage(`Saved local brief ${brief.filename}.`);
+    } catch (saveError) {
+      setBriefSaveError(saveError instanceof Error ? saveError.message : "Unable to save local export brief.");
+    } finally {
+      setSavingBrief(false);
+    }
   }
 
   if (packs.length === 0) {
@@ -3472,8 +3545,13 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
           onCopy={copyComposition}
           onDownload={() => downloadExportArtifact(artifact)}
           copied={copied}
+          onSaveBrief={saveCompositionBrief}
+          savingBrief={savingBrief}
+          briefSaveMessage={briefSaveMessage}
+          briefSaveError={briefSaveError}
         />
       ) : null}
+      <LocalExportBriefsPanel briefs={briefs} loading={briefsLoading} error={briefsError} compact />
     </section>
   );
 }
@@ -3486,6 +3564,12 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
   const [skill, setSkill] = useState<SkillDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const {
+    briefs,
+    loading: briefsLoading,
+    error: briefsError,
+    addBrief
+  } = useLocalExportBriefs();
 
   useEffect(() => {
     if (!selectedPackId && packs[0]) {
@@ -3618,8 +3702,9 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
       ) : loading || !activeSubject ? (
         <DetailLoading />
       ) : (
-        <ExportWorkbench subject={activeSubject} subjectKind={subjectKind} />
+        <ExportWorkbench subject={activeSubject} subjectKind={subjectKind} onBriefSaved={addBrief} />
       )}
+      <LocalExportBriefsPanel briefs={briefs} loading={briefsLoading} error={briefsError} />
     </section>
   );
 }
@@ -3628,12 +3713,14 @@ function ExportWorkbench({
   subject,
   subjectKind,
   exposureReadiness,
-  compact = false
+  compact = false,
+  onBriefSaved
 }: {
   subject: PackDetail | SkillDetail;
   subjectKind: "pack" | "skill";
   exposureReadiness?: PackExposureReadiness | null;
   compact?: boolean;
+  onBriefSaved?: (brief: ExportBrief) => void;
 }) {
   const [target, setTarget] = useState("all");
   const [profileId, setProfileId] = useState(subject.exportProfiles[0]?.id ?? "");
@@ -3641,6 +3728,9 @@ function ExportWorkbench({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefSaveMessage, setBriefSaveMessage] = useState<string | null>(null);
+  const [briefSaveError, setBriefSaveError] = useState<string | null>(null);
   const [fetchedExposureReadiness, setFetchedExposureReadiness] = useState<PackExposureReadiness | null>(null);
   const [fetchedExposureError, setFetchedExposureError] = useState<string | null>(null);
   const targets = getExportTargets(subject.exportProfiles);
@@ -3654,6 +3744,8 @@ function ExportWorkbench({
     setArtifact(null);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }, [subject.id, subject.exportProfiles]);
 
   useEffect(() => {
@@ -3701,6 +3793,8 @@ function ExportWorkbench({
     setLoading(true);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
 
     try {
       setArtifact(
@@ -3713,6 +3807,30 @@ function ExportWorkbench({
       setArtifact(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveBrief() {
+    if (!artifact || !selectedProfile) {
+      return;
+    }
+
+    setSavingBrief(true);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
+    try {
+      const brief = await apiClient.saveExportBrief({
+        objectType: subjectKind,
+        objectId: subject.id,
+        privacyMode: normalizeExportBriefPrivacyMode(selectedProfile.privacyMode),
+        artifact
+      });
+      onBriefSaved?.(brief);
+      setBriefSaveMessage(`Saved local brief ${brief.filename}.`);
+    } catch (saveError) {
+      setBriefSaveError(saveError instanceof Error ? saveError.message : "Unable to save local export brief.");
+    } finally {
+      setSavingBrief(false);
     }
   }
 
@@ -3781,6 +3899,10 @@ function ExportWorkbench({
           onCopy={copyExport}
           onDownload={() => downloadExportArtifact(artifact)}
           copied={copied}
+          onSaveBrief={saveBrief}
+          savingBrief={savingBrief}
+          briefSaveMessage={briefSaveMessage}
+          briefSaveError={briefSaveError}
         />
       ) : (
         <div className="export-placeholder">
@@ -3884,18 +4006,71 @@ function ExportClarityFact({ label, value }: { label: string; value: string }) {
   );
 }
 
+function LocalExportBriefsPanel({
+  briefs,
+  loading,
+  error,
+  compact = false
+}: {
+  briefs: ExportBrief[];
+  loading: boolean;
+  error: string | null;
+  compact?: boolean;
+}) {
+  const visibleBriefs = briefs.slice(0, 6);
+
+  return (
+    <article className={compact ? "detail-card export-briefs-panel compact" : "detail-card export-briefs-panel"}>
+      <div className="export-header">
+        <div>
+          <h2>Local Export Briefs</h2>
+          <p>Saved previews are local derived artifacts, not source of truth.</p>
+        </div>
+      </div>
+      {loading ? <p className="muted-note">Loading local briefs...</p> : null}
+      {error ? <p className="composer-error">Unable to load local briefs: {error}</p> : null}
+      {!loading && !error && briefs.length === 0 ? <p className="muted-note">No saved briefs yet.</p> : null}
+      {visibleBriefs.length > 0 ? (
+        <div className="profile-grid">
+          {visibleBriefs.map((brief) => (
+            <article className="profile-card" key={brief.id}>
+              <strong>{brief.filename}</strong>
+              <span>
+                {formatPackType(brief.objectType)} / {formatPackType(brief.target)} / {formatPrivacyMode(brief.privacyMode)}
+              </span>
+              <em>Derived from {brief.objectId}</em>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function normalizeExportBriefPrivacyMode(mode?: string | null): ExportBriefPrivacyMode {
+  return mode === "public_safe" ? "public_safe" : "redacted";
+}
+
 function ExportPreview({
   artifact,
   profile,
   copied,
   onCopy,
-  onDownload
+  onDownload,
+  onSaveBrief,
+  savingBrief = false,
+  briefSaveMessage,
+  briefSaveError
 }: {
   artifact: ExportArtifact;
   profile?: ExportPreviewProfileMetadata;
   copied: boolean;
   onCopy(): void;
   onDownload(): void;
+  onSaveBrief?: () => void;
+  savingBrief?: boolean;
+  briefSaveMessage?: string | null;
+  briefSaveError?: string | null;
 }) {
   const privacyMode = profile?.privacyMode ?? "redacted";
   const excludedReasonSummary = summarizeExcludedReasons(artifact.excludedRecords);
@@ -3919,6 +4094,12 @@ function ExportPreview({
             <Download size={16} aria-hidden="true" />
             <span>Download</span>
           </button>
+          {onSaveBrief ? (
+            <button type="button" onClick={onSaveBrief} disabled={savingBrief}>
+              <FileText size={16} aria-hidden="true" />
+              <span>{savingBrief ? "Saving" : "Save Brief"}</span>
+            </button>
+          ) : null}
         </div>
       </div>
       <div className="export-stats">
@@ -3931,6 +4112,8 @@ function ExportPreview({
         <strong>{formatPreviewRecordSummary(artifact)}</strong>
         <p>Privacy mode: {formatPrivacyMode(privacyMode)}. {defaultExportExclusionNote}</p>
         {excludedReasonSummary ? <p>Excluded reasons: {excludedReasonSummary}.</p> : null}
+        {briefSaveMessage ? <p>{briefSaveMessage}</p> : null}
+        {briefSaveError ? <p>{briefSaveError}</p> : null}
       </div>
       {artifact.warnings.length > 0 ? (
         <ul className="export-warning-list">
