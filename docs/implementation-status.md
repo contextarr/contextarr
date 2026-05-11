@@ -7,7 +7,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Context Pack schema, validation, deterministic validation reports, and local scanner reports.
 - Fifteen public-safe demo Context Packs, including 12 curated starter packs.
 - Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
-- Local API for packs, records, search, health, exposure readiness, exports, collectors, composition, Draft Intake candidates, proof-gated activation with local history, backup, and restore surfaces.
+- Local API for packs, records, search, health, exposure readiness, per-pack Context Readiness, exports, collectors, composition, Draft Intake candidates, proof-gated activation with local history, backup, and restore surfaces.
 - Pack Library UI with brand-aware cards and starter/local/imported grouping.
 - Pack detail with Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
 - Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
@@ -17,6 +17,7 @@ This file is the shipped-versus-planned source of truth for implementation claim
 - Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
 - Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
 - Draft Intake inventory, activation planning, dry-run proof, explicit proof-gated local activation, and sanitized local activation history for draft, composed, and configured quarantine Context Pack candidates. It returns metadata only before activation and does not export, publish, perform network access, or expose candidates through MCP.
+- `GET /api/packs/:id/readiness` as a read-only report composed from existing Pack Health, Exposure Readiness, review items, governance-file presence, redaction, export, and MCP metadata. It does not replace Pack Health or Exposure Readiness, write events, mutate pack files, generate exports, execute content, upload telemetry, or widen MCP access.
 
 ## Current CLI Surface
 
@@ -71,6 +72,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - Agent runtime behavior.
 - Executable packs, executable Skills, or executable Agent Kits.
 - Benchmark fixtures and context-quality package from PR #2.
+- Context Readiness list, recalculation, persisted evidence events, governance parsing/enforcement, token-budget reports, export history, and MCP query logs.
 
 ## Starter Pack Status
 

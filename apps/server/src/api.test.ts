@@ -304,6 +304,86 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/packs/:id/readiness returns a metadata-only context readiness report", async () => {
+    const eventsBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schemaVersion: "contextarr.readiness-report.v1",
+      packId: "ai-workstation-pack",
+      status: "review_needed",
+      dimensions: {
+        source: expect.objectContaining({ status: "ready", score: 100 }),
+        review: expect.objectContaining({ status: "ready", score: 100 }),
+        governance: expect.objectContaining({ status: "review_needed" }),
+        redaction: expect.objectContaining({ status: "ready", score: 100 }),
+        export: expect.objectContaining({ status: "ready", score: 100 }),
+        mcp: expect.objectContaining({ status: "ready", score: 100 })
+      }
+    });
+    expect(response.json().score).toBeGreaterThanOrEqual(90);
+    expect(response.json().issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "governance.missing", severity: "warning" })])
+    );
+    expect(new Date(response.json().generatedAt).toString()).not.toBe("Invalid Date");
+    expect(response.json().issues[0]).toHaveProperty("evidence");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(JSON.stringify(response.json())).not.toMatch(/[A-Za-z]:[\\/]/);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventsBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/readiness composes exposure blockers and record eligibility", async () => {
+    db.prepare(
+      `UPDATE records
+       SET privacy = ?, review_status = ?, tags_json = ?, tags_text = ?
+       WHERE id = ?`
+    ).run("private", "draft", JSON.stringify(["never_export"]), "never_export", "ai-workstation.local-ai-stack");
+    db.prepare(
+      `UPDATE export_profiles
+       SET readiness_status = ?, readiness_blocking_codes_json = ?
+       WHERE pack_id = ? AND id = ?`
+    ).run(
+      "blocked",
+      JSON.stringify(["export_profile.blocked_for_test"]),
+      "ai-workstation-pack",
+      "ai-workstation-codex"
+    );
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: "blocked",
+      dimensions: {
+        export: expect.objectContaining({ status: "blocked" }),
+        mcp: expect.objectContaining({ status: "review_needed" })
+      }
+    });
+    expect(response.json().issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "export.profile_blocked", severity: "blocker" }),
+        expect.objectContaining({ code: "mcp.record_ineligible", severity: "warning" })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/readiness returns 404 for unknown packs", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/missing-pack/readiness" });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "not_found", message: "Pack not found: missing-pack" });
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs returns demo pack summaries", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/packs" });
@@ -3014,7 +3094,7 @@ describe("Contextarr API", () => {
     authedContext.db.close();
   });
 
-  it("requires token auth on review, pack health, and exposure readiness routes", async () => {
+  it("requires token auth on review, pack health, exposure readiness, and context readiness routes", async () => {
     db.close();
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
@@ -3033,11 +3113,22 @@ describe("Contextarr API", () => {
       url: "/api/packs/ai-workstation-pack/exposure-readiness",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedContextReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/readiness"
+    });
+    const allowedContextReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/readiness",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(reviewResponse.statusCode).toBe(401);
     expect(healthResponse.statusCode).toBe(200);
     expect(blockedReadiness.statusCode).toBe(401);
     expect(allowedReadiness.statusCode).toBe(200);
+    expect(blockedContextReadiness.statusCode).toBe(401);
+    expect(allowedContextReadiness.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });

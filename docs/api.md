@@ -22,6 +22,7 @@ Optional token auth is controlled by `CONTEXTARR_API_TOKEN` for loopback local d
 - `GET /api/records/:id`: full record body, metadata, source ids, and resolved source summaries.
 - `GET /api/packs/:id/health`: deterministic pack health and review items.
 - `GET /api/packs/:id/exposure-readiness`: read-only eligibility report for default export and read-only MCP exposure.
+- `GET /api/packs/:id/readiness`: read-only Context Readiness report composed from health, exposure, review, governance presence, redaction, export, and MCP metadata.
 - `GET /api/packs/:id/exports/:profileId/preview`: local export preview only; no files are written.
 - `GET /api/search?q=`: local search across pack and record data; supports `type=pack`, `record`, `skill`, `agent-kit`, or `all`.
 - `POST /api/rescan`: rebuilds the derived index from configured local directories only.
@@ -47,13 +48,20 @@ Draft Intake candidate endpoints scan configured local candidate roots for untru
 
 The endpoint is read-only. It does not approve packs, mutate SQLite state, change export behavior, widen MCP visibility, return record bodies, or expose absolute local paths.
 
+## Context Readiness
+
+`GET /api/packs/:id/readiness` returns a `contextarr.readiness-report.v1` report for one active Context Pack. The report includes `packId`, `status`, `score`, `dimensions`, `issues`, and `generatedAt`.
+
+Statuses are `ready`, `review_needed`, and `blocked`. Dimensions are `source`, `review`, `governance`, `redaction`, `export`, and `mcp`. Issues include `code`, `severity`, `message`, and metadata-only `evidence`.
+
+This slice is read-only. It does not mutate pack files, write readiness events, recalculate the index, generate exports, call AI or external services, execute pack content, upload telemetry, or widen MCP access. Governance is presence-only here; missing `rules/governance.yaml` is reported as a warning, not enforced.
+
 ## Planned Context Readiness And Local Observability
 
-The Agentic AI Context Readiness and Local Observability PRD is accepted as a planning addition only. AR0 adds no API routes and no runtime behavior.
+The Agentic AI Context Readiness and Local Observability PRD is accepted as a planning addition. Wave 2 adds only the read-only per-pack Context Readiness route above.
 
 Later scoped phases may add:
 
-- `GET /api/packs/:id/readiness`
 - `POST /api/packs/:id/readiness/recalculate`
 - `GET /api/readiness`
 - `GET /api/events`
