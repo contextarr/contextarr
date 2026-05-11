@@ -137,6 +137,58 @@ function expectNoLocalPaths(value: string): void {
   expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
 }
 
+function insertExportBriefFixture(
+  db: ContextarrDatabase,
+  overrides: {
+    id: string;
+    objectType?: "pack" | "skill" | "agent_kit" | "composed";
+    objectId?: string;
+    savedAt?: string;
+    contentSnapshot?: string | null;
+  }
+): void {
+  const objectType = overrides.objectType ?? "pack";
+  const objectId = overrides.objectId ?? `${objectType}-fixture`;
+  const savedAt = overrides.savedAt ?? "2026-05-11T00:00:00.000Z";
+  const content = `Export brief fixture ${overrides.id}`;
+
+  db.prepare(
+    `INSERT INTO export_briefs (
+      id, object_type, object_id, profile_id, target, format, privacy_mode,
+      filename, mime_type, sha256, byte_length, estimated_tokens,
+      included_count, excluded_count, source_count, warning_count, warning_codes_json,
+      generated_at, saved_at, content_snapshot, content_snapshot_truncated
+    ) VALUES (
+      @id, @objectType, @objectId, @profileId, @target, @format, @privacyMode,
+      @filename, @mimeType, @sha256, @byteLength, @estimatedTokens,
+      @includedCount, @excludedCount, @sourceCount, @warningCount, @warningCodesJson,
+      @generatedAt, @savedAt, @contentSnapshot, @contentSnapshotTruncated
+    )`
+  ).run({
+    id: overrides.id,
+    objectType,
+    objectId,
+    profileId: `${objectId}-codex`,
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    filename: `${overrides.id}.md`,
+    mimeType: "text/markdown",
+    sha256: crypto.createHash("sha256").update(content, "utf8").digest("hex"),
+    byteLength: Buffer.byteLength(content, "utf8"),
+    estimatedTokens: 8,
+    includedCount: 1,
+    excludedCount: 0,
+    sourceCount: 1,
+    warningCount: 0,
+    warningCodesJson: "[]",
+    generatedAt: savedAt,
+    savedAt,
+    contentSnapshot: overrides.contentSnapshot === undefined ? `Snapshot ${overrides.id}` : overrides.contentSnapshot,
+    contentSnapshotTruncated: 0
+  });
+}
+
 describe("Contextarr API", () => {
   let db: ContextarrDatabase;
   let config: ServerConfig;
@@ -181,6 +233,11 @@ describe("Contextarr API", () => {
   });
 
   it("GET /api/events returns bounded newest-first sanitized metadata without writing rows", async () => {
+    const rawQuery = "private-query-token-workstation";
+    const returnedContextBody = "returned-context-body-content";
+    const exportBody = "export-body-confidential-content";
+    const secretValue = "api_key=ctxarr_observability_secret_1234567890";
+    const nestedLocalPath = path.join(repoRoot, "exports", "secret-event.md");
     db.prepare("DELETE FROM events").run();
     db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
       "local.old",
@@ -199,7 +256,19 @@ describe("Contextarr API", () => {
         body: "raw-private-context-body",
         nested: {
           safe: "kept",
-          filePath: path.join(repoRoot, "secret.md")
+          filePath: path.join(repoRoot, "secret.md"),
+          audit: {
+            safe: "kept-deep",
+            queryText: rawQuery,
+            returnedContextBodies: [returnedContextBody],
+            export: {
+              body: exportBody
+            },
+            secrets: {
+              apiKey: secretValue
+            },
+            localPaths: [nestedLocalPath]
+          }
         }
       })
     );
@@ -226,11 +295,19 @@ describe("Contextarr API", () => {
     expect(body.events[1].metadata).toEqual({
       ok: true,
       nested: {
-        safe: "kept"
+        safe: "kept",
+        audit: {
+          safe: "kept-deep"
+        }
       }
     });
     expect(serialized).not.toContain(repoRoot);
     expect(serialized).not.toContain("raw-private-context-body");
+    expect(serialized).not.toContain(rawQuery);
+    expect(serialized).not.toContain(returnedContextBody);
+    expect(serialized).not.toContain(exportBody);
+    expect(serialized).not.toContain(secretValue);
+    expect(serialized).not.toContain(nestedLocalPath);
     expectNoLocalPaths(serialized);
     expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
     expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
@@ -241,6 +318,9 @@ describe("Contextarr API", () => {
   it("GET /api/mcp/query-log returns bounded newest-first sanitized metadata without query text or returned content", async () => {
     const rawQuery = "private-query-token-workstation";
     const returnedContext = "returned-context-body-content";
+    const exportBody = "export-body-confidential-content";
+    const secretValue = "api_key=ctxarr_mcp_observability_secret_1234567890";
+    const nestedLocalPath = path.join(repoRoot, "exports", "secret-query.md");
     db.prepare(
       `INSERT INTO mcp_query_log (
         tool, pack_id, record_id, profile_id, status, result_count,
@@ -269,7 +349,23 @@ describe("Contextarr API", () => {
         returnedContext,
         repoRoot,
         outputPath: path.join(repoRoot, "exports", "context.md"),
-        resultKinds: ["record"]
+        resultKinds: ["record"],
+        nested: {
+          safe: "kept",
+          request: {
+            q: rawQuery
+          },
+          returned: {
+            contextBodies: [returnedContext]
+          },
+          export: {
+            bodies: [exportBody]
+          },
+          diagnostics: {
+            secretValue,
+            absoluteLocalPaths: [nestedLocalPath]
+          }
+        }
       })
     );
     db.prepare(
@@ -301,11 +397,17 @@ describe("Contextarr API", () => {
       createdAt: "2026-05-11T00:01:00.000Z",
       metadata: {
         ok: true,
-        resultKinds: ["record"]
+        resultKinds: ["record"],
+        nested: {
+          safe: "kept"
+        }
       }
     });
     expect(serialized).not.toContain(rawQuery);
     expect(serialized).not.toContain(returnedContext);
+    expect(serialized).not.toContain(exportBody);
+    expect(serialized).not.toContain(secretValue);
+    expect(serialized).not.toContain(nestedLocalPath);
     expect(serialized).not.toContain(repoRoot);
     expect(serialized).not.toContain("context.md");
     expectNoLocalPaths(serialized);
@@ -2036,6 +2138,107 @@ describe("Contextarr API", () => {
     expect(list.json().briefs[0]).not.toHaveProperty("contentSnapshot");
     expect(fetch.statusCode).toBe(200);
     expect(fetch.json().brief).toEqual(saved);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/export-briefs applies bounded list limits and keeps snapshots detail-only", async () => {
+    for (let index = 0; index < 30; index += 1) {
+      insertExportBriefFixture(db, {
+        id: `export_brief_limit_${index.toString().padStart(2, "0")}`,
+        objectId: `limit-pack-${index.toString().padStart(2, "0")}`,
+        savedAt: new Date(Date.UTC(2026, 4, 11, 0, 0, index)).toISOString()
+      });
+    }
+
+    const app = createApp({ config, db });
+    const defaultList = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const limitedList = await app.inject({ method: "GET", url: "/api/export-briefs?limit=3" });
+    const maxList = await app.inject({ method: "GET", url: "/api/export-briefs?limit=100" });
+    const invalidLimit = await app.inject({ method: "GET", url: "/api/export-briefs?limit=101" });
+    const invalidFormat = await app.inject({ method: "GET", url: "/api/export-briefs?limit=1.5" });
+    const detail = await app.inject({ method: "GET", url: "/api/export-briefs/export_brief_limit_29" });
+
+    expect(defaultList.statusCode).toBe(200);
+    expect(defaultList.json().briefs).toHaveLength(25);
+    expect(defaultList.json().briefs[0]).not.toHaveProperty("contentSnapshot");
+    expect(limitedList.statusCode).toBe(200);
+    expect(limitedList.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_limit_29",
+      "export_brief_limit_28",
+      "export_brief_limit_27"
+    ]);
+    expect(maxList.statusCode).toBe(200);
+    expect(maxList.json().briefs).toHaveLength(30);
+    expect(invalidLimit.statusCode).toBe(400);
+    expect(invalidLimit.json()).toMatchObject({ error: "invalid_query" });
+    expect(invalidFormat.statusCode).toBe(400);
+    expect(invalidFormat.json()).toMatchObject({ error: "invalid_query" });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().brief.contentSnapshot).toBe("Snapshot export_brief_limit_29");
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/export-briefs filters by object type aliases and object ID", async () => {
+    insertExportBriefFixture(db, {
+      id: "export_brief_pack_filter",
+      objectType: "pack",
+      objectId: "shared-export-object",
+      savedAt: "2026-05-11T00:00:00.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_skill_filter",
+      objectType: "skill",
+      objectId: "shared-export-object",
+      savedAt: "2026-05-11T00:00:01.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_agent_filter_a",
+      objectType: "agent_kit",
+      objectId: "support-ticket-writing-kit",
+      savedAt: "2026-05-11T00:00:02.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_agent_filter_b",
+      objectType: "agent_kit",
+      objectId: "implementation-support-kit",
+      savedAt: "2026-05-11T00:00:03.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_composed_filter",
+      objectType: "composed",
+      objectId: "composed-context-export",
+      savedAt: "2026-05-11T00:00:04.000Z"
+    });
+
+    const app = createApp({ config, db });
+    const agentAlias = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=agent-kit" });
+    const agentUnderscoreAndId = await app.inject({
+      method: "GET",
+      url: "/api/export-briefs?objectType=agent_kit&objectId=support-ticket-writing-kit"
+    });
+    const sharedObjectId = await app.inject({ method: "GET", url: "/api/export-briefs?objectId=shared-export-object&limit=100" });
+    const composed = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=composed" });
+    const invalidObjectType = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=agentkit" });
+
+    expect(agentAlias.statusCode).toBe(200);
+    expect(agentAlias.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_agent_filter_b",
+      "export_brief_agent_filter_a"
+    ]);
+    expect(agentAlias.json().briefs.every((brief: { objectType: string }) => brief.objectType === "agent_kit")).toBe(true);
+    expect(agentUnderscoreAndId.statusCode).toBe(200);
+    expect(agentUnderscoreAndId.json().briefs.map((brief: { id: string }) => brief.id)).toEqual(["export_brief_agent_filter_a"]);
+    expect(sharedObjectId.statusCode).toBe(200);
+    expect(sharedObjectId.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_skill_filter",
+      "export_brief_pack_filter"
+    ]);
+    expect(composed.statusCode).toBe(200);
+    expect(composed.json().briefs.map((brief: { id: string }) => brief.id)).toEqual(["export_brief_composed_filter"]);
+    expect(invalidObjectType.statusCode).toBe(400);
+    expect(invalidObjectType.json()).toMatchObject({ error: "invalid_query" });
     await app.close();
     db.close();
   });

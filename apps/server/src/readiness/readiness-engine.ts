@@ -285,7 +285,7 @@ function buildExportDimension(exposure: PackExposureReadiness): DimensionResult 
   }
 
   return {
-    dimension: dimension("export", exposureScore(exposure.summary.exportEligibleProfiles, exposure.summary.exportProfileCount), issues, {
+    dimension: dimension("export", exportScore(exposure.summary), issues, {
       exportProfileCount: exposure.summary.exportProfileCount,
       exportEligibleProfiles: exposure.summary.exportEligibleProfiles,
       exportEligibleRecords: exposure.summary.exportEligibleRecords,
@@ -424,6 +424,20 @@ function exposureScore(eligible: number, total: number): number {
   }
 
   return clampScore(Math.round((eligible / total) * 100));
+}
+
+function exportScore(summary: PackExposureReadiness["summary"]): number {
+  if (summary.exportProfileCount === 0 || summary.recordCount === 0) {
+    return 0;
+  }
+
+  return clampScore(
+    Math.round(
+      (exposureScore(summary.exportEligibleProfiles, summary.exportProfileCount) +
+        exposureScore(summary.exportEligibleRecords, summary.recordCount)) /
+        2
+    )
+  );
 }
 
 function clampScore(score: number): number {

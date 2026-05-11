@@ -45,7 +45,15 @@ import {
 } from "./config";
 import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
 import type { ContextarrDatabase } from "./db";
-import { ExportBriefError, getExportBrief, listExportBriefs, saveExportBrief, type SaveExportBriefBody } from "./export-briefs";
+import {
+  ExportBriefError,
+  getExportBrief,
+  listExportBriefs,
+  normalizeExportBriefObjectType,
+  saveExportBrief,
+  type ExportBriefObjectType,
+  type SaveExportBriefBody
+} from "./export-briefs";
 import { ExposureReadinessError, getPackExposureReadiness } from "./exposure-readiness";
 import { getPackReadinessReport, ReadinessReportError } from "./readiness/readiness-engine";
 import {
@@ -108,6 +116,8 @@ import type {
 const LOCAL_OBSERVABILITY_DEFAULT_LIMIT = 25;
 const LOCAL_OBSERVABILITY_MAX_LIMIT = 100;
 const LOCAL_OBSERVABILITY_MAX_STRING_LENGTH = 240;
+const EXPORT_BRIEF_DEFAULT_LIMIT = 25;
+const EXPORT_BRIEF_MAX_LIMIT = 100;
 
 export interface CreateAppOptions {
   config: ServerConfig;
@@ -859,9 +869,26 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
-  app.get("/api/export-briefs", async () => {
+  app.get<{ Querystring: { limit?: string; objectType?: string; objectId?: string } }>("/api/export-briefs", async (request, reply) => {
+    const limit = parseExportBriefListLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Export brief limit must be an integer from 1 to 100." });
+    }
+
+    const objectType = parseExportBriefListObjectType(request.query.objectType);
+    if (objectType === "invalid") {
+      return reply.code(400).send({
+        error: "invalid_query",
+        message: "Export brief objectType must be pack, skill, agent_kit, agent-kit, or composed."
+      });
+    }
+
     return {
-      briefs: listExportBriefs(db)
+      briefs: listExportBriefs(db, {
+        limit,
+        objectType,
+        objectId: parseExportBriefListObjectId(request.query.objectId)
+      })
     };
   });
 
@@ -1553,6 +1580,31 @@ function parseLocalObservabilityLimit(value: string | undefined): number | "inva
   return parsed;
 }
 
+function parseExportBriefListLimit(value: string | undefined): number | "invalid" {
+  if (!value) {
+    return EXPORT_BRIEF_DEFAULT_LIMIT;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > EXPORT_BRIEF_MAX_LIMIT) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+function parseExportBriefListObjectType(value: string | undefined): ExportBriefObjectType | undefined | "invalid" {
+  if (!value) {
+    return undefined;
+  }
+
+  return normalizeExportBriefObjectType(value.trim()) ?? "invalid";
+}
+
+function parseExportBriefListObjectId(value: string | undefined): string | undefined {
+  const objectId = value?.trim();
+  return objectId || undefined;
+}
+
 interface LocalEventRow {
   id: number;
   type: string;
@@ -1711,6 +1763,7 @@ function isSensitiveLocalObservabilityKey(key: string): boolean {
     normalized.includes("prompt") ||
     normalized.includes("input") ||
     normalized.includes("body") ||
+    normalized.includes("bodies") ||
     normalized.includes("content") ||
     normalized.includes("context") ||
     normalized.includes("secret") ||

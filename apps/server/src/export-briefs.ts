@@ -4,7 +4,7 @@ import type { ContextarrDatabase } from "./db";
 
 const CONTENT_SNAPSHOT_MAX_CHARS = 4096;
 
-type ExportBriefObjectType = "pack" | "skill" | "agent_kit" | "composed";
+export type ExportBriefObjectType = "pack" | "skill" | "agent_kit" | "composed";
 type ExportBriefPrivacyMode = "redacted" | "public_safe";
 
 const allowedObjectTypes = new Set<ExportBriefObjectType>(["pack", "skill", "agent_kit", "composed"]);
@@ -16,6 +16,12 @@ export interface SaveExportBriefBody {
   objectId?: unknown;
   privacyMode?: unknown;
   artifact?: unknown;
+}
+
+export interface ListExportBriefFilters {
+  limit?: number;
+  objectType?: ExportBriefObjectType;
+  objectId?: string;
 }
 
 export interface SavedExportBrief {
@@ -167,14 +173,32 @@ export function saveExportBrief(db: ContextarrDatabase, body: SaveExportBriefBod
   return brief;
 }
 
-export function listExportBriefs(db: ContextarrDatabase): SavedExportBrief[] {
+export function listExportBriefs(db: ContextarrDatabase, filters: ListExportBriefFilters = {}): SavedExportBrief[] {
+  const clauses: string[] = [];
+  const params: Record<string, number | string> = {
+    limit: filters.limit ?? 25
+  };
+
+  if (filters.objectType) {
+    clauses.push("object_type = @objectType");
+    params.objectType = filters.objectType;
+  }
+
+  if (filters.objectId) {
+    clauses.push("object_id = @objectId");
+    params.objectId = filters.objectId;
+  }
+
+  const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
   const rows = db
     .prepare(
       `SELECT *
        FROM export_briefs
-       ORDER BY saved_at DESC, id DESC`
+       ${whereSql}
+       ORDER BY saved_at DESC, id DESC
+       LIMIT @limit`
     )
-    .all() as ExportBriefRow[];
+    .all(params) as ExportBriefRow[];
 
   return rows.map((row) => rowToExportBrief(row, false));
 }
@@ -192,9 +216,18 @@ export function getExportBrief(db: ContextarrDatabase, id: string): SavedExportB
 }
 
 function parseObjectType(value: unknown): ExportBriefObjectType {
+  const normalized = normalizeExportBriefObjectType(value);
+  if (!normalized) {
+    throw new ExportBriefError("invalid_export_brief_request", "Export brief objectType is invalid.");
+  }
+
+  return normalized;
+}
+
+export function normalizeExportBriefObjectType(value: unknown): ExportBriefObjectType | undefined {
   const normalized = value === "agent-kit" ? "agent_kit" : value;
   if (typeof normalized !== "string" || !allowedObjectTypes.has(normalized as ExportBriefObjectType)) {
-    throw new ExportBriefError("invalid_export_brief_request", "Export brief objectType is invalid.");
+    return undefined;
   }
 
   return normalized as ExportBriefObjectType;
