@@ -1,0 +1,16 @@
+Tailscale VPN Pack
+
+Public-safe starter context for a fictional Tailscale tailnet.
+
+Records:
+- tailscale-vpn-pack.tailnet-overview
+- tailscale-vpn-pack.device-inventory
+- tailscale-vpn-pack.access-controls
+- tailscale-vpn-pack.subnet-routes
+- tailscale-vpn-pack.exit-node-policy
+- tailscale-vpn-pack.sharing-rules
+- tailscale-vpn-pack.troubleshooting
+- tailscale-vpn-pack.review-cadence
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

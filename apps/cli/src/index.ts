@@ -42,17 +42,27 @@ import {
   type ValidationResult
 } from "@contextarr/pack-validator";
 import { renderPackToStaticHtml, renderPacksToStaticHtml, StaticRenderError } from "@contextarr/renderer/static";
+import {
+  listReviewCandidates,
+  type ReviewCandidateListResult,
+  type ReviewCandidateSourceKind,
+  type ReviewCandidateStatus,
+  type ReviewCandidateSummary
+} from "@contextarr/review-candidates";
 import { formatSecurityScannerReport, scanArtifact, SecurityScannerError, type SecurityScannerReportV1 } from "@contextarr/security-scanner";
 import {
   getAgentKit,
   getAgentKitContextPacks,
   getAgentKitHealth,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getAgentKitSkills,
   getAgentKits,
   getIndexStats,
   getPack,
+  getPackExposureReadiness,
   getPackHealth,
+  getPackReadinessReport,
   getPackRecords,
   getPacks,
   getRecord,
@@ -69,10 +79,13 @@ import {
   searchIndex,
   type AgentKitHealthDetail,
   type AgentKitSummary,
+  type ContextReadinessReport,
   type ContextarrDatabase,
   type PackHealthDetail,
+  type PackExposureReadiness,
   type PackSummary,
   type RebuildIndexResult,
+  READINESS_REPORT_SCHEMA_VERSION,
   type ReviewItem,
   type ReviewItemFilters,
   type ServerConfig,
@@ -144,8 +157,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .argument("[kind]", "object kind: all, packs, skills, or agent-kits", "all")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((kindValue: string, options: { format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((kindValue: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseListKind(kindValue);
 
       if (!format) {
@@ -182,10 +196,12 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .description("inspect one indexed Contextarr object from the local derived index")
     .argument("<id>", "pack, record, Skill, or Agent Kit id")
     .option("--kind <kind>", "object kind: auto, pack, record, skill, or agent-kit", "auto")
+    .option("--readiness", "include read-only Context Pack exposure readiness", false)
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string, options: { kind: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string, options: { kind: string; readiness?: boolean } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseInspectKind(options.kind);
 
       if (!format) {
@@ -201,9 +217,29 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
       }
 
       try {
-        const result = withConfiguredIndex((db) => findIndexedObject(db, id, kind));
+        const result = withConfiguredIndex((db, config) => {
+          const object = findIndexedObject(db, id, kind);
+          if (!object || !options.readiness) {
+            return object;
+          }
+
+          return {
+            ...object,
+            exposureReadiness: object.kind === "pack" ? getPackExposureReadiness(db, config, object.id) : undefined
+          };
+        });
         if (!result) {
           io.stderr.write(`Indexed Contextarr object not found: ${id}\n`);
+          exitCode = 1;
+          return;
+        }
+        if (options.readiness && result.kind !== "pack") {
+          io.stderr.write("Exposure readiness is only available for Context Packs.\n");
+          exitCode = 2;
+          return;
+        }
+        if (options.readiness && !result.exposureReadiness) {
+          io.stderr.write(`Exposure readiness unavailable for Context Pack: ${id}\n`);
           exitCode = 1;
           return;
         }
@@ -223,8 +259,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--kind <kind>", "health target kind: auto, summary, pack, skill, or agent-kit", "auto")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string | undefined, options: { kind: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string | undefined, options: { kind: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseHealthKind(options.kind);
 
       if (!format) {
@@ -268,6 +305,52 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     });
 
   program
+    .command("readiness")
+    .description("summarize read-only Context Readiness for one indexed Context Pack")
+    .argument("<pack-id>", "Context Pack id")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((packId: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db, config) => {
+          const pack = getPack(db, packId);
+          if (!pack) {
+            return { packFound: false, report: undefined };
+          }
+
+          return { packFound: true, report: getPackReadinessReport(db, config, packId) };
+        });
+
+        if (!result.packFound) {
+          io.stderr.write(`Context Pack not found in local index: ${packId}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        if (!result.report) {
+          io.stderr.write(`Readiness report unavailable for Context Pack: ${packId}\n`);
+          exitCode = 1;
+          return;
+        }
+
+        io.stdout.write(format === "json" ? `${JSON.stringify(formatReadinessJson(result.report), null, 2)}\n` : formatReadinessText(result.report));
+        exitCode = 0;
+      } catch (error) {
+        io.stderr.write(`${errorMessage(error)}\n`);
+        exitCode = 2;
+      }
+    });
+
+  program
     .command("review")
     .description("list local Contextarr review items from the derived index")
     .option("--status <status>", "review item status: open, ignored, accepted, reviewed, resolved, or all", "open")
@@ -281,6 +364,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum items to return", "50")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
     .action(
       (options: {
         status: string;
@@ -294,8 +378,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         limit: string;
         format: string;
         json?: boolean;
+        agent?: boolean;
       }) => {
-        const format = options.json ? "json" : parseFormat(options.format);
+        const format = parseAgentOutputFormat(options);
         const filters = parseReviewFilters(options);
         const limit = parsePositiveInteger(options.limit);
 
@@ -333,6 +418,66 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     );
 
   program
+    .command("review-candidates")
+    .description("list untrusted draft Context Pack candidates without activating or indexing them")
+    .option("--source-kind <kind>", "candidate source: draft_pack, composed_pack, imported_pack, restored_quarantine, unknown, or all", "all")
+    .option("--status <status>", "candidate status: ready_for_review, invalid, blocked, duplicate_active_id, or all", "all")
+    .option("--q <query>", "filter by pack id, name, source label, or path label")
+    .option("--limit <count>", "maximum candidates to return", "50")
+    .option("--format <format>", "output format: text or json", "text")
+    .option("--json", "emit deterministic JSON output", false)
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((options: { sourceKind: string; status: string; q?: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
+      const sourceKind = parseReviewCandidateSourceKind(options.sourceKind);
+      const status = parseReviewCandidateStatus(options.status);
+      const limit = parsePositiveInteger(options.limit);
+
+      if (!format) {
+        io.stderr.write(`Unsupported output format: ${options.format}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (sourceKind === "invalid") {
+        io.stderr.write(`Unsupported review candidate source kind: ${options.sourceKind}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (status === "invalid") {
+        io.stderr.write(`Unsupported review candidate status: ${options.status}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      if (!limit) {
+        io.stderr.write(`Review candidate limit must be a positive integer: ${options.limit}\n`);
+        exitCode = 2;
+        return;
+      }
+
+      try {
+        const result = withConfiguredIndex((db, config) => {
+          const candidates = listReviewCandidates({
+            roots: getReviewCandidateRoots(config),
+            activePackIds: getPacks(db).map((pack) => pack.id),
+            displayRoot: process.env.INIT_CWD ?? process.cwd()
+          });
+          return filterReviewCandidateResult(candidates, { sourceKind, status, query: options.q, limit });
+        });
+
+        io.stdout.write(
+          format === "json" ? `${JSON.stringify(formatReviewCandidatesJson(result), null, 2)}\n` : formatReviewCandidatesText(result)
+        );
+        exitCode = 0;
+      } catch (error) {
+        writeCliError(io, format, error);
+        exitCode = 2;
+      }
+    });
+
+  program
     .command("brief")
     .description("build a compact read-only brief from the local derived index")
     .argument("[id]", "pack, Skill, or Agent Kit id")
@@ -340,8 +485,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum child items per brief section", "5")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((id: string | undefined, options: { kind: string; limit: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((id: string | undefined, options: { kind: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const kind = parseBriefKind(options.kind);
       const limit = parsePositiveInteger(options.limit);
 
@@ -399,8 +545,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .option("--limit <count>", "maximum results to return", "10")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON output", false)
-    .action((queryParts: string[], options: { type: string; limit: string; format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((queryParts: string[], options: { type: string; limit: string } & AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
       const type = parseQueryKind(options.type);
       const limit = parsePositiveInteger(options.limit);
       const query = queryParts.join(" ").trim();
@@ -462,7 +609,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         io.stdout.write(format === "json" ? `${JSON.stringify(formatBackupJson(result), null, 2)}\n` : formatBackupText(result));
         exitCode = 0;
       } catch (error) {
-        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        writeCliError(io, format, error);
         exitCode = error instanceof BackupError && isBackupUsageError(error.code) ? 2 : 1;
       }
     });
@@ -490,7 +637,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         io.stdout.write(format === "json" ? `${JSON.stringify(formatRestoreJson(result), null, 2)}\n` : formatRestoreText(result));
         exitCode = result.validationErrors > 0 || result.scannerBlocked > 0 ? 1 : 0;
       } catch (error) {
-        io.stderr.write(`${error instanceof BackupError ? error.message : errorMessage(error)}\n`);
+        writeCliError(io, format, error);
         exitCode = error instanceof BackupError && isRestoreUsageError(error.code) ? 2 : 1;
       }
     });
@@ -631,8 +778,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .command("scan")
     .argument("<path>", "local Contextarr artifact file or directory to scan")
     .option("--format <format>", "output format: text or json", "text")
-    .action((targetPath: string, options: { format: string }) => {
-      const format = parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((targetPath: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
 
       if (!format) {
         io.stderr.write(`Unsupported output format: ${options.format}\n`);
@@ -655,8 +803,9 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
     .argument("<path>", "pack, Skill, Agent Kit, or directory of child objects to validate")
     .option("--format <format>", "output format: text or json", "text")
     .option("--json", "emit deterministic JSON validation report", false)
-    .action((targetPath: string, options: { format: string; json?: boolean }) => {
-      const format = options.json ? "json" : parseFormat(options.format);
+    .option("--agent", "agent mode: deterministic JSON output with no color or progress", false)
+    .action((targetPath: string, options: AgentOutputOptions) => {
+      const format = parseAgentOutputFormat(options);
 
       if (!format) {
         io.stderr.write(`Unsupported output format: ${options.format}\n`);
@@ -681,7 +830,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
               ? validateAgentKit(target.path)
               : validatePack(target.path)
         );
-        const validationJson = formatValidationJson(resolvedTargetPath, results);
+        const validationJson = formatValidationJson(resolvedTargetPath, results, { sanitizePaths: Boolean(options.agent) });
         if (format === "json") {
           io.stdout.write(`${JSON.stringify(validationJson, null, 2)}\n`);
         } else {
@@ -786,7 +935,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
           : renderPacksToStaticHtml({ packsDir: resolvedTargetPath, outputDir: resolvedOutputPath });
 
         io.stdout.write(
-          `Rendered ${result.packsRendered} pack(s), ${result.recordsRendered} record(s): ${result.entryFile}\n`
+          `Rendered ${result.packsRendered} pack(s), ${result.recordsRendered} record(s): ${displayPath(result.entryFile)}\n`
         );
         exitCode = 0;
       } catch (error) {
@@ -849,7 +998,7 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
         );
         const writtenFiles = writeExportArtifacts(resolvedOutputPath, artifacts);
 
-        io.stdout.write(`Exported ${writtenFiles.length} file(s): ${resolvedOutputPath}\n`);
+        io.stdout.write(`Exported ${writtenFiles.length} file(s): ${displayPath(resolvedOutputPath)}\n`);
         exitCode = 0;
       } catch (error) {
         io.stderr.write(`${error instanceof ExportError ? error.message : errorMessage(error)}\n`);
@@ -873,6 +1022,16 @@ export async function runCli(args = process.argv.slice(2), io: CliIo = defaultIo
 
 function parseFormat(value: string): OutputFormat | undefined {
   return value === "text" || value === "json" ? value : undefined;
+}
+
+type AgentOutputOptions = {
+  format: string;
+  json?: boolean;
+  agent?: boolean;
+};
+
+function parseAgentOutputFormat(options: AgentOutputOptions): OutputFormat | undefined {
+  return options.agent || options.json ? "json" : parseFormat(options.format);
 }
 
 function parseImportKind(value: string): ImporterKind | undefined {
@@ -926,10 +1085,16 @@ type ListResult = {
   agentKits: AgentKitSummary[];
 };
 type IndexedObjectKind = Exclude<InspectKind, "auto">;
-type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown };
+type IndexedObject = { kind: IndexedObjectKind; id: string; object: unknown; exposureReadiness?: PackExposureReadiness };
 type HealthObjectKind = Exclude<HealthKind, "auto" | "summary">;
 type HealthDetail = PackHealthDetail | SkillHealthDetail | AgentKitHealthDetail;
 type HealthObjectResult = { kind: HealthObjectKind; id: string; health: HealthDetail };
+type ReadinessCommandJson = {
+  schemaVersion: "contextarr.cli.readiness.v1";
+  reportSchemaVersion: typeof READINESS_REPORT_SCHEMA_VERSION;
+  packId: string;
+  readiness: ContextReadinessReport;
+};
 type HealthSummaryResult = {
   kind: "summary";
   status: "healthy" | "review_required";
@@ -1006,6 +1171,19 @@ type ReviewQueryResult = {
   limit: number;
   total: number;
   items: ReviewItem[];
+};
+type ReviewCandidateCommandResult = {
+  filters: {
+    sourceKind?: ReviewCandidateSourceKind;
+    status?: ReviewCandidateStatus;
+    query?: string;
+  };
+  limit: number;
+  total: number;
+  returned: number;
+  counts: ReviewCandidateListResult["counts"];
+  skippedRoots: ReviewCandidateListResult["skippedRoots"];
+  candidates: ReviewCandidateSummary[];
 };
 type ReviewCommandOptions = {
   status: string;
@@ -1154,6 +1332,24 @@ function parseOptionalReviewObjectType(value?: string): ReviewItem["objectType"]
 
   const normalized = value === "agent-kit" ? "agent_kit" : value;
   return reviewObjectTypes.includes(normalized as ReviewItem["objectType"]) ? (normalized as ReviewItem["objectType"]) : undefined;
+}
+
+function parseReviewCandidateSourceKind(value?: string): ReviewCandidateSourceKind | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["draft_pack", "composed_pack", "imported_pack", "restored_quarantine", "unknown"].includes(value)
+    ? (value as ReviewCandidateSourceKind)
+    : "invalid";
+}
+
+function parseReviewCandidateStatus(value?: string): ReviewCandidateStatus | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
+    ? (value as ReviewCandidateStatus)
+    : "invalid";
 }
 
 function loadCliConfig(): ServerConfig {
@@ -1470,7 +1666,13 @@ function formatAgentKitListLine(agentKit: AgentKitSummary): string {
   return `- ${agentKit.id}: ${agentKit.name} [${agentKit.healthStatus}; packs=${agentKit.contextPackCount}; skills=${agentKit.skillCount}; review=${agentKit.reviewQueueCount}]`;
 }
 
-function formatInspectJson(result: IndexedObject): { schemaVersion: string; kind: IndexedObjectKind; id: string; object: unknown } {
+function formatInspectJson(result: IndexedObject): {
+  schemaVersion: string;
+  kind: IndexedObjectKind;
+  id: string;
+  object: unknown;
+  exposureReadiness?: PackExposureReadiness;
+} {
   return {
     schemaVersion: "contextarr.cli.inspect.v1",
     ...result
@@ -1506,7 +1708,33 @@ function formatInspectText(result: IndexedObject): string {
     lines.push("", object.body.trim());
   }
 
+  if (result.exposureReadiness) {
+    appendExposureReadinessText(lines, result.exposureReadiness);
+  }
+
   return `${lines.join("\n")}\n`;
+}
+
+function appendExposureReadinessText(lines: string[], readiness: PackExposureReadiness): void {
+  lines.push(
+    "",
+    "Exposure readiness:",
+    `- Export: ${readiness.summary.exportEligibleRecords}/${readiness.summary.recordCount} records, ${readiness.summary.exportEligibleProfiles}/${readiness.summary.exportProfileCount} profiles eligible`,
+    `- MCP: ${readiness.summary.mcpEligibleRecords}/${readiness.summary.recordCount} records eligible`,
+    `- Validation: ${readiness.validation.status} (${readiness.validation.errors} errors, ${readiness.validation.warnings} warnings)`,
+    `- Scanner: ${readiness.security.status} (${readiness.security.recommendedAction})`,
+    `- Source coverage: ${readiness.summary.sourceBackedRecords}/${readiness.summary.recordCount} records source-backed`
+  );
+
+  if (readiness.blockers.length > 0) {
+    lines.push("Blockers:");
+    lines.push(...readiness.blockers.slice(0, 5).map((item) => `- ${item.code}: ${item.message}`));
+  }
+
+  if (readiness.warnings.length > 0) {
+    lines.push("Warnings:");
+    lines.push(...readiness.warnings.slice(0, 5).map((item) => `- ${item.code}: ${item.message}`));
+  }
 }
 
 function formatHealthJson(result: HealthResult): unknown {
@@ -1568,6 +1796,52 @@ function formatHealthText(result: HealthResult): string {
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function formatReadinessJson(report: ContextReadinessReport): ReadinessCommandJson {
+  return {
+    schemaVersion: "contextarr.cli.readiness.v1",
+    reportSchemaVersion: READINESS_REPORT_SCHEMA_VERSION,
+    packId: report.packId,
+    readiness: report
+  };
+}
+
+function formatReadinessText(report: ContextReadinessReport): string {
+  const lines = [
+    `Context Readiness: ${report.packId}`,
+    `Status: ${report.status}`,
+    `Score: ${report.score}/100`,
+    `Report schema: ${report.schemaVersion}`,
+    `Generated: ${report.generatedAt}`,
+    "",
+    "Dimensions:"
+  ];
+
+  lines.push(
+    ...Object.values(report.dimensions).map(
+      (dimension) => `- ${dimension.id}: ${dimension.status} (${dimension.score}/100) - ${dimension.label}`
+    )
+  );
+
+  lines.push("", "Top issues:");
+  if (report.issues.length === 0) {
+    lines.push("- None");
+  } else {
+    lines.push(...topReadinessIssues(report).map((issue) => `- [${issue.severity}] ${issue.code}: ${issue.message}`));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function topReadinessIssues(report: ContextReadinessReport): ContextReadinessReport["issues"] {
+  return [...report.issues]
+    .sort((left, right) => readinessIssueSeverityRank(left.severity) - readinessIssueSeverityRank(right.severity))
+    .slice(0, 5);
+}
+
+function readinessIssueSeverityRank(severity: ContextReadinessReport["issues"][number]["severity"]): number {
+  return severity === "blocker" ? 0 : 1;
 }
 
 function appendHealthSummarySection(
@@ -1797,6 +2071,122 @@ function formatReviewItemForCli(item: ReviewItem): Omit<ReviewItem, "fingerprint
 
 function formatReviewItemLine(item: ReviewItem): string {
   return `- [${item.severity}/${item.status}] ${reviewObjectTypeLabel(item.objectType)}/${item.objectId} ${item.type}: ${item.message}`;
+}
+
+function filterReviewCandidateResult(
+  result: ReviewCandidateListResult,
+  filters: {
+    sourceKind?: ReviewCandidateSourceKind;
+    status?: ReviewCandidateStatus;
+    query?: string;
+    limit: number;
+  }
+): ReviewCandidateCommandResult {
+  const query = filters.query?.trim().toLowerCase();
+  const skippedRoots = filters.sourceKind
+    ? result.skippedRoots.filter((skippedRoot) => skippedRoot.sourceKind === filters.sourceKind)
+    : result.skippedRoots;
+  const candidates = result.candidates.filter((candidate) => {
+    if (filters.sourceKind && candidate.sourceKind !== filters.sourceKind) {
+      return false;
+    }
+    if (filters.status && candidate.status !== filters.status) {
+      return false;
+    }
+    if (query) {
+      return [candidate.packId, candidate.name, candidate.sourceLabel, candidate.pathLabel]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    }
+    return true;
+  });
+
+  return {
+    filters: {
+      sourceKind: filters.sourceKind,
+      status: filters.status,
+      query: filters.query?.trim() || undefined
+    },
+    limit: filters.limit,
+    total: candidates.length,
+    returned: Math.min(candidates.length, filters.limit),
+    counts: countReviewCandidates(candidates, skippedRoots.length),
+    skippedRoots,
+    candidates: candidates.slice(0, filters.limit)
+  };
+}
+
+function countReviewCandidates(candidates: ReviewCandidateSummary[], skippedRoots: number): ReviewCandidateListResult["counts"] {
+  return {
+    total: candidates.length,
+    readyForReview: candidates.filter((candidate) => candidate.status === "ready_for_review").length,
+    invalid: candidates.filter((candidate) => candidate.status === "invalid").length,
+    blocked: candidates.filter((candidate) => candidate.status === "blocked").length,
+    duplicateActiveId: candidates.filter((candidate) => candidate.status === "duplicate_active_id").length,
+    skippedRoots
+  };
+}
+
+function formatReviewCandidatesJson(result: ReviewCandidateCommandResult): unknown {
+  return {
+    schemaVersion: "contextarr.cli.review-candidates.v1",
+    filters: result.filters,
+    limit: result.limit,
+    total: result.total,
+    returned: result.returned,
+    counts: result.counts,
+    skippedRoots: result.skippedRoots,
+    candidates: result.candidates.map((candidate) => ({
+      key: candidate.key,
+      sourceKind: candidate.sourceKind,
+      sourceLabel: candidate.sourceLabel,
+      pathLabel: candidate.pathLabel,
+      packId: candidate.packId,
+      name: candidate.name,
+      version: candidate.version,
+      status: candidate.status,
+      recommendedAction: candidate.recommendedAction,
+      activeConflict: candidate.activeConflict,
+      validation: candidate.validation,
+      security: candidate.security,
+      counts: candidate.counts
+    }))
+  };
+}
+
+function formatReviewCandidatesText(result: ReviewCandidateCommandResult): string {
+  const lines = [
+    `Review candidates: ${result.returned} returned (${result.total} matching)`,
+    `Filters: ${formatReviewCandidateFiltersText(result.filters)}`,
+    `Limit: ${result.limit}`
+  ];
+
+  if (result.skippedRoots.length > 0) {
+    lines.push(`Skipped roots: ${result.skippedRoots.length}`);
+  }
+
+  if (result.candidates.length === 0) {
+    lines.push("No review candidates match the filters.");
+  } else {
+    lines.push("", "Candidates:");
+    lines.push(...result.candidates.map(formatReviewCandidateLine));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function formatReviewCandidateFiltersText(filters: ReviewCandidateCommandResult["filters"]): string {
+  const entries = [
+    ["sourceKind", filters.sourceKind],
+    ["status", filters.status],
+    ["query", filters.query]
+  ].filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0);
+
+  return entries.length > 0 ? entries.map(([key, value]) => `${key}=${value}`).join(", ") : "all";
+}
+
+function formatReviewCandidateLine(candidate: ReviewCandidateSummary): string {
+  return `- [${candidate.status}] ${candidate.packId ?? candidate.name} (${candidate.sourceKind}; ${candidate.pathLabel}) records=${candidate.counts.records}; sources=${candidate.counts.sources}; exports=${candidate.counts.exportProfiles}`;
 }
 
 function inspectKindLabel(kind: IndexedObjectKind): string {
@@ -2057,13 +2447,21 @@ type FormattedValidationJson = AnyValidationResult | FormattedPackValidationJson
   summary: { errors: number; warnings: number; infos: number };
 };
 
-function formatValidationJson(targetPath: string, results: AnyValidationResult[]): FormattedValidationJson {
+function formatValidationJson(
+  targetPath: string,
+  results: AnyValidationResult[],
+  options: { sanitizePaths?: boolean } = {}
+): FormattedValidationJson {
   if (results.length === 1) {
-    return "packPath" in results[0] ? formatPackValidationJson(results[0]) : results[0];
+    const formatted = "packPath" in results[0] ? formatPackValidationJson(results[0]) : results[0];
+    return options.sanitizePaths ? sanitizeValidationPaths(formatted) : formatted;
   }
 
   const displayTargetPath = displayPath(targetPath);
-  const formattedResults = results.map((result) => ("packPath" in result ? formatPackValidationJson(result) : result));
+  const formattedResults = results.map((result) => {
+    const formatted = "packPath" in result ? formatPackValidationJson(result) : result;
+    return options.sanitizePaths ? sanitizeValidationPaths(formatted) : formatted;
+  });
   const aggregate = {
     targetPath: displayTargetPath,
     valid: formattedResults.every((result) => result.valid),
@@ -2088,6 +2486,26 @@ function formatValidationJson(targetPath: string, results: AnyValidationResult[]
   }
 
   return aggregate;
+}
+
+function sanitizeValidationPaths<T>(value: T): T {
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValidationPaths(item)) as T;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    sanitized[key] =
+      (key === "packPath" || key === "skillPath" || key === "agentKitPath" || key === "targetPath") && typeof item === "string"
+        ? displayPath(item)
+        : sanitizeValidationPaths(item);
+  }
+
+  return sanitized as T;
 }
 
 function formatPackValidationJson(result: ValidationResult): FormattedPackValidationJson {
@@ -2299,43 +2717,94 @@ function formatSkillImportJson(result: DraftSkillImportResult): {
 
 function formatBackupText(result: BackupResult): string {
   return [
-    `Created Context Pack backup: ${result.backupPath}`,
+    `Created Context Pack backup: ${displayPath(result.backupPath)}`,
     `Backup: ${result.backupId}`,
     `Packs: ${result.packCount}`,
     `Files: ${result.fileCount}`,
     `Bytes: ${result.byteLength}`,
     `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
-    `Manifest: ${result.manifestPath}`,
+    `Manifest: ${displayPath(result.manifestPath)}`,
     `Manifest checksum: ${result.manifestSha256}`
   ].join("\n") + "\n";
 }
 
 function formatBackupJson(result: BackupResult): BackupResult {
-  return result;
+  return {
+    ...result,
+    backupPath: displayPath(result.backupPath),
+    manifestPath: displayPath(result.manifestPath),
+    manifestSha256Path: displayPath(result.manifestSha256Path)
+  };
 }
 
 function formatRestoreText(result: RestoreResult): string {
   return [
-    `Restored Context Pack backup to quarantine: ${result.outputPath}`,
+    `Restored Context Pack backup to quarantine: ${displayPath(result.outputPath)}`,
     `Backup: ${result.backupId}`,
     `Status: ${result.status}`,
     `Packs: ${result.packCount}`,
     `Validation: ${result.validationErrors} error(s), ${result.validationWarnings} warning(s)`,
     `Scanner blocked: ${result.scannerBlocked}`,
-    `Restore report: ${result.reportPath}`,
+    `Restore report: ${displayPath(result.reportPath)}`,
     "Activation: manual review required; no packs were activated automatically."
   ].join("\n") + "\n";
 }
 
 function formatRestoreJson(result: RestoreResult): RestoreResult {
-  return result;
+  return {
+    ...result,
+    outputPath: displayPath(result.outputPath),
+    reportPath: displayPath(result.reportPath),
+    packs: result.packs.map((pack) => ({
+      ...pack,
+      packPath: displayPath(pack.packPath)
+    }))
+  };
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function formatCliError(error: unknown): string {
+  return sanitizeCliMessage(errorMessage(error));
+}
+
+function writeCliError(io: CliIo, format: OutputFormat, error: unknown): void {
+  if (format === "json") {
+    io.stdout.write(`${JSON.stringify(formatCliErrorJson(error), null, 2)}\n`);
+    return;
+  }
+
+  io.stderr.write(`${formatCliError(error)}\n`);
+}
+
+function formatCliErrorJson(error: unknown): { ok: false; error: string; message: string } {
+  return {
+    ok: false,
+    error: error instanceof BackupError ? error.code : "cli_error",
+    message: formatCliError(error)
+  };
+}
+
+function sanitizeCliMessage(message: string): string {
+  const cwd = path.resolve(process.env.INIT_CWD ?? process.cwd());
+  const cwdVariants = [cwd, cwd.replace(/\\/g, "/")];
+  let sanitized = message;
+
+  for (const variant of cwdVariants) {
+    sanitized = sanitized.split(variant).join(".");
+  }
+
+  sanitized = sanitized.replace(/[A-Za-z]:[\\/][^\s"']+/g, (match) => displayPath(match.trim()));
+  return sanitized.replace(/\\/g, "/");
+}
+
 function displayPath(value: string): string {
+  if (!path.isAbsolute(value)) {
+    return value.replace(/\\/g, "/");
+  }
+
   const cwd = path.resolve(process.env.INIT_CWD ?? process.cwd());
   const relative = path.relative(cwd, path.resolve(value));
   if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) {

@@ -8,17 +8,27 @@ const demoPacksDir = path.join(repoRoot, "demo-packs");
 const validatorFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
 
 describe("loadPacks", () => {
-  it("loads all five demo packs", () => {
+  it("loads all demo packs", () => {
     const result = loadPacks(demoPacksDir);
 
     expect(result.skipped).toHaveLength(0);
     expect(result.packs.map((pack) => pack.manifest.id).sort()).toEqual(
       [
         "ai-workstation-pack",
-        "jellyfin-server-pack",
+        "aws-infrastructure-pack",
         "claude-code-project-pack",
+        "docker-containers-pack",
+        "fake-product-line-pack",
+        "github-workflow-pack",
+        "google-workspace-pack",
+        "home-assistant-pack",
         "internal-support-kb-pack",
-        "fake-product-line-pack"
+        "jellyfin-media-server-pack",
+        "obsidian-vault-pack",
+        "openai-prompt-engineering-pack",
+        "tailscale-vpn-pack",
+        "unifi-network-pack",
+        "vscode-setup-pack"
       ].sort()
     );
   });
@@ -26,9 +36,9 @@ describe("loadPacks", () => {
   it("loads expected demo totals", () => {
     const result = loadPacks(demoPacksDir);
 
-    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(25);
-    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(25);
-    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(40);
+    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(111);
+    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(111);
+    expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(120);
   });
 
   it("skips invalid packs without failing the whole load", () => {

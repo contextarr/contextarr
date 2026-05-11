@@ -44,6 +44,16 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiClient } from "./api";
 import {
+  PackCard as BrandPackCard,
+  PackCardMenu,
+  PackCover as BrandPackCover,
+  PackHealthPill,
+  PackTrustBadge,
+  normalizePackTrustLevel,
+  packTrustLabels,
+  resolvePackBrand
+} from "./components/pack-card";
+import {
   createAgentKitCoverVisual,
   filterAndSortAgentKits,
   getAgentKitFilterOptions,
@@ -86,16 +96,20 @@ import {
   formatPackType,
   getFilterOptions,
   getInitialLibraryView,
+  type LibraryPackGroup,
   persistLibraryView
 } from "./library";
 import { renderRecordBodyHtml } from "./record-rendering";
 import { renderSkillDocumentHtml } from "./skill-rendering";
 import {
   filterReviewItems,
+  filterReviewCandidates,
   reviewAgentKitName,
   reviewPackName,
   reviewSkillName,
+  summarizeReviewCandidates,
   summarizeReviewItems,
+  type ReviewCandidateFilters,
   type ReviewFilters
 } from "./review";
 import {
@@ -115,21 +129,35 @@ import {
 import { createSkillCoverVisual, filterAndSortSkills, getSkillFilterOptions } from "./skills";
 import type {
   ExportArtifact,
+  ExportBrief,
+  ExportBriefPrivacyMode,
   ExportProfileSummary,
   HealthCheck,
   HealthResponse,
   LibraryViewMode,
+  LocalEvent,
+  McpQueryLogEntry,
   ComposeSavePackResponse,
   ContextPackCollectorDefinition,
   ContextPackCollectorId,
   ContextPackCollectorPreview,
   ContextPackCollectorResult,
   PackDetail,
+  PackExposureReadiness,
   PackHealthResponse,
+  PackReadinessReport,
   PackSummary,
   RecordDetail,
   RecordSummary,
   ReviewItem,
+  ReviewCandidateActivationApplyResponse,
+  ReviewCandidateActivationDryRun,
+  ReviewCandidateActivationHistoryItem,
+  ReviewCandidateActivationPlan,
+  ReviewCandidateDetail,
+  ReviewCandidateSummary,
+  ReviewCandidateSourceKind,
+  ReviewCandidateStatus,
   Route,
   SearchResult,
   SkillDetail,
@@ -163,6 +191,14 @@ const navItems = [
   { label: "Settings", icon: Settings }
 ] satisfies Array<{ label: string; icon: typeof Library; href?: string; route?: Route["name"] }>;
 
+const shellActions = [
+  { label: "Activity monitor unavailable in developer preview", icon: Activity },
+  { label: "Import shortcut unavailable in developer preview", icon: Import },
+  { label: "Notifications unavailable in developer preview", icon: Bell },
+  { label: "Help center unavailable in developer preview", icon: CircleHelp },
+  { label: "User profile unavailable in developer preview", icon: UserRound }
+] satisfies Array<{ label: string; icon: typeof Activity }>;
+
 const coverIconMap = {
   book: BookOpen,
   box: Box,
@@ -176,10 +212,13 @@ const coverIconMap = {
 
 const detailTabs = ["overview", "records", "sources", "exports", "health", "activity", "changelog"] as const;
 type DetailTab = (typeof detailTabs)[number];
+const readinessDimensionOrder = ["source", "review", "governance", "redaction", "export", "mcp"] as const;
 const skillDetailTabs = ["overview", "instructions", "examples", "sources", "exports", "health"] as const;
 type SkillDetailTab = (typeof skillDetailTabs)[number];
 const agentKitDetailTabs = ["overview", "context-packs", "skills", "rules", "exports", "health"] as const;
 type AgentKitDetailTab = (typeof agentKitDetailTabs)[number];
+const defaultExportExclusionNote =
+  "Draft Intake, composed, restored quarantine, private, secret, and never_export content remains excluded by default.";
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => currentRoute());
@@ -192,6 +231,7 @@ export function App() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [viewMode, setViewMode] = useState<LibraryViewMode>(() => getInitialLibraryView());
   const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [packGroup, setPackGroup] = useState<LibraryPackGroup>("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [trustFilter, setTrustFilter] = useState("all");
   const [healthFilter, setHealthFilter] = useState("all");
@@ -310,6 +350,7 @@ export function App() {
         packs,
         {
           query: debouncedQuery,
+          group: packGroup,
           type: typeFilter,
           trustLevel: trustFilter,
           healthStatus: healthFilter,
@@ -317,7 +358,7 @@ export function App() {
         },
         searchResults
       ),
-    [debouncedQuery, healthFilter, packs, searchResults, sortBy, trustFilter, typeFilter]
+    [debouncedQuery, healthFilter, packGroup, packs, searchResults, sortBy, trustFilter, typeFilter]
   );
   const visibleSkills = useMemo(
     () =>
@@ -378,7 +419,7 @@ export function App() {
         ) : route.name === "skill" ? (
           <SkillDetailPage skillId={route.skillId} />
         ) : route.name === "reviewQueue" ? (
-          <ReviewQueuePage packs={packs} skills={skills} agentKits={agentKits} onStatusChanged={loadDashboard} />
+          <ReviewQueuePage packs={packs} skills={skills} agentKits={agentKits} initialTab={route.tab ?? "items"} onStatusChanged={loadDashboard} />
         ) : route.name === "agentKits" ? (
           <AgentKitLibraryPage
             agentKits={agentKits}
@@ -409,6 +450,7 @@ export function App() {
             authError={authError}
             viewMode={viewMode}
             sortBy={sortBy}
+            packGroup={packGroup}
             typeFilter={typeFilter}
             trustFilter={trustFilter}
             healthFilter={healthFilter}
@@ -416,11 +458,13 @@ export function App() {
             onRetry={loadDashboard}
             onViewModeChange={handleViewModeChange}
             onSortChange={setSortBy}
+            onPackGroupChange={setPackGroup}
             onTypeFilterChange={setTypeFilter}
             onTrustFilterChange={setTrustFilter}
             onHealthFilterChange={setHealthFilter}
           />
         )}
+        <footer className="third-party-marks-note">Third-party marks shown for identification only.</footer>
       </main>
     </div>
   );
@@ -490,16 +534,26 @@ function TopBar({
         <input
           type="search"
           value={query}
+          aria-label="Search packs, tags, authors, and descriptions"
           placeholder="Search packs, tags, authors, descriptions..."
           onChange={(event) => onQueryChange(event.target.value)}
         />
-        <span className="search-status">{searching ? "..." : "/"}</span>
+        <span className="search-status" aria-hidden="true">
+          {searching ? "..." : "/"}
+        </span>
       </label>
 
       <div className="topbar-actions" aria-label="Inactive shell actions">
-        {[Activity, Import, Bell, CircleHelp, UserRound].map((Icon, index) => (
-          <button className="icon-button" type="button" disabled key={index}>
-            <Icon size={19} aria-hidden="true" />
+        {shellActions.map((action) => (
+          <button
+            className="icon-button"
+            type="button"
+            disabled
+            aria-label={action.label}
+            title={action.label}
+            key={action.label}
+          >
+            <action.icon size={19} aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -515,6 +569,7 @@ interface LibraryPageProps {
   authError: boolean;
   viewMode: LibraryViewMode;
   sortBy: SortKey;
+  packGroup: LibraryPackGroup;
   typeFilter: string;
   trustFilter: string;
   healthFilter: string;
@@ -522,6 +577,7 @@ interface LibraryPageProps {
   onRetry(): void;
   onViewModeChange(mode: LibraryViewMode): void;
   onSortChange(sort: SortKey): void;
+  onPackGroupChange(value: LibraryPackGroup): void;
   onTypeFilterChange(value: string): void;
   onTrustFilterChange(value: string): void;
   onHealthFilterChange(value: string): void;
@@ -534,16 +590,19 @@ function LibraryPage(props: LibraryPageProps) {
         packCount={props.packs.length}
         viewMode={props.viewMode}
         sortBy={props.sortBy}
+        packGroup={props.packGroup}
         typeFilter={props.typeFilter}
         trustFilter={props.trustFilter}
         healthFilter={props.healthFilter}
         filterOptions={props.filterOptions}
         onViewModeChange={props.onViewModeChange}
         onSortChange={props.onSortChange}
+        onPackGroupChange={props.onPackGroupChange}
         onTypeFilterChange={props.onTypeFilterChange}
         onTrustFilterChange={props.onTrustFilterChange}
         onHealthFilterChange={props.onHealthFilterChange}
       />
+      <FirstPackPath />
 
       {props.error ? (
         <ErrorState authError={props.authError} onRetry={props.onRetry} />
@@ -564,12 +623,14 @@ interface LibraryHeaderProps {
   packCount: number;
   viewMode: LibraryViewMode;
   sortBy: SortKey;
+  packGroup: LibraryPackGroup;
   typeFilter: string;
   trustFilter: string;
   healthFilter: string;
   filterOptions: ReturnType<typeof getFilterOptions>;
   onViewModeChange(mode: LibraryViewMode): void;
   onSortChange(sort: SortKey): void;
+  onPackGroupChange(value: LibraryPackGroup): void;
   onTypeFilterChange(value: string): void;
   onTrustFilterChange(value: string): void;
   onHealthFilterChange(value: string): void;
@@ -601,6 +662,16 @@ function LibraryHeader(props: LibraryHeaderProps) {
             <option value="health">Health</option>
             <option value="lastReviewed">Last reviewed</option>
             <option value="records">Records</option>
+          </select>
+        </label>
+
+        <label className="select-control">
+          <Package size={16} aria-hidden="true" />
+          <select value={props.packGroup} onChange={(event) => props.onPackGroupChange(event.target.value as LibraryPackGroup)}>
+            <option value="all">All packs</option>
+            <option value="starter">Starter packs</option>
+            <option value="local">Local packs</option>
+            <option value="imported">Imported packs</option>
           </select>
         </label>
 
@@ -640,14 +711,63 @@ function LibraryHeader(props: LibraryHeaderProps) {
           </select>
         </label>
 
-        <button className="primary-action" type="button" disabled>
+        <a className="primary-action" href={collectorsHref()}>
           <Sparkles size={18} aria-hidden="true" />
-          <span>New Pack</span>
-        </button>
+          <span>First Pack</span>
+        </a>
       </div>
 
       <div className="library-count">{props.packCount} packs</div>
     </div>
+  );
+}
+
+const firstPackSteps = [
+  {
+    label: "Collectors",
+    href: collectorsHref(),
+    detail: "Preview local notes or starter templates into a private draft pack.",
+    icon: Layers3
+  },
+  {
+    label: "Draft Intake",
+    href: reviewQueueHref("drafts"),
+    detail: "Inspect candidate metadata, scanner results, and dry-run proof before activation.",
+    icon: ShieldCheck
+  },
+  {
+    label: "Export Center",
+    href: exportsHref(),
+    detail: "Preview redacted profile output and save a local export brief.",
+    icon: CloudDownload
+  }
+] satisfies Array<{ label: string; href: string; detail: string; icon: typeof Layers3 }>;
+
+function FirstPackPath() {
+  return (
+    <section className="first-pack-path" aria-labelledby="first-pack-title">
+      <div className="first-pack-copy">
+        <div className="eyebrow">
+          <Sparkles size={16} aria-hidden="true" />
+          <span>First Pack</span>
+        </div>
+        <h2 id="first-pack-title">Collect, review, export</h2>
+        <p>
+          Library stays the read-only catalog. Start with local drafts, review them in Draft Intake, then preview an export
+          before saving a brief.
+        </p>
+      </div>
+      <div className="first-pack-steps" aria-label="First pack workflow">
+        {firstPackSteps.map((step, index) => (
+          <a className="first-pack-step" href={step.href} key={step.label}>
+            <span className="first-pack-step-index">{index + 1}</span>
+            <step.icon size={18} aria-hidden="true" />
+            <strong>{step.label}</strong>
+            <span>{step.detail}</span>
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -688,27 +808,7 @@ function CoverGrid({ packs }: { packs: PackSummary[] }) {
   return (
     <div className="cover-grid">
       {packs.map((pack) => (
-        <article className="cover-card" key={pack.id}>
-          <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <PackCover pack={pack} variant="large" />
-          </a>
-          <div className="cover-card-body">
-            <h2>
-              <a className="pack-title-link" href={packHref(pack.id)}>
-                {pack.name}
-              </a>
-            </h2>
-            <span className="pack-type">{formatPackType(pack.type)}</span>
-            <div className="badge-row">
-              <HealthBadge pack={pack} />
-              <TrustBadge pack={pack} />
-            </div>
-            <div className="card-footer">
-              <span>{formatDate(pack.lastReviewedAt)}</span>
-              <ExternalLink size={17} aria-hidden="true" />
-            </div>
-          </div>
-        </article>
+        <BrandPackCard pack={pack} key={pack.id} />
       ))}
     </div>
   );
@@ -717,32 +817,33 @@ function CoverGrid({ packs }: { packs: PackSummary[] }) {
 function CompactCards({ packs }: { packs: PackSummary[] }) {
   return (
     <div className="compact-grid">
-      {packs.map((pack) => (
-        <article className="compact-card" key={pack.id}>
-          <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <PackCover pack={pack} variant="thumb" />
-          </a>
-          <div className="compact-main">
-            <h2>
-              <a className="pack-title-link" href={packHref(pack.id)}>
-                {pack.name}
-              </a>
-            </h2>
-            <p>{pack.description}</p>
-            <span className="pack-type">{formatPackType(pack.type)}</span>
-          </div>
-          <div className="compact-metrics">
-            <HealthBadge pack={pack} />
-            <TrustBadge pack={pack} />
-            <span>{pack.sourceCount} sources</span>
-            <span>{pack.recordCount} records</span>
-            <span>{formatDate(pack.lastReviewedAt)}</span>
-          </div>
-          <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-            <MoreVertical size={17} aria-hidden="true" />
-          </a>
-        </article>
-      ))}
+      {packs.map((pack) => {
+        const brand = resolvePackBrand(pack);
+        return (
+          <article className="compact-card" key={pack.id}>
+            <a href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
+              <BrandPackCover pack={pack} variant="compact" />
+            </a>
+            <div className="compact-main">
+              <h2>
+                <a className="pack-title-link" href={packHref(pack.id)}>
+                  {pack.name}
+                </a>
+              </h2>
+              <p>{pack.description}</p>
+              <span className="pack-type">{formatPackType(pack.type)}</span>
+            </div>
+            <div className="compact-metrics">
+              <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+              <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(brand)} />
+              <span>{pack.sourceCount} sources</span>
+              <span>{pack.recordCount} records</span>
+              <span>{formatDate(pack.lastReviewedAt)}</span>
+            </div>
+            <PackCardMenu href={packHref(pack.id)} packName={pack.name} compact />
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -766,44 +867,47 @@ function DenseTable({ packs }: { packs: PackSummary[] }) {
           </tr>
         </thead>
         <tbody>
-          {packs.map((pack) => (
-            <tr key={pack.id}>
-              <td>
-                <div className="table-pack">
-                  <PackCover pack={pack} variant="mini" />
-                  <div>
-                    <strong>
-                      <a className="pack-title-link" href={packHref(pack.id)}>
-                        {pack.name}
-                      </a>
-                    </strong>
-                    <span>{pack.description}</span>
+          {packs.map((pack) => {
+            const brand = resolvePackBrand(pack);
+            return (
+              <tr key={pack.id}>
+                <td>
+                  <div className="table-pack">
+                    <BrandPackCover pack={pack} variant="mini" />
+                    <div>
+                      <strong>
+                        <a className="pack-title-link" href={packHref(pack.id)}>
+                          {pack.name}
+                        </a>
+                      </strong>
+                      <span>{pack.description}</span>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td>{formatPackType(pack.type)}</td>
-              <td>
-                <TrustBadge pack={pack} />
-              </td>
-              <td>
-                <HealthBadge pack={pack} />
-              </td>
-              <td>{pack.recordCount}</td>
-              <td>{pack.sourceCount}</td>
-              <td>
-                <span className={pack.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
-                  {pack.reviewQueueCount}
-                </span>
-              </td>
-              <td>{formatDate(pack.lastReviewedAt)}</td>
-              <td>{pack.version}</td>
-              <td>
-                <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
-                  <ExternalLink size={17} aria-hidden="true" />
-                </a>
-              </td>
-            </tr>
-          ))}
+                </td>
+                <td>{formatPackType(pack.type)}</td>
+                <td>
+                  <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(brand)} />
+                </td>
+                <td>
+                  <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+                </td>
+                <td>{pack.recordCount}</td>
+                <td>{pack.sourceCount}</td>
+                <td>
+                  <span className={pack.reviewQueueCount > 0 ? "queue-pill has-items" : "queue-pill"}>
+                    {pack.reviewQueueCount}
+                  </span>
+                </td>
+                <td>{formatDate(pack.lastReviewedAt)}</td>
+                <td>{pack.version}</td>
+                <td>
+                  <a className="ghost-action open-action" href={packHref(pack.id)} aria-label={`Open ${pack.name}`}>
+                    <ExternalLink size={17} aria-hidden="true" />
+                  </a>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -2000,6 +2104,10 @@ function SkillHealthTab({ skill }: { skill: SkillDetail }) {
 function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[] }) {
   const [pack, setPack] = useState<PackDetail | null>(null);
   const [records, setRecords] = useState<RecordSummary[]>([]);
+  const [exposureReadiness, setExposureReadiness] = useState<PackExposureReadiness | null>(null);
+  const [exposureError, setExposureError] = useState<string | null>(null);
+  const [contextReadiness, setContextReadiness] = useState<PackReadinessReport | null>(null);
+  const [contextReadinessError, setContextReadinessError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -2008,17 +2116,37 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setExposureError(null);
+    setExposureReadiness(null);
+    setContextReadinessError(null);
+    setContextReadiness(null);
     setActiveTab("overview");
 
     async function loadPackDetail() {
       try {
-        const [packResponse, recordsResponse] = await Promise.all([
+        const [packResponse, recordsResponse, exposureResponse, contextReadinessResponse] = await Promise.all([
           apiClient.getPack(packId),
-          apiClient.getPackRecords(packId)
+          apiClient.getPackRecords(packId),
+          apiClient.getPackExposureReadiness(packId).catch((readinessError: unknown) => {
+            if (!cancelled) {
+              setExposureError(readinessError instanceof Error ? readinessError.message : "Exposure readiness is unavailable.");
+            }
+            return null;
+          }),
+          apiClient.getPackReadiness(packId).catch((readinessError: unknown) => {
+            if (!cancelled) {
+              setContextReadinessError(
+                readinessError instanceof Error ? readinessError.message : "Context Readiness is unavailable."
+              );
+            }
+            return null;
+          })
         ]);
         if (!cancelled) {
           setPack(packResponse);
           setRecords(recordsResponse);
+          setExposureReadiness(exposureResponse);
+          setContextReadiness(contextReadinessResponse);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -2050,11 +2178,13 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
     );
   }
 
+  const detailBrand = resolvePackBrand(pack);
+
   return (
     <section className="detail-page" aria-labelledby="pack-detail-title">
       <BackLink href="#/library" label="Pack Library" />
       <div className="pack-detail-hero">
-        <PackCover pack={pack} variant="large" />
+        <BrandPackCover pack={pack} />
         <div>
           <div className="eyebrow">
             <Package size={16} aria-hidden="true" />
@@ -2063,8 +2193,8 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
           <h1 id="pack-detail-title">{pack.name}</h1>
           <p>{pack.description}</p>
           <div className="hero-badges">
-            <HealthBadge pack={pack} />
-            <TrustBadge pack={pack} />
+            <PackHealthPill score={pack.healthScore} status={pack.healthStatus} />
+            <PackTrustBadge trustLevel={pack.trustLevel} hasThirdPartyBrand={Boolean(detailBrand)} />
             <span className="version-pill">{pack.version}</span>
           </div>
           <div className="last-reviewed">
@@ -2087,19 +2217,47 @@ function PackDetailPage({ packId, packs }: { packId: string; packs: PackSummary[
         ))}
       </div>
 
-      {activeTab === "overview" ? <PackOverview pack={pack} records={records} packs={packs} /> : null}
+      {activeTab === "overview" ? (
+        <PackOverview
+          pack={pack}
+          records={records}
+          packs={packs}
+          exposureReadiness={exposureReadiness}
+          exposureError={exposureError}
+          contextReadiness={contextReadiness}
+          contextReadinessError={contextReadinessError}
+        />
+      ) : null}
       {activeTab === "records" ? <RecordsTab pack={pack} records={records} /> : null}
       {activeTab === "sources" ? <SourcesTab sources={pack.sources} /> : null}
-      {activeTab === "exports" ? <ExportsTab pack={pack} /> : null}
+      {activeTab === "exports" ? <ExportsTab pack={pack} exposureReadiness={exposureReadiness} /> : null}
       {activeTab === "health" ? <HealthTab pack={pack} /> : null}
-      {activeTab === "activity" ? <PlaceholderTab title="Activity" detail="Activity timelines arrive after pack health and review workflows are implemented." /> : null}
+      {activeTab === "activity" ? <ActivityTab pack={pack} records={records} /> : null}
       {activeTab === "changelog" ? <PlaceholderTab title="Changelog" detail="Static HTML can render CHANGELOG.md; API-backed changelog content remains a later read endpoint." /> : null}
     </section>
   );
 }
 
-function PackOverview({ pack, records, packs }: { pack: PackDetail; records: RecordSummary[]; packs: PackSummary[] }) {
+function PackOverview({
+  pack,
+  records,
+  packs,
+  exposureReadiness,
+  exposureError,
+  contextReadiness,
+  contextReadinessError
+}: {
+  pack: PackDetail;
+  records: RecordSummary[];
+  packs: PackSummary[];
+  exposureReadiness: PackExposureReadiness | null;
+  exposureError: string | null;
+  contextReadiness: PackReadinessReport | null;
+  contextReadinessError: string | null;
+}) {
   const related = packs.filter((candidate) => candidate.id !== pack.id && candidate.type === pack.type).slice(0, 3);
+  const brand = resolvePackBrand(pack);
+  const trustLabel = packTrustLabels[normalizePackTrustLevel(pack.trustLevel, Boolean(brand))];
 
   return (
     <div className="detail-grid">
@@ -2109,7 +2267,7 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
           Summary
         </h2>
         <p>{pack.description}</p>
-        <TagList values={[pack.type, pack.visibility, pack.trustLevel]} />
+        <TagList values={[pack.type, pack.visibility, trustLabel]} />
         <dl className="fact-grid">
           <Fact label="Author" value={pack.author} />
           <Fact label="License" value={pack.license} />
@@ -2142,6 +2300,10 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
         </button>
       </article>
 
+      <ExposureReadinessPanel readiness={exposureReadiness} error={exposureError} />
+
+      <ContextReadinessPanel readiness={contextReadiness} error={contextReadinessError} />
+
       <article className="detail-card">
         <h2>
           <CloudDownload size={19} aria-hidden="true" />
@@ -2170,6 +2332,153 @@ function PackOverview({ pack, records, packs }: { pack: PackDetail; records: Rec
       </article>
     </div>
   );
+}
+
+function ExposureReadinessPanel({ readiness, error }: { readiness: PackExposureReadiness | null; error: string | null }) {
+  if (error) {
+    return (
+      <article className="detail-card warning-card" aria-labelledby="exposure-readiness-title">
+        <h2 id="exposure-readiness-title">
+          <ShieldAlert size={19} aria-hidden="true" />
+          Exposure Readiness
+        </h2>
+        <p>{error}</p>
+      </article>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <article className="detail-card" aria-labelledby="exposure-readiness-title">
+        <h2 id="exposure-readiness-title">
+          <ShieldCheck size={19} aria-hidden="true" />
+          Exposure Readiness
+        </h2>
+        <p>Exposure readiness is loading.</p>
+      </article>
+    );
+  }
+
+  const hasBlockers = readiness.summary.blockedRecords > 0 || readiness.summary.blockedProfiles > 0 || readiness.blockers.length > 0;
+  const hasWarnings = readiness.summary.warningRecords > 0 || readiness.summary.warningProfiles > 0 || readiness.warnings.length > 0;
+  const status = hasBlockers ? "Blocked" : hasWarnings ? "Needs review" : "Ready";
+  const issues = [...readiness.blockers, ...readiness.warnings].slice(0, 3);
+
+  return (
+    <article className={hasBlockers ? "detail-card warning-card" : "detail-card"} aria-labelledby="exposure-readiness-title">
+      <h2 id="exposure-readiness-title">
+        {hasBlockers ? <ShieldAlert size={19} aria-hidden="true" /> : <ShieldCheck size={19} aria-hidden="true" />}
+        Exposure Readiness
+      </h2>
+      <div className="readiness-summary">
+        <span className={hasBlockers ? "readiness-status is-blocked" : hasWarnings ? "readiness-status is-warning" : "readiness-status is-ready"}>
+          {status}
+        </span>
+        <span>{formatPackType(readiness.security.status)}</span>
+      </div>
+      <div className="stat-grid compact-stat-grid">
+        <Stat value={`${readiness.summary.exportEligibleRecords}/${readiness.summary.recordCount}`} label="Export Records" />
+        <Stat value={`${readiness.summary.mcpEligibleRecords}/${readiness.summary.recordCount}`} label="MCP Records" />
+        <Stat value={`${readiness.summary.exportEligibleProfiles}/${readiness.summary.exportProfileCount}`} label="Profiles" />
+        <Stat value={`${readiness.summary.sourceBackedRecords}/${readiness.summary.recordCount}`} label="Source Coverage" />
+      </div>
+      {issues.length > 0 ? (
+        <ul className="simple-list readiness-issues">
+          {issues.map((issue) => (
+            <li key={`${issue.severity}-${issue.code}`}>
+              <strong>{formatPackType(issue.severity)}</strong>
+              <span>{issue.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>All active records and profiles meet the default read-only exposure policy.</p>
+      )}
+      <p className="muted-note">{readiness.policies.mcp.defaultBodyPolicy}.</p>
+    </article>
+  );
+}
+
+function ContextReadinessPanel({ readiness, error }: { readiness: PackReadinessReport | null; error: string | null }) {
+  if (error) {
+    return (
+      <article className="detail-card warning-card" aria-labelledby="context-readiness-title">
+        <h2 id="context-readiness-title">
+          <ShieldAlert size={19} aria-hidden="true" />
+          Context Readiness
+        </h2>
+        <p>{error}</p>
+      </article>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <article className="detail-card" aria-labelledby="context-readiness-title">
+        <h2 id="context-readiness-title">
+          <ShieldCheck size={19} aria-hidden="true" />
+          Context Readiness
+        </h2>
+        <p>Context Readiness is loading.</p>
+      </article>
+    );
+  }
+
+  const topIssues = readiness.issues.slice(0, 3);
+  const isBlocked = readiness.status === "blocked";
+
+  return (
+    <article className={isBlocked ? "detail-card warning-card" : "detail-card"} aria-labelledby="context-readiness-title">
+      <h2 id="context-readiness-title">
+        {isBlocked ? <ShieldAlert size={19} aria-hidden="true" /> : <ShieldCheck size={19} aria-hidden="true" />}
+        Context Readiness
+      </h2>
+      <div className="readiness-summary">
+        <span className={readinessStatusClass(readiness.status)}>{formatReadinessStatus(readiness.status)}</span>
+        <span>{readiness.score}/100 score</span>
+        <span>Read-only report</span>
+      </div>
+      <div className="stat-grid compact-stat-grid">
+        {readinessDimensionOrder.map((dimensionId) => {
+          const dimension = readiness.dimensions[dimensionId];
+          return <Stat value={dimension.score} label={`${dimension.label} ${formatReadinessStatus(dimension.status)}`} key={dimension.id} />;
+        })}
+      </div>
+      {topIssues.length > 0 ? (
+        <ul className="simple-list readiness-issues">
+          {topIssues.map((issue, index) => (
+            <li key={`${issue.severity}-${issue.code}-${index}`}>
+              <strong>{formatPackType(issue.severity)}</strong>
+              <span>{issue.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No top issues reported by Context Readiness.</p>
+      )}
+      <p className="muted-note">Does not approve, export, enforce policy, or run pack content.</p>
+    </article>
+  );
+}
+
+function formatReadinessStatus(status: PackReadinessReport["status"]): string {
+  if (status === "review_needed") {
+    return "Review needed";
+  }
+
+  return formatPackType(status);
+}
+
+function readinessStatusClass(status: PackReadinessReport["status"]): string {
+  if (status === "blocked") {
+    return "readiness-status is-blocked";
+  }
+
+  if (status === "review_needed") {
+    return "readiness-status is-warning";
+  }
+
+  return "readiness-status is-ready";
 }
 
 function RecordsTab({ pack, records }: { pack: PackDetail; records: RecordSummary[] }) {
@@ -2290,9 +2599,9 @@ function SourcesTab({ sources }: { sources: SourceSummary[] }) {
   );
 }
 
-function ExportsTab({ pack }: { pack: PackDetail }) {
+function ExportsTab({ pack, exposureReadiness }: { pack: PackDetail; exposureReadiness: PackExposureReadiness | null }) {
   return (
-    <ExportWorkbench subject={pack} subjectKind="pack" compact />
+    <ExportWorkbench subject={pack} subjectKind="pack" exposureReadiness={exposureReadiness} compact />
   );
 }
 
@@ -2314,6 +2623,34 @@ function ComposerPage({ packs, skills, mode }: { packs: PackSummary[]; skills: S
       {mode === "record-export" ? <RecordExportComposerPage packs={packs} /> : <AgentKitComposerPage packs={packs} skills={skills} />}
     </>
   );
+}
+
+function useLocalExportBriefs() {
+  const [briefs, setBriefs] = useState<ExportBrief[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refreshBriefs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setBriefs(await apiClient.listExportBriefs({ limit: 6 }));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load local export briefs.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBriefs();
+  }, [refreshBriefs]);
+
+  const addBrief = useCallback((brief: ExportBrief) => {
+    setBriefs((current) => [brief, ...current.filter((item) => item.id !== brief.id)]);
+  }, []);
+
+  return { briefs, loading, error, addBrief };
 }
 
 function AgentKitComposerPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSummary[] }) {
@@ -2841,6 +3178,15 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
   const [saveResult, setSaveResult] = useState<ComposeSavePackResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefSaveMessage, setBriefSaveMessage] = useState<string | null>(null);
+  const [briefSaveError, setBriefSaveError] = useState<string | null>(null);
+  const {
+    briefs,
+    loading: briefsLoading,
+    error: briefsError,
+    addBrief
+  } = useLocalExportBriefs();
 
   useEffect(() => {
     if (!activePackId && packs[0]) {
@@ -2909,6 +3255,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function toggleRecord(packId: string, recordId: string) {
@@ -2924,6 +3272,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function selectVisibleRecords() {
@@ -2937,12 +3287,16 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     });
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   function clearActivePackRecords() {
     setSelectedByPack((current) => ({ ...current, [activePackId]: [] }));
     setArtifact(null);
     setSaveResult(null);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }
 
   async function previewComposition() {
@@ -2954,6 +3308,8 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     setLoadingPreview(true);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
     try {
       const request = buildComposePreviewRequest({
         title,
@@ -3011,6 +3367,30 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
     }
 
     setCopied(await copyTextToClipboard(artifact.content));
+  }
+
+  async function saveCompositionBrief() {
+    if (!artifact) {
+      return;
+    }
+
+    setSavingBrief(true);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
+    try {
+      const brief = await apiClient.saveExportBrief({
+        objectType: "composed",
+        objectId: artifact.packId || "composed",
+        privacyMode,
+        artifact
+      });
+      addBrief(brief);
+      setBriefSaveMessage(`Saved local brief ${brief.filename}.`);
+    } catch (saveError) {
+      setBriefSaveError(saveError instanceof Error ? saveError.message : "Unable to save local export brief.");
+    } finally {
+      setSavingBrief(false);
+    }
   }
 
   if (packs.length === 0) {
@@ -3205,8 +3585,25 @@ function RecordExportComposerPage({ packs }: { packs: PackSummary[] }) {
       </div>
 
       {artifact ? (
-        <ExportPreview artifact={artifact} onCopy={copyComposition} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+        <ExportPreview
+          artifact={artifact}
+          profile={{
+            name: title,
+            target,
+            format: selectedTarget.format,
+            privacyMode,
+            tokenBudget: tokenBudgetValue ?? null
+          }}
+          onCopy={copyComposition}
+          onDownload={() => downloadExportArtifact(artifact)}
+          copied={copied}
+          onSaveBrief={saveCompositionBrief}
+          savingBrief={savingBrief}
+          briefSaveMessage={briefSaveMessage}
+          briefSaveError={briefSaveError}
+        />
       ) : null}
+      <LocalExportBriefsPanel briefs={briefs} loading={briefsLoading} error={briefsError} compact />
     </section>
   );
 }
@@ -3219,6 +3616,12 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
   const [skill, setSkill] = useState<SkillDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const {
+    briefs,
+    loading: briefsLoading,
+    error: briefsError,
+    addBrief
+  } = useLocalExportBriefs();
 
   useEffect(() => {
     if (!selectedPackId && packs[0]) {
@@ -3315,7 +3718,10 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
             <span>Exports</span>
           </div>
           <h1 id="exports-title">Export Center</h1>
-          <p>Generate local, profile-driven pack and Skill artifacts for assistant and agent targets.</p>
+          <p>
+            Generate local, profile-driven artifacts with visible privacy mode, record counts, and default exclusion policy before
+            download.
+          </p>
         </div>
         <div className="inline-actions">
           <label className="select-control export-pack-select">
@@ -3348,8 +3754,9 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
       ) : loading || !activeSubject ? (
         <DetailLoading />
       ) : (
-        <ExportWorkbench subject={activeSubject} subjectKind={subjectKind} />
+        <ExportWorkbench subject={activeSubject} subjectKind={subjectKind} onBriefSaved={addBrief} />
       )}
+      <LocalExportBriefsPanel briefs={briefs} loading={briefsLoading} error={briefsError} />
     </section>
   );
 }
@@ -3357,11 +3764,15 @@ function ExportsPage({ packs, skills }: { packs: PackSummary[]; skills: SkillSum
 function ExportWorkbench({
   subject,
   subjectKind,
-  compact = false
+  exposureReadiness,
+  compact = false,
+  onBriefSaved
 }: {
   subject: PackDetail | SkillDetail;
   subjectKind: "pack" | "skill";
+  exposureReadiness?: PackExposureReadiness | null;
   compact?: boolean;
+  onBriefSaved?: (brief: ExportBrief) => void;
 }) {
   const [target, setTarget] = useState("all");
   const [profileId, setProfileId] = useState(subject.exportProfiles[0]?.id ?? "");
@@ -3369,9 +3780,15 @@ function ExportWorkbench({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefSaveMessage, setBriefSaveMessage] = useState<string | null>(null);
+  const [briefSaveError, setBriefSaveError] = useState<string | null>(null);
+  const [fetchedExposureReadiness, setFetchedExposureReadiness] = useState<PackExposureReadiness | null>(null);
+  const [fetchedExposureError, setFetchedExposureError] = useState<string | null>(null);
   const targets = getExportTargets(subject.exportProfiles);
   const options = buildExportOptions(subject, target);
   const selectedProfile = options.find((option) => option.profile.id === profileId)?.profile ?? options[0]?.profile;
+  const activeExposureReadiness = subjectKind === "pack" ? exposureReadiness ?? fetchedExposureReadiness : null;
 
   useEffect(() => {
     setTarget("all");
@@ -3379,6 +3796,8 @@ function ExportWorkbench({
     setArtifact(null);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
   }, [subject.id, subject.exportProfiles]);
 
   useEffect(() => {
@@ -3389,6 +3808,35 @@ function ExportWorkbench({
     }
   }, [options, profileId, selectedProfile]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setFetchedExposureReadiness(null);
+    setFetchedExposureError(null);
+
+    if (subjectKind !== "pack" || exposureReadiness !== undefined) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    apiClient.getPackExposureReadiness(subject.id).then(
+      (readiness) => {
+        if (!cancelled) {
+          setFetchedExposureReadiness(readiness);
+        }
+      },
+      (readinessError: unknown) => {
+        if (!cancelled) {
+          setFetchedExposureError(readinessError instanceof Error ? readinessError.message : "Exposure Readiness is unavailable.");
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [exposureReadiness, subject.id, subjectKind]);
+
   async function previewExport() {
     if (!selectedProfile) {
       return;
@@ -3397,6 +3845,8 @@ function ExportWorkbench({
     setLoading(true);
     setError(null);
     setCopied(false);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
 
     try {
       setArtifact(
@@ -3409,6 +3859,30 @@ function ExportWorkbench({
       setArtifact(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveBrief() {
+    if (!artifact || !selectedProfile) {
+      return;
+    }
+
+    setSavingBrief(true);
+    setBriefSaveMessage(null);
+    setBriefSaveError(null);
+    try {
+      const brief = await apiClient.saveExportBrief({
+        objectType: subjectKind,
+        objectId: subject.id,
+        privacyMode: normalizeExportBriefPrivacyMode(selectedProfile.privacyMode),
+        artifact
+      });
+      onBriefSaved?.(brief);
+      setBriefSaveMessage(`Saved local brief ${brief.filename}.`);
+    } catch (saveError) {
+      setBriefSaveError(saveError instanceof Error ? saveError.message : "Unable to save local export brief.");
+    } finally {
+      setSavingBrief(false);
     }
   }
 
@@ -3462,37 +3936,206 @@ function ExportWorkbench({
 
       <ProfileList profiles={options.map((option) => option.profile)} />
 
+      <ExportClarityPanel
+        subjectKind={subjectKind}
+        selectedProfile={selectedProfile}
+        readiness={activeExposureReadiness}
+        readinessError={fetchedExposureError}
+      />
+
       {error ? <StateCard title="Export failed" detail={error} icon={ShieldAlert} /> : null}
       {artifact ? (
-        <ExportPreview artifact={artifact} onCopy={copyExport} onDownload={() => downloadExportArtifact(artifact)} copied={copied} />
+        <ExportPreview
+          artifact={artifact}
+          profile={selectedProfile}
+          onCopy={copyExport}
+          onDownload={() => downloadExportArtifact(artifact)}
+          copied={copied}
+          onSaveBrief={saveBrief}
+          savingBrief={savingBrief}
+          briefSaveMessage={briefSaveMessage}
+          briefSaveError={briefSaveError}
+        />
       ) : (
         <div className="export-placeholder">
           <CloudDownload size={26} aria-hidden="true" />
           <h2>No preview loaded</h2>
-          <p>{selectedProfile ? `${selectedProfile.name} is ready.` : "No export profile matches this target."}</p>
+          <p>
+            {selectedProfile
+              ? `${selectedProfile.name} is ready. Preview to see exact included and excluded records.`
+              : "No export profile matches this target."}
+          </p>
         </div>
       )}
     </article>
   );
 }
 
+interface ExportPreviewProfileMetadata {
+  name?: string;
+  target?: string;
+  format?: string;
+  privacyMode?: string | null;
+  tokenBudget?: number | null;
+}
+
+function ExportClarityPanel({
+  subjectKind,
+  selectedProfile,
+  readiness,
+  readinessError
+}: {
+  subjectKind: "pack" | "skill";
+  selectedProfile?: ExportProfileSummary;
+  readiness: PackExposureReadiness | null;
+  readinessError: string | null;
+}) {
+  const privacyMode = selectedProfile?.privacyMode ?? readiness?.policies.export.defaultPrivacyMode ?? "redacted";
+
+  if (subjectKind === "skill") {
+    return (
+      <div className="export-clarity-panel">
+        <div className="export-clarity-grid">
+          <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+          <ExportClarityFact label="Target" value={selectedProfile ? formatPackType(selectedProfile.target) : "No profile"} />
+          <ExportClarityFact label="Format" value={selectedProfile?.format ?? "No profile"} />
+        </div>
+        <p>
+          Skill exports use the selected profile metadata and exclude private, draft, secret, and never_export Skill material by
+          default.
+        </p>
+        <p>{defaultExportExclusionNote}</p>
+      </div>
+    );
+  }
+
+  if (!readiness) {
+    return (
+      <div className="export-clarity-panel">
+        <div className="export-clarity-grid">
+          <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+          <ExportClarityFact label="Target" value={selectedProfile ? formatPackType(selectedProfile.target) : "No profile"} />
+          <ExportClarityFact label="Format" value={selectedProfile?.format ?? "No profile"} />
+        </div>
+        <p>
+          {readinessError
+            ? `Exposure Readiness is unavailable: ${readinessError}`
+            : "Exposure Readiness is loading for this pack."} Preview will still show returned included and excluded record
+          counts.
+        </p>
+        <p>{defaultExportExclusionNote}</p>
+      </div>
+    );
+  }
+
+  const includedRecords = readiness.summary.exportEligibleRecords;
+  const totalRecords = readiness.summary.recordCount;
+  const excludedRecords = Math.max(0, totalRecords - includedRecords);
+
+  return (
+    <div className="export-clarity-panel">
+      <div className="export-clarity-grid">
+        <ExportClarityFact label="Privacy Mode" value={formatPrivacyMode(privacyMode)} />
+        <ExportClarityFact label="Readiness Includes" value={`${includedRecords} of ${totalRecords} records`} />
+        <ExportClarityFact label="Readiness Excludes" value={formatRecordCount(excludedRecords)} />
+      </div>
+      <p>
+        Exposure Readiness includes {includedRecords} of {totalRecords} records for default export;{" "}
+        {formatRecordCount(excludedRecords)} remain excluded before a preview is built.
+      </p>
+      <p>Policy: {readiness.policies.export.recordPolicy}.</p>
+      <p>{defaultExportExclusionNote}</p>
+    </div>
+  );
+}
+
+function ExportClarityFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function LocalExportBriefsPanel({
+  briefs,
+  loading,
+  error,
+  compact = false
+}: {
+  briefs: ExportBrief[];
+  loading: boolean;
+  error: string | null;
+  compact?: boolean;
+}) {
+  const visibleBriefs = briefs.slice(0, 6);
+
+  return (
+    <article className={compact ? "detail-card export-briefs-panel compact" : "detail-card export-briefs-panel"}>
+      <div className="export-header">
+        <div>
+          <h2>Local Export Briefs</h2>
+          <p>Saved previews are local derived artifacts, not source of truth.</p>
+        </div>
+      </div>
+      {loading ? <p className="muted-note">Loading local briefs...</p> : null}
+      {error ? <p className="composer-error">Unable to load local briefs: {error}</p> : null}
+      {!loading && !error && briefs.length === 0 ? <p className="muted-note">No saved briefs yet.</p> : null}
+      {visibleBriefs.length > 0 ? (
+        <div className="profile-grid">
+          {visibleBriefs.map((brief) => (
+            <article className="profile-card" key={brief.id}>
+              <strong>{brief.filename}</strong>
+              <span>
+                {formatPackType(brief.objectType)} / {formatPackType(brief.target)} / {formatPrivacyMode(brief.privacyMode)}
+              </span>
+              <em>Derived from {brief.objectId}</em>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function normalizeExportBriefPrivacyMode(mode?: string | null): ExportBriefPrivacyMode {
+  return mode === "public_safe" ? "public_safe" : "redacted";
+}
+
 function ExportPreview({
   artifact,
+  profile,
   copied,
   onCopy,
-  onDownload
+  onDownload,
+  onSaveBrief,
+  savingBrief = false,
+  briefSaveMessage,
+  briefSaveError
 }: {
   artifact: ExportArtifact;
+  profile?: ExportPreviewProfileMetadata;
   copied: boolean;
   onCopy(): void;
   onDownload(): void;
+  onSaveBrief?: () => void;
+  savingBrief?: boolean;
+  briefSaveMessage?: string | null;
+  briefSaveError?: string | null;
 }) {
+  const privacyMode = profile?.privacyMode ?? "redacted";
+  const excludedReasonSummary = summarizeExcludedReasons(artifact.excludedRecords);
+
   return (
     <div className="export-preview">
       <div className="export-preview-toolbar">
         <div>
           <strong>{artifact.filename}</strong>
-          <span>{formatPackType(artifact.target)} / {artifact.estimatedTokens} estimated tokens / {artifact.byteLength} bytes</span>
+          <span>
+            {formatPackType(artifact.target)} / {artifact.format} / Privacy mode: {formatPrivacyMode(privacyMode)} /{" "}
+            {artifact.estimatedTokens} estimated tokens / {artifact.byteLength} bytes
+          </span>
         </div>
         <div className="export-actions">
           <button type="button" onClick={onCopy}>
@@ -3503,13 +4146,26 @@ function ExportPreview({
             <Download size={16} aria-hidden="true" />
             <span>Download</span>
           </button>
+          {onSaveBrief ? (
+            <button type="button" onClick={onSaveBrief} disabled={savingBrief}>
+              <FileText size={16} aria-hidden="true" />
+              <span>{savingBrief ? "Saving" : "Save Brief"}</span>
+            </button>
+          ) : null}
         </div>
       </div>
       <div className="export-stats">
-        <Stat value={artifact.includedRecords.length} label="Included" />
-        <Stat value={artifact.excludedRecords.length} label="Excluded" />
+        <Stat value={artifact.includedRecords.length} label="Included Records" />
+        <Stat value={artifact.excludedRecords.length} label="Excluded Records" />
         <Stat value={artifact.sources.length} label="Sources" />
         <Stat value={artifact.warnings.length} label="Warnings" />
+      </div>
+      <div className="export-preview-explainer">
+        <strong>{formatPreviewRecordSummary(artifact)}</strong>
+        <p>Privacy mode: {formatPrivacyMode(privacyMode)}. {defaultExportExclusionNote}</p>
+        {excludedReasonSummary ? <p>Excluded reasons: {excludedReasonSummary}.</p> : null}
+        {briefSaveMessage ? <p>{briefSaveMessage}</p> : null}
+        {briefSaveError ? <p>{briefSaveError}</p> : null}
       </div>
       {artifact.warnings.length > 0 ? (
         <ul className="export-warning-list">
@@ -3521,6 +4177,39 @@ function ExportPreview({
       <pre className="export-code"><code>{artifact.content}</code></pre>
     </div>
   );
+}
+
+function formatPrivacyMode(mode?: string | null): string {
+  return formatPackType(mode ?? "redacted");
+}
+
+function formatRecordCount(count: number): string {
+  return `${count} ${count === 1 ? "record" : "records"}`;
+}
+
+function formatPreviewRecordSummary(artifact: ExportArtifact): string {
+  const included = artifact.includedRecords.length;
+  const excluded = artifact.excludedRecords.length;
+
+  if (included + excluded === 0) {
+    return "This preview does not report record-level includes or exclusions.";
+  }
+
+  return `This preview includes ${formatRecordCount(included)} and excludes ${formatRecordCount(excluded)}.`;
+}
+
+function summarizeExcludedReasons(excludedRecords: ExportArtifact["excludedRecords"]): string {
+  const counts = new Map<string, number>();
+
+  for (const record of excludedRecords) {
+    const reason = record.reason || "not export eligible";
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .slice(0, 4)
+    .map(([reason, count]) => (count > 1 ? `${reason} (${count})` : reason))
+    .join(", ");
 }
 
 function agentKitPreviewToArtifact(preview: AgentKitExportPreview, fallbackName: string): ExportArtifact {
@@ -3542,6 +4231,263 @@ function agentKitPreviewToArtifact(preview: AgentKitExportPreview, fallbackName:
     byteLength: preview.byteLength ?? preview.content.length,
     estimatedTokens: preview.estimatedTokens ?? Math.max(1, Math.ceil(preview.content.length / 4))
   };
+}
+
+function ActivityTab({ pack, records }: { pack: PackDetail; records: RecordSummary[] }) {
+  const [events, setEvents] = useState<LocalEvent[]>([]);
+  const [queries, setQueries] = useState<McpQueryLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const recordIds = useMemo(() => new Set(records.map((record) => record.id)), [records]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEvents([]);
+    setQueries([]);
+    setError(null);
+    setLoading(true);
+
+    async function loadActivity() {
+      try {
+        const [eventResponse, queryResponse] = await Promise.all([
+          apiClient.getEvents({ limit: 100, packId: pack.id }),
+          apiClient.getMcpQueryLog({ limit: 100, packId: pack.id })
+        ]);
+        if (!cancelled) {
+          setEvents(eventResponse.filter((event) => isLocalEventRelevantToPack(event, pack.id, recordIds)).slice(0, 8));
+          setQueries(queryResponse.filter((query) => isMcpQueryRelevantToPack(query, pack.id, recordIds)).slice(0, 8));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load local activity.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadActivity();
+    return () => {
+      cancelled = true;
+    };
+  }, [pack.id, recordIds]);
+
+  if (error) {
+    return <StateCard title="Activity unavailable" detail={error} />;
+  }
+
+  if (loading) {
+    return <div className="detail-card skeleton-detail" />;
+  }
+
+  return (
+    <div className="activity-tab">
+      <article className="detail-card activity-panel">
+        <h2>
+          <Activity size={19} aria-hidden="true" />
+          Activity v0
+        </h2>
+        <p>Read-only local events and MCP query metadata for this pack.</p>
+        {events.length === 0 ? <p className="muted-note">No local events yet for this pack.</p> : null}
+        {events.length > 0 ? (
+          <div className="activity-list">
+            {events.map((event) => (
+              <ActivityEntry
+                key={event.id}
+                title={formatActivityLabel(event.type)}
+                detail={event.message}
+                createdAt={event.createdAt}
+                metadata={event.metadata ?? {}}
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+      <article className="detail-card activity-panel">
+        <h2>
+          <Server size={19} aria-hidden="true" />
+          MCP Queries
+        </h2>
+        <p>Sanitized query log rows already stored by the local MCP runtime.</p>
+        {queries.length === 0 ? <p className="muted-note">No MCP query metadata yet for this pack.</p> : null}
+        {queries.length > 0 ? (
+          <div className="activity-list">
+            {queries.map((query, index) => (
+              <ActivityEntry
+                key={`${query.createdAt}-${query.tool}-${query.recordId ?? query.packId ?? index}`}
+                title={formatActivityLabel(query.tool)}
+                detail={`${formatPackType(query.status)} / ${query.resultCount} results / ${query.durationMs} ms`}
+                createdAt={query.createdAt}
+                metadata={buildMcpQueryActivityMetadata(query)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </article>
+    </div>
+  );
+}
+
+function ActivityEntry({
+  title,
+  detail,
+  createdAt,
+  metadata
+}: {
+  title: string;
+  detail: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+}) {
+  const entries = formatActivityMetadata(metadata);
+
+  return (
+    <div className="activity-entry">
+      <div className="activity-entry-heading">
+        <strong>{title}</strong>
+        <time dateTime={createdAt}>{formatDateTime(createdAt)}</time>
+      </div>
+      <p>{detail}</p>
+      {entries.length > 0 ? (
+        <dl className="activity-metadata">
+          {entries.map(([key, value]) => (
+            <div key={key}>
+              <dt>{formatActivityLabel(key)}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
+  );
+}
+
+const activityMetadataOrder = [
+  "briefId",
+  "objectType",
+  "objectId",
+  "packId",
+  "recordId",
+  "profile",
+  "profileId",
+  "target",
+  "format",
+  "privacyMode",
+  "status",
+  "resultCount",
+  "queryHash",
+  "queryLength",
+  "durationMs",
+  "sha256",
+  "byteLength",
+  "estimatedTokens",
+  "includedCount",
+  "excludedCount",
+  "sourceCount",
+  "warningCount",
+  "warningCodes",
+  "resultKinds",
+  "ok",
+  "generatedAt",
+  "savedAt"
+];
+
+const activityMetadataKeys = new Set(activityMetadataOrder);
+
+function buildMcpQueryActivityMetadata(query: McpQueryLogEntry): Record<string, unknown> {
+  return compactMetadata({
+    packId: query.packId,
+    recordId: query.recordId,
+    profileId: query.profileId,
+    queryHash: query.queryHash,
+    queryLength: query.queryLength,
+    ...(query.metadata ?? {})
+  });
+}
+
+function isLocalEventRelevantToPack(event: LocalEvent, packId: string, recordIds: Set<string>): boolean {
+  const metadata = event.metadata ?? {};
+  return metadataMatchesPack(metadata, packId, recordIds);
+}
+
+function isMcpQueryRelevantToPack(query: McpQueryLogEntry, packId: string, recordIds: Set<string>): boolean {
+  if (query.packId === packId) {
+    return true;
+  }
+  if (query.recordId && recordIds.has(query.recordId)) {
+    return true;
+  }
+  return metadataMatchesPack(query.metadata ?? {}, packId, recordIds);
+}
+
+function metadataMatchesPack(metadata: Record<string, unknown>, packId: string, recordIds: Set<string>): boolean {
+  const packCandidates = ["packId", "objectId", "pack", "subjectId"];
+  if (packCandidates.some((key) => getMetadataString(metadata, key) === packId)) {
+    return true;
+  }
+
+  const recordCandidate = getMetadataString(metadata, "recordId");
+  if (recordCandidate && recordIds.has(recordCandidate)) {
+    return true;
+  }
+
+  return metadataArrayIncludes(metadata, "packIds", packId) || [...recordIds].some((recordId) => metadataArrayIncludes(metadata, "recordIds", recordId));
+}
+
+function getMetadataString(metadata: Record<string, unknown>, key: string): string | undefined {
+  const value = metadata[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function metadataArrayIncludes(metadata: Record<string, unknown>, key: string, expected: string): boolean {
+  const value = metadata[key];
+  return Array.isArray(value) && value.some((item) => item === expected);
+}
+
+function compactMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const compacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (value !== null && value !== undefined) {
+      compacted[key] = value;
+    }
+  }
+  return compacted;
+}
+
+function formatActivityMetadata(metadata: Record<string, unknown>): Array<[string, string]> {
+  return Object.entries(metadata)
+    .filter(([key]) => activityMetadataKeys.has(key))
+    .sort(([left], [right]) => activityMetadataOrder.indexOf(left) - activityMetadataOrder.indexOf(right))
+    .map(([key, value]) => [key, formatActivityMetadataValue(key, value)] as [string, string])
+    .filter(([, value]) => value.length > 0);
+}
+
+function formatActivityMetadataValue(key: string, value: unknown): string {
+  if (typeof value === "string") {
+    if ((key === "sha256" || key === "queryHash") && value.length > 16) {
+      return `${value.slice(0, 16)}...`;
+    }
+    if (key === "generatedAt" || key === "savedAt") {
+      return formatDateTime(value);
+    }
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string | number | boolean => ["string", "number", "boolean"].includes(typeof item)).join(", ");
+  }
+
+  return "";
+}
+
+function formatActivityLabel(value: string): string {
+  return formatPackType(value.replace(/[.:]/g, "_"));
 }
 
 function HealthTab({ pack }: { pack: PackDetail }) {
@@ -3599,13 +4545,16 @@ function ReviewQueuePage({
   packs,
   skills,
   agentKits,
+  initialTab,
   onStatusChanged
 }: {
   packs: PackSummary[];
   skills: SkillSummary[];
   agentKits: AgentKitSummary[];
+  initialTab: "items" | "drafts";
   onStatusChanged(): void;
 }) {
+  const [activeTab, setActiveTab] = useState<"items" | "drafts">(initialTab);
   const [response, setResponse] = useState<{ items: ReviewItem[] } | null>(null);
   const [filters, setFilters] = useState<ReviewFilters>({
     objectType: "all",
@@ -3614,8 +4563,31 @@ function ReviewQueuePage({
     severity: "all",
     type: "all"
   });
+  const [candidateResponse, setCandidateResponse] = useState<{
+    candidates: ReviewCandidateSummary[];
+    skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
+  } | null>(null);
+  const [candidateFilters, setCandidateFilters] = useState<ReviewCandidateFilters>({
+    sourceKind: "all",
+    status: "all",
+    query: ""
+  });
+  const [candidateDetail, setCandidateDetail] = useState<ReviewCandidateDetail | null>(null);
+  const [candidateActivationPlan, setCandidateActivationPlan] = useState<ReviewCandidateActivationPlan | null>(null);
+  const [candidateActivationDryRun, setCandidateActivationDryRun] = useState<ReviewCandidateActivationDryRun | null>(null);
+  const [candidateActivationApplyResult, setCandidateActivationApplyResult] = useState<ReviewCandidateActivationApplyResponse | null>(null);
+  const [candidateActivationHistory, setCandidateActivationHistory] = useState<ReviewCandidateActivationHistoryItem[]>([]);
+  const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null);
+  const [preparingCandidateKey, setPreparingCandidateKey] = useState<string | null>(null);
+  const [applyingCandidateKey, setApplyingCandidateKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
@@ -3634,15 +4606,99 @@ function ReviewQueuePage({
     void loadItems();
   }, [loadItems]);
 
+  const loadCandidates = useCallback(async () => {
+    setLoadingCandidates(true);
+    setCandidateError(null);
+    try {
+      const [reviewResponse, activationHistory] = await Promise.all([
+        apiClient.getReviewCandidates(),
+        apiClient.getReviewCandidateActivations()
+      ]);
+      setCandidateResponse({
+        candidates: reviewResponse.candidates,
+        skippedRoots: reviewResponse.skippedRoots
+      });
+      setCandidateActivationHistory(activationHistory);
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load draft intake.");
+    } finally {
+      setLoadingCandidates(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "drafts" && !candidateResponse && !loadingCandidates) {
+      void loadCandidates();
+    }
+  }, [activeTab, candidateResponse, loadCandidates, loadingCandidates]);
+
   async function updateStatus(item: ReviewItem, status: "accepted" | "ignored" | "reviewed") {
     await apiClient.updateReviewItemStatus(item.id, status);
     await loadItems();
     onStatusChanged();
   }
 
+  async function inspectCandidate(candidate: ReviewCandidateSummary) {
+    setSelectedCandidateKey(candidate.key);
+    setCandidateError(null);
+    setCandidateDetail(null);
+    setCandidateActivationPlan(null);
+    setCandidateActivationDryRun(null);
+    setCandidateActivationApplyResult(null);
+    try {
+      const [detail, plan] = await Promise.all([
+        apiClient.getReviewCandidate(candidate.key),
+        apiClient.getReviewCandidateActivationPlan(candidate.key)
+      ]);
+      setCandidateDetail(detail);
+      setCandidateActivationPlan(plan);
+    } catch (loadError) {
+      setCandidateDetail(null);
+      setCandidateActivationPlan(null);
+      setCandidateActivationDryRun(null);
+      setCandidateActivationApplyResult(null);
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to load review candidate detail.");
+    }
+  }
+
+  async function prepareCandidateActivation(plan: ReviewCandidateActivationPlan) {
+    setPreparingCandidateKey(plan.candidateKey);
+    setCandidateActivationDryRun(null);
+    setCandidateActivationApplyResult(null);
+    setCandidateError(null);
+    try {
+      setCandidateActivationDryRun(await apiClient.dryRunReviewCandidateActivation(plan.candidateKey));
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to prepare activation dry run.");
+    } finally {
+      setPreparingCandidateKey(null);
+    }
+  }
+
+  async function applyCandidateActivation(dryRun: ReviewCandidateActivationDryRun) {
+    setApplyingCandidateKey(dryRun.candidateKey);
+    setCandidateError(null);
+    try {
+      const result = await apiClient.applyReviewCandidateActivation(dryRun.candidateKey, {
+        proofId: dryRun.proofId,
+        mode: "move"
+      });
+      setCandidateActivationApplyResult(result);
+      await loadCandidates();
+      onStatusChanged();
+    } catch (loadError) {
+      setCandidateError(loadError instanceof Error ? loadError.message : "Unable to apply activation.");
+    } finally {
+      setApplyingCandidateKey(null);
+    }
+  }
+
   const items = response?.items ?? [];
   const visibleItems = filterReviewItems(items, filters);
   const summary = summarizeReviewItems(items);
+  const candidates = candidateResponse?.candidates ?? [];
+  const visibleCandidates = filterReviewCandidates(candidates, candidateFilters);
+  const candidateSummary = summarizeReviewCandidates(candidates);
 
   return (
     <section className="detail-page" aria-labelledby="review-queue-title">
@@ -3653,31 +4709,98 @@ function ReviewQueuePage({
             <span>Review Queue</span>
           </div>
           <h1 id="review-queue-title">Review Queue</h1>
-      <p>SQLite-backed attention items generated from local Context Pack, Skill, and Agent Kit checks.</p>
+          <p>SQLite-backed attention items plus read-only draft intake for local untrusted Context Pack candidates.</p>
         </div>
-        <div className="summary-strip">
-          <Stat value={summary.open} label="Open" />
-          <Stat value={summary.errors} label="Errors" />
-          <Stat value={summary.warnings} label="Warnings" />
-        </div>
+        {activeTab === "drafts" ? (
+          <div className="summary-strip">
+            <Stat value={candidateSummary.ready} label="Ready" />
+            <Stat value={candidateSummary.blocked} label="Blocked" />
+            <Stat value={candidateSummary.invalid + candidateSummary.duplicates} label="Needs Fix" />
+          </div>
+        ) : (
+          <div className="summary-strip">
+            <Stat value={summary.open} label="Open" />
+            <Stat value={summary.errors} label="Errors" />
+            <Stat value={summary.warnings} label="Warnings" />
+          </div>
+        )}
       </div>
 
-      <ReviewFiltersBar filters={filters} packs={packs} skills={skills} agentKits={agentKits} onChange={setFilters} />
+      <div className="detail-tabs review-tabs" role="tablist" aria-label="Review queue sections">
+        <a className={activeTab === "items" ? "is-selected" : ""} href={reviewQueueHref()} role="tab" aria-selected={activeTab === "items"}>
+          Review Items
+        </a>
+        <a
+          className={activeTab === "drafts" ? "is-selected" : ""}
+          href={reviewQueueHref("drafts")}
+          role="tab"
+          aria-selected={activeTab === "drafts"}
+        >
+          Draft Intake
+        </a>
+      </div>
 
-      {error ? (
-        <StateCard title="Review queue unavailable" detail={error} />
-      ) : loading ? (
-        <DetailLoading />
-      ) : items.length === 0 ? (
-        <StateCard title="No review items" detail="All indexed demo packs, Skills, and Agent Kits are healthy." icon={CheckCircle2} />
-      ) : visibleItems.length === 0 ? (
-        <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
+      {activeTab === "drafts" ? (
+        <>
+          <ReviewCandidateFiltersBar filters={candidateFilters} onChange={setCandidateFilters} />
+          {candidateError ? <StateCard title="Draft intake unavailable" detail={candidateError} /> : null}
+          {loadingCandidates ? (
+            <DetailLoading />
+          ) : candidates.length === 0 ? (
+            <StateCard
+              title="No draft candidates"
+              detail="Configured draft, composed, and quarantine folders do not currently contain candidate Context Packs."
+              icon={CheckCircle2}
+            />
+          ) : visibleCandidates.length === 0 ? (
+            <StateCard title="No matching draft candidates" detail="Adjust the intake filters to see more candidates." />
+          ) : (
+            <div className="draft-intake-layout">
+              <div className="review-list">
+                {visibleCandidates.map((candidate) => (
+                  <ReviewCandidateCard
+                    candidate={candidate}
+                    selected={selectedCandidateKey === candidate.key}
+                    onInspect={inspectCandidate}
+                    key={candidate.key}
+                  />
+                ))}
+              </div>
+              <ReviewCandidateDetailPanel
+                candidate={candidateDetail}
+                activationPlan={candidateActivationPlan}
+                activationDryRun={candidateActivationDryRun}
+                activationApplyResult={candidateActivationApplyResult}
+                activationHistory={candidateActivationHistory}
+                preparing={preparingCandidateKey === candidateActivationPlan?.candidateKey}
+                applying={applyingCandidateKey === candidateActivationDryRun?.candidateKey}
+                onPrepareActivation={prepareCandidateActivation}
+                onApplyActivation={applyCandidateActivation}
+                skippedRoots={candidateResponse?.skippedRoots ?? []}
+              />
+            </div>
+          )}
+        </>
       ) : (
-        <div className="review-list">
-          {visibleItems.map((item) => (
-            <ReviewItemCard item={item} packs={packs} skills={skills} agentKits={agentKits} onUpdateStatus={updateStatus} key={item.id} />
-          ))}
-        </div>
+        <>
+          <ReviewFiltersBar filters={filters} packs={packs} skills={skills} agentKits={agentKits} onChange={setFilters} />
+
+          {error ? (
+            <StateCard title="Review queue unavailable" detail={error} />
+          ) : loading ? (
+            <DetailLoading />
+          ) : items.length === 0 ? (
+            <StateCard title="No review items" detail="All indexed demo packs, Skills, and Agent Kits are healthy." icon={CheckCircle2} />
+          ) : visibleItems.length === 0 ? (
+            <StateCard title="No matching review items" detail="Adjust the queue filters to see more items." />
+          ) : (
+            <div className="review-list">
+              {visibleItems.map((item) => (
+                <ReviewItemCard item={item} packs={packs} skills={skills} agentKits={agentKits} onUpdateStatus={updateStatus} key={item.id} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -4111,6 +5234,13 @@ function AgentKitDetailPage({ agentKitId }: { agentKitId: string }) {
               {preview.content ? (
                 <ExportPreview
                   artifact={agentKitPreviewToArtifact(preview, agentKit.name)}
+                  profile={{
+                    name: preview.profileName ?? preview.profileId,
+                    target: preview.target,
+                    format: preview.format,
+                    privacyMode: preview.privacyMode ?? "redacted",
+                    tokenBudget: preview.tokenBudget ?? null
+                  }}
                   copied={copied}
                   onCopy={() => void copyAgentKitExport()}
                   onDownload={() => downloadExportArtifact(agentKitPreviewToArtifact(preview, agentKit.name))}
@@ -4231,6 +5361,434 @@ function RecordDetailPage({ recordId, packs }: { recordId: string; packs: PackSu
       </div>
     </section>
   );
+}
+
+function ReviewCandidateFiltersBar({
+  filters,
+  onChange
+}: {
+  filters: ReviewCandidateFilters;
+  onChange(filters: ReviewCandidateFilters): void;
+}) {
+  return (
+    <div className="review-filters candidate-filters">
+      <label className="select-control">
+        <Layers3 size={16} aria-hidden="true" />
+        <select
+          value={filters.sourceKind}
+          onChange={(event) => onChange({ ...filters, sourceKind: event.target.value as ReviewCandidateSourceKind | "all" })}
+        >
+          <option value="all">All sources</option>
+          <option value="draft_pack">Draft packs</option>
+          <option value="composed_pack">Composed packs</option>
+          <option value="imported_pack">Imported packs</option>
+          <option value="restored_quarantine">Restored quarantine</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </label>
+      <label className="select-control">
+        <ShieldCheck size={16} aria-hidden="true" />
+        <select value={filters.status} onChange={(event) => onChange({ ...filters, status: event.target.value as ReviewCandidateStatus | "all" })}>
+          <option value="all">All status</option>
+          <option value="ready_for_review">Ready for review</option>
+          <option value="invalid">Invalid</option>
+          <option value="blocked">Blocked</option>
+          <option value="duplicate_active_id">Duplicate active ID</option>
+        </select>
+      </label>
+      <label className="select-control candidate-search">
+        <Search size={16} aria-hidden="true" />
+        <input
+          value={filters.query}
+          aria-label="Search draft candidates"
+          placeholder="Search candidates"
+          onChange={(event) => onChange({ ...filters, query: event.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ReviewCandidateCard({
+  candidate,
+  selected,
+  onInspect
+}: {
+  candidate: ReviewCandidateSummary;
+  selected: boolean;
+  onInspect(candidate: ReviewCandidateSummary): void;
+}) {
+  return (
+    <article className={`review-card candidate-card severity-${candidateSeverity(candidate.status)} ${selected ? "is-selected" : ""}`}>
+      <div className="review-card-main">
+        <div className="review-card-title">
+          <StatusPill value={candidateSeverity(candidate.status)} />
+          <span>{formatPackType(candidate.status)}</span>
+          <span>{formatPackType(candidate.sourceKind)}</span>
+          <em>{candidate.validation.status}</em>
+        </div>
+        <h2>{candidate.name}</h2>
+        <p>{candidate.recommendedAction}</p>
+        <div className="review-card-meta">
+          {candidate.packId ? <span>{candidate.packId}</span> : null}
+          <span>{candidate.pathLabel}</span>
+          <span>{candidate.counts.records} records</span>
+          <span>{candidate.counts.sources} sources</span>
+          <span>{candidate.counts.exportProfiles} exports</span>
+        </div>
+      </div>
+      <div className="review-actions">
+        <button type="button" onClick={() => onInspect(candidate)}>
+          Inspect
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ReviewCandidateDetailPanel({
+  candidate,
+  activationPlan,
+  activationDryRun,
+  activationApplyResult,
+  activationHistory,
+  preparing,
+  applying,
+  onPrepareActivation,
+  onApplyActivation,
+  skippedRoots
+}: {
+  candidate: ReviewCandidateDetail | null;
+  activationPlan: ReviewCandidateActivationPlan | null;
+  activationDryRun: ReviewCandidateActivationDryRun | null;
+  activationApplyResult: ReviewCandidateActivationApplyResponse | null;
+  activationHistory: ReviewCandidateActivationHistoryItem[];
+  preparing: boolean;
+  applying: boolean;
+  onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
+  onApplyActivation(dryRun: ReviewCandidateActivationDryRun): void;
+  skippedRoots: Array<{ rootLabel: string; reason: string; message: string }>;
+}) {
+  if (!candidate) {
+    return (
+      <aside className="detail-card candidate-detail-panel" aria-label="Draft candidate detail">
+        <h2>Candidate Detail</h2>
+        <p className="muted-note">Inspect a draft candidate to review validation, security, records, sources, and export metadata.</p>
+        {skippedRoots.length > 0 ? (
+          <div className="candidate-skipped-roots">
+            <h3>Skipped Roots</h3>
+            <ul className="simple-list">
+              {skippedRoots.map((root) => (
+                <li key={`${root.rootLabel}:${root.reason}`}>
+                  <span>{root.rootLabel}</span>
+                  <strong>{formatPackType(root.reason)}</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <ReviewCandidateActivationHistoryList items={activationHistory} />
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="detail-card candidate-detail-panel" aria-label={`${candidate.name} candidate detail`}>
+      <h2>{candidate.name}</h2>
+      <div className="fact-grid">
+        <Fact label="Status" value={formatPackType(candidate.status)} />
+        <Fact label="Source" value={formatPackType(candidate.sourceKind)} />
+        <Fact label="Validation" value={formatPackType(candidate.validation.status)} />
+        <Fact label="Security" value={formatPackType(candidate.security.status)} />
+      </div>
+      <p className="muted-note">{candidate.recommendedAction}</p>
+      <ReviewCandidateActivationPlanView
+        plan={activationPlan}
+        dryRun={activationDryRun}
+        applyResult={activationApplyResult}
+        preparing={preparing}
+        applying={applying}
+        onPrepareActivation={onPrepareActivation}
+        onApplyActivation={onApplyActivation}
+      />
+      <ReviewCandidateActivationHistoryList items={activationHistory} candidateKey={candidate.key} packId={candidate.packId} />
+
+      <CandidateIssueList title="Validation Issues" issues={candidate.validationIssues} />
+      <CandidateSecurityList findings={candidate.securityFindings} />
+
+      <h3>Records</h3>
+      {candidate.records.length === 0 ? (
+        <p className="muted-note">No record metadata available.</p>
+      ) : (
+        <ul className="simple-list candidate-metadata-list">
+          {candidate.records.slice(0, 8).map((record) => (
+            <li key={record.id}>
+              <span>{record.title}</span>
+              <strong>{formatPackType(record.reviewStatus)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3>Sources and Exports</h3>
+      <div className="stat-grid">
+        <Stat value={candidate.sources.length} label="Sources" />
+        <Stat value={candidate.exportProfiles.length} label="Profiles" />
+        <Stat value={candidate.security.findingCount} label="Findings" />
+      </div>
+    </aside>
+  );
+}
+
+function ReviewCandidateActivationPlanView({
+  plan,
+  dryRun,
+  applyResult,
+  preparing,
+  applying,
+  onPrepareActivation,
+  onApplyActivation
+}: {
+  plan: ReviewCandidateActivationPlan | null;
+  dryRun: ReviewCandidateActivationDryRun | null;
+  applyResult: ReviewCandidateActivationApplyResponse | null;
+  preparing: boolean;
+  applying: boolean;
+  onPrepareActivation(plan: ReviewCandidateActivationPlan): void;
+  onApplyActivation(dryRun: ReviewCandidateActivationDryRun): void;
+}) {
+  if (!plan) {
+    return null;
+  }
+
+  return (
+    <section className={`candidate-plan candidate-plan-${plan.status}`} aria-label="Manual activation plan">
+      <h3>Manual Activation Plan</h3>
+      <div className="fact-grid">
+        <Fact label="Plan" value={plan.status === "ready" ? "Ready" : "Blocked"} />
+        <Fact label="Target" value={plan.target.pathLabel ?? plan.target.activePacksRootLabel} />
+        <Fact label="Blockers" value={plan.blockers.length} />
+        <Fact label="Warnings" value={plan.warnings.length} />
+      </div>
+
+      <h3>Checks</h3>
+      <ul className="simple-list candidate-plan-list">
+        {plan.checks.map((check) => (
+          <li key={check.id}>
+            <span>{check.message}</span>
+            <strong>{formatPackType(check.status)}</strong>
+          </li>
+        ))}
+      </ul>
+
+      {plan.blockers.length > 0 ? (
+        <>
+          <h3>Blocking Conditions</h3>
+          <ul className="simple-list candidate-issue-list">
+            {plan.blockers.map((blocker) => (
+              <li key={blocker.code}>
+                <span>{blocker.message}</span>
+                <strong>{blocker.code}</strong>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      {plan.warnings.length > 0 ? (
+        <>
+          <h3>Warnings</h3>
+          <ul className="simple-list candidate-issue-list">
+            {plan.warnings.map((warning) => (
+              <li key={warning.code}>
+                <span>{warning.message}</span>
+                <strong>{warning.code}</strong>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      <h3>Next Steps</h3>
+      <ol className="candidate-next-steps">
+        {plan.nextSteps.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+
+      <div className="candidate-plan-actions">
+        <button className="secondary-action" type="button" disabled={!plan.canActivate || Boolean(applyResult) || preparing} onClick={() => onPrepareActivation(plan)}>
+          {preparing ? "Preparing..." : "Prepare Activation"}
+        </button>
+        {!plan.canActivate ? <span>Resolve blockers before preparing activation evidence.</span> : null}
+      </div>
+
+      {dryRun ? <ReviewCandidateActivationDryRunView dryRun={dryRun} /> : null}
+      <div className="candidate-plan-actions">
+        <button
+          className="secondary-action"
+          type="button"
+          disabled={!dryRun?.canActivate || Boolean(applyResult) || applying}
+          onClick={() => (dryRun ? onApplyActivation(dryRun) : undefined)}
+        >
+          {applying ? "Applying..." : "Apply Activation"}
+        </button>
+        {!dryRun ? <span>Prepare activation evidence before applying.</span> : null}
+      </div>
+      {applyResult ? <ReviewCandidateActivationApplyResultView result={applyResult} /> : null}
+      <p className="muted-note">{plan.boundaries.join(" ")}</p>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationDryRunView({ dryRun }: { dryRun: ReviewCandidateActivationDryRun }) {
+  return (
+    <section className="candidate-dry-run" aria-label="Activation dry-run proof">
+      <h3>Activation Proof</h3>
+      <div className="fact-grid">
+        <Fact label="Proof" value={dryRun.proofId} />
+        <Fact label="Validation" value={formatPackType(dryRun.validation.status)} />
+        <Fact label="Security" value={formatPackType(dryRun.security.status)} />
+        <Fact label="Effects" value="None" />
+      </div>
+      <ul className="simple-list candidate-plan-list">
+        <li>
+          <span>{dryRun.target.pathLabel ?? dryRun.target.activePacksRootLabel}</span>
+          <strong>{dryRun.canActivate ? "ready" : "blocked"}</strong>
+        </li>
+        <li>
+          <span>{dryRun.boundaries.join(" ")}</span>
+          <strong>dry_run</strong>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationApplyResultView({ result }: { result: ReviewCandidateActivationApplyResponse }) {
+  const indexRefreshed = Boolean(result.history?.indexRefreshedAt || result.pack);
+
+  return (
+    <section className="candidate-dry-run candidate-activation-result" aria-label="Activation apply result">
+      <h3>Activation Applied</h3>
+      <div className="fact-grid">
+        <Fact label="Pack" value={result.activation.packId} />
+        <Fact label="Mode" value={formatPackType(result.activation.mode)} />
+        <Fact label="Target" value={result.activation.target.pathLabel} />
+        <Fact label="History" value={result.history ? `#${result.history.id}` : "Recorded"} />
+        <Fact label="Index" value={indexRefreshed ? "Refreshed" : "Needs Review"} />
+      </div>
+      <ul className="simple-list candidate-plan-list">
+        <li>
+          <span>{result.activation.boundaries.join(" ")}</span>
+          <strong>local_only</strong>
+        </li>
+        <li>
+          <span>Review Pack Health and Exposure Readiness before export or MCP exposure.</span>
+          <strong>next</strong>
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+function ReviewCandidateActivationHistoryList({
+  items,
+  candidateKey,
+  packId
+}: {
+  items: ReviewCandidateActivationHistoryItem[];
+  candidateKey?: string;
+  packId?: string | null;
+}) {
+  const relevantItems =
+    candidateKey || packId
+      ? items.filter((item) => item.candidateKey === candidateKey || (packId ? item.packId === packId : false))
+      : items;
+  const visibleItems = relevantItems.slice(0, 5);
+
+  return (
+    <section className="candidate-activation-history" aria-label="Activation history">
+      <h3>Activation History</h3>
+      {visibleItems.length === 0 ? (
+        <p className="muted-note">No local activation history recorded yet.</p>
+      ) : (
+        <ul className="simple-list candidate-activation-history-list">
+          {visibleItems.map((item) => (
+            <li key={item.id}>
+              <span className="candidate-activation-history-main">
+                <span>{item.name}</span>
+                <em>
+                  {formatDate(item.activatedAt)} / proof {item.proofId}
+                </em>
+              </span>
+              <strong>{item.indexRefreshedAt ? "indexed" : "pending_index"}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function CandidateIssueList({
+  title,
+  issues
+}: {
+  title: string;
+  issues: Array<{ severity: string; code: string; message: string; file?: string }>;
+}) {
+  return (
+    <>
+      <h3>{title}</h3>
+      {issues.length === 0 ? (
+        <p className="muted-note">No validation issues reported.</p>
+      ) : (
+        <ul className="simple-list candidate-issue-list">
+          {issues.slice(0, 8).map((issue) => (
+            <li key={`${issue.code}:${issue.file ?? ""}:${issue.message}`}>
+              <span>{issue.message}</span>
+              <strong>{issue.code}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function CandidateSecurityList({
+  findings
+}: {
+  findings: ReviewCandidateDetail["securityFindings"];
+}) {
+  return (
+    <>
+      <h3>Security Findings</h3>
+      {findings.length === 0 ? (
+        <p className="muted-note">No scanner findings reported.</p>
+      ) : (
+        <ul className="simple-list candidate-issue-list">
+          {findings.slice(0, 8).map((finding) => (
+            <li key={finding.id}>
+              <span>{finding.message}</span>
+              <strong>{formatPackType(finding.severity)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function candidateSeverity(status: ReviewCandidateStatus): ReviewItem["severity"] {
+  if (status === "blocked" || status === "invalid") {
+    return "error";
+  }
+  if (status === "duplicate_active_id") {
+    return "warning";
+  }
+  return "info";
 }
 
 function ReviewFiltersBar({
@@ -4739,7 +6297,19 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC"
   }).format(new Date(value));
 }
 

@@ -24,7 +24,7 @@
   },
   "contextPacks": [
     "claude-code-project-pack",
-    "jellyfin-server-pack"
+    "jellyfin-media-server-pack"
   ],
   "skills": [
     "security-review-skill",

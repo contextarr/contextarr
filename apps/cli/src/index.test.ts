@@ -24,6 +24,12 @@ const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
 const importFixturesDir = path.join(repoRoot, "packages/importers/test/fixtures");
 const scannerFixturesDir = path.join(repoRoot, "packages/security-scanner/test/fixtures");
 const tempDirs: string[] = [];
+const expectedDemoCounts = {
+  packs: 15,
+  records: 111,
+  skills: 8,
+  agentKits: 8
+};
 
 function fixture(name: string): string {
   return path.join(fixturesDir, name);
@@ -63,11 +69,19 @@ function createIo() {
   };
 }
 
+function expectNoAbsolutePaths(value: string): void {
+  expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
+  expect(value).not.toContain(repoRoot);
+}
+
 async function withCliIndex(callback: () => Promise<void>): Promise<void> {
   const previousEnv = {
     INIT_CWD: process.env.INIT_CWD,
     CONTEXTARR_DATABASE_PATH: process.env.CONTEXTARR_DATABASE_PATH,
     CONTEXTARR_PACKS_DIR: process.env.CONTEXTARR_PACKS_DIR,
+    CONTEXTARR_DRAFT_PACKS_DIR: process.env.CONTEXTARR_DRAFT_PACKS_DIR,
+    CONTEXTARR_COMPOSED_PACKS_DIR: process.env.CONTEXTARR_COMPOSED_PACKS_DIR,
+    CONTEXTARR_REVIEW_CANDIDATE_DIRS: process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS,
     CONTEXTARR_SKILLS_DIR: process.env.CONTEXTARR_SKILLS_DIR,
     CONTEXTARR_IMPORTED_SKILLS_DIR: process.env.CONTEXTARR_IMPORTED_SKILLS_DIR,
     CONTEXTARR_AGENT_KITS_DIR: process.env.CONTEXTARR_AGENT_KITS_DIR,
@@ -78,6 +92,9 @@ async function withCliIndex(callback: () => Promise<void>): Promise<void> {
   process.env.INIT_CWD = repoRoot;
   process.env.CONTEXTARR_DATABASE_PATH = path.join(root, "contextarr.db");
   process.env.CONTEXTARR_PACKS_DIR = "./demo-packs";
+  process.env.CONTEXTARR_DRAFT_PACKS_DIR = path.join(root, "draft-packs");
+  process.env.CONTEXTARR_COMPOSED_PACKS_DIR = path.join(root, "composed-packs");
+  delete process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS;
   process.env.CONTEXTARR_SKILLS_DIR = "./demo-skills";
   process.env.CONTEXTARR_IMPORTED_SKILLS_DIR = path.join(root, "imported-skills");
   process.env.CONTEXTARR_AGENT_KITS_DIR = path.join(root, "agent-kits");
@@ -116,10 +133,10 @@ describe("contextarr CLI", () => {
       expect(code).toBe(0);
       expect(json).toMatchObject({
         schemaVersion: "contextarr.cli.rescan.v1",
-        packsIndexed: 5,
-        recordsIndexed: 25,
-        skillsIndexed: 8,
-        agentKitsIndexed: 8
+        packsIndexed: expectedDemoCounts.packs,
+        recordsIndexed: expectedDemoCounts.records,
+        skillsIndexed: expectedDemoCounts.skills,
+        agentKitsIndexed: expectedDemoCounts.agentKits
       });
       expect(output.stderr).toBe("");
       expect(output.stdout).not.toContain(repoRoot);
@@ -139,13 +156,13 @@ describe("contextarr CLI", () => {
         schemaVersion: "contextarr.cli.list.v1",
         kind: "packs",
         stats: {
-          packs: 5,
-          records: 25,
-          skills: 8,
-          agentKits: 8
+          packs: expectedDemoCounts.packs,
+          records: expectedDemoCounts.records,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
         }
       });
-      expect(json.packs).toHaveLength(5);
+      expect(json.packs).toHaveLength(expectedDemoCounts.packs);
       expect(json.packs.map((pack: { id: string }) => pack.id)).toContain("ai-workstation-pack");
       expect(json.skills).toEqual([]);
       expect(json.agentKits).toEqual([]);
@@ -177,6 +194,43 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("adds read-only exposure readiness to Context Pack inspect output when requested", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const textOutput = createIo();
+      const jsonOutput = createIo();
+      const invalidOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--readiness"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("Exposure readiness:");
+      expect(textOutput.stdout).toContain("Export:");
+      expect(textOutput.stdout).toContain("MCP:");
+      expectNoAbsolutePaths(textOutput.stdout);
+
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--readiness", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "pack",
+        id: "ai-workstation-pack",
+        exposureReadiness: {
+          packId: "ai-workstation-pack",
+          summary: {
+            recordCount: 5,
+            exportEligibleRecords: 5,
+            mcpEligibleRecords: 5
+          }
+        }
+      });
+      expect(json.exposureReadiness.records[0]).not.toHaveProperty("body");
+      expectNoAbsolutePaths(jsonOutput.stdout);
+
+      expect(await runCli(["inspect", "ai-workstation.local-ai-stack", "--kind", "record", "--readiness"], invalidOutput.io)).toBe(2);
+      expect(invalidOutput.stderr).toContain("Exposure readiness is only available for Context Packs.");
+    });
+  });
+
   it("reports local index health in summary and object formats", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();
@@ -191,9 +245,9 @@ describe("contextarr CLI", () => {
         schemaVersion: "contextarr.cli.health.v1",
         kind: "summary",
         counts: {
-          packs: 5,
-          skills: 8,
-          agentKits: 8
+          packs: expectedDemoCounts.packs,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
         },
         reviewItems: {
           total: expect.any(Number),
@@ -207,6 +261,70 @@ describe("contextarr CLI", () => {
       expect(packOutput.stdout).toContain("Score:");
       expect(packOutput.stdout).toContain("Review queue:");
       expect(packOutput.stderr).toBe("");
+    });
+  });
+
+  it("reports Context Pack readiness in text, JSON, and agent formats", async () => {
+    await withCliIndex(async () => {
+      const rescanOutput = createIo();
+      const textOutput = createIo();
+      const jsonOutput = createIo();
+      const agentOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], rescanOutput.io)).toBe(0);
+
+      expect(await runCli(["readiness", "ai-workstation-pack"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("Context Readiness: ai-workstation-pack");
+      expect(textOutput.stdout).toContain("Status:");
+      expect(textOutput.stdout).toContain("Score:");
+      expect(textOutput.stdout).toContain("Dimensions:");
+      expect(textOutput.stdout).toContain("Top issues:");
+      expectNoAbsolutePaths(textOutput.stdout);
+      expect(textOutput.stderr).toBe("");
+
+      expect(await runCli(["readiness", "ai-workstation-pack", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.readiness.v1",
+        reportSchemaVersion: "contextarr.readiness-report.v1",
+        packId: "ai-workstation-pack",
+        readiness: {
+          schemaVersion: "contextarr.readiness-report.v1",
+          packId: "ai-workstation-pack",
+          status: expect.any(String),
+          score: expect.any(Number),
+          dimensions: expect.any(Object),
+          issues: expect.any(Array)
+        }
+      });
+      expect(Object.keys(json.readiness.dimensions).sort()).toEqual(["export", "governance", "mcp", "redaction", "review", "source"]);
+      expectNoAbsolutePaths(jsonOutput.stdout);
+      expect(jsonOutput.stderr).toBe("");
+
+      expect(await runCli(["readiness", "ai-workstation-pack", "--format", "text", "--agent"], agentOutput.io)).toBe(0);
+      const agentJson = JSON.parse(agentOutput.stdout);
+      expect(agentJson).toMatchObject({
+        schemaVersion: "contextarr.cli.readiness.v1",
+        packId: "ai-workstation-pack",
+        readiness: {
+          schemaVersion: "contextarr.readiness-report.v1"
+        }
+      });
+      expect(agentOutput.stdout).not.toContain("Context Readiness:");
+      expect(agentOutput.stdout).not.toMatch(/\u001b\[/);
+      expectNoAbsolutePaths(agentOutput.stdout);
+      expect(agentOutput.stderr).toBe("");
+    });
+  });
+
+  it("returns 1 with a clear stderr message when readiness pack is missing", async () => {
+    await withCliIndex(async () => {
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+
+      const output = createIo();
+      expect(await runCli(["readiness", "missing-pack", "--json"], output.io)).toBe(1);
+      expect(output.stdout).toBe("");
+      expect(output.stderr).toContain("Context Pack not found in local index: missing-pack");
     });
   });
 
@@ -235,6 +353,77 @@ describe("contextarr CLI", () => {
     });
   });
 
+  it("lists draft review candidates without indexing or leaking local paths", async () => {
+    await withCliIndex(async () => {
+      const root = tempDir();
+      const draftRoot = path.join(root, "draft-packs");
+      const quarantineRoot = path.join(root, "restored");
+      const importedRoot = path.join(root, "imported-packs", "phase9-smoke");
+      fs.mkdirSync(draftRoot, { recursive: true });
+      fs.mkdirSync(quarantineRoot, { recursive: true });
+      fs.mkdirSync(importedRoot, { recursive: true });
+      fs.cpSync(fixture("valid-minimal-pack"), path.join(draftRoot, "valid-draft"), { recursive: true });
+      fs.cpSync(path.join(scannerFixturesDir, "shell-command-pack"), path.join(quarantineRoot, "blocked-draft"), { recursive: true });
+      fs.cpSync(fixture("valid-minimal-pack"), path.join(importedRoot, "valid-import"), { recursive: true });
+      process.env.CONTEXTARR_DRAFT_PACKS_DIR = draftRoot;
+      process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS = quarantineRoot;
+
+      const jsonOutput = createIo();
+      const textOutput = createIo();
+      const importedOutput = createIo();
+      const invalidOutput = createIo();
+
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+      expect(await runCli(["review-candidates", "--status", "ready_for_review", "--json"], jsonOutput.io)).toBe(0);
+      const json = JSON.parse(jsonOutput.stdout);
+
+      expect(json).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        filters: { status: "ready_for_review" },
+        returned: 1,
+        candidates: [expect.objectContaining({ packId: "valid-minimal-pack", status: "ready_for_review" })]
+      });
+      expectNoAbsolutePaths(jsonOutput.stdout);
+      expect(jsonOutput.stderr).toBe("");
+
+      expect(await runCli(["review-candidates", "--source-kind", "restored_quarantine"], textOutput.io)).toBe(0);
+      expect(textOutput.stdout).toContain("blocked");
+      expectNoAbsolutePaths(textOutput.stdout);
+      expect(textOutput.stderr).toBe("");
+
+      process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS = `${quarantineRoot}${path.delimiter}${importedRoot}`;
+      expect(await runCli(["review-candidates", "--source-kind", "imported_pack", "--json"], importedOutput.io)).toBe(0);
+      const importedJson = JSON.parse(importedOutput.stdout);
+      expect(importedJson).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        filters: { sourceKind: "imported_pack" },
+        total: 1,
+        returned: 1,
+        counts: {
+          total: 1,
+          readyForReview: 1,
+          invalid: 0,
+          blocked: 0,
+          duplicateActiveId: 0,
+          skippedRoots: 0
+        },
+        skippedRoots: [],
+        candidates: [
+          expect.objectContaining({
+            sourceKind: "imported_pack",
+            packId: "valid-minimal-pack",
+            status: "ready_for_review"
+          })
+        ]
+      });
+      expectNoAbsolutePaths(importedOutput.stdout);
+      expect(importedOutput.stderr).toBe("");
+
+      expect(await runCli(["review-candidates", "--status", "published"], invalidOutput.io)).toBe(2);
+      expect(invalidOutput.stderr).toContain("Unsupported review candidate status");
+    });
+  });
+
   it("builds local briefs without requiring MCP or the API server", async () => {
     await withCliIndex(async () => {
       const rescanOutput = createIo();
@@ -250,10 +439,10 @@ describe("contextarr CLI", () => {
         kind: "summary",
         limit: 2,
         stats: {
-          packs: 5,
-          records: 25,
-          skills: 8,
-          agentKits: 8
+          packs: expectedDemoCounts.packs,
+          records: expectedDemoCounts.records,
+          skills: expectedDemoCounts.skills,
+          agentKits: expectedDemoCounts.agentKits
         }
       });
       expect(summary.packs).toHaveLength(2);
@@ -302,6 +491,164 @@ describe("contextarr CLI", () => {
       expect(queryOutput.stdout).not.toContain(repoRoot);
       expect(queryOutput.stderr).toBe("");
     });
+  });
+
+  it("treats --agent as JSON output for read-oriented path commands", async () => {
+    const validateOutput = createIo();
+    const scanOutput = createIo();
+
+    expect(await runCli(["validate", fixture("valid-minimal-pack"), "--format", "text", "--agent"], validateOutput.io)).toBe(0);
+    expect(JSON.parse(validateOutput.stdout)).toMatchObject({
+      schemaVersion: "contextarr.validation-report.v1",
+      valid: true
+    });
+    expect(validateOutput.stderr).toBe("");
+    expectNoAbsolutePaths(validateOutput.stdout);
+
+    expect(await runCli(["scan", path.join(scannerFixturesDir, "clean-context-pack"), "--format", "text", "--agent"], scanOutput.io)).toBe(0);
+    expect(JSON.parse(scanOutput.stdout)).toMatchObject({
+      status: "policy_clean",
+      recommendedAction: "activate"
+    });
+    expect(scanOutput.stderr).toBe("");
+    expect(scanOutput.stdout).not.toContain("Status: policy_clean");
+  });
+
+  it("treats --agent as JSON output for read-only index commands", async () => {
+    await withCliIndex(async () => {
+      expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
+
+      const listOutput = createIo();
+      expect(await runCli(["list", "packs", "--format", "text", "--agent"], listOutput.io)).toBe(0);
+      expect(JSON.parse(listOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.list.v1",
+        kind: "packs"
+      });
+      expectNoAbsolutePaths(listOutput.stdout);
+
+      const inspectOutput = createIo();
+      expect(await runCli(["inspect", "ai-workstation-pack", "--kind", "pack", "--agent"], inspectOutput.io)).toBe(0);
+      expect(JSON.parse(inspectOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.inspect.v1",
+        kind: "pack",
+        id: "ai-workstation-pack"
+      });
+
+      const healthOutput = createIo();
+      expect(await runCli(["health", "--agent"], healthOutput.io)).toBe(0);
+      expect(JSON.parse(healthOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.health.v1",
+        kind: "summary"
+      });
+
+      const reviewOutput = createIo();
+      expect(await runCli(["review", "--status", "all", "--limit", "2", "--agent"], reviewOutput.io)).toBe(0);
+      const reviewJson = JSON.parse(reviewOutput.stdout);
+      expect(reviewJson).toMatchObject({
+        schemaVersion: "contextarr.cli.review.v1",
+        limit: 2
+      });
+      expect(reviewJson.returned).toBeLessThanOrEqual(2);
+
+      const candidatesOutput = createIo();
+      expect(await runCli(["review-candidates", "--limit", "2", "--agent"], candidatesOutput.io)).toBe(0);
+      expect(JSON.parse(candidatesOutput.stdout)).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        limit: 2
+      });
+      expectNoAbsolutePaths(candidatesOutput.stdout);
+
+      const briefOutput = createIo();
+      expect(await runCli(["brief", "--limit", "2", "--agent"], briefOutput.io)).toBe(0);
+      const briefJson = JSON.parse(briefOutput.stdout);
+      expect(briefJson).toMatchObject({
+        schemaVersion: "contextarr.cli.brief.v1",
+        kind: "summary",
+        limit: 2
+      });
+      expect(briefJson.packs).toHaveLength(2);
+
+      const queryOutput = createIo();
+      expect(await runCli(["query", "workstation", "--type", "record", "--limit", "2", "--agent"], queryOutput.io)).toBe(0);
+      const queryJson = JSON.parse(queryOutput.stdout);
+      expect(queryJson).toMatchObject({
+        schemaVersion: "contextarr.cli.query.v1",
+        query: "workstation",
+        type: "record",
+        limit: 2
+      });
+      expect(queryJson.returned).toBeLessThanOrEqual(2);
+      expectNoAbsolutePaths(queryOutput.stdout);
+    });
+  });
+
+  it("keeps --agent unsupported on commands that can write files or indexes", async () => {
+    const cases: Array<{ args: string[]; outputDir?: string; forbiddenPath?: string }> = [];
+    const importOut = tempDir();
+    const importSkillOut = tempDir();
+    const renderOut = tempDir();
+    const exportOut = tempDir();
+    const backupOut = tempDir();
+    const restoreOut = tempDir();
+
+    cases.push(
+      { args: ["rescan", "--agent"] },
+      {
+        args: ["import", path.join(importFixturesDir, "markdown-folder"), "--kind", "markdown", "--out", importOut, "--pack-id", "agent-import", "--agent"],
+        outputDir: importOut
+      },
+      {
+        args: [
+          "import-skill",
+          path.join(importFixturesDir, "skill-markdown-folder"),
+          "--kind",
+          "markdown",
+          "--out",
+          importSkillOut,
+          "--skill-id",
+          "agent-import-skill",
+          "--agent"
+        ],
+        outputDir: importSkillOut
+      },
+      {
+        args: ["render", path.join(demoPacksDir, "ai-workstation-pack"), "--out", renderOut, "--agent"],
+        forbiddenPath: path.join(renderOut, "index.html")
+      },
+      {
+        args: [
+          "export",
+          path.join(demoPacksDir, "ai-workstation-pack"),
+          "--profile",
+          "ai-workstation-chatgpt",
+          "--out",
+          exportOut,
+          "--agent"
+        ],
+        outputDir: exportOut
+      },
+      {
+        args: ["backup", path.join(demoPacksDir, "ai-workstation-pack"), "--out", backupOut, "--backup-id", "agent-backup", "--agent"],
+        outputDir: backupOut
+      },
+      {
+        args: ["restore", "does-not-exist", "--out", restoreOut, "--agent"],
+        outputDir: restoreOut
+      }
+    );
+
+    for (const testCase of cases) {
+      const output = createIo();
+      expect(await runCli(testCase.args, output.io)).toBe(2);
+      expect(output.stderr).toContain("unknown option '--agent'");
+      expect(output.stdout).toBe("");
+      if (testCase.outputDir) {
+        expect(fs.readdirSync(testCase.outputDir)).toEqual([]);
+      }
+      if (testCase.forbiddenPath) {
+        expect(fs.existsSync(testCase.forbiddenPath)).toBe(false);
+      }
+    }
   });
 
   it("returns expected codes for read-only index command usage and misses", async () => {
@@ -392,7 +739,7 @@ describe("contextarr CLI", () => {
         infos: 0
       }
     });
-    expect(json.results).toHaveLength(5);
+    expect(json.results).toHaveLength(15);
     expect(json.results[0]).toMatchObject({
       securityScan: {
         status: "policy_clean",
@@ -733,10 +1080,14 @@ describe("contextarr CLI", () => {
     expect(backupCode).toBe(0);
     expect(backupJson).toMatchObject({
       backupId: "cli-backup",
-      packCount: 5,
+      packCount: 15,
       validationErrors: 0,
       validationWarnings: 0
     });
+    expect(backupJson.backupPath).toBe("cli-backup");
+    expect(backupJson.manifestPath).toBe("contextarr-backup.json");
+    expect(backupJson.manifestSha256Path).toBe("contextarr-backup.sha256");
+    expectNoAbsolutePaths(backupOutput.stdout);
     expect(fs.existsSync(path.join(backupOutDir, "cli-backup", "contextarr-backup.json"))).toBe(true);
 
     const restoreCode = await runCli(
@@ -749,10 +1100,14 @@ describe("contextarr CLI", () => {
     expect(restoreJson).toMatchObject({
       backupId: "cli-backup",
       status: "restored_to_quarantine",
-      packCount: 5,
+      packCount: 15,
       validationErrors: 0,
       scannerBlocked: 0
     });
+    expect(restoreJson.outputPath).toBe("cli-backup");
+    expect(restoreJson.reportPath).toBe("restore-report.json");
+    expect(restoreJson.packs[0].packPath).toBe("ai-workstation-pack");
+    expectNoAbsolutePaths(restoreOutput.stdout);
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "restore-report.json"))).toBe(true);
     expect(fs.existsSync(path.join(restoreOutDir, "cli-backup", "ai-workstation-pack", "contextarr-pack.json"))).toBe(true);
   });
@@ -773,6 +1128,7 @@ describe("contextarr CLI", () => {
     expect(await runCli(["restore", path.join(backupOutDir, "blocked-cli-backup"), "--out", restoreOutDir], restoreOutput.io)).toBe(1);
     expect(restoreOutput.stdout).toContain("Status: restored_with_security_findings");
     expect(restoreOutput.stdout).toContain("Scanner blocked: 1");
+    expectNoAbsolutePaths(restoreOutput.stdout);
   });
 
   it("scans local artifacts in text and JSON formats", async () => {
@@ -832,20 +1188,41 @@ describe("contextarr CLI", () => {
 
   it("returns expected codes for backup and restore failures", async () => {
     const readOutput = createIo();
+    const readJsonOutput = createIo();
     const invalidOutput = createIo();
     const restoreReadOutput = createIo();
+    const restoreReadJsonOutput = createIo();
     const existingOutput = createIo();
     const backupOutDir = tempDir();
     const restoreOutDir = tempDir();
 
     expect(await runCli(["backup", "does-not-exist", "--out", tempDir()], readOutput.io)).toBe(2);
     expect(readOutput.stderr).toContain("Backup source is not a readable directory");
+    expectNoAbsolutePaths(readOutput.stderr);
+
+    expect(await runCli(["backup", "does-not-exist", "--out", tempDir(), "--format", "json"], readJsonOutput.io)).toBe(2);
+    expect(JSON.parse(readJsonOutput.stdout)).toMatchObject({
+      ok: false,
+      error: "backup.input_unreadable"
+    });
+    expect(readJsonOutput.stderr).toBe("");
+    expectNoAbsolutePaths(readJsonOutput.stdout);
 
     expect(await runCli(["backup", fixture("invalid-permissions-pack"), "--out", tempDir()], invalidOutput.io)).toBe(1);
     expect(invalidOutput.stderr).toContain("invalid Context Pack");
+    expectNoAbsolutePaths(invalidOutput.stderr);
 
     expect(await runCli(["restore", "does-not-exist", "--out", tempDir()], restoreReadOutput.io)).toBe(2);
     expect(restoreReadOutput.stderr).toContain("Restore source is not a readable backup directory");
+    expectNoAbsolutePaths(restoreReadOutput.stderr);
+
+    expect(await runCli(["restore", "does-not-exist", "--out", tempDir(), "--format", "json"], restoreReadJsonOutput.io)).toBe(2);
+    expect(JSON.parse(restoreReadJsonOutput.stdout)).toMatchObject({
+      ok: false,
+      error: "restore.input_unreadable"
+    });
+    expect(restoreReadJsonOutput.stderr).toBe("");
+    expectNoAbsolutePaths(restoreReadJsonOutput.stdout);
 
     expect(
       await runCli(
@@ -863,6 +1240,8 @@ describe("contextarr CLI", () => {
     expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(0);
     expect(await runCli(["restore", path.join(backupOutDir, "already-restored"), "--out", restoreOutDir], existingOutput.io)).toBe(1);
     expect(existingOutput.stderr).toContain("Restore output already exists");
+    expectNoAbsolutePaths(existingOutput.stdout);
+    expectNoAbsolutePaths(existingOutput.stderr);
   });
 
   it("renders a valid pack to static HTML", async () => {
@@ -872,6 +1251,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Rendered 1 pack(s), 5 record(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.readFileSync(path.join(outDir, "index.html"), "utf8")).toContain("AI Workstation Pack");
     expect(fs.existsSync(path.join(outDir, "records", "ai-workstation.local-ai-stack.html"))).toBe(true);
   });
@@ -882,7 +1262,8 @@ describe("contextarr CLI", () => {
     const code = await runCli(["render", demoPacksDir, "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Rendered 5 pack(s), 25 record(s)");
+    expect(output.stdout).toContain("Rendered 15 pack(s), 111 record(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.existsSync(path.join(outDir, "packs", "ai-workstation-pack", "index.html"))).toBe(true);
   });
 
@@ -905,6 +1286,7 @@ describe("contextarr CLI", () => {
 
     expect(code).toBe(0);
     expect(output.stdout).toContain("Exported 1 file(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.readFileSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-chatgpt.md"), "utf8")).toContain(
       "ChatGPT Context Export"
     );
@@ -916,10 +1298,11 @@ describe("contextarr CLI", () => {
     const code = await runCli(["export", demoPacksDir, "--all", "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Exported 40 file(s)");
+    expect(output.stdout).toContain("Exported 120 file(s)");
+    expectNoAbsolutePaths(output.stdout);
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-json-records.json"))).toBe(true);
     expect(fs.existsSync(path.join(outDir, "ai-workstation-pack", "ai-workstation-llms-txt.txt"))).toBe(true);
-    expect(fs.existsSync(path.join(outDir, "jellyfin-server-pack", "jellyfin-server-markdown.md"))).toBe(true);
+    expect(fs.existsSync(path.join(outDir, "jellyfin-media-server-pack", "jellyfin-media-server-markdown.md"))).toBe(true);
   });
 
   it("exports Skill profiles to generated files", async () => {

@@ -1,0 +1,25 @@
+id: jellyfin-media-server-codex
+name: Jellyfin Media Server Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - jellyfin-media-server-pack.server-overview
+    - jellyfin-media-server-pack.hardware-and-os
+    - jellyfin-media-server-pack.library-structure
+    - jellyfin-media-server-pack.storage-map
+    - jellyfin-media-server-pack.clients-and-users
+    - jellyfin-media-server-pack.transcoding-policy
+    - jellyfin-media-server-pack.network-access
+    - jellyfin-media-server-pack.backup-policy
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

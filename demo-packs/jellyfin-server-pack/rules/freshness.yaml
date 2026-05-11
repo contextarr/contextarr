@@ -1,4 +1,0 @@
-stale_after_days:
-  default: 90
-  technical_system: 60
-  internal_kb: 45

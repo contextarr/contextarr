@@ -200,6 +200,42 @@ describe("@contextarr/importers", () => {
     expect(prompts.validation.summary.errors).toBe(0);
   });
 
+  it("keeps script-bearing external Skill imports data-only without execution approval", () => {
+    const result = writeSkillImport({
+      inputPath: fixture("claude-skill"),
+      kind: "claude-skill",
+      skillId: "script-bearing-claude-skill"
+    });
+    const manifest = JSON.parse(fs.readFileSync(path.join(result.skillPath, "contextarr-skill.json"), "utf8"));
+    const generatedFiles = listFiles(result.skillPath).map((file) => path.relative(result.skillPath, file).replace(/\\/g, "/"));
+    const instructionFiles = generatedFiles.filter((file) => file.startsWith("instructions/") && file.endsWith(".md"));
+    const instructionText = instructionFiles
+      .map((file) => fs.readFileSync(path.join(result.skillPath, file), "utf8"))
+      .join("\n");
+    const serializedManifest = JSON.stringify(manifest);
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "skill_import.executable_file", file: "unsafe.sh" })])
+    );
+    expect(generatedFiles).not.toContain("unsafe.sh");
+    expect(generatedFiles.some((file) => file.startsWith("scripts/"))).toBe(false);
+    expect(manifest).toMatchObject({
+      containsExecutableCode: false,
+      requiresNetwork: false,
+      trustLevel: "unreviewed",
+      permissions: {
+        runCommands: false,
+        networkAccess: false,
+        toolExecution: false
+      }
+    });
+    expect(serializedManifest).not.toContain("approved_for_execution");
+    expect(serializedManifest).not.toContain("approvedForExecution");
+    expect(instructionText).toContain("privacy: private");
+    expect(instructionText).toContain("review_status: draft");
+    expect(instructionText).toContain("never_export");
+  });
+
   it("imports a single ChatGPT prompt object as one draft document", () => {
     const result = writeSkillImport({
       inputPath: fixture("chatgpt-single-prompt"),

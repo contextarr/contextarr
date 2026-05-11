@@ -48,20 +48,35 @@ describe("Contextarr MCP stdio protocol", () => {
       try {
         await client.connect(transport);
         const tools = await client.listTools();
-        expect(tools.tools.map((tool) => tool.name)).toEqual(
+        const toolNames = tools.tools.map((tool) => tool.name).sort();
+        expect(toolNames).toEqual([
+          "build_agent_kit_export_preview",
+          "build_export_preview",
+          "get_agent_kit_summary",
+          "get_pack_summary",
+          "get_record",
+          "get_skill",
+          "get_skill_summary",
+          "list_agent_kits",
+          "list_export_profiles",
+          "list_packs",
+          "list_skills",
+          "query_agent_kit_context",
+          "query_pack_context"
+        ]);
+        expect(toolNames).not.toEqual(
           expect.arrayContaining([
-            "list_packs",
-            "get_record",
-            "build_export_preview",
-            "list_skills",
-            "get_skill_summary",
-            "get_skill",
-            "list_agent_kits",
-            "get_agent_kit_summary",
-            "query_agent_kit_context",
-            "build_agent_kit_export_preview"
+            expect.stringMatching(/^(activate|approve|backup|create|delete|execute|import|install|publish|restore|run|sync|update|write)_/)
           ])
         );
+        for (const tool of tools.tools) {
+          expect(tool.annotations).toMatchObject({
+            readOnlyHint: true,
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false
+          });
+        }
 
         const packs = parseToolJson(await client.callTool({ name: "list_packs", arguments: { limit: 1 } }));
         const skills = parseToolJson(await client.callTool({ name: "list_skills", arguments: { limit: 1 } }));

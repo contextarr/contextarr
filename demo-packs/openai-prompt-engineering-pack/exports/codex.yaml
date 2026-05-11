@@ -1,0 +1,25 @@
+id: openai-prompt-engineering-codex
+name: OpenAI Prompt Engineering Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - openai-prompt-engineering-pack.overview
+    - openai-prompt-engineering-pack.model-usage-policy
+    - openai-prompt-engineering-pack.chatgpt-projects
+    - openai-prompt-engineering-pack.prompt-library-conventions
+    - openai-prompt-engineering-pack.api-usage-boundaries
+    - openai-prompt-engineering-pack.data-handling-rules
+    - openai-prompt-engineering-pack.evaluation-patterns
+    - openai-prompt-engineering-pack.preferred-output-formats
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

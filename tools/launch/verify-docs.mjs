@@ -12,18 +12,34 @@ const requiredFiles = [
   "docs/docker.md",
   "docs/security.md",
   "docs/api.md",
+  "docs/cli-agent-mode.md",
   "docs/collectors.md",
+  "docs/implementation-status.md",
+  "docs/known-limitations.md",
+  "docs/known-issues.md",
   "docs/composed-packs.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
   "docs/mcp.md",
   "docs/roadmap.md",
+  "docs/master-plan.md",
+  "docs/product-strategy.md",
+  "docs/private-context.md",
+  "docs/external-skills.md",
+  "docs/local-event-hooks.md",
   "docs/demo-script.md",
   "docs/release-checklist.md",
   "docs/screenshots/README.md",
   "Dockerfile",
   "docker-compose.yml",
   ".dockerignore",
+  ".github/ISSUE_TEMPLATE/bug_report.md",
+  ".github/ISSUE_TEMPLATE/documentation_correction.md",
+  ".github/ISSUE_TEMPLATE/demo_pack_issue.md",
+  ".github/ISSUE_TEMPLATE/export_target_request.md",
+  ".github/ISSUE_TEMPLATE/pack_schema_proposal.md",
+  ".github/ISSUE_TEMPLATE/security_concern.md",
+  ".github/pull_request_template.md"
 ];
 
 let failed = false;
@@ -45,6 +61,8 @@ for (const file of requiredFiles) {
 
 if (!failed) {
   const readme = read("README.md");
+  const implementationStatus = read("docs/implementation-status.md");
+  const knownLimitations = read("docs/known-limitations.md");
   const mcp = read("docs/mcp.md");
   const docker = read("docs/docker.md");
   const security = read("docs/security.md");
@@ -52,6 +70,11 @@ if (!failed) {
   const architecture = read("docs/architecture.md");
   const agentKits = read("docs/agent-kits.md");
   const roadmap = read("docs/roadmap.md");
+  const masterPlan = read("docs/master-plan.md");
+  const productStrategy = read("docs/product-strategy.md");
+  const privateContext = read("docs/private-context.md");
+  const externalSkills = read("docs/external-skills.md");
+  const localEventHooks = read("docs/local-event-hooks.md");
   const apiDocs = read("docs/api.md");
   const collectorsDocs = read("docs/collectors.md");
   const composedPacksDocs = read("docs/composed-packs.md");
@@ -59,24 +82,91 @@ if (!failed) {
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
   const releaseChecklist = read("docs/release-checklist.md");
+  const cliAgentMode = read("docs/cli-agent-mode.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
   const combinedDocs = [readme, mcp, docker].join("\n");
 
   const requiredReadmeText = [
-    "Phase 11",
-    "pnpm phase11:verify",
-    "docker compose up",
+    "## What Contextarr Is",
+    "## Core Working Now",
+    "## Advanced Preview",
+    "## Not Included",
+    "## Quickstart",
+    "## Verification",
+    "## Security Boundaries",
+    "## Current Limitations",
+    "Contextarr prepares Agent Kits. It does not run them.",
+    "Skills and Agent Kits are advanced-preview data objects",
+    "12 curated starter Context Packs",
+    "15 public-safe demo packs",
+    "docs/implementation-status.md",
+    "docs/known-limitations.md",
     "docs/quickstart.md",
     "docs/docker.md",
     "docs/security.md",
+    "docs/cli-agent-mode.md",
     "docs/pack-authoring.md",
     "docs/export-profiles.md",
-    "docs/release-checklist.md",
+    "docs/release-checklist.md"
   ];
   for (const text of requiredReadmeText) {
     if (!readme.includes(text)) {
       fail(`README is missing launch text: ${text}`);
+    }
+  }
+
+  const forbiddenReadmeText = [
+    "Current scope:",
+    "Phase 12 terminology docs for Context Packs",
+    "The original PRD through Phase 11 is implemented locally"
+  ];
+  for (const text of forbiddenReadmeText) {
+    if (readme.includes(text)) {
+      fail(`README still contains old phase-heavy positioning: ${text}`);
+    }
+  }
+
+  const requiredStatusText = [
+    "## Core Working Now",
+    "## Advanced Preview, Data-Only, Frozen",
+    "## Planned Or Guarded",
+    "12 curated starter packs",
+    "Contextarr prepares Agent Kits. It does not run them."
+  ];
+  for (const text of requiredStatusText) {
+    if (!implementationStatus.includes(text)) {
+      fail(`Implementation status is missing text: ${text}`);
+    }
+  }
+
+  const requiredCliAgentModeText = [
+    "`--agent` is an explicit automation mode",
+    "read-oriented Contextarr CLI commands",
+    "JSON output",
+    "No color output",
+    "No progress animation output",
+    "`contextarr export`",
+    "must reject `--agent`",
+    "`--agent` does not execute Context Packs, Skills, or Agent Kits"
+  ];
+  for (const text of requiredCliAgentModeText) {
+    if (!cliAgentMode.includes(text)) {
+      fail(`CLI agent mode docs are missing text: ${text}`);
+    }
+  }
+
+  const requiredLimitationsText = [
+    "No tagged GitHub release",
+    "No npm package is published",
+    "No public registry",
+    "No public marketplace",
+    "No Agent Kit runtime",
+    "Screenshot Requirements"
+  ];
+  for (const text of requiredLimitationsText) {
+    if (!knownLimitations.includes(text)) {
+      fail(`Known limitations are missing text: ${text}`);
     }
   }
 
@@ -107,214 +197,57 @@ if (!failed) {
     fail("Launch security docs must keep v0 non-goals visible.");
   }
 
-  const requiredPhase15Text = [
-    "Phase 15",
-    "CONTEXTARR_SKILLS_DIR",
-    "/api/skills",
-    "/api/search?type=skill&q=",
-  ];
-  for (const text of requiredPhase15Text) {
-    if (!readme.includes(text)) {
-      fail(`README is missing Phase 15 text: ${text}`);
-    }
-  }
   if (!architecture.includes("/api/skills") || !architecture.includes("Skill-scoped search")) {
-    fail("Architecture docs must describe Phase 15 Skill API and search.");
+    fail("Architecture docs must describe Skill API and search.");
   }
   if (!security.includes("Skills") || !security.includes("non-executable")) {
     fail("Security docs must describe non-executable Skill boundaries.");
   }
 
-  const requiredPhase21Text = [
-    "Phase 21",
-    "phase21:verify",
-    "CONTEXTARR_AGENT_KITS_DIR",
-    "/api/agent-kits",
-    "/api/search?type=agent-kit&q=",
-  ];
-  for (const text of requiredPhase21Text) {
-    if (!readme.includes(text)) {
-      fail(`README is missing Phase 21 text: ${text}`);
-    }
-  }
   if (!architecture.includes("/api/agent-kits") || !architecture.includes("Agent Kit-scoped search")) {
-    fail("Architecture docs must describe Phase 21 Agent Kit API and search.");
+    fail("Architecture docs must describe Agent Kit API and search.");
   }
-  if (!packageJson.scripts["phase21:verify"]) {
-    fail("Root package scripts must include phase21:verify.");
+  if (!agentKits.includes("POST /api/agent-kits") || !agentKits.includes("CONTEXTARR_AGENT_KITS_DIR")) {
+    fail("Agent Kits docs must describe Composer saves and the local Agent Kits directory.");
   }
-
-  const requiredPhase22Text = [
-    "Phase 22",
-    "phase22:verify",
-    "POST /api/agent-kits",
-    "Agent Kit Composer",
-    "CONTEXTARR_DEMO_AGENT_KITS_DIR",
-  ];
-  for (const text of requiredPhase22Text) {
-    if (!readme.includes(text)) {
-      fail(`README is missing Phase 22 text: ${text}`);
+  if (!roadmap.includes("advanced-preview data-only surfaces")) {
+    fail("Roadmap must describe Skills and Agent Kits as advanced-preview data-only surfaces.");
+  }
+  if (!securityModel.includes("Contextarr prepares Agent Kits. It does not run them.")) {
+    fail("Security model must preserve the Agent Kit non-runtime boundary.");
+  }
+  for (const [label, content, required] of [
+    [
+      "master plan",
+      masterPlan,
+      ["Status: planning control document.", "No hidden network calls.", "No hosted vault.", "No product telemetry."]
+    ],
+    [
+      "product strategy",
+      productStrategy,
+      ["Status: idea harvest and product direction note.", "Do not build now:", "Hosted core app."]
+    ],
+    [
+      "private context",
+      privateContext,
+      ["Status: future product layer.", "not a separate personal memory vault", "Protected records should not appear through MCP"]
+    ],
+    [
+      "external skills",
+      externalSkills,
+      ["Status: future import and packaging direction.", "Never execute them.", "There should be no `approved for execution` state"]
+    ],
+    [
+      "local event hooks",
+      localEventHooks,
+      ["Status: future automation design.", "Webhooks are app settings, not pack content.", "Webhooks exposed through MCP."]
+    ]
+  ]) {
+    for (const text of required) {
+      if (!content.includes(text)) {
+        fail(`Launch ${label} docs are missing required text: ${text}`);
+      }
     }
-  }
-  if (!architecture.includes("POST /api/agent-kits") || !architecture.includes("validated local Agent Kit saves")) {
-    fail("Architecture docs must describe Phase 22 Agent Kit saves.");
-  }
-  if (
-    !agentKits.includes("Phase 22") ||
-    !agentKits.includes("POST /api/agent-kits") ||
-    !agentKits.includes("CONTEXTARR_AGENT_KITS_DIR")
-  ) {
-    fail("Agent Kits docs must describe Phase 22 Composer saves and the local Agent Kits directory.");
-  }
-  if (!roadmap.includes("Phase 22: Agent Kit Composer UI. Complete.")) {
-    fail("Roadmap must mark Phase 22 complete.");
-  }
-  if (!securityModel.includes("validated local Agent Kit Composer save flow")) {
-    fail("Security model must describe Phase 22 validated local Agent Kit saves.");
-  }
-  if (!packageJson.scripts["phase22:verify"]) {
-    fail("Root package scripts must include phase22:verify.");
-  }
-
-  const requiredPhase23Text = [
-    "Phase 23",
-    "phase23:verify",
-    "Agent Kit Library",
-    "read-only Agent Kit",
-    "Agent Kit health",
-    "detail",
-  ];
-  for (const text of requiredPhase23Text) {
-    if (!readme.includes(text)) {
-      fail(`README is missing Phase 23 text: ${text}`);
-    }
-  }
-  if (!architecture.includes("/api/agent-kits/:id/health") || !architecture.includes("Agent Kit health")) {
-    fail("Architecture docs must describe Phase 23 Agent Kit health/detail support.");
-  }
-  if (!agentKits.includes("Phase 23") || !agentKits.includes("Agent Kit Library") || !agentKits.includes("health")) {
-    fail("Agent Kits docs must describe Phase 23 read-only Library/detail/health scopes.");
-  }
-  if (!security.includes("Phase 23") || !security.includes("non-executable")) {
-    fail("Security docs must include Phase 23 non-executable library/detail/health boundaries.");
-  }
-  if (!securityModel.includes("Phase 23") || !securityModel.includes("read-only") || !securityModel.includes("health")) {
-    fail("Security model docs must include Phase 23 read-only health/detail boundaries.");
-  }
-  if (!packageJson.scripts["phase23:verify"]) {
-    fail("Root package scripts must include phase23:verify.");
-  }
-
-  const exportProfiles = read("docs/export-profiles.md");
-  const requiredPhase24Text = [
-    "Phase 24",
-    "phase24:verify",
-    "Agent Kit Export Engine",
-    "GET /api/agent-kits/:id/exports/:profileId/preview",
-    "contextarr export demo-agent-kits",
-  ];
-  for (const text of requiredPhase24Text) {
-    if (!readme.includes(text)) {
-      fail(`README is missing Phase 24 text: ${text}`);
-    }
-  }
-  if (!agentKits.includes("Phase 24") || !agentKits.includes("profile-driven export generation")) {
-    fail("Agent Kits docs must describe Phase 24 profile-driven export generation.");
-  }
-  if (!exportProfiles.includes("Agent Kit exports") || !exportProfiles.includes("contextarr export demo-agent-kits")) {
-    fail("Export profile docs must describe Agent Kit export CLI usage.");
-  }
-  if (!roadmap.includes("Phase 24: Agent Kit export engine. Complete.")) {
-    fail("Roadmap must mark Phase 24 complete.");
-  }
-  if (!securityModel.includes("Phase 24") || !securityModel.includes("never_export")) {
-    fail("Security model docs must include Phase 24 Agent Kit export boundaries.");
-  }
-  if (!packageJson.scripts["phase24:verify"]) {
-    fail("Root package scripts must include phase24:verify.");
-  }
-
-  const requiredPhase25Text = [
-    "Phase 25",
-    "phase25:verify",
-    "list_packs",
-    "get_pack_summary",
-    "query_pack_context",
-    "get_record",
-    "list_export_profiles",
-    "build_export_preview",
-    "list_skills",
-    "get_skill_summary",
-    "get_skill",
-    "list_agent_kits",
-    "get_agent_kit_summary",
-    "query_agent_kit_context",
-    "build_agent_kit_export_preview",
-  ];
-  for (const text of requiredPhase25Text) {
-    if (!readme.includes(text) && !mcp.includes(text)) {
-      fail(`README or MCP docs are missing Phase 25 text: ${text}`);
-    }
-  }
-  if (!roadmap.includes("Phase 25: Read-only MCP for Skills and Agent Kits. Complete.")) {
-    fail("Roadmap must mark Phase 25 complete.");
-  }
-  if (!securityModel.includes("Phase 25") || !securityModel.includes("read-only stdio MCP")) {
-    fail("Security model docs must include Phase 25 read-only MCP boundaries.");
-  }
-  if (!packageJson.scripts["phase25:verify"]) {
-    fail("Root package scripts must include phase25:verify.");
-  }
-  if (!packageJson.scripts["phase25:verify"]?.includes("research-delta:verify")) {
-    fail("phase25:verify must include research-delta:verify.");
-  }
-  const importers = read("docs/importers.md");
-  const requiredPhase26Text = [
-    "Phase 26",
-    "phase26:verify",
-    "contextarr import-skill",
-    "CONTEXTARR_ENABLE_LOCAL_IMPORTS",
-    "CONTEXTARR_IMPORTED_SKILLS_DIR",
-    "POST /api/import-skills/preview",
-    "POST /api/import-skills",
-    "imported-skills/",
-  ];
-  for (const text of requiredPhase26Text) {
-    if (!readme.includes(text) && !importers.includes(text) && !securityModel.includes(text) && !architecture.includes(text)) {
-      fail(`README or docs are missing Phase 26 text: ${text}`);
-    }
-  }
-  if (!roadmap.includes("Phase 26: Local Skill importers. Complete.")) {
-    fail("Roadmap must mark Phase 26 complete.");
-  }
-  if (!securityModel.includes("Phase 26") || !securityModel.includes("imported-skills")) {
-    fail("Security model docs must include Phase 26 Skill importer boundaries.");
-  }
-  if (!packageJson.scripts["phase26:verify"]) {
-    fail("Root package scripts must include phase26:verify.");
-  }
-
-  const requiredPhase27Text = [
-    "Phase 27",
-    "phase27:verify",
-    "CONTEXTARR_AGENT_KIT_TEMPLATES_DIR",
-    "agent-kit-templates/",
-    "GET /api/agent-kit-templates",
-    "POST /api/agent-kit-templates/:id/create",
-  ];
-  for (const text of requiredPhase27Text) {
-    if (!readme.includes(text) && !agentKits.includes(text) && !architecture.includes(text) && !securityModel.includes(text)) {
-      fail(`README or docs are missing Phase 27 text: ${text}`);
-    }
-  }
-  if (!roadmap.includes("Phase 27: Agent Kit templates. Complete.")) {
-    fail("Roadmap must mark Phase 27 complete.");
-  }
-  if (!agentKits.includes("Phase 27") || !agentKits.includes("Templates")) {
-    fail("Agent Kits docs must describe Phase 27 templates.");
-  }
-  if (!packageJson.scripts["phase27:verify"]) {
-    fail("Root package scripts must include phase27:verify.");
   }
 
   const requiredCollectorsText = [
@@ -330,7 +263,7 @@ if (!failed) {
     "draft-packs/",
     "not activate",
     "do not index",
-    "must not expose submitted local input paths",
+    "must not expose submitted local input paths"
   ];
   for (const text of requiredCollectorsText) {
     if (
@@ -348,9 +281,6 @@ if (!failed) {
   }
   if (!releaseChecklist.includes("local Skill import lane") || !releaseChecklist.includes("imported-skills/")) {
     fail("Release checklist must include a manual local Skill import coexistence smoke.");
-  }
-  if (!packageJson.scripts["collectors:verify"]) {
-    fail("Root package scripts must include collectors:verify.");
   }
 
   const requiredComposerSaveText = [
@@ -375,9 +305,6 @@ if (!failed) {
       fail(`README or docs are missing Composer save text: ${text}`);
     }
   }
-  if (!packageJson.scripts["composer:verify"]) {
-    fail("Root package scripts must include composer:verify.");
-  }
   if (!envExample.includes("CONTEXTARR_COMPOSED_PACKS_DIR=./composed-packs")) {
     fail(".env.example must include CONTEXTARR_COMPOSED_PACKS_DIR.");
   }
@@ -388,22 +315,39 @@ if (!failed) {
     fail("Server README must document Composer save-as-draft-pack behavior.");
   }
 
-  if (!packageJson.scripts["phase11:verify"] || !packageJson.scripts["docker:verify"] || !packageJson.scripts["docs:verify"]) {
-    fail("Root package scripts must include docs:verify, docker:verify, and phase11:verify.");
+  const requiredScripts = [
+    "docs:verify",
+    "docker:verify",
+    "phase11:verify",
+    "verify:core",
+    "verify:security",
+    "verify:release",
+    "site:verify",
+    "screenshots:verify",
+    "release:verify"
+  ];
+  for (const script of requiredScripts) {
+    if (!packageJson.scripts?.[script]) {
+      fail(`Root package scripts must include ${script}.`);
+    }
   }
 }
 
 const trackedScreenshots = execFileSync("git", ["ls-files", "--", "docs/screenshots"], {
   cwd: repoRoot,
-  encoding: "utf8",
+  encoding: "utf8"
 })
   .trim()
   .split(/\r?\n/)
   .filter(Boolean)
-  .filter((file) => file !== "docs/screenshots/README.md");
+  .filter(
+    (file) =>
+      file !== "docs/screenshots/README.md" &&
+      !file.startsWith("docs/screenshots/v0.1.0-alpha.1/")
+  );
 
 if (trackedScreenshots.length > 0) {
-  fail(`Only docs/screenshots/README.md may be tracked in Phase 11:\n${trackedScreenshots.join("\n")}`);
+  fail(`Only reviewed alpha screenshots may be tracked under docs/screenshots:\n${trackedScreenshots.join("\n")}`);
 }
 
 if (failed) {

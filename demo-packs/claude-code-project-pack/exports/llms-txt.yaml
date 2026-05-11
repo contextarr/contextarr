@@ -1,20 +1,25 @@
-id: claude-code-project-llms-txt
-name: Claude Code Project llms.txt Export
+﻿id: claude-code-project-llms-txt
+name: Claude Code Project Pack llms.txt Export
 target: llms_txt
 format: text
 privacy_mode: redacted
 include:
   records:
-    - claude-code-project.repo-overview
+    - claude-code-project-pack.project-overview
+    - claude-code-project-pack.repo-structure
+    - claude-code-project-pack.current-phase
     - claude-code-project.agent-instructions
-    - claude-code-project.dev-workflow
-    - claude-code-project.testing-checklist
-    - claude-code-project.handoff-notes
+    - claude-code-project-pack.coding-conventions
+    - claude-code-project-pack.testing-and-validation
+    - claude-code-project-pack.forbidden-actions
+    - claude-code-project-pack.agent-final-report-format
 exclude_tags:
   - secret
   - never_export
+  - imported_draft
 token_budget: 12000
 sections:
   - summary
-  - records
+  - key_facts
+  - constraints
   - sources

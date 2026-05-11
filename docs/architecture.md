@@ -2,9 +2,13 @@
 
 ## Summary
 
-Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable.
+Contextarr is a local-first context pack compiler and manager. Source files are the source of truth; runtime indexes, rendered output, exports, cache files, and MCP responses are derived artifacts that must be rebuildable. The longer-term product category is a local-first AI artifact gateway for Context Packs, Skills, Agent Kits, and Export Briefs, but the v1 core lane still prioritizes the Context Pack loop.
 
 Phase 22 continues the second PRD track with non-executable Skill schemas, public-safe demo Skills, read-only Skill indexing/API/UI, deterministic Skill health/review items, profile-driven Skill export previews, Agent Kit schemas/validation, public-safe demo Agent Kits, Agent Kit indexing/API/search, and the local Agent Kit Composer save flow. Context Packs remain the core source-backed knowledge object. Phase 23 adds read-only Agent Kit Library/detail/health surfaces and local health scoring. Phase 24 adds read-only Agent Kit export generation from selected Context Packs and Skills. Phase 24R applies the research-delta foundation to Context Packs: stronger source provenance, source license status, hash/freshness metadata, deterministic validation reports, export readiness, redaction warnings, and assistant handoff targets. Phase 27 adds public-safe Agent Kit templates that prefill the Composer and generate unreviewed local draft kits only. Phase 3A planning defines the future Registry Trust Foundation as architecture only: registry artifacts, scanner reports, signing, encryption, quarantine, revocation, and marketplace gates without a live public registry. The v1 core hardening lane now includes local Context Pack collectors and Composer save-as-draft-pack, both of which create private unreviewed draft packs without activating them.
+
+The Agentic AI Context Readiness and Local Observability PRD started as an AR0 planning addition. The current runtime slice adds only a per-pack read-only Context Readiness API report and bounded metadata-only Local Observability reads. Future phases may add readiness list views, recalculation, UI, CLI commands, governance parsing, export history, token-budget reports, and release gates only after the Context Pack core lane remains stable.
+
+Derived Index Adapters are a future export-direction addition, not a database pivot. Contextarr may later emit redacted, source-mapped exports for external vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes, but those systems stay downstream derived indexes.
 
 ## Core Decisions
 
@@ -18,6 +22,8 @@ Phase 22 continues the second PRD track with non-executable Skill schemas, publi
 - Use Docker Compose for local operation.
 - Use read-only stdio MCP as a local context access layer.
 - Keep Skills, Agent Kits, and Agent Kit templates data-only and non-executable.
+- Treat Private Context as a future protected policy/view layer over local artifacts, not as a hosted personal memory vault.
+- Keep vector stores, graph databases, RAG stacks, and Graphify-style systems downstream of explicit derived exports.
 
 ## Monorepo Shape
 
@@ -56,7 +62,7 @@ docs
 
 ## Source of Truth
 
-Pack and Skill folders are authoritative. SQLite tables, search indexes, generated exports, static render output, and MCP responses are derived and must be safe to rebuild from local files.
+Pack and Skill folders are authoritative. SQLite tables, search indexes, generated exports, static render output, MCP responses, and future vector/graph/RAG seed exports are derived and must be safe to rebuild from local files.
 
 ## Backend Direction
 
@@ -74,19 +80,29 @@ The shared renderer converts Markdown to sanitized HTML for both the web UI and 
 
 SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record and Skill search, with safe fallback behavior for punctuation-heavy UI queries.
 
+Future Derived Index Adapters may produce local JSONL, Markdown, JSON, or CSV files for external retrieval systems. They must not turn Contextarr into a built-in vector database, graph database, code graph engine, managed RAG app, hidden embedding service, always-on external indexer, or external database sync service.
+
 Review item statuses are local SQLite app state. Rescans preserve statuses by deterministic fingerprints and mark missing generated issues as resolved, but review actions do not edit pack files.
 
 Generated exports are derived artifacts. The CLI may write them to ignored local folders such as `generated-exports/`; API previews return content only and do not write files.
 
+Derived index exports, when implemented, should preserve pack IDs, record IDs, source IDs, review status, privacy, redaction mode, freshness, export profile ID, generated time, and content hashes so downstream retrieval hits can be traced back to canonical Contextarr records.
+
 MCP query metadata is local SQLite app state. It records tool name, related ids, query hash and length, result count, timing, and sanitized metadata only. It must not store raw result content or full raw query text.
+
+Local Observability tables are local app state. The current exposed slice reads event metadata and MCP query metadata from SQLite. Future tables may also record metadata and hashes for exports, readiness calculations, review activity, redaction events, and token warnings. They must not store raw export bodies, raw MCP queries, returned context bodies, or product telemetry by default.
 
 Imported draft packs and imported draft Skills are generated local files under explicit ignored output directories such as `imported-packs/` and `imported-skills/`. They are not approved by default; imported records and Skill documents are private drafts tagged `imported_draft` and `never_export`.
 
 Composed previews are temporary derived artifacts. The web UI can preview, copy, and browser-download them. Composer save-as-draft-pack writes selected approved `public_safe` records to ignored `composed-packs/` as private unreviewed draft Context Packs with provenance back to source packs and records. It applies source pack redaction rules to persisted drafts and rejects non-public records for durable saves. It does not mutate source packs, index drafts as active packs, or approve them for export/MCP exposure.
 
+Draft Intake is a guarded local review workbench layered over untrusted local candidate roots. It scans draft packs, composed packs, and optional restored/imported quarantine roots for Context Pack-like folders, then returns path-redacted metadata, validation summaries, scanner summaries, duplicate-active-pack warnings, record/source/export counts, read-only activation plans, dry-run activation proof, and recent activation history. Activation plans prepare blockers, warnings, target path labels, manual next steps, and explicit no-mutation boundaries. Dry-run proof adds a proof ID, generated time, validation/security status, blockers, warnings, target labels, manual actions, and false effect flags without moving files or touching SQLite. Apply activation requires the current dry-run proof ID, rejects changed or blocked candidates, moves or copies the reviewed candidate into the configured active packs root, records sanitized local activation evidence, and refreshes the local derived index. The workbench still stops before broader exposure: activation does not generate exports, publish artifacts, perform network access, or expose records through MCP.
+
 ## Local API Direction
 
-The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`. Phase 22 adds `POST /api/agent-kits` for validated local Agent Kit saves under `CONTEXTARR_AGENT_KITS_DIR`; the API never accepts an arbitrary output path. Phase 23 adds read-only Agent Kit `detail` endpoints and `GET /api/agent-kits/:id/health` for Agent Kit health. Phase 24 makes `GET /api/agent-kits/:id/exports/:profileId/preview` return generated local export content. Phase 26 adds local Skill import preview/write endpoints only when `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`. Context Pack collectors use `/api/context-pack-collectors`, write only under `CONTEXTARR_DRAFT_PACKS_DIR`, and do not index drafts as active packs automatically. Composer save uses `POST /api/compose/save-pack`, writes only under `CONTEXTARR_COMPOSED_PACKS_DIR`, validates before success, and does not index drafts as active packs automatically.
+The local API binds to `127.0.0.1` by default. Local development can run without auth, but setting `CONTEXTARR_API_TOKEN` requires a bearer token or `X-Contextarr-Token` header for protected API routes. Phase 15 added read-only Skill endpoints under `/api/skills` and Skill-scoped search via `/api/search?type=skill&q=`. Phase 21 adds Agent Kit endpoints under `/api/agent-kits` and Agent Kit-scoped search via `/api/search?type=agent-kit&q=`. Phase 22 adds `POST /api/agent-kits` for validated local Agent Kit saves under `CONTEXTARR_AGENT_KITS_DIR`; the API never accepts an arbitrary output path. Phase 23 adds read-only Agent Kit `detail` endpoints and `GET /api/agent-kits/:id/health` for Agent Kit health. Phase 24 makes `GET /api/agent-kits/:id/exports/:profileId/preview` return generated local export content. Phase 26 adds local Skill import preview/write endpoints only when `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; writes stay under `CONTEXTARR_IMPORTED_SKILLS_DIR`. Context Pack collectors use `/api/context-pack-collectors`, write only under `CONTEXTARR_DRAFT_PACKS_DIR`, and do not index drafts as active packs automatically. Composer save uses `POST /api/compose/save-pack`, writes only under `CONTEXTARR_COMPOSED_PACKS_DIR`, validates before success, and does not index drafts as active packs automatically. Draft Intake uses `GET /api/review-candidates`, `GET /api/review-candidates/:key`, `GET /api/review-candidates/:key/activation-plan`, `POST /api/review-candidates/:key/activation/dry-run`, `POST /api/review-candidates/:key/activation/apply`, and `GET /api/review-candidate-activations` for guarded local candidate review, activation, and local evidence review.
+
+The implemented Context Readiness and Local Observability API routes are `GET /api/packs/:id/readiness`, `GET /api/events`, and `GET /api/mcp/query-log`. They remain local, metadata-first, auth-protected with the same API rules, and non-mutating. Planned routes such as `/api/readiness`, `/api/exports/history`, `/api/governance/:packId`, and `/api/token-budget/:packId` are not implemented yet; later recalculation writes must be explicitly scoped to derived SQLite state.
 
 When `CONTEXTARR_WEB_DIST_DIR` is set, the server also serves the built web app from that directory. API routes keep priority under `/api/*`; unknown API routes return JSON 404 responses while non-API browser routes fall back to `index.html`.
 
@@ -100,7 +116,7 @@ MCP is implemented as a local stdio process in `apps/mcp`. It uses the official 
 
 ## Importer Direction
 
-Phase 9 importers read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. Context Pack collectors add guided local draft pack creation under `draft-packs/` for blank starters, Markdown folders, project notes, and support KB starters. Phase 26 extends importer support to local draft Skills through CLI plus gated local API flows. Skill importers support folder, Markdown, prompt-template, Claude Skill, and ChatGPT prompt inputs. Phase 27 adds Agent Kit template loading from `CONTEXTARR_AGENT_KIT_TEMPLATES_DIR`, defaulting to committed `agent-kit-templates/`, and writes generated kits only under `CONTEXTARR_AGENT_KITS_DIR`. They must not add MCP mutation, live connectors, cloud sync, external API calls, execution, or approval behavior.
+Phase 9 importers read local folders, Markdown folders, Obsidian vaults, ChatGPT exports, and Claude exports, then write generated draft pack folders. Context Pack collectors add guided local draft pack creation under `draft-packs/` for blank starters, Markdown folders, project notes, and support KB starters. Phase 26 extends importer support to local draft Skills through CLI plus gated local API flows. Current Skill importers support folder, Markdown, prompt-template, Claude Skill, and ChatGPT prompt inputs by creating private data-only Contextarr Skill drafts and skipping scripts or executable resources. A future External Skill Artifact track should preserve original Skill folders separately as untrusted archive material with safety and compatibility sidecars instead of weakening the Native Skill schema. Phase 27 adds Agent Kit template loading from `CONTEXTARR_AGENT_KIT_TEMPLATES_DIR`, defaulting to committed `agent-kit-templates/`, and writes generated kits only under `CONTEXTARR_AGENT_KITS_DIR`. They must not add MCP mutation, live connectors, cloud sync, external API calls, execution, or approval behavior.
 
 ## Registry Trust Direction
 
@@ -130,3 +146,5 @@ The second PRD adds Skills and future Agent Kits:
 Contextarr prepares Agent Kits. It does not run them.
 
 Phase 13 added Skill schemas and validation, Phase 14 added fake public-safe demo Skills, Phase 15 indexes Skills into read-only SQLite/API surfaces, Phase 16 displays Skills in a read-only dashboard surface, Phase 17 adds deterministic Skill Health and object-aware review items, Phase 18 adds profile-driven Skill exports, Phase 19 adds Agent Kit schemas/validation, Phase 20 adds fake public-safe demo Agent Kits, Phase 21 indexes Agent Kits into SQLite/API/search surfaces, Phase 22 adds validated local Agent Kit creation from selected existing objects, Phase 23 adds local Agent Kit Library/detail/health views, and Phase 24 adds profile-driven Agent Kit exports. Phase 24R strengthens the Context Pack foundation before extending MCP/import/template/registry work. Phase 25 extends the local read-only MCP server to Skills and Agent Kits. Phase 26 adds local draft Skill importers and review-queue integration. Phase 27 adds public-safe Agent Kit templates and Composer prefill. Skill, Agent Kit, and template files must remain local, inspectable, source-backed, reviewable, and non-executable. Indexes, previews, exports, UI rendering, and MCP responses must remain derived artifacts.
+
+This paragraph describes Contextarr Native Skills. Future External Skill Artifacts may preserve original third-party Skill folders, including scripts or resources, as quarantined untrusted source artifacts. Contextarr may classify, summarize, adapt, and export them to compatible downstream runtimes with explicit warnings, but Contextarr still must not execute them.

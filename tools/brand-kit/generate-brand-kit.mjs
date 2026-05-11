@@ -460,7 +460,7 @@ async function main() {
       },
     },
     usage: {
-      positioning: "Contextarr is the context layer. Validated. Source-backed. Ready for agents. Not an agent runner.",
+      positioning: "Contextarr is the context layer. Validated. Source-backed. Export-ready. Not an agent runner.",
       note: "These SVG files intentionally embed the approved high-resolution PNG renders so the logos preserve the supplied art exactly. They are SVG containers, not pure vector redraws.",
     },
     assets,

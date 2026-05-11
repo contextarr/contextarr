@@ -1,42 +1,57 @@
-export const implementedFeatures = [
-  "TypeScript monorepo",
-  "Zod schemas",
-  "read-only validator",
-  "demo Context Packs",
+export const coreWorkingNow = [
+  "Context Pack schema and validator",
+  "15 public-safe demo Context Packs",
+  "12 curated starter Context Packs",
   "SQLite derived index",
   "Fastify local API",
   "React/Vite dashboard",
+  "Pack Library, detail, health, review, exports, and Composer",
   "sanitized Markdown renderer",
   "static HTML renderer",
-  "Pack Health",
-  "Review Queue",
-  "export engine",
-  "Export Center",
-  "local CLI/core importers",
-  "read-only Composer previews",
+  "profile-driven exports",
+  "Context Pack CLI commands",
   "read-only stdio MCP server",
-  "Docker Compose local preview",
-  "Phase 12 terminology docs for future Skills and Agent Kits"
+  "local backup and quarantine restore",
+  "Context Pack collectors",
+  "Docker Compose local preview"
+];
+
+export const advancedPreview = [
+  "advanced-preview data-only Skills",
+  "advanced-preview data-only Agent Kits",
+  "Skill and Agent Kit validation only",
+  "Skill and Agent Kit read-only API/UI views where implemented",
+  "Skill and Agent Kit export previews where implemented",
+  "read-only MCP tools for Skills and Agent Kits where implemented",
+  "local Skill imports behind an explicit flag",
+  "Agent Kit templates for unreviewed local drafts"
 ];
 
 export const notIncludedYet = [
-  "web importer UI",
-  "API import endpoints",
-  "pack file editing from review actions",
-  "saving composed exports as new packs",
-  "Skill schema and Skill validator",
-  "demo Skills or demo Agent Kits",
-  "Skill Library or Agent Kit UI/API/MCP extensions",
-  "Skill execution or Agent Kit runtime behavior"
+  "tagged GitHub release",
+  "npm package publishing",
+  "public registry",
+  "public marketplace",
+  "private registry workflow",
+  "remote install or auto-activation",
+  "hosted cloud or hosted vault",
+  "telemetry",
+  "signing implementation",
+  "built-in vector or graph database",
+  "executable packs or Skills",
+  "Agent Kit runtime behavior"
 ];
 
 export const homepageSecurityBoundaries = [
-  "No hosted cloud",
+  "No hosted vault",
   "No telemetry",
+  "No registry or marketplace",
+  "No package publishing",
   "No executable packs",
   "No scripts inside packs",
   "No shell commands",
   "No hidden network calls",
+  "No built-in vector or graph database",
   "No direct Gmail, bank, or brokerage connectors",
   "No agent runner",
   "Read-only MCP",
@@ -45,6 +60,11 @@ export const homepageSecurityBoundaries = [
 
 export const exactSecurityBoundaryBullets = [
   "No executable packs",
+  "No executable Skills",
+  "No Agent Kit runtime",
+  "No public registry",
+  "No marketplace",
+  "No package publishing",
   "No scripts inside packs",
   "No shell commands",
   "No hidden network calls",
@@ -52,19 +72,24 @@ export const exactSecurityBoundaryBullets = [
   "No direct Gmail connector",
   "No banking or brokerage connector",
   "No hosted sync",
-  "No managed AI dependency",
-  "No agent runner"
+  "No managed AI dependency"
 ];
 
 export const explicitNonGoals = [
   "hosted cloud vault",
   "public marketplace",
+  "public registry",
+  "private registry workflow",
+  "package publishing",
   "executable packs",
   "script packs",
-  "agent action runner",
+  "Skill execution",
+  "Agent Kit runtime",
   "direct Gmail connector",
   "direct bank or brokerage connector",
+  "built-in vector database",
+  "built-in graph database",
+  "managed RAG app",
   "passive always-on capture",
-  "mobile app in v0",
   "managed AI subscription"
 ];

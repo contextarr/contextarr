@@ -1,4 +1,4 @@
-# Fake Product Line Pack
+# Product Line Pack
 
 Public-safe demo context for a fictional product line.
 

@@ -1,0 +1,16 @@
+Obsidian Vault Pack
+
+Public-safe starter context for a fictional local Markdown knowledge vault.
+
+Records:
+- obsidian-vault-pack.vault-overview
+- obsidian-vault-pack.folder-map
+- obsidian-vault-pack.note-conventions
+- obsidian-vault-pack.frontmatter-rules
+- obsidian-vault-pack.linking-patterns
+- obsidian-vault-pack.daily-notes
+- obsidian-vault-pack.import-boundaries
+- obsidian-vault-pack.export-rules
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

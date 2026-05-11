@@ -1,0 +1,39 @@
+{
+  "id": "obsidian-vault-pack",
+  "name": "Obsidian Vault Pack",
+  "version": "1.0.0",
+  "description": "Public-safe starter context for a fictional local Markdown knowledge vault.",
+  "type": "local_markdown_knowledge",
+  "visibility": "local",
+  "trustLevel": "curated",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-09T00:00:00Z",
+  "updatedAt": "2026-05-09T00:00:00Z",
+  "lastReviewedAt": "2026-05-09T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "starterPack": true,
+  "starterCategory": "local_markdown_knowledge",
+  "starterSortOrder": 12,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "brandId": "obsidian",
+    "accentColor": "#7C3AED",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

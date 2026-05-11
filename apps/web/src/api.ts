@@ -18,14 +18,31 @@ import type {
   ContextPackCollectorRequest,
   ContextPackCollectorResult,
   ExportArtifact,
+  ExportBrief,
+  ExportBriefListQuery,
   PackDetail,
+  PackExposureReadiness,
   PackHealthResponse,
+  PackReadinessReport,
   PackSummary,
+  LocalEvent,
+  LocalEventsResponse,
+  LocalObservabilityQuery,
+  McpQueryLogEntry,
+  McpQueryLogResponse,
   RecordDetail,
   RecordSummary,
   ReviewItemsResponse,
+  ReviewCandidatesResponse,
+  ReviewCandidateActivationApplyRequest,
+  ReviewCandidateActivationApplyResponse,
+  ReviewCandidateActivationDryRun,
+  ReviewCandidateActivationHistoryItem,
+  ReviewCandidateActivationPlan,
+  ReviewCandidateDetail,
   ReviewItemStatus,
   SaveAgentKitResponse,
+  SaveExportBriefRequest,
   SearchResponse,
   SkillDetail,
   SkillDocument,
@@ -56,6 +73,8 @@ export interface ApiClient {
   getHealth(): Promise<HealthResponse>;
   getPacks(): Promise<PackSummary[]>;
   getPack(id: string): Promise<PackDetail>;
+  getPackExposureReadiness(id: string): Promise<PackExposureReadiness>;
+  getPackReadiness(id: string): Promise<PackReadinessReport>;
   getPackHealth(id: string): Promise<PackHealthResponse>;
   getPackRecords(id: string): Promise<RecordSummary[]>;
   getRecord(id: string): Promise<RecordDetail>;
@@ -84,6 +103,11 @@ export interface ApiClient {
   getSkillExportPreview(skillId: string, profileId: string): Promise<ExportArtifact>;
   composePreview(request: ComposePreviewRequest): Promise<ExportArtifact>;
   saveComposedPack(request: ComposeSavePackRequest): Promise<ComposeSavePackResponse>;
+  saveExportBrief(request: SaveExportBriefRequest): Promise<ExportBrief>;
+  listExportBriefs(query?: ExportBriefListQuery): Promise<ExportBrief[]>;
+  getExportBrief(id: string): Promise<ExportBrief>;
+  getEvents(query?: LocalObservabilityQuery): Promise<LocalEvent[]>;
+  getMcpQueryLog(query?: LocalObservabilityQuery): Promise<McpQueryLogEntry[]>;
   getReviewItems(filters?: {
     status?: string;
     severity?: string;
@@ -94,6 +118,15 @@ export interface ApiClient {
     skillId?: string;
     agentKitId?: string;
   }): Promise<ReviewItemsResponse>;
+  getReviewCandidates(filters?: { sourceKind?: string; status?: string; q?: string }): Promise<ReviewCandidatesResponse>;
+  getReviewCandidate(key: string): Promise<ReviewCandidateDetail>;
+  getReviewCandidateActivationPlan(key: string): Promise<ReviewCandidateActivationPlan>;
+  dryRunReviewCandidateActivation(key: string): Promise<ReviewCandidateActivationDryRun>;
+  getReviewCandidateActivations(): Promise<ReviewCandidateActivationHistoryItem[]>;
+  applyReviewCandidateActivation(
+    key: string,
+    request: ReviewCandidateActivationApplyRequest
+  ): Promise<ReviewCandidateActivationApplyResponse>;
   updateReviewItemStatus(id: string, status: ReviewItemStatus): Promise<ReviewItemsResponse["items"][number]>;
   search(query: string): Promise<SearchResponse>;
 }
@@ -126,6 +159,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return response.packs;
     },
     getPack: (id: string) => requestJson<PackDetail>(`/api/packs/${encodeURIComponent(id)}`),
+    getPackExposureReadiness: (id: string) =>
+      requestJson<PackExposureReadiness>(`/api/packs/${encodeURIComponent(id)}/exposure-readiness`),
+    getPackReadiness: (id: string) =>
+      requestJson<PackReadinessReport>(`/api/packs/${encodeURIComponent(id)}/readiness`),
     getPackHealth: (id: string) => requestJson<PackHealthResponse>(`/api/packs/${encodeURIComponent(id)}/health`),
     getPackRecords: async (id: string) => {
       const response = await requestJson<{ records: RecordSummary[] }>(`/api/packs/${encodeURIComponent(id)}/records`);
@@ -242,7 +279,75 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       }),
+    saveExportBrief: async (body: SaveExportBriefRequest) => {
+      const response = await requestJson<{ brief: ExportBrief }>("/api/export-briefs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      return response.brief;
+    },
+    listExportBriefs: async (query = {}) => {
+      const response = await requestJson<{ briefs: ExportBrief[] }>(
+        `/api/export-briefs${toQueryString({
+          limit: query.limit,
+          objectType: query.objectType,
+          objectId: query.objectId
+        })}`
+      );
+      return response.briefs;
+    },
+    getExportBrief: async (id: string) => {
+      const response = await requestJson<{ brief: ExportBrief }>(`/api/export-briefs/${encodeURIComponent(id)}`);
+      return response.brief;
+    },
+    getEvents: async (query = {}) => {
+      const response = await requestJson<LocalEventsResponse>(
+        `/api/events${toQueryString({ limit: query.limit ?? 50, packId: query.packId, recordId: query.recordId })}`
+      );
+      return response.events;
+    },
+    getMcpQueryLog: async (query = {}) => {
+      const response = await requestJson<McpQueryLogResponse>(
+        `/api/mcp/query-log${toQueryString({ limit: query.limit ?? 50, packId: query.packId, recordId: query.recordId })}`
+      );
+      return response.queries;
+    },
     getReviewItems: (filters = {}) => requestJson<ReviewItemsResponse>(`/api/review-items${toQueryString(filters)}`),
+    getReviewCandidates: (filters = {}) =>
+      requestJson<ReviewCandidatesResponse>(`/api/review-candidates${toQueryString(filters)}`),
+    getReviewCandidate: async (key: string) => {
+      const response = await requestJson<{ candidate: ReviewCandidateDetail }>(`/api/review-candidates/${encodeURIComponent(key)}`);
+      return response.candidate;
+    },
+    getReviewCandidateActivationPlan: async (key: string) => {
+      const response = await requestJson<{ plan: ReviewCandidateActivationPlan }>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation-plan`
+      );
+      return response.plan;
+    },
+    dryRunReviewCandidateActivation: async (key: string) => {
+      const response = await requestJson<{ dryRun: ReviewCandidateActivationDryRun }>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation/dry-run`,
+        { method: "POST" }
+      );
+      return response.dryRun;
+    },
+    getReviewCandidateActivations: async () => {
+      const response = await requestJson<{ activations: ReviewCandidateActivationHistoryItem[] }>(
+        "/api/review-candidate-activations"
+      );
+      return response.activations;
+    },
+    applyReviewCandidateActivation: (key: string, body: ReviewCandidateActivationApplyRequest) =>
+      requestJson<ReviewCandidateActivationApplyResponse>(
+        `/api/review-candidates/${encodeURIComponent(key)}/activation/apply`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        }
+      ),
     updateReviewItemStatus: async (id: string, status: ReviewItemStatus) => {
       const response = await requestJson<{ item: ReviewItemsResponse["items"][number] }>(
         `/api/review-items/${encodeURIComponent(id)}/status`,
@@ -271,11 +376,11 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, "");
 }
 
-function toQueryString(filters: Record<string, string | undefined>): string {
+function toQueryString(filters: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
-    if (value) {
-      params.set(key, value);
+    if (value !== undefined && value !== "") {
+      params.set(key, String(value));
     }
   }
 

@@ -1,0 +1,81 @@
+sources:
+  - id: vscode-setup-pack-editor-overview-source
+    type: manual_demo_note
+    title: VS Code Setup Pack Editor Overview Synthetic Source
+    path: ../raw/editor-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-workspace-settings-source
+    type: local_markdown
+    title: VS Code Setup Pack Workspace Settings Synthetic Source
+    path: ../raw/workspace-settings.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-extension-groups-source
+    type: official_docs_reference
+    title: VS Code Setup Pack Extension Groups Synthetic Source
+    path: ../raw/extension-groups.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-language-tooling-source
+    type: synthetic_example
+    title: VS Code Setup Pack Language Tooling Synthetic Source
+    path: ../raw/language-tooling.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-task-conventions-source
+    type: configuration_summary
+    title: VS Code Setup Pack Task Conventions Synthetic Source
+    path: ../raw/task-conventions.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-debugging-notes-source
+    type: operator_note
+    title: VS Code Setup Pack Debugging Notes Synthetic Source
+    path: ../raw/debugging-notes.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-accessibility-settings-source
+    type: review_checklist
+    title: VS Code Setup Pack Accessibility Settings Synthetic Source
+    path: ../raw/accessibility-settings.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current
+  - id: vscode-setup-pack-known-editor-issues-source
+    type: export_summary
+    title: VS Code Setup Pack Known Editor Issues Synthetic Source
+    path: ../raw/known-editor-issues.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: curated
+    status: current

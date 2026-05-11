@@ -4,10 +4,30 @@ export {
   assertImportedSkillsDirectory,
   assertSkillDirectorySeparation,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getSkillIndexDirs,
   loadConfig
 } from "./config";
 export { createSchema, openDatabase, type ContextarrDatabase } from "./db";
+export {
+  ExposureReadinessError,
+  getPackExposureReadiness,
+  type ExposureIssue,
+  type ExposureIssueSeverity,
+  type ExposureProfileReadiness,
+  type ExposureRecordReadiness,
+  type PackExposureReadiness
+} from "./exposure-readiness";
+export {
+  getPackReadinessReport,
+  READINESS_REPORT_SCHEMA_VERSION,
+  ReadinessReportError,
+  type ContextReadinessReport,
+  type ReadinessDimension,
+  type ReadinessDimensions,
+  type ReadinessIssue,
+  type ReadinessIssueSeverity
+} from "./readiness/readiness-engine";
 export {
   getAgentKit,
   getAgentKitContextPacks,

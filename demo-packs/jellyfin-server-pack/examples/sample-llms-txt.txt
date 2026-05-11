@@ -1,3 +1,0 @@
-Jellyfin Server
-
-Fake public-safe llms.txt style sample. Use the pack summary, approved records, and source titles only. Do not include private data or executable instructions.

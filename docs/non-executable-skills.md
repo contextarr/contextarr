@@ -1,18 +1,24 @@
 # Non-Executable Skills
 
-Contextarr Skills are instruction artifacts, not executable plugins. This boundary is part of the product definition.
+Contextarr Native Skills are instruction artifacts, not executable plugins. This boundary is part of the product definition.
 
 ## Core Rule
 
 Contextarr prepares Agent Kits. It does not run them.
 
-Skills may describe how an AI assistant should work, but they must not give Contextarr the ability to perform that work.
+Native Skills may describe how an AI assistant should work, but they must not give Contextarr the ability to perform that work.
 
 Skills should not be used as bootloaders whose only purpose is explaining how to use Agent Kits. Every Agent Kit must carry its own usage instructions, task goal, output contract, and safety boundary.
 
-## Forbidden In Skills
+## External Skill Artifacts
 
-Skills must not contain or request:
+External Skills from other ecosystems may contain scripts, references, assets, templates, or other resources. Contextarr should eventually preserve those original folders as untrusted artifacts with safety and compatibility reports, then create adapted data-only views when useful.
+
+That future archive does not change the core rule: Contextarr never executes Skill scripts, installs Skill dependencies, posts Skill webhooks, calls Skill tools, or treats Skill-defined actions as Contextarr actions.
+
+## Forbidden In Native Skills
+
+Contextarr Native Skills must not contain or request:
 
 - Executable scripts.
 - Shell commands.

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -24,6 +26,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const demoPacksDir = path.join(repoRoot, "demo-packs");
 const demoSkillsDir = path.join(repoRoot, "demo-skills");
 const demoAgentKitsDir = path.join(repoRoot, "demo-agent-kits");
+const packFixturesDir = path.join(repoRoot, "packages/pack-validator/test/fixtures");
+const tempDirs: string[] = [];
 
 describe("Contextarr MCP tools", () => {
   let context: ContextarrMcpContext | undefined;
@@ -31,6 +35,9 @@ describe("Contextarr MCP tools", () => {
   afterEach(() => {
     context?.db.close();
     context = undefined;
+    for (const dir of tempDirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("loads the configured export preview character limit", () => {
@@ -44,10 +51,10 @@ describe("Contextarr MCP tools", () => {
 
   it("lists all demo packs", async () => {
     context = createTestContext();
-    const result = await listPacksTool(context, { limit: 10 });
+    const result = await listPacksTool(context, { limit: 20 });
 
     expect(result.ok).toBe(true);
-    expect(result.count).toBe(5);
+    expect(result.count).toBe(15);
     expect(result.packs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -102,32 +109,78 @@ describe("Contextarr MCP tools", () => {
     );
   });
 
-  it("omits secret and private record bodies unless private access is enabled", async () => {
+  it("omits private, sensitive, secret, and never_export records from MCP unless private access is enabled", async () => {
     context = createTestContext();
     insertSyntheticRecord(context.db, {
       id: "ai-workstation.secret-note",
       title: "Secret Note",
       privacy: "secret",
-      body: "do not expose this secret fixture body"
+      body: "mcptrustsecretalphaone"
     });
     insertSyntheticRecord(context.db, {
       id: "ai-workstation.private-note",
       title: "Private Note",
       privacy: "private",
-      body: "private fixture body"
+      body: "mcptrustprivatealphaone"
+    });
+    insertSyntheticRecord(context.db, {
+      id: "ai-workstation.sensitive-note",
+      title: "Sensitive Note",
+      privacy: "sensitive",
+      body: "mcptrustsensitivealphaone"
+    });
+    insertSyntheticRecord(context.db, {
+      id: "ai-workstation.never-export-note",
+      title: "Never Export Note",
+      privacy: "public_safe",
+      tags: ["synthetic", "never_export"],
+      body: "mcptrustneverexportalphaone"
     });
 
     const secretResult = await getRecordTool(context, { recordId: "ai-workstation.secret-note" });
     const privateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
+    const sensitiveResult = await getRecordTool(context, { recordId: "ai-workstation.sensitive-note" });
+    const neverExportResult = await getRecordTool(context, { recordId: "ai-workstation.never-export-note" });
+    const secretQuery = await queryPackContextTool(context, { query: "mcptrustsecretalphaone", limit: 10 });
+    const privateQuery = await queryPackContextTool(context, { query: "mcptrustprivatealphaone", limit: 10 });
+    const sensitiveQuery = await queryPackContextTool(context, { query: "mcptrustsensitivealphaone", limit: 10 });
+    const neverExportQuery = await queryPackContextTool(context, { query: "mcptrustneverexportalphaone", limit: 10 });
 
-    expect(secretResult.record).toEqual(expect.objectContaining({ bodyIncluded: false, body: null }));
-    expect(privateResult.record).toEqual(expect.objectContaining({ bodyIncluded: false, body: null }));
+    expect(secretResult).toEqual(expect.objectContaining({ ok: false, error: "record_secret" }));
+    expect(privateResult).toEqual(expect.objectContaining({ ok: false, error: "private_access_disabled" }));
+    expect(sensitiveResult).toEqual(expect.objectContaining({ ok: false, error: "private_access_disabled" }));
+    expect(neverExportResult).toEqual(expect.objectContaining({ ok: false, error: "record_excluded" }));
+    expect(secretQuery.results).toEqual([]);
+    expect(privateQuery.results).toEqual([]);
+    expect(sensitiveQuery.results).toEqual([]);
+    expect(neverExportQuery.results).toEqual([]);
+    expect(secretQuery.warnings).toEqual(expect.arrayContaining(["Secret records were omitted."]));
+    expect(privateQuery.warnings).toEqual(expect.arrayContaining(["Non-public records were omitted because private MCP access is disabled."]));
+    expect(sensitiveQuery.warnings).toEqual(expect.arrayContaining(["Non-public records were omitted because private MCP access is disabled."]));
+    expect(neverExportQuery.warnings).toEqual(expect.arrayContaining(["Records with MCP exclusion tags were omitted."]));
 
     context.config.allowPrivate = true;
     const allowedPrivateResult = await getRecordTool(context, { recordId: "ai-workstation.private-note" });
+    const allowedPrivateQuery = await queryPackContextTool(context, { query: "mcptrustprivatealphaone", limit: 10 });
+    const allowedSensitiveResult = await getRecordTool(context, { recordId: "ai-workstation.sensitive-note" });
+    const allowedSensitiveQuery = await queryPackContextTool(context, { query: "mcptrustsensitivealphaone", limit: 10 });
+    const stillSecretResult = await getRecordTool(context, { recordId: "ai-workstation.secret-note" });
+    const stillNeverExportResult = await getRecordTool(context, { recordId: "ai-workstation.never-export-note" });
+
     expect(allowedPrivateResult.record).toEqual(
-      expect.objectContaining({ bodyIncluded: true, body: "private fixture body" })
+      expect.objectContaining({ bodyIncluded: true, body: "mcptrustprivatealphaone" })
     );
+    expect(allowedPrivateQuery.results).toEqual([
+      expect.objectContaining({ id: "ai-workstation.private-note", snippet: expect.stringContaining("mcptrustprivatealphaone") })
+    ]);
+    expect(allowedSensitiveResult.record).toEqual(
+      expect.objectContaining({ bodyIncluded: true, body: "mcptrustsensitivealphaone" })
+    );
+    expect(allowedSensitiveQuery.results).toEqual([
+      expect.objectContaining({ id: "ai-workstation.sensitive-note", snippet: expect.stringContaining("mcptrustsensitivealphaone") })
+    ]);
+    expect(stillSecretResult).toEqual(expect.objectContaining({ ok: false, error: "record_secret" }));
+    expect(stillNeverExportResult).toEqual(expect.objectContaining({ ok: false, error: "record_excluded" }));
   });
 
   it("omits non-approved records from MCP query and detail tools", async () => {
@@ -152,6 +205,48 @@ describe("Contextarr MCP tools", () => {
         error: "record_not_approved"
       })
     );
+  });
+
+  it("keeps Draft Intake, composed, and restored quarantine candidate packs out of MCP exposure", async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-mcp-candidates-"));
+    tempDirs.push(tempRoot);
+    const draftRoot = path.join(tempRoot, "draft-packs");
+    const composedRoot = path.join(tempRoot, "composed-packs");
+    const quarantineRoot = path.join(tempRoot, "restore-quarantine");
+    fs.mkdirSync(draftRoot, { recursive: true });
+    fs.mkdirSync(composedRoot, { recursive: true });
+    fs.mkdirSync(quarantineRoot, { recursive: true });
+
+    const draft = createCandidatePack(draftRoot, "draft-intake-pack", "draft-intake-pack", "draftintakemcptokenalphaone");
+    const composed = createCandidatePack(composedRoot, "composed-draft-pack", "composed-draft-pack", "composeddraftmcptokenalphaone");
+    const restored = createCandidatePack(
+      quarantineRoot,
+      "restored-quarantine-pack",
+      "restored-quarantine-pack",
+      "restoredquarantinemcptokenalphaone"
+    );
+
+    context = createTestContext({
+      draftPacksDir: draftRoot,
+      composedPacksDir: composedRoot,
+      reviewCandidateDirs: [quarantineRoot]
+    });
+
+    for (const candidate of [draft, composed, restored]) {
+      const query = await queryPackContextTool(context, { query: candidate.token, limit: 10 });
+      const summary = await getPackSummaryTool(context, { packId: candidate.packId });
+      const preview = await buildExportPreviewTool(context, {
+        packId: candidate.packId,
+        profileId: "codex-context"
+      });
+
+      expect(query).toEqual(expect.objectContaining({ ok: true, count: 0, results: [] }));
+      expect(summary).toEqual(expect.objectContaining({ ok: false, error: "not_found" }));
+      expect(preview).toEqual(expect.objectContaining({ ok: false, error: "not_found" }));
+      expect(JSON.stringify(query.results)).not.toContain(candidate.token);
+      expect(JSON.stringify(summary)).not.toContain(candidate.token);
+      expect(JSON.stringify(preview)).not.toContain(candidate.token);
+    }
   });
 
   it("lists export profiles and builds export previews", async () => {
@@ -289,7 +384,7 @@ describe("Contextarr MCP tools", () => {
     expect(String(result.message)).toContain("agentKitId");
   });
 
-  it("omits private and secret record and Skill document snippets from Agent Kit context by default", async () => {
+  it("omits private, secret, and never_export records and unsafe Skill document snippets from Agent Kit context by default", async () => {
     context = createTestContext();
     insertSyntheticRecord(context.db, {
       id: "internal-support.private-mcp-note",
@@ -304,6 +399,14 @@ describe("Contextarr MCP tools", () => {
       title: "Secret MCP Note",
       privacy: "secret",
       body: "phase25secretrecordtoken"
+    });
+    insertSyntheticRecord(context.db, {
+      id: "internal-support.never-export-mcp-note",
+      packId: "internal-support-kb-pack",
+      title: "Never Export MCP Note",
+      privacy: "public_safe",
+      tags: ["synthetic", "never_export"],
+      body: "phase25neverexportrecordtoken"
     });
     insertSyntheticSkillDocument(context.db, {
       id: "support-ticket-writing.private-mcp-instruction",
@@ -328,6 +431,10 @@ describe("Contextarr MCP tools", () => {
       agentKitId: "support-ticket-writing-kit",
       query: "phase25secretrecordtoken"
     });
+    const neverExportRecord = await queryAgentKitContextTool(context, {
+      agentKitId: "support-ticket-writing-kit",
+      query: "phase25neverexportrecordtoken"
+    });
     const privateSkill = await queryAgentKitContextTool(context, {
       agentKitId: "support-ticket-writing-kit",
       query: "phase25privateskilltoken"
@@ -337,14 +444,14 @@ describe("Contextarr MCP tools", () => {
       query: "phase25secretskilltoken"
     });
 
-    expect(privateRecord.results).toEqual([
-      expect.objectContaining({ id: "internal-support.private-mcp-note", snippet: null })
-    ]);
+    expect(privateRecord.results).toEqual([]);
     expect(privateRecord.warnings).toEqual(
-      expect.arrayContaining(["Non-public record snippets were omitted because private MCP access is disabled."])
+      expect.arrayContaining(["Non-public records were omitted because private MCP access is disabled."])
     );
     expect(secretRecord.results).toEqual([]);
     expect(secretRecord.warnings).toEqual(expect.arrayContaining(["Secret records were omitted."]));
+    expect(neverExportRecord.results).toEqual([]);
+    expect(neverExportRecord.warnings).toEqual(expect.arrayContaining(["Records with MCP exclusion tags were omitted."]));
     expect(privateSkill.results).toEqual([]);
     expect(privateSkill.warnings).toEqual(
       expect.arrayContaining(["Non-public Skill documents were omitted because private MCP access is disabled."])
@@ -352,6 +459,7 @@ describe("Contextarr MCP tools", () => {
     expect(secretSkill.results).toEqual([]);
     expect(secretSkill.warnings).toEqual(expect.arrayContaining(["Secret Skill documents were omitted."]));
     expect(JSON.stringify(privateRecord.results)).not.toContain("phase25privaterecordtoken");
+    expect(JSON.stringify(neverExportRecord.results)).not.toContain("phase25neverexportrecordtoken");
     expect(JSON.stringify(privateSkill.results)).not.toContain("phase25privateskilltoken");
   });
 
@@ -481,6 +589,7 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
     packsDir: demoPacksDir,
     draftPacksDir: path.join(repoRoot, "draft-packs"),
     composedPacksDir: path.join(repoRoot, "composed-packs"),
+    reviewCandidateDirs: [],
     skillsDir: demoSkillsDir,
     importedSkillsDir: path.join(repoRoot, "imported-skills"),
     agentKitsDir: demoAgentKitsDir,
@@ -499,16 +608,50 @@ function createTestContext(overrides: Partial<ContextarrMcpConfig> = {}): Contex
   return { config, db };
 }
 
+function createCandidatePack(root: string, dirName: string, packId: string, token: string): { packId: string; token: string } {
+  const packPath = path.join(root, dirName);
+  fs.cpSync(path.join(packFixturesDir, "valid-minimal-pack"), packPath, { recursive: true });
+
+  const manifestPath = path.join(packPath, "contextarr-pack.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+  manifest.id = packId;
+  manifest.name = packId
+    .split("-")
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+  const recordPath = path.join(packPath, "records", "overview.md");
+  fs.writeFileSync(
+    recordPath,
+    fs
+      .readFileSync(recordPath, "utf8")
+      .replace("id: valid.overview", `id: ${packId}.overview`)
+      .replace("pack: valid-minimal-pack", `pack: ${packId}`)
+      .replace("This fake record is safe and source-backed.", token),
+    "utf8"
+  );
+
+  const exportPath = path.join(packPath, "exports", "codex.yaml");
+  fs.writeFileSync(
+    exportPath,
+    fs.readFileSync(exportPath, "utf8").replace("valid.overview", `${packId}.overview`),
+    "utf8"
+  );
+
+  return { packId, token };
+}
+
 function insertSyntheticRecord(
   db: ContextarrDatabase,
-  record: { id: string; title: string; privacy: string; body: string; packId?: string; reviewStatus?: string }
+  record: { id: string; title: string; privacy: string; body: string; packId?: string; reviewStatus?: string; tags?: string[] }
 ): void {
   const metadata = {
     id: record.id,
     title: record.title,
     type: "note",
     pack: record.packId ?? "ai-workstation-pack",
-    tags: ["synthetic"],
+    tags: record.tags ?? ["synthetic"],
     confidence: "high",
     source_status: "manual",
     freshness: "current",

@@ -4,7 +4,7 @@ supported_targets:
   - codex
 required_context_packs:
   - claude-code-project-pack
-  - jellyfin-server-pack
+  - jellyfin-media-server-pack
 required_skills:
   - security-review-skill
   - homelab-troubleshooting-skill
@@ -21,11 +21,11 @@ pairings:
     skill: homelab-troubleshooting-skill
     target: codex
     status: supported
-  - context_pack: jellyfin-server-pack
+  - context_pack: jellyfin-media-server-pack
     skill: security-review-skill
     target: codex
     status: supported
-  - context_pack: jellyfin-server-pack
+  - context_pack: jellyfin-media-server-pack
     skill: homelab-troubleshooting-skill
     target: codex
     status: supported

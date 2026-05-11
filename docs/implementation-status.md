@@ -1,90 +1,99 @@
 # Implementation Status
 
-This document is the shipped-versus-planned source of truth for Contextarr. Roadmaps, PRDs, release notes, and design docs can describe targets; this file should say what the current mainline actually supports.
+This file is the shipped-versus-planned source of truth for implementation claims. Roadmaps and PRD additions define target behavior; this status file records what is present in this checkout. Use [master-plan.md](master-plan.md) for build sequencing and idea intake.
 
-## Status Labels
+## Core Working Now
 
-| Label | Meaning |
-|---|---|
-| Current | Implemented in the repository and covered by an available verification path. |
-| Partial | Some behavior exists, but important target requirements or gates are still missing. |
-| Planned | Documented as intended behavior, but not implemented as a runnable surface. |
-| Future | Later product direction after the current core proves useful. |
-| Rejected | Explicitly out of scope unless a future task changes the boundary. |
+- Context Pack schema, validation, deterministic validation reports, and local scanner reports.
+- Fifteen public-safe demo Context Packs, including 12 curated starter packs.
+- Local SQLite-derived index for packs, records, sources, exports, health, review items, Skills, and Agent Kits.
+- Local API for packs, records, search, health, exposure readiness, per-pack Context Readiness, exports, collectors, composition, Draft Intake candidates, proof-gated activation with local history, backup, and restore surfaces.
+- Pack Library UI with brand-aware cards and starter/local/imported grouping.
+- Pack detail with Exposure Readiness, record detail, Pack Health, Review Queue with Draft Intake, Export Center, and Composer views.
+- Profile-driven Context Pack exports for ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
+- CLI commands for Context Pack validation, static rendering, export generation, local draft imports, scanner reports, backup, quarantine restore, local index rescan, list, inspect, health, readiness, review, review-candidates, brief, and query.
+- Explicit CLI `--agent` mode for read-oriented commands only: validate, scan, list, inspect, health, readiness, review, review-candidates, brief, and query.
+- Read-only MCP surfaces where implemented by the local server package.
+- Backup and restore tooling for local Context Packs, with validation-before-activation and quarantine-only restore.
+- Context Pack collectors and Composer save-as-draft-pack flows that write private unreviewed drafts without activating them.
+- Draft Intake inventory, activation planning, dry-run proof, explicit proof-gated local activation, and sanitized local activation history for draft, composed, and configured quarantine Context Pack candidates. It returns metadata only before activation and does not export, publish, perform network access, or expose candidates through MCP.
+- `GET /api/packs/:id/readiness` as a read-only report composed from existing Pack Health, Exposure Readiness, review items, governance-file presence, redaction, export, and MCP metadata. It does not replace Pack Health or Exposure Readiness, write events, mutate pack files, generate exports, execute content, upload telemetry, or widen MCP access.
+- `GET /api/events` and `GET /api/mcp/query-log` as bounded metadata-only Local Observability reads. They are local SQLite views, not telemetry, and do not expose raw query text, returned context bodies, export bodies, raw private source dumps, secrets, or absolute local paths.
+- `POST /api/export-briefs`, `GET /api/export-briefs`, and `GET /api/export-briefs/:id` as explicit local Saved Export Brief persistence for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots. Preview routes remain stateless, and saved briefs are not exposed through MCP.
 
-## Agent Rule
+## Current CLI Surface
 
-Before claiming a command, API route, export target, safety gate, or product surface is shipped, check this file, `package.json`, and the relevant implementation files. If this file conflicts with roadmap language, treat the roadmap as planning and this file as current shipped status.
+These commands are implemented in the current checkout and covered by CLI tests unless noted otherwise:
 
-## Current Product Surfaces
-
-| Capability | Status | Evidence path | Notes |
-|---|---|---|---|
-| Context Packs | Current | `packages/schema/src/index.ts`; `packages/pack-validator/src/index.ts`; `demo-packs/` | Core object. Files are source of truth; SQLite is derived. |
-| Local CLI | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Current commands include validation, render, export, import, Skill import, Agent Kit validation/export, scan, backup/restore, and read-only index health/review/brief/query helpers. |
-| Local Fastify API | Current | `apps/server/src/api.ts`; `apps/server/src/main.ts` | Serves derived local state, review status, preview, collector, Composer, Skill, and Agent Kit surfaces. Non-loopback binds must be token-protected. |
-| React/Vite dashboard | Current | `apps/web/src/App.tsx`; `apps/web/src/api.ts` | Local power-user dashboard for pack library, records, health, review, exports, Composer, collectors, Skills, and Agent Kits. |
-| Docker Compose preview | Current | `Dockerfile`; `docker-compose.yml`; `tools/launch/verify-docker.mjs` | Local preview only. Serves the built web app and API from one Fastify origin with demo objects mounted locally. |
-| Composer preview and draft-pack save | Current | `packages/export-profiles/src/index.ts`; `apps/server/src/composed-pack-writer.ts`; `apps/web/src/composer.ts` | Builds temporary previews and can save private unreviewed draft Context Packs under the configured local output root. |
-| Read-only stdio MCP | Current | `apps/mcp/src/server.ts`; `apps/mcp/src/tools.ts` | Optional local MCP for read-only Context Pack, Skill, Agent Kit, query, and preview tools. No mutating MCP tools. |
-| Non-executable Skills | Current | `packages/skill-validator/src/index.ts`; `demo-skills/`; `apps/server/src/indexer.ts` | Implemented advanced-preview surface in this checkout but frozen behind the v1 bridge boundary for new expansion decisions. |
-| Non-executable Agent Kits | Current | `packages/agent-kit-validator/src/index.ts`; `demo-agent-kits/`; `agent-kit-templates/` | Implemented advanced-preview surface for local data-only objects and templates. Contextarr does not run Agent Kits. |
-| Backup/restore v0 | Current | `packages/backups/src/index.ts`; `tools/launch/verify-backups.mjs` | Local Context Pack backups and quarantine-only restore flows. |
-| Security scanner foundation | Current | `packages/security-scanner/src/index.ts`; `tools/launch/verify-scanner.mjs` | Deterministic local text scanner and `contextarr scan`; not a hosted registry scanner. |
-| Public Astro site | Current | `apps/site/`; `apps/site/package.json` | Static public-preview site source is part of current mainline. Root release gates do not yet include site check/build. |
-| G3/G4 benchmark package from PR #2 | Planned | none on `origin/main` | `packages/context-quality/`, `demo-evals/`, and `quality:verify` are not part of current mainline. |
-| Public registry or marketplace | Rejected | `docs/non-goals.md`; `docs/marketplace-non-goals.md` | Planning docs may describe trust foundations, but no public registry or marketplace runtime is shipped. |
-
-## CLI Status
-
-| Capability | Status | Evidence path | Notes |
-|---|---|---|---|
-| `contextarr validate` | Current | `apps/cli/src/index.ts` | Unified validation for current supported object types. |
-| `contextarr render` | Current | `apps/cli/src/index.ts`; `packages/renderer/src/index.ts` | Derived static rendering only. |
-| `contextarr export` | Current | `apps/cli/src/index.ts`; `packages/export-profiles/src/index.ts` | Profile-driven exports for Context Packs, Skills, and Agent Kits where supported by profiles. |
-| `contextarr import` / `contextarr import-skill` | Current | `apps/cli/src/index.ts`; `packages/importers/src/index.ts` | Writes draft local objects only under caller-selected output roots. |
-| `contextarr scan` | Current | `apps/cli/src/index.ts`; `packages/security-scanner/src/index.ts` | Local deterministic scanner. |
-| `contextarr backup` / `contextarr restore` | Current | `apps/cli/src/index.ts`; `packages/backups/src/index.ts` | Restore writes quarantine output, not automatic activation. |
-| `contextarr rescan` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Rebuilds the derived local SQLite index from configured folders without requiring the API server or MCP. |
-| `contextarr list` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Lists indexed packs, Skills, and Agent Kits with deterministic text or JSON output. |
-| `contextarr inspect` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. |
-| `contextarr health` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Summarizes local index health or reports one pack, Skill, or Agent Kit health without requiring the API server or MCP. |
-| `contextarr review` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Lists local review items with deterministic filters, limits, text, and JSON output. |
-| `contextarr brief` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Builds a compact local index or object brief for packs, Skills, and Agent Kits without requiring the API server or MCP. |
-| `contextarr query` | Current | `apps/cli/src/index.ts`; `apps/cli/src/index.test.ts` | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
-| CLI commands that execute pack, Skill, or Agent Kit content | Rejected | `README.md`; `docs/security-model.md` | Contextarr prepares data; it does not run agents or execute content. |
-
-## Safety And Exposure Gates
-
-| Capability | Status | Evidence path | Notes |
-|---|---|---|---|
-| Pack export approval/privacy defaults | Current | `packages/export-profiles/src/index.ts`; `packages/export-profiles/src/index.test.ts` | Pack exports exclude unapproved and non-public records from trusted redacted/public-safe paths. |
-| Composed export approval/privacy defaults | Current | `packages/export-profiles/src/index.ts`; `packages/export-profiles/src/index.test.ts` | Composed exports omit unapproved records and apply privacy/tag gates before rendering. |
-| Skill and Agent Kit export safety | Current | `packages/export-profiles/src/index.ts`; `packages/export-profiles/src/index.test.ts` | Data-only exports; secret and blocked-tag content must stay out of trusted outputs. |
-| MCP approved-only visibility | Partial | `apps/mcp/src/tools.ts`; `apps/mcp/src/tools.test.ts` | Pack record paths are guarded; current mainline also hardens newer Skill and Agent Kit lanes. |
-| MCP record/result limits | Partial | `apps/mcp/src/config.ts`; `apps/mcp/src/tools.ts` | Record body limits and export-preview caps are current. |
-| Non-loopback API token guard | Current | `apps/server/src/config.ts`; `apps/server/src/config.test.ts` | Non-loopback API binding fails closed unless `CONTEXTARR_API_TOKEN` is configured. |
-| Redacted API health | Current | `apps/server/src/api.ts`; `apps/server/src/api.test.ts` | Health is unauthenticated, path-redacted, and reports aggregate local status only. |
-| Core validator policy checks | Current | `packages/pack-validator/src/index.ts`; `packages/pack-validator/src/index.test.ts` | Enforces the declared small core set when present in `rules/validation.yaml` and rejects unknown check names. |
-| Hidden network calls and telemetry | Rejected | `docs/security-model.md`; package manifests | Not part of current product scope. |
-
-## Verification
-
-| Gate | Status | Evidence path | Notes |
-|---|---|---|---|
-| `pnpm typecheck` | Current | `package.json`; `tsconfig.json` | Main TypeScript gate. |
-| `pnpm test` | Current | `package.json`; `vitest.config.ts` | Main Vitest gate. |
-| `pnpm docs:verify` | Current | `tools/launch/verify-docs.mjs` | Launch and safety wording guard. |
-| `pnpm v1-core:verify` | Current | `package.json`; `tools/launch/verify-v1-core.mjs` | Main local v1 core gate. |
-| `pnpm security:verify` | Current | `package.json`; `tools/launch/verify-security.mjs` | Current security gate over scanner, API, MCP, and fixture checks. |
-| `pnpm release:verify` | Current | `package.json`; `tools/launch/verify-release-docs.mjs` | Full local release-readiness gate; includes Docker and backup checks. |
-| GitHub Actions CI | Current | `.github/workflows/ci.yml` | Reintroduced as a smaller mainline gate for current scripts, not PR #2's retired site/quality lanes. |
-
-## Planned Or Future Work
-
-| Capability | Status | Notes |
+| Command | Status | Boundary |
 |---|---|---|
-| Public registry trust foundation implementation | Planned | Docs exist; registry runtime, remote install, signing implementation, and marketplace behavior remain out of scope. |
-| Hosted sync or telemetry | Rejected | Not part of Contextarr v1 core. |
-| Executable packs, executable Skills, Agent Kit runtime | Rejected | Contextarr remains data-only and local-first. |
-| Benchmark fixtures and context-quality package from PR #2 | Future | Useful historical work from commit `165f641`, but not part of current mainline. |
+| `contextarr validate` | Current | Unified validation for supported local object types. |
+| `contextarr render` | Current | Derived static rendering only. |
+| `contextarr export` | Current | Profile-driven exports for Context Packs, Skills, and Agent Kits where profiles support them. |
+| `contextarr import` / `contextarr import-skill` | Current | Writes draft local objects only under caller-selected output roots. |
+| `contextarr scan` | Current | Deterministic local scanner; not a hosted registry scanner. |
+| `contextarr backup` / `contextarr restore` | Current | Restore writes quarantine output, not automatic activation. |
+| `contextarr rescan` | Current | Rebuilds the derived local SQLite index without requiring the API server or MCP. |
+| `contextarr list` | Current | Lists indexed packs, Skills, and Agent Kits with deterministic text or JSON output. |
+| `contextarr inspect` | Current | Inspects one indexed pack, record, Skill, or Agent Kit with deterministic text or JSON output. `--readiness` adds read-only Exposure Readiness for Context Packs only. |
+| `contextarr health` | Current | Summarizes local index health or reports one object health without requiring the API server or MCP. |
+| `contextarr readiness` | Current | Summarizes read-only Context Readiness for one indexed Context Pack. Supports text, `--json`, and automation-safe `--agent` output without recalculating readiness, writing events, generating exports, or widening MCP access. |
+| `contextarr review` | Current | Lists local review items with deterministic filters, limits, text, and JSON output. |
+| `contextarr review-candidates` | Current | Lists untrusted draft/composed/quarantine Context Pack candidates with path-redacted metadata only. |
+| `contextarr brief` | Current | Builds compact local index or object briefs for packs, Skills, and Agent Kits. |
+| `contextarr query` | Current | Searches the derived local index with type and limit filters plus deterministic text or JSON output. |
+| Read-oriented `--agent` CLI mode | Current | Available on validate, scan, list, inspect, health, readiness, review, review-candidates, brief, and query. It emits deterministic JSON with no color/progress and preserves existing sanitization, redaction, and limits. |
+| Write-heavy `--agent` CLI mode | Rejected | `import`, `import-skill`, `render`, `export`, `backup`, `restore`, and `rescan` reject `--agent` instead of silently writing. |
+| Commands that execute pack, Skill, or Agent Kit content | Rejected | Contextarr prepares data; it does not run agents or execute content. |
+
+## Advanced Preview, Data-Only, Frozen
+
+- Non-executable Skills as data-only instruction artifacts.
+- Non-executable Agent Kits as data-only compositions of Context Packs and Skills.
+- Skills and Agent Kits are data-only and non-executable.
+- Skill and Agent Kit validation, demo fixtures, SQLite/API indexing, search, health/review items, read-only UI views, export previews, and read-only MCP tools where implemented.
+- Local Skill importers gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
+- Agent Kit templates that create unreviewed local draft Agent Kits only.
+
+These surfaces are present, but they are not the public headline for the first release. Further Skills or Agent Kit expansion remains frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
+
+Contextarr prepares Agent Kits. It does not run them.
+
+## Planned Or Guarded
+
+- Tagged GitHub release.
+- npm package publishing.
+- Public registry behavior.
+- Marketplace behavior.
+- Remote installation or auto-activation.
+- Creator accounts.
+- Payments.
+- Live SaaS connectors.
+- Telemetry.
+- Hosted cloud sync.
+- Signing implementation.
+- Agent runtime behavior.
+- Executable packs, executable Skills, or executable Agent Kits.
+- Benchmark fixtures and context-quality package from PR #2.
+- Context Readiness list, recalculation, persisted evidence event writers, governance parsing/enforcement, token-budget reports, and export history.
+- Derived Index Adapter export profiles for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. These remain docs/spec-only future work, with no current runtime adapter promises.
+- Built-in vector database, built-in graph database, code graph engine, managed RAG app, hidden embedding calls, always-on external indexer, and external database sync service are not implemented and are not part of the current product.
+
+## Starter Pack Status
+
+Current starter packs are curated local examples, not marketplace listings. The starter set is:
+
+1. OpenAI Prompt Engineering Pack
+2. Claude Code Project Pack
+3. Google Workspace Pack
+4. AWS Infrastructure Pack
+5. Jellyfin Media Server Pack
+6. Docker Containers Pack
+7. UniFi Network Pack
+8. VS Code Setup Pack
+9. GitHub Workflow Pack
+10. Home Assistant Pack
+11. Tailscale VPN Pack
+12. Obsidian Vault Pack
+
+The repository also keeps non-starter demo packs for fixture coverage. Third-party marks are identifiers only and do not imply endorsement, partnership, official status, or ownership of pack content.

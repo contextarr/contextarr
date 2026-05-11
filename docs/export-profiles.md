@@ -20,6 +20,8 @@ Pack exports select records from a validated local pack, preserve configured ord
 
 Composer uses the same export engine to build temporary custom exports across selected records from one or more packs.
 
+The web Export Center surfaces the same contract before download: the selected profile privacy mode, Exposure Readiness include/exclude counts where available, and preview artifact included/excluded record counts after generation. Draft Intake, composed, restored quarantine, private, secret, and `never_export` content remains excluded by default.
+
 ## CLI
 
 ```bash

@@ -674,6 +674,76 @@ describe("export profile engine", () => {
     );
   });
 
+  it("keeps private, sensitive, secret, and never_export records out of default Context Pack export previews", () => {
+    const packPath = copyFixture();
+    const baseRecord = fs.readFileSync(path.join(packPath, "records", "overview.md"), "utf8");
+    const cases = [
+      {
+        id: "valid.private-default-preview",
+        title: "Private Default Preview",
+        filename: "private-default-preview.md",
+        body: "PRIVATE DEFAULT EXPORT TOKEN",
+        transform: (record: string) => record.replace("privacy: public_safe", "privacy: private")
+      },
+      {
+        id: "valid.secret-default-preview",
+        title: "Secret Default Preview",
+        filename: "secret-default-preview.md",
+        body: "SECRET DEFAULT EXPORT TOKEN",
+        transform: (record: string) => record.replace("privacy: public_safe", "privacy: secret")
+      },
+      {
+        id: "valid.sensitive-default-preview",
+        title: "Sensitive Default Preview",
+        filename: "sensitive-default-preview.md",
+        body: "SENSITIVE DEFAULT EXPORT TOKEN",
+        transform: (record: string) => record.replace("privacy: public_safe", "privacy: sensitive")
+      },
+      {
+        id: "valid.never-export-default-preview",
+        title: "Never Export Default Preview",
+        filename: "never-export-default-preview.md",
+        body: "NEVER EXPORT DEFAULT TOKEN",
+        transform: (record: string) => record.replace("tags:\n  - test", "tags:\n  - test\n  - never_export")
+      }
+    ];
+
+    for (const item of cases) {
+      fs.writeFileSync(
+        path.join(packPath, "records", item.filename),
+        `${item
+          .transform(baseRecord)
+          .replace("id: valid.overview", `id: ${item.id}`)
+          .replace("title: Valid Overview", `title: ${item.title}`)
+          .trim()}\n\n${item.body}\n`,
+        "utf8"
+      );
+    }
+
+    fs.writeFileSync(
+      path.join(packPath, "exports", "codex.yaml"),
+      fs
+        .readFileSync(path.join(packPath, "exports", "codex.yaml"), "utf8")
+        .replace(
+          "    - valid.overview",
+          ["    - valid.overview", ...cases.map((item) => `    - ${item.id}`)].join("\n")
+        ),
+      "utf8"
+    );
+
+    const artifact = buildPackExport({ packPath, profileId: "codex-context" });
+    const serialized = JSON.stringify(artifact);
+
+    expect(artifact.includedRecords.map((record) => record.id)).toEqual(["valid.overview"]);
+    for (const item of cases) {
+      expect(artifact.excludedRecords).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: item.id })])
+      );
+      expect(serialized).not.toContain(item.title);
+      expect(serialized).not.toContain(item.body);
+    }
+  });
+
   it("excludes non-approved Context Pack records from pack exports by default", () => {
     const packPath = copyFixture();
     const draftPath = path.join(packPath, "records", "draft.md");

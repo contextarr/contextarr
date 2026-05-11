@@ -18,6 +18,7 @@
     "@contextarr/importers": "workspace:*",
     "@contextarr/pack-validator": "workspace:*",
     "@contextarr/renderer": "workspace:*",
+    "@contextarr/review-candidates": "workspace:*",
     "@contextarr/security-scanner": "workspace:*",
     "@contextarr/server": "workspace:*",
     "@contextarr/skill-validator": "workspace:*",

@@ -1,0 +1,39 @@
+{
+  "id": "tailscale-vpn-pack",
+  "name": "Tailscale VPN Pack",
+  "version": "1.0.0",
+  "description": "Public-safe starter context for a fictional Tailscale tailnet.",
+  "type": "networking_security",
+  "visibility": "local",
+  "trustLevel": "verified",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-09T00:00:00Z",
+  "updatedAt": "2026-05-09T00:00:00Z",
+  "lastReviewedAt": "2026-05-09T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "starterPack": true,
+  "starterCategory": "networking_security",
+  "starterSortOrder": 11,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "brandId": "tailscale",
+    "accentColor": "#9CA3AF",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

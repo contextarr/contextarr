@@ -1,6 +1,9 @@
 import type {
   AgentKitSummary,
   PackSummary,
+  ReviewCandidateSourceKind,
+  ReviewCandidateStatus,
+  ReviewCandidateSummary,
   ReviewItem,
   ReviewItemSeverity,
   ReviewItemStatus,
@@ -15,6 +18,12 @@ export interface ReviewFilters {
   status: ReviewItemStatus | "all";
   severity: ReviewItemSeverity | "all";
   type: ReviewItemType | "all";
+}
+
+export interface ReviewCandidateFilters {
+  sourceKind: ReviewCandidateSourceKind | "all";
+  status: ReviewCandidateStatus | "all";
+  query: string;
 }
 
 export function filterReviewItems(items: ReviewItem[], filters: ReviewFilters): ReviewItem[] {
@@ -56,6 +65,43 @@ export function summarizeReviewItems(items: ReviewItem[]): {
     errors: items.filter((item) => item.severity === "error").length,
     warnings: items.filter((item) => item.severity === "warning").length,
     infos: items.filter((item) => item.severity === "info").length
+  };
+}
+
+export function filterReviewCandidates(candidates: ReviewCandidateSummary[], filters: ReviewCandidateFilters): ReviewCandidateSummary[] {
+  const query = filters.query.trim().toLowerCase();
+  return candidates.filter((candidate) => {
+    if (filters.sourceKind !== "all" && candidate.sourceKind !== filters.sourceKind) {
+      return false;
+    }
+
+    if (filters.status !== "all" && candidate.status !== filters.status) {
+      return false;
+    }
+
+    if (query) {
+      return [candidate.packId, candidate.name, candidate.sourceLabel, candidate.pathLabel]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+    }
+
+    return true;
+  });
+}
+
+export function summarizeReviewCandidates(candidates: ReviewCandidateSummary[]): {
+  total: number;
+  ready: number;
+  invalid: number;
+  blocked: number;
+  duplicates: number;
+} {
+  return {
+    total: candidates.length,
+    ready: candidates.filter((candidate) => candidate.status === "ready_for_review").length,
+    invalid: candidates.filter((candidate) => candidate.status === "invalid").length,
+    blocked: candidates.filter((candidate) => candidate.status === "blocked").length,
+    duplicates: candidates.filter((candidate) => candidate.status === "duplicate_active_id").length
   };
 }
 

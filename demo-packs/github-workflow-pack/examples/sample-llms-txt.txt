@@ -1,0 +1,16 @@
+GitHub Workflow Pack
+
+Public-safe starter context for fictional GitHub repository workflows.
+
+Records:
+- github-workflow-pack.repository-overview
+- github-workflow-pack.branch-policy
+- github-workflow-pack.pull-request-template
+- github-workflow-pack.issue-triage
+- github-workflow-pack.actions-workflows
+- github-workflow-pack.release-process
+- github-workflow-pack.code-review-rules
+- github-workflow-pack.security-alerts
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

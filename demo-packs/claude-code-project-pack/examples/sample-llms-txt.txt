@@ -1,3 +1,16 @@
-Claude Code Project
+﻿Claude Code Project Pack
 
-Fake public-safe llms.txt style sample. Use the pack summary, approved records, and source titles only. Do not include private data or executable instructions.
+Public-safe starter context for a fictional Claude Code repository workflow.
+
+Records:
+- claude-code-project-pack.project-overview
+- claude-code-project-pack.repo-structure
+- claude-code-project-pack.current-phase
+- claude-code-project.agent-instructions
+- claude-code-project-pack.coding-conventions
+- claude-code-project-pack.testing-and-validation
+- claude-code-project-pack.forbidden-actions
+- claude-code-project-pack.agent-final-report-format
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

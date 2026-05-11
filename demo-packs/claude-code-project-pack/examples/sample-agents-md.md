@@ -1,7 +1,21 @@
-# Claude Code Project AGENTS.md Sample
+﻿# Claude Code Project Pack - AGENTS.md Sample
 
-Use this fake public-safe sample as an assistant handoff outline for Claude Code Project.
+Validated public-safe starter context for local assistant workflows.
 
-- Respect Contextarr redaction tags.
-- Use only approved records from this demo pack.
-- Cite source titles when summarizing operational decisions.
+## Included Records
+
+- claude-code-project-pack.project-overview
+- claude-code-project-pack.repo-structure
+- claude-code-project-pack.current-phase
+- claude-code-project.agent-instructions
+- claude-code-project-pack.coding-conventions
+- claude-code-project-pack.testing-and-validation
+- claude-code-project-pack.forbidden-actions
+- claude-code-project-pack.agent-final-report-format
+
+## Constraints
+
+- No private data.
+- No credentials.
+- No executable commands.
+- Third-party names and marks identify domains only and do not imply endorsement.

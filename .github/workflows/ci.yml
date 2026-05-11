@@ -10,14 +10,29 @@ permissions:
   contents: read
 
 jobs:
-  mainline-gates:
-    name: Mainline Gates
+  credibility-gates:
+    name: Credibility Gates
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check whitespace in changed files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+          else
+            base="${{ github.event.before }}"
+            if [[ "$base" =~ ^0+$ ]]; then
+              base="HEAD~1"
+            fi
+            git diff --check "$base..HEAD"
+          fi
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -32,6 +47,36 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify docs
+        run: pnpm docs:verify
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Validate demo packs
+        run: pnpm demo:validate
+
+      - name: Build web dashboard
+        run: pnpm --filter @contextarr/web build
+
+      - name: Verify public site
+        run: pnpm site:verify
+
+      - name: Run server tests
+        run: pnpm --filter @contextarr/server test
+
+      - name: Run CLI tests
+        run: pnpm --filter @contextarr/cli test
+
+      - name: Run MCP tests
+        run: pnpm --filter @contextarr/mcp test
+
+      - name: Docker smoke
+        run: pnpm docker:verify
 
       - name: Run security gate
         run: pnpm security:verify

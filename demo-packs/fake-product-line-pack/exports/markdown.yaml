@@ -1,5 +1,5 @@
 id: fake-product-line-markdown
-name: Fake Product Line Generic Markdown Export
+name: Product Line Generic Markdown Export
 target: generic_markdown
 format: markdown
 privacy_mode: redacted

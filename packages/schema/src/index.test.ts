@@ -32,6 +32,9 @@ describe("Contextarr schemas", () => {
       containsPersonalData: false,
       containsExecutableCode: false,
       requiresNetwork: false,
+      starterPack: true,
+      starterCategory: "ai_workstation",
+      starterSortOrder: 1,
       permissions: {
         readVault: false,
         writeDrafts: true,
@@ -44,7 +47,10 @@ describe("Contextarr schemas", () => {
       rulesPath: "rules",
       assets: {
         coverImage: "assets/cover.png",
-        accentColor: "#3b82f6"
+        accentColor: "#3b82f6",
+        brandId: "openai",
+        coverRecipe: "brand_hex_v1",
+        logoVariant: "auto"
       },
       compatibility: {
         contextarr: ">=0.1.0"
@@ -52,6 +58,64 @@ describe("Contextarr schemas", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("keeps manifest assets brand metadata optional and backward compatible", () => {
+    const baseManifest = {
+      id: "legacy-pack",
+      name: "Legacy Pack",
+      version: "1.0.0",
+      description: "A valid pack without brand card metadata.",
+      type: "technical_system",
+      visibility: "local",
+      trustLevel: "local",
+      author: "Contextarr Demo",
+      license: "MIT",
+      createdAt: "2026-05-07T00:00:00Z",
+      updatedAt: "2026-05-07T00:00:00Z",
+      lastReviewedAt: null,
+      containsPersonalData: false,
+      containsExecutableCode: false,
+      requiresNetwork: false,
+      permissions: {
+        readVault: false,
+        writeDrafts: true,
+        runCommands: false,
+        networkAccess: false
+      },
+      recordsPath: "records",
+      sourcesPath: "sources/sources.yaml",
+      exportsPath: "exports",
+      rulesPath: "rules",
+      assets: {
+        accentColor: "#3b82f6"
+      },
+      compatibility: {
+        contextarr: ">=0.1.0"
+      }
+    };
+
+    expect(contextPackManifestSchema.safeParse(baseManifest).success).toBe(true);
+    expect(
+      contextPackManifestSchema.safeParse({
+        ...baseManifest,
+        trustLevel: "curated",
+        assets: {
+          brandId: "docker",
+          coverRecipe: "generated_v1",
+          logoVariant: "mono"
+        }
+      }).success
+    ).toBe(true);
+    expect(
+      contextPackManifestSchema.safeParse({
+        ...baseManifest,
+        assets: {
+          brandId: "docker",
+          coverRecipe: "remote_marketplace_card"
+        }
+      }).success
+    ).toBe(false);
   });
 
   it("accepts record frontmatter from the PRD", () => {

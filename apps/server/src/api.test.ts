@@ -1,9 +1,11 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import { beforeEach, describe, expect, it } from "vitest";
+import { importToDraftPack } from "@contextarr/importers";
 import { validatePack } from "@contextarr/pack-validator";
 import { createApp } from "./api";
 import { getAgentKitIndexDirs, getSkillIndexDirs } from "./config";
@@ -27,6 +29,7 @@ function createTestContext(
   const skillsDir = overrides.skillsDir ?? demoSkillsDir;
   const draftPacksDir = overrides.draftPacksDir ?? path.join(os.tmpdir(), "contextarr-no-draft-packs");
   const composedPacksDir = overrides.composedPacksDir ?? path.join(os.tmpdir(), "contextarr-no-composed-packs");
+  const reviewCandidateDirs = overrides.reviewCandidateDirs ?? [];
   const importedSkillsDir = overrides.importedSkillsDir ?? path.join(os.tmpdir(), "contextarr-no-imported-skills");
   const agentKitsDir = overrides.agentKitsDir ?? path.join(os.tmpdir(), "contextarr-no-local-agent-kits");
   const resolvedDemoAgentKitsDir =
@@ -37,6 +40,7 @@ function createTestContext(
     packsDir,
     draftPacksDir,
     composedPacksDir,
+    reviewCandidateDirs,
     skillsDir,
     importedSkillsDir,
     agentKitsDir,
@@ -128,6 +132,64 @@ function expectPathInside(root: string, value: string): void {
   expect(path.isAbsolute(relative)).toBe(false);
 }
 
+function expectNoLocalPaths(value: string): void {
+  expect(value).not.toContain(repoRoot);
+  expect(value).not.toMatch(/[A-Za-z]:[\\/]/);
+  expect(value).not.toMatch(/\/(?:__w|app|github|home|tmp|var|Users|mnt|workspace|workspaces|runner|private|opt)\/[A-Za-z0-9._/-]+/);
+}
+
+function insertExportBriefFixture(
+  db: ContextarrDatabase,
+  overrides: {
+    id: string;
+    objectType?: "pack" | "skill" | "agent_kit" | "composed";
+    objectId?: string;
+    savedAt?: string;
+    contentSnapshot?: string | null;
+  }
+): void {
+  const objectType = overrides.objectType ?? "pack";
+  const objectId = overrides.objectId ?? `${objectType}-fixture`;
+  const savedAt = overrides.savedAt ?? "2026-05-11T00:00:00.000Z";
+  const content = `Export brief fixture ${overrides.id}`;
+
+  db.prepare(
+    `INSERT INTO export_briefs (
+      id, object_type, object_id, profile_id, target, format, privacy_mode,
+      filename, mime_type, sha256, byte_length, estimated_tokens,
+      included_count, excluded_count, source_count, warning_count, warning_codes_json,
+      generated_at, saved_at, content_snapshot, content_snapshot_truncated
+    ) VALUES (
+      @id, @objectType, @objectId, @profileId, @target, @format, @privacyMode,
+      @filename, @mimeType, @sha256, @byteLength, @estimatedTokens,
+      @includedCount, @excludedCount, @sourceCount, @warningCount, @warningCodesJson,
+      @generatedAt, @savedAt, @contentSnapshot, @contentSnapshotTruncated
+    )`
+  ).run({
+    id: overrides.id,
+    objectType,
+    objectId,
+    profileId: `${objectId}-codex`,
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    filename: `${overrides.id}.md`,
+    mimeType: "text/markdown",
+    sha256: crypto.createHash("sha256").update(content, "utf8").digest("hex"),
+    byteLength: Buffer.byteLength(content, "utf8"),
+    estimatedTokens: 8,
+    includedCount: 1,
+    excludedCount: 0,
+    sourceCount: 1,
+    warningCount: 0,
+    warningCodesJson: "[]",
+    generatedAt: savedAt,
+    savedAt,
+    contentSnapshot: overrides.contentSnapshot === undefined ? `Snapshot ${overrides.id}` : overrides.contentSnapshot,
+    contentSnapshotTruncated: 0
+  });
+}
+
 describe("Contextarr API", () => {
   let db: ContextarrDatabase;
   let config: ServerConfig;
@@ -147,10 +209,10 @@ describe("Contextarr API", () => {
       status: "ok",
       authRequired: false,
       counts: {
-        packs: 5,
-        records: 25,
-        sources: 25,
-        exportProfiles: 40,
+        packs: 15,
+        records: 111,
+        sources: 111,
+        exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
         skillExamples: 16,
@@ -167,6 +229,324 @@ describe("Contextarr API", () => {
     expect(response.json()).not.toHaveProperty("packsDir");
     expect(response.json()).not.toHaveProperty("skillsDir");
     expect(response.json()).not.toHaveProperty("databasePath");
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/events returns bounded newest-first sanitized metadata without writing rows", async () => {
+    const rawQuery = "private-query-token-workstation";
+    const returnedContextBody = "returned-context-body-content";
+    const exportBody = "export-body-confidential-content";
+    const secretValue = "api_key=ctxarr_observability_secret_1234567890";
+    const nestedLocalPath = path.join(repoRoot, "exports", "secret-event.md");
+    const ciLinuxLocalPath = "/home/runner/work/contextarr/contextarr/exports/secret-event.md";
+    const tmpLinuxLocalPath = "/tmp/contextarr-secret/event.md";
+    const githubWorkspacePath = "/github/workspace/contextarr/exports/secret-event.md";
+    const containerAppPath = "/app/data/exports/secret-event.md";
+    const hostedRunnerPath = "/__w/contextarr/contextarr/exports/secret-event.md";
+    db.prepare("DELETE FROM events").run();
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.old",
+      "Old event",
+      "2026-05-11T00:00:00.000Z",
+      JSON.stringify({ ok: true })
+    );
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.middle",
+      `Middle event from ${repoRoot} and ${ciLinuxLocalPath}`,
+      "2026-05-11T00:01:00.000Z",
+      JSON.stringify({
+        ok: true,
+        repoRoot,
+        ciLinuxLocalPath,
+        tmpLinuxLocalPath,
+        githubWorkspacePath,
+        containerAppPath,
+        hostedRunnerPath,
+        safeRoute: "/api/events",
+        packsDir: demoPacksDir,
+        body: "raw-private-context-body",
+        nested: {
+          safe: "kept",
+          filePath: path.join(repoRoot, "secret.md"),
+          audit: {
+            safe: "kept-deep",
+            queryText: rawQuery,
+            returnedContextBodies: [returnedContextBody],
+            export: {
+              body: exportBody
+            },
+            secrets: {
+              apiKey: secretValue
+            },
+            localPaths: [nestedLocalPath, ciLinuxLocalPath, tmpLinuxLocalPath, githubWorkspacePath, containerAppPath, hostedRunnerPath]
+          }
+        }
+      })
+    );
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "local.new",
+      "New event",
+      "2026-05-11T00:02:00.000Z",
+      JSON.stringify({
+        count: 2,
+        summary: "metadata only"
+      })
+    );
+    const eventCountBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const mcpCountBefore = db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get();
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/events?limit=2" });
+    const body = response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.events.map((event: { type: string }) => event.type)).toEqual(["local.new", "local.middle"]);
+    expect(body.events[1].message).toContain("[local path]");
+    expect(body.events[1].metadata).toEqual({
+      ok: true,
+      safeRoute: "/api/events",
+      nested: {
+        safe: "kept",
+        audit: {
+          safe: "kept-deep"
+        }
+      }
+    });
+    expect(serialized).not.toContain(repoRoot);
+    expect(serialized).not.toContain("raw-private-context-body");
+    expect(serialized).not.toContain(rawQuery);
+    expect(serialized).not.toContain(returnedContextBody);
+    expect(serialized).not.toContain(exportBody);
+    expect(serialized).not.toContain(secretValue);
+    expect(serialized).not.toContain(nestedLocalPath);
+    expect(serialized).not.toContain(ciLinuxLocalPath);
+    expect(serialized).not.toContain(tmpLinuxLocalPath);
+    expect(serialized).not.toContain(githubWorkspacePath);
+    expect(serialized).not.toContain(containerAppPath);
+    expect(serialized).not.toContain(hostedRunnerPath);
+    expect(serialized).toContain("/api/events");
+    expectNoLocalPaths(serialized);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
+    expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/mcp/query-log returns bounded newest-first sanitized metadata without query text or returned content", async () => {
+    const rawQuery = "private-query-token-workstation";
+    const returnedContext = "returned-context-body-content";
+    const exportBody = "export-body-confidential-content";
+    const secretValue = "api_key=ctxarr_mcp_observability_secret_1234567890";
+    const nestedLocalPath = path.join(repoRoot, "exports", "secret-query.md");
+    const ciLinuxLocalPath = "/home/runner/work/contextarr/contextarr/exports/query.md";
+    const tmpLinuxLocalPath = "/tmp/contextarr-secret/query.md";
+    const githubWorkspacePath = "/github/workspace/contextarr/exports/query.md";
+    const containerAppPath = "/app/data/exports/query.md";
+    const hostedRunnerPath = "/__w/contextarr/contextarr/exports/query.md";
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run("get_pack_summary", "old-pack", null, null, "ok", 1, "hash-old", 4, 8, "2026-05-11T00:00:00.000Z", "{}");
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "query_pack_context",
+      "ai-workstation-pack",
+      "ai-workstation.local-ai-stack",
+      "ai-workstation-codex",
+      "ok",
+      2,
+      "hash-middle",
+      rawQuery.length,
+      12,
+      "2026-05-11T00:01:00.000Z",
+      JSON.stringify({
+        ok: true,
+        query: rawQuery,
+        returnedContext,
+        repoRoot,
+        ciLinuxLocalPath,
+        tmpLinuxLocalPath,
+        githubWorkspacePath,
+        containerAppPath,
+        hostedRunnerPath,
+        safeRoute: "/api/mcp/query-log",
+        outputPath: path.join(repoRoot, "exports", "context.md"),
+        resultKinds: ["record"],
+        nested: {
+          safe: "kept",
+          request: {
+            q: rawQuery
+          },
+          returned: {
+            contextBodies: [returnedContext]
+          },
+          export: {
+            bodies: [exportBody]
+          },
+          diagnostics: {
+            secretValue,
+            absoluteLocalPaths: [nestedLocalPath, ciLinuxLocalPath, tmpLinuxLocalPath, githubWorkspacePath, containerAppPath, hostedRunnerPath]
+          }
+        }
+      })
+    );
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run("get_record", "new-pack", "new-record", null, "error", 0, null, null, 4, "2026-05-11T00:02:00.000Z", "{}");
+    const eventCountBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const mcpCountBefore = db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get();
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=2" });
+    const body = response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.queries.map((query: { tool: string }) => query.tool)).toEqual(["get_record", "query_pack_context"]);
+    expect(body.queries[1]).toMatchObject({
+      tool: "query_pack_context",
+      packId: "ai-workstation-pack",
+      recordId: "ai-workstation.local-ai-stack",
+      profileId: "ai-workstation-codex",
+      status: "ok",
+      resultCount: 2,
+      queryHash: "hash-middle",
+      queryLength: rawQuery.length,
+      durationMs: 12,
+      createdAt: "2026-05-11T00:01:00.000Z",
+      metadata: {
+        ok: true,
+        resultKinds: ["record"],
+        safeRoute: "/api/mcp/query-log",
+        nested: {
+          safe: "kept"
+        }
+      }
+    });
+    expect(serialized).not.toContain(rawQuery);
+    expect(serialized).not.toContain(returnedContext);
+    expect(serialized).not.toContain(exportBody);
+    expect(serialized).not.toContain(secretValue);
+    expect(serialized).not.toContain(nestedLocalPath);
+    expect(serialized).not.toContain(ciLinuxLocalPath);
+    expect(serialized).not.toContain(tmpLinuxLocalPath);
+    expect(serialized).not.toContain(githubWorkspacePath);
+    expect(serialized).not.toContain(containerAppPath);
+    expect(serialized).not.toContain(hostedRunnerPath);
+    expect(serialized).not.toContain(repoRoot);
+    expect(serialized).not.toContain("context.md");
+    expect(serialized).toContain("/api/mcp/query-log");
+    expectNoLocalPaths(serialized);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventCountBefore);
+    expect(db.prepare("SELECT COUNT(*) FROM mcp_query_log").pluck().get()).toBe(mcpCountBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("scopes Local Observability rows before applying response limits", async () => {
+    db.prepare("DELETE FROM events").run();
+    db.prepare("DELETE FROM mcp_query_log").run();
+    db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+      "export_brief.saved",
+      "Saved local export brief metadata.",
+      "2026-05-10T23:00:00.000Z",
+      JSON.stringify({
+        objectType: "pack",
+        objectId: "ai-workstation-pack",
+        packId: "ai-workstation-pack",
+        profileId: "ai-workstation-codex"
+      })
+    );
+    db.prepare(
+      `INSERT INTO mcp_query_log (
+        tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      "get_record",
+      "ai-workstation-pack",
+      "ai-workstation.local-ai-stack",
+      null,
+      "ok",
+      1,
+      "scoped-hash",
+      18,
+      5,
+      "2026-05-10T23:00:01.000Z",
+      JSON.stringify({ resultKinds: ["record"] })
+    );
+
+    for (let index = 0; index < 105; index += 1) {
+      const createdAt = new Date(Date.UTC(2026, 4, 11, 0, 0, index)).toISOString();
+      db.prepare("INSERT INTO events (type, message, created_at, metadata_json) VALUES (?, ?, ?, ?)").run(
+        "local.noise",
+        `Noise event ${index}`,
+        createdAt,
+        JSON.stringify({ packId: `noise-pack-${index}` })
+      );
+      db.prepare(
+        `INSERT INTO mcp_query_log (
+          tool, pack_id, record_id, profile_id, status, result_count,
+          query_hash, query_length, duration_ms, created_at, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run("get_pack_summary", `noise-pack-${index}`, null, null, "ok", 1, `noise-${index}`, 5, 2, createdAt, "{}");
+    }
+
+    const app = createApp({ config, db });
+    const scopedEvents = await app.inject({ method: "GET", url: "/api/events?limit=1&packId=ai-workstation-pack" });
+    const scopedMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=1&packId=ai-workstation-pack" });
+    const invalidScope = await app.inject({ method: "GET", url: "/api/events?packId=../../secret" });
+
+    expect(scopedEvents.statusCode).toBe(200);
+    expect(scopedEvents.json().events).toEqual([
+      expect.objectContaining({
+        type: "export_brief.saved",
+        metadata: expect.objectContaining({
+          packId: "ai-workstation-pack",
+          profileId: "ai-workstation-codex"
+        })
+      })
+    ]);
+    expect(scopedMcp.statusCode).toBe(200);
+    expect(scopedMcp.json().queries).toEqual([
+      expect.objectContaining({
+        tool: "get_record",
+        packId: "ai-workstation-pack",
+        recordId: "ai-workstation.local-ai-stack"
+      })
+    ]);
+    expect(invalidScope.statusCode).toBe(400);
+    expect(invalidScope.json()).toMatchObject({ error: "invalid_query" });
+    await app.close();
+    db.close();
+  });
+
+  it("rejects malformed or excessive Local Observability limits", async () => {
+    const app = createApp({ config, db });
+    const malformedEvents = await app.inject({ method: "GET", url: "/api/events?limit=abc" });
+    const excessiveEvents = await app.inject({ method: "GET", url: "/api/events?limit=101" });
+    const malformedMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=1.5" });
+    const excessiveMcp = await app.inject({ method: "GET", url: "/api/mcp/query-log?limit=0" });
+
+    for (const response of [malformedEvents, excessiveEvents, malformedMcp, excessiveMcp]) {
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: "invalid_query",
+        message: "Local observability limit must be an integer from 1 to 100."
+      });
+    }
+
     await app.close();
     db.close();
   });
@@ -193,6 +573,26 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("normalizes malformed JSON request bodies without leaking internals", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      headers: { "content-type": "application/json" },
+      payload: "{not json"
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: "invalid_json",
+      message: "Request body must be valid JSON."
+    });
+    expect(response.body).not.toContain("stack");
+    expectNoLocalPaths(response.body);
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs/:id/health returns pack health checks", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/health" });
@@ -211,6 +611,151 @@ describe("Contextarr API", () => {
     db.close();
   });
 
+  it("GET /api/packs/:id/exposure-readiness reports read-only export and MCP eligibility", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      packId: "ai-workstation-pack",
+      validation: {
+        status: "valid",
+        errors: 0
+      },
+      security: {
+        status: "policy_clean",
+        blocked: false
+      },
+      summary: {
+        recordCount: 5,
+        exportEligibleRecords: 5,
+        mcpEligibleRecords: 5,
+        exportProfileCount: 8,
+        exportEligibleProfiles: 8,
+        sourceBackedRecords: 5,
+        recordsMissingSourceCoverage: 0
+      },
+      policies: {
+        mcp: {
+          allowPrivateByDefault: false
+        }
+      }
+    });
+    expect(response.json().records[0]).not.toHaveProperty("body");
+    expect(response.json().records[0]).not.toHaveProperty("filePath");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(JSON.stringify(response.json())).not.toMatch(/[A-Za-z]:[\\/]/);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exposure-readiness reports privacy and review blockers without changing export behavior", async () => {
+    db.prepare(
+      `UPDATE records
+       SET privacy = ?, review_status = ?, tags_json = ?, tags_text = ?
+       WHERE id = ?`
+    ).run("private", "draft", JSON.stringify(["never_export"]), "never_export", "ai-workstation.local-ai-stack");
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/exposure-readiness" });
+
+    expect(response.statusCode).toBe(200);
+    const record = response.json().records.find((item: { id: string }) => item.id === "ai-workstation.local-ai-stack");
+    expect(record).toMatchObject({
+      exportEligible: false,
+      mcpEligible: false
+    });
+    expect(record.blockers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "record.review_status" }),
+        expect.objectContaining({ code: "record.privacy.not_public_safe" }),
+        expect.objectContaining({ code: "record.tag.never_export" })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/readiness returns a metadata-only context readiness report", async () => {
+    const eventsBefore = db.prepare("SELECT COUNT(*) FROM events").pluck().get();
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schemaVersion: "contextarr.readiness-report.v1",
+      packId: "ai-workstation-pack",
+      status: "review_needed",
+      dimensions: {
+        source: expect.objectContaining({ status: "ready", score: 100 }),
+        review: expect.objectContaining({ status: "ready", score: 100 }),
+        governance: expect.objectContaining({ status: "review_needed" }),
+        redaction: expect.objectContaining({ status: "ready", score: 100 }),
+        export: expect.objectContaining({ status: "ready", score: 100 }),
+        mcp: expect.objectContaining({ status: "ready", score: 100 })
+      }
+    });
+    expect(response.json().score).toBeGreaterThanOrEqual(90);
+    expect(response.json().issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "governance.missing", severity: "warning" })])
+    );
+    expect(new Date(response.json().generatedAt).toString()).not.toBe("Invalid Date");
+    expect(response.json().issues[0]).toHaveProperty("evidence");
+    expect(JSON.stringify(response.json())).not.toContain(repoRoot);
+    expect(JSON.stringify(response.json())).not.toMatch(/[A-Za-z]:[\\/]/);
+    expect(db.prepare("SELECT COUNT(*) FROM events").pluck().get()).toBe(eventsBefore);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/readiness composes exposure blockers and record eligibility", async () => {
+    db.prepare(
+      `UPDATE records
+       SET privacy = ?, review_status = ?, tags_json = ?, tags_text = ?
+       WHERE id = ?`
+    ).run("private", "draft", JSON.stringify(["never_export"]), "never_export", "ai-workstation.local-ai-stack");
+    db.prepare(
+      `UPDATE export_profiles
+       SET readiness_status = ?, readiness_blocking_codes_json = ?
+       WHERE pack_id = ? AND id = ?`
+    ).run(
+      "blocked",
+      JSON.stringify(["export_profile.blocked_for_test"]),
+      "ai-workstation-pack",
+      "ai-workstation-codex"
+    );
+
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/ai-workstation-pack/readiness" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: "blocked",
+      dimensions: {
+        export: expect.objectContaining({ status: "blocked" }),
+        mcp: expect.objectContaining({ status: "review_needed" })
+      }
+    });
+    expect(response.json().issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "export.profile_blocked", severity: "blocker" }),
+        expect.objectContaining({ code: "mcp.record_ineligible", severity: "warning" })
+      ])
+    );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/readiness returns 404 for unknown packs", async () => {
+    const app = createApp({ config, db });
+    const response = await app.inject({ method: "GET", url: "/api/packs/missing-pack/readiness" });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({ error: "not_found", message: "Pack not found: missing-pack" });
+    await app.close();
+    db.close();
+  });
+
   it("GET /api/packs returns demo pack summaries", async () => {
     const app = createApp({ config, db });
     const response = await app.inject({ method: "GET", url: "/api/packs" });
@@ -225,10 +770,45 @@ describe("Contextarr API", () => {
           exportProfileCount: 8,
           healthStatus: "healthy",
           coverImage: null,
+          starterPack: false,
           reviewQueueCount: 0
+        }),
+        expect.objectContaining({
+          id: "openai-prompt-engineering-pack",
+          recordCount: 8,
+          sourceCount: 8,
+          starterPack: true,
+          starterCategory: "ai_prompting",
+          starterSortOrder: 1
         })
       ])
     );
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs filters starter packs deterministically", async () => {
+    const app = createApp({ config, db });
+    const starterResponse = await app.inject({ method: "GET", url: "/api/packs?starter=true" });
+    const categoryResponse = await app.inject({ method: "GET", url: "/api/packs?starterCategory=networking" });
+
+    expect(starterResponse.statusCode).toBe(200);
+    expect(starterResponse.json().packs.map((pack: { id: string }) => pack.id)).toEqual([
+      "openai-prompt-engineering-pack",
+      "claude-code-project-pack",
+      "google-workspace-pack",
+      "aws-infrastructure-pack",
+      "jellyfin-media-server-pack",
+      "docker-containers-pack",
+      "unifi-network-pack",
+      "vscode-setup-pack",
+      "github-workflow-pack",
+      "home-assistant-pack",
+      "tailscale-vpn-pack",
+      "obsidian-vault-pack"
+    ]);
+    expect(categoryResponse.statusCode).toBe(200);
+    expect(categoryResponse.json().packs.map((pack: { id: string }) => pack.id)).toEqual(["unifi-network-pack"]);
     await app.close();
     db.close();
   });
@@ -754,6 +1334,112 @@ describe("Contextarr API", () => {
     }
   });
 
+  it("keeps draft, imported, composed, and restored packs outside active API surfaces after rescan", async () => {
+    db.close();
+    const activePacksDir = copyDemoPacksFixture("contextarr-active-boundary-");
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-boundary-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-composed-boundary-"));
+    const importedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-import-boundary-"));
+    const restoreOutDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-restore-boundary-"));
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+    const hiddenPackIds = [
+      "boundary-collector-draft",
+      "boundary-imported-draft",
+      "boundary-composed-draft",
+      "valid-minimal-pack"
+    ];
+
+    try {
+      const collector = await app.inject({
+        method: "POST",
+        url: "/api/context-pack-collectors/markdown-folder/run",
+        payload: {
+          inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+          packId: "boundary-collector-draft",
+          name: "Boundary Collector Draft"
+        }
+      });
+      importToDraftPack({
+        inputPath: path.join(repoRoot, "packages/importers/test/fixtures/markdown-folder"),
+        kind: "markdown",
+        packId: "boundary-imported-draft",
+        outputDir: importedPacksDir
+      });
+      const composed = await app.inject({
+        method: "POST",
+        url: "/api/compose/save-pack",
+        payload: {
+          packId: "boundary-composed-draft",
+          name: "Boundary Composed Draft",
+          target: "codex",
+          format: "markdown",
+          privacyMode: "redacted",
+          selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+        }
+      });
+      const restoredPackRoot = path.join(restoreOutDir, "boundary-restore", "valid-minimal-pack");
+      fs.mkdirSync(path.dirname(restoredPackRoot), { recursive: true });
+      fs.cpSync(path.join(repoRoot, "packages/pack-validator/test/fixtures/valid-minimal-pack"), restoredPackRoot, {
+        recursive: true
+      });
+      fs.writeFileSync(
+        path.join(restoreOutDir, "boundary-restore", "restore-report.json"),
+        `${JSON.stringify(
+          {
+            schemaVersion: "contextarr.restore-report.v1",
+            status: "restored_to_quarantine",
+            activation: { automaticActivation: false, requiresManualReview: true },
+            packs: [{ packId: "valid-minimal-pack", quarantineStatus: "review_required" }]
+          },
+          null,
+          2
+        )}\n`,
+        "utf8"
+      );
+      const rescan = await app.inject({ method: "POST", url: "/api/rescan" });
+      const list = await app.inject({ method: "GET", url: "/api/packs" });
+      const search = await app.inject({ method: "GET", url: "/api/search?q=boundary" });
+
+      expect(collector.statusCode).toBe(201);
+      expect(collector.json()).toMatchObject({ draft: { indexed: false, status: "review_required" } });
+      expect(composed.statusCode).toBe(201);
+      expect(composed.json()).toMatchObject({ draft: { indexed: false, status: "review_required" } });
+      expect(fs.existsSync(path.join(restoredPackRoot, "contextarr-pack.json"))).toBe(true);
+      expect(rescan.statusCode).toBe(200);
+      expect(list.statusCode).toBe(200);
+      expect(search.statusCode).toBe(200);
+      expect(JSON.stringify(list.json())).not.toContain("boundary");
+
+      for (const packId of hiddenPackIds) {
+        const detail = await app.inject({ method: "GET", url: `/api/packs/${packId}` });
+        const preview = await app.inject({ method: "GET", url: `/api/packs/${packId}/exports/not-real/preview` });
+
+        expect(search.json().results).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ packId })])
+        );
+        expect(search.json().results).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: packId })])
+        );
+        expect(detail.statusCode).toBe(404);
+        expect(preview.statusCode).toBe(404);
+        expect(preview.json()).toMatchObject({ error: "not_found" });
+      }
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      for (const dir of [activePacksDir, draftPacksDir, composedPacksDir, importedPacksDir, restoreOutDir]) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("protects Context Pack collector writes with token auth and rejects invalid requests", async () => {
     const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-draft-packs-auth-"));
     const fixtureContext = createTestContext("collector-token", demoPacksDir, { draftPacksDir });
@@ -814,6 +1500,252 @@ describe("Contextarr API", () => {
       fixtureContext.db.close();
       fs.rmSync(draftPacksDir, { recursive: true, force: true });
     }
+  });
+
+  it("GET /api/review-candidates lists unindexed draft and quarantine packs without local path leaks", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-draft-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-composed-"));
+    const quarantineDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-quarantine-"));
+    fs.cpSync(path.join(validatorFixturesDir, "valid-minimal-pack"), path.join(draftPacksDir, "valid-draft"), { recursive: true });
+    fs.cpSync(path.join(demoPacksDir, "ai-workstation-pack"), path.join(composedPacksDir, "duplicate-active-pack"), { recursive: true });
+    fs.cpSync(path.join(validatorFixturesDir, "missing-manifest-pack"), path.join(quarantineDir, "invalid-quarantine"), { recursive: true });
+    const fixtureContext = createTestContext(undefined, demoPacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      reviewCandidateDirs: [quarantineDir]
+    });
+    const app = createApp(fixtureContext);
+
+    const list = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const filtered = await app.inject({ method: "GET", url: "/api/review-candidates?status=duplicate_active_id" });
+    const invalidQuery = await app.inject({ method: "GET", url: "/api/review-candidates?sourceKind=agent_runtime" });
+
+    expect(list.statusCode).toBe(200);
+    expect(filtered.statusCode).toBe(200);
+    expect(invalidQuery.statusCode).toBe(400);
+    expect(list.json().counts.total).toBe(3);
+    expect(list.json().candidates.map((candidate: { status: string }) => candidate.status).sort()).toEqual(
+      ["duplicate_active_id", "invalid", "ready_for_review"].sort()
+    );
+    expect(filtered.json().candidates).toEqual([
+      expect.objectContaining({
+        packId: "ai-workstation-pack",
+        status: "duplicate_active_id",
+        activeConflict: true
+      })
+    ]);
+    expect(list.body).not.toContain(draftPacksDir);
+    expect(list.body).not.toContain(composedPacksDir);
+    expect(list.body).not.toContain(quarantineDir);
+
+    const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
+    const detail = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}` });
+    const plan = await app.inject({ method: "GET", url: `/api/review-candidates/${ready.key}/activation-plan` });
+    const dryRun = await app.inject({ method: "POST", url: `/api/review-candidates/${ready.key}/activation/dry-run` });
+    expect(detail.statusCode).toBe(200);
+    expect(plan.statusCode).toBe(200);
+    expect(dryRun.statusCode).toBe(200);
+    expect(detail.json().candidate.records).toEqual([
+      expect.objectContaining({
+        id: "valid.overview",
+        title: "Valid Overview"
+      })
+    ]);
+    expect(plan.json().plan).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+      canActivate: true,
+      status: "ready",
+      target: {
+        pathLabel: "demo-packs/valid-minimal-pack",
+        activeConflict: false
+      }
+    });
+    expect(plan.json().plan.boundaries).toEqual(expect.arrayContaining([expect.stringContaining("No record bodies")]));
+    expect(dryRun.json().dryRun).toMatchObject({
+      schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+      canActivate: true,
+      status: "ready",
+      target: {
+        pathLabel: "demo-packs/valid-minimal-pack",
+        activeConflict: false
+      },
+      effects: {
+        filesMoved: false,
+        sqliteMutated: false,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      }
+    });
+    expect(dryRun.json().dryRun.proofId).toMatch(/^[a-f0-9]{24}$/);
+    expect(detail.body).not.toContain("This is a valid minimal context pack");
+    expect(detail.body).not.toContain(draftPacksDir);
+    expect(plan.body).not.toContain("This is a valid minimal context pack");
+    expect(plan.body).not.toContain(draftPacksDir);
+    expect(dryRun.body).not.toContain("This is a valid minimal context pack");
+    expect(dryRun.body).not.toContain(draftPacksDir);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
+    fs.rmSync(quarantineDir, { recursive: true, force: true });
+  });
+
+  it("protects review candidate routes with optional token auth", async () => {
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-candidates-auth-"));
+    const fixtureContext = createTestContext("candidate-token", demoPacksDir, { draftPacksDir });
+    const app = createApp(fixtureContext);
+
+    const rejected = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const rejectedPlan = await app.inject({ method: "GET", url: "/api/review-candidates/fake-key/activation-plan" });
+    const rejectedDryRun = await app.inject({ method: "POST", url: "/api/review-candidates/fake-key/activation/dry-run" });
+    const rejectedApply = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/apply",
+      payload: { proofId: "000000000000000000000000" }
+    });
+    const rejectedHistory = await app.inject({ method: "GET", url: "/api/review-candidate-activations" });
+    const accepted = await app.inject({
+      method: "GET",
+      url: "/api/review-candidates",
+      headers: { authorization: "Bearer candidate-token" }
+    });
+    const acceptedPlan = await app.inject({
+      method: "GET",
+      url: "/api/review-candidates/fake-key/activation-plan",
+      headers: { authorization: "Bearer candidate-token" }
+    });
+    const acceptedDryRun = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/dry-run",
+      headers: { authorization: "Bearer candidate-token" }
+    });
+    const acceptedApply = await app.inject({
+      method: "POST",
+      url: "/api/review-candidates/fake-key/activation/apply",
+      headers: { authorization: "Bearer candidate-token" },
+      payload: { proofId: "000000000000000000000000" }
+    });
+    const acceptedHistory = await app.inject({
+      method: "GET",
+      url: "/api/review-candidate-activations",
+      headers: { authorization: "Bearer candidate-token" }
+    });
+
+    expect(rejected.statusCode).toBe(401);
+    expect(rejectedPlan.statusCode).toBe(401);
+    expect(rejectedDryRun.statusCode).toBe(401);
+    expect(rejectedApply.statusCode).toBe(401);
+    expect(rejectedHistory.statusCode).toBe(401);
+    expect(accepted.statusCode).toBe(200);
+    expect(acceptedPlan.statusCode).toBe(404);
+    expect(acceptedDryRun.statusCode).toBe(404);
+    expect(acceptedApply.statusCode).toBe(404);
+    expect(acceptedHistory.statusCode).toBe(200);
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
+  });
+
+  it("POST /api/review-candidates/:key/activation/apply moves a proof-gated candidate into active packs and refreshes the index", async () => {
+    const activePacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-active-"));
+    const draftPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-draft-"));
+    const composedPacksDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-review-activation-composed-"));
+    const sourcePath = path.join(draftPacksDir, "valid-draft");
+    const targetPath = path.join(activePacksDir, "valid-minimal-pack");
+    fs.cpSync(path.join(validatorFixturesDir, "valid-minimal-pack"), sourcePath, { recursive: true });
+
+    const fixtureContext = createTestContext(undefined, activePacksDir, {
+      draftPacksDir,
+      composedPacksDir,
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-activation-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-activation-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-activation-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+
+    const list = await app.inject({ method: "GET", url: "/api/review-candidates" });
+    const ready = list.json().candidates.find((candidate: { status: string }) => candidate.status === "ready_for_review");
+    const dryRun = await app.inject({ method: "POST", url: `/api/review-candidates/${ready.key}/activation/dry-run` });
+    const rejected = await app.inject({
+      method: "POST",
+      url: `/api/review-candidates/${ready.key}/activation/apply`,
+      payload: { proofId: "000000000000000000000000" }
+    });
+    const applied = await app.inject({
+      method: "POST",
+      url: `/api/review-candidates/${ready.key}/activation/apply`,
+      payload: { proofId: dryRun.json().dryRun.proofId }
+    });
+    const activePack = await app.inject({ method: "GET", url: "/api/packs/valid-minimal-pack" });
+    const history = await app.inject({ method: "GET", url: "/api/review-candidate-activations" });
+
+    expect(rejected.statusCode).toBe(409);
+    expect(rejected.json()).toMatchObject({ error: "activation.proof_mismatch" });
+    expect(applied.statusCode).toBe(201);
+    expect(applied.json()).toMatchObject({
+      ok: true,
+      activation: {
+        schemaVersion: "contextarr.review-candidate-activation-result.v1",
+        packId: "valid-minimal-pack",
+        mode: "move",
+        effects: {
+          filesMoved: true,
+          filesCopied: true,
+          sourceRemoved: true,
+          exportsGenerated: false,
+          mcpExposed: false,
+          networkAccessed: false
+        }
+      },
+      history: {
+        schemaVersion: "contextarr.review-candidate-activation-history.v1",
+        proofId: dryRun.json().dryRun.proofId,
+        packId: "valid-minimal-pack",
+        status: "applied",
+        indexRefreshedAt: expect.any(String),
+        activation: {
+          packId: "valid-minimal-pack"
+        }
+      },
+      pack: {
+        id: "valid-minimal-pack"
+      },
+      index: {
+        packsIndexed: 1
+      }
+    });
+    expect(activePack.statusCode).toBe(200);
+    expect(history.statusCode).toBe(200);
+    expect(history.json().activations).toEqual([
+      expect.objectContaining({
+        proofId: dryRun.json().dryRun.proofId,
+        packId: "valid-minimal-pack",
+        name: "Valid Minimal Pack",
+        mode: "move",
+        status: "applied",
+        indexRefreshedAt: expect.any(String),
+        source: expect.objectContaining({ kind: "draft_pack" }),
+        target: expect.objectContaining({ pathLabel: expect.stringContaining("valid-minimal-pack") }),
+        validation: expect.objectContaining({ status: "valid" }),
+        effects: expect.objectContaining({ filesMoved: true, networkAccessed: false })
+      })
+    ]);
+    expect(fs.existsSync(path.join(targetPath, "contextarr-pack.json"))).toBe(true);
+    expect(fs.existsSync(sourcePath)).toBe(false);
+    expect(applied.body).not.toContain(activePacksDir);
+    expect(applied.body).not.toContain(draftPacksDir);
+    expect(history.body).not.toContain(activePacksDir);
+    expect(history.body).not.toContain(draftPacksDir);
+    expect(history.body).not.toContain("This is a valid minimal context pack");
+
+    await app.close();
+    fixtureContext.db.close();
+    fs.rmSync(activePacksDir, { recursive: true, force: true });
+    fs.rmSync(draftPacksDir, { recursive: true, force: true });
+    fs.rmSync(composedPacksDir, { recursive: true, force: true });
   });
 
   it("GET /api/review-items lists and filters generated items", async () => {
@@ -1267,6 +2199,317 @@ describe("Contextarr API", () => {
     expect(response.json().includedRecords).toHaveLength(5);
     await app.close();
     db.close();
+  });
+
+  it("POST /api/export-briefs saves, lists, and fetches a pack export preview brief", async () => {
+    const app = createApp({ config, db });
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const artifact = preview.json();
+    const save = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        artifact
+      }
+    });
+    const saved = save.json().brief;
+    const list = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const fetch = await app.inject({ method: "GET", url: `/api/export-briefs/${saved.id}` });
+
+    expect(preview.statusCode).toBe(200);
+    expect(save.statusCode).toBe(201);
+    expect(saved).toMatchObject({
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex",
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      filename: "ai-workstation-codex.md",
+      mimeType: "text/markdown",
+      byteLength: artifact.byteLength,
+      estimatedTokens: artifact.estimatedTokens,
+      includedCount: artifact.includedRecords.length,
+      excludedCount: artifact.excludedRecords.length,
+      sourceCount: artifact.sources.length,
+      warningCount: artifact.warnings.length,
+      warningCodes: []
+    });
+    expect(saved.id).toMatch(/^export_brief_[0-9a-f-]+$/);
+    expect(saved.sha256).toBe(crypto.createHash("sha256").update(artifact.content, "utf8").digest("hex"));
+    expect(saved.generatedAt).toBe(artifact.generatedAt);
+    expect(new Date(saved.savedAt).toString()).not.toBe("Invalid Date");
+    expect(saved.contentSnapshot).toContain("Codex Context Export");
+    expect(saved.contentSnapshot.length).toBeLessThanOrEqual(4096);
+    expect(saved.contentSnapshotTruncated).toBe(artifact.content.length > 4096);
+    expect(list.statusCode).toBe(200);
+    expect(list.json().briefs).toHaveLength(1);
+    const { contentSnapshot: _contentSnapshot, ...savedSummary } = saved;
+    expect(list.json().briefs[0]).toEqual(savedSummary);
+    expect(list.json().briefs[0]).not.toHaveProperty("contentSnapshot");
+    expect(fetch.statusCode).toBe(200);
+    expect(fetch.json().brief).toEqual(saved);
+    const event = db
+      .prepare("SELECT type, message, metadata_json FROM events WHERE type = ? ORDER BY id DESC LIMIT 1")
+      .get("export_brief.saved") as { type: string; message: string; metadata_json: string };
+    const eventMetadata = JSON.parse(event.metadata_json);
+    expect(event).toMatchObject({
+      type: "export_brief.saved",
+      message: "Saved local export brief metadata."
+    });
+    expect(eventMetadata).toMatchObject({
+      briefId: saved.id,
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      packId: "ai-workstation-pack",
+      profileId: "ai-workstation-codex",
+      target: "codex",
+      format: "markdown",
+      privacyMode: "redacted",
+      sha256: saved.sha256,
+      byteLength: saved.byteLength,
+      estimatedTokens: saved.estimatedTokens,
+      includedCount: saved.includedCount,
+      excludedCount: saved.excludedCount,
+      sourceCount: saved.sourceCount,
+      warningCount: saved.warningCount,
+      generatedAt: saved.generatedAt,
+      savedAt: saved.savedAt
+    });
+    expect(JSON.stringify(eventMetadata)).not.toContain(artifact.content);
+    expect(eventMetadata).not.toHaveProperty("contentSnapshot");
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/export-briefs applies bounded list limits and keeps snapshots detail-only", async () => {
+    for (let index = 0; index < 30; index += 1) {
+      insertExportBriefFixture(db, {
+        id: `export_brief_limit_${index.toString().padStart(2, "0")}`,
+        objectId: `limit-pack-${index.toString().padStart(2, "0")}`,
+        savedAt: new Date(Date.UTC(2026, 4, 11, 0, 0, index)).toISOString()
+      });
+    }
+
+    const app = createApp({ config, db });
+    const defaultList = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const limitedList = await app.inject({ method: "GET", url: "/api/export-briefs?limit=3" });
+    const maxList = await app.inject({ method: "GET", url: "/api/export-briefs?limit=100" });
+    const invalidLimit = await app.inject({ method: "GET", url: "/api/export-briefs?limit=101" });
+    const invalidFormat = await app.inject({ method: "GET", url: "/api/export-briefs?limit=1.5" });
+    const detail = await app.inject({ method: "GET", url: "/api/export-briefs/export_brief_limit_29" });
+
+    expect(defaultList.statusCode).toBe(200);
+    expect(defaultList.json().briefs).toHaveLength(25);
+    expect(defaultList.json().briefs[0]).not.toHaveProperty("contentSnapshot");
+    expect(limitedList.statusCode).toBe(200);
+    expect(limitedList.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_limit_29",
+      "export_brief_limit_28",
+      "export_brief_limit_27"
+    ]);
+    expect(maxList.statusCode).toBe(200);
+    expect(maxList.json().briefs).toHaveLength(30);
+    expect(invalidLimit.statusCode).toBe(400);
+    expect(invalidLimit.json()).toMatchObject({ error: "invalid_query" });
+    expect(invalidFormat.statusCode).toBe(400);
+    expect(invalidFormat.json()).toMatchObject({ error: "invalid_query" });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().brief.contentSnapshot).toBe("Snapshot export_brief_limit_29");
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/export-briefs filters by object type aliases and object ID", async () => {
+    insertExportBriefFixture(db, {
+      id: "export_brief_pack_filter",
+      objectType: "pack",
+      objectId: "shared-export-object",
+      savedAt: "2026-05-11T00:00:00.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_skill_filter",
+      objectType: "skill",
+      objectId: "shared-export-object",
+      savedAt: "2026-05-11T00:00:01.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_agent_filter_a",
+      objectType: "agent_kit",
+      objectId: "support-ticket-writing-kit",
+      savedAt: "2026-05-11T00:00:02.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_agent_filter_b",
+      objectType: "agent_kit",
+      objectId: "implementation-support-kit",
+      savedAt: "2026-05-11T00:00:03.000Z"
+    });
+    insertExportBriefFixture(db, {
+      id: "export_brief_composed_filter",
+      objectType: "composed",
+      objectId: "composed-context-export",
+      savedAt: "2026-05-11T00:00:04.000Z"
+    });
+
+    const app = createApp({ config, db });
+    const agentAlias = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=agent-kit" });
+    const agentUnderscoreAndId = await app.inject({
+      method: "GET",
+      url: "/api/export-briefs?objectType=agent_kit&objectId=support-ticket-writing-kit"
+    });
+    const sharedObjectId = await app.inject({ method: "GET", url: "/api/export-briefs?objectId=shared-export-object&limit=100" });
+    const composed = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=composed" });
+    const invalidObjectType = await app.inject({ method: "GET", url: "/api/export-briefs?objectType=agentkit" });
+
+    expect(agentAlias.statusCode).toBe(200);
+    expect(agentAlias.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_agent_filter_b",
+      "export_brief_agent_filter_a"
+    ]);
+    expect(agentAlias.json().briefs.every((brief: { objectType: string }) => brief.objectType === "agent_kit")).toBe(true);
+    expect(agentUnderscoreAndId.statusCode).toBe(200);
+    expect(agentUnderscoreAndId.json().briefs.map((brief: { id: string }) => brief.id)).toEqual(["export_brief_agent_filter_a"]);
+    expect(sharedObjectId.statusCode).toBe(200);
+    expect(sharedObjectId.json().briefs.map((brief: { id: string }) => brief.id)).toEqual([
+      "export_brief_skill_filter",
+      "export_brief_pack_filter"
+    ]);
+    expect(composed.statusCode).toBe(200);
+    expect(composed.json().briefs.map((brief: { id: string }) => brief.id)).toEqual(["export_brief_composed_filter"]);
+    expect(invalidObjectType.statusCode).toBe(400);
+    expect(invalidObjectType.json()).toMatchObject({ error: "invalid_query" });
+    await app.close();
+    db.close();
+  });
+
+  it("export preview endpoints remain stateless and do not save export briefs implicitly", async () => {
+    const app = createApp({ config, db });
+    const countBefore = db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get();
+    const packPreview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const composePreview = await app.inject({
+      method: "POST",
+      url: "/api/compose/preview",
+      payload: {
+        title: "Stateless Preview",
+        target: "codex",
+        format: "markdown",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] }]
+      }
+    });
+    const list = await app.inject({ method: "GET", url: "/api/export-briefs" });
+
+    expect(packPreview.statusCode).toBe(200);
+    expect(composePreview.statusCode).toBe(200);
+    expect(db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get()).toBe(countBefore);
+    expect(list.json().briefs).toEqual([]);
+    await app.close();
+    db.close();
+  });
+
+  it("POST /api/export-briefs rejects unsafe privacy modes and invalid artifacts", async () => {
+    const app = createApp({ config, db });
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+    });
+    const artifact = preview.json();
+    const unsafe = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        privacyMode: "private",
+        artifact
+      }
+    });
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload: {
+        objectType: "pack",
+        artifact: {
+          ...artifact,
+          byteLength: artifact.byteLength + 1
+        }
+      }
+    });
+
+    expect(preview.statusCode).toBe(200);
+    expect(unsafe.statusCode).toBe(400);
+    expect(unsafe.json()).toMatchObject({ error: "unsafe_privacy_mode" });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json()).toMatchObject({ error: "invalid_export_artifact" });
+    expect(db.prepare("SELECT COUNT(*) FROM export_briefs").pluck().get()).toBe(0);
+    await app.close();
+    db.close();
+  });
+
+  it("GET /api/packs/:id/exports/:profileId/preview excludes unsafe record bodies", async () => {
+    db.close();
+    const tempRoot = copyDemoPacksFixture("contextarr-api-export-boundary-");
+    const fixtureContext = createTestContext(undefined, tempRoot, {
+      skillsDir: path.join(os.tmpdir(), "contextarr-no-skills"),
+      agentKitsDir: path.join(os.tmpdir(), "contextarr-no-agent-kits"),
+      demoAgentKitsDir: path.join(os.tmpdir(), "contextarr-no-demo-agent-kits")
+    });
+    const app = createApp(fixtureContext);
+
+    try {
+      const packRoot = path.join(tempRoot, "ai-workstation-pack");
+      replaceInFile(
+        path.join(packRoot, "records", "hardware-overview.md"),
+        "privacy: public_safe",
+        "privacy: private"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "hardware-overview.md"), "\nprivate-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "storage-layout.md"),
+        "review_status: approved",
+        "review_status: draft"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "storage-layout.md"), "\ndraft-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "networking-notes.md"),
+        "privacy: public_safe",
+        "privacy: secret"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "networking-notes.md"), "\nsecret-api-export-token\n", "utf8");
+      replaceInFile(
+        path.join(packRoot, "records", "troubleshooting-workflow.md"),
+        "  - workflow",
+        "  - workflow\n  - never_export"
+      );
+      fs.appendFileSync(path.join(packRoot, "records", "troubleshooting-workflow.md"), "\nnever-export-api-token\n", "utf8");
+      rebuildIndex(fixtureContext.db, tempRoot, getSkillIndexDirs(fixtureContext.config), getAgentKitIndexDirs(fixtureContext.config));
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview"
+      });
+      const body = JSON.stringify(response.json());
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().includedRecords.map((record: { id: string }) => record.id)).toEqual([
+        "ai-workstation.local-ai-stack"
+      ]);
+      expect(body).not.toContain("private-api-export-token");
+      expect(body).not.toContain("draft-api-export-token");
+      expect(body).not.toContain("secret-api-export-token");
+      expect(body).not.toContain("never-export-api-token");
+      expectNoLocalPaths(body);
+    } finally {
+      await app.close();
+      fixtureContext.db.close();
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   it("GET /api/packs/:id/exports/:profileId/preview reports missing packs and profiles", async () => {
@@ -2436,8 +3679,8 @@ describe("Contextarr API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       ok: true,
-      packsIndexed: 5,
-      recordsIndexed: 25,
+      packsIndexed: 15,
+      recordsIndexed: 111,
       skillsIndexed: 8,
       skillInstructionsIndexed: 24,
       agentKitsIndexed: 8,
@@ -2474,7 +3717,7 @@ describe("Contextarr API", () => {
     authedContext.db.close();
   });
 
-  it("requires token auth on review and pack health routes", async () => {
+  it("requires token auth on review, pack health, exposure readiness, context readiness, and observability routes", async () => {
     db.close();
     const authedContext = createTestContext("test-token");
     const app = createApp(authedContext);
@@ -2484,9 +3727,53 @@ describe("Contextarr API", () => {
       url: "/api/packs/ai-workstation-pack/health",
       headers: { authorization: "Bearer test-token" }
     });
+    const blockedReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exposure-readiness"
+    });
+    const allowedReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exposure-readiness",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedContextReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/readiness"
+    });
+    const allowedContextReadiness = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/readiness",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedEvents = await app.inject({
+      method: "GET",
+      url: "/api/events"
+    });
+    const allowedEvents = await app.inject({
+      method: "GET",
+      url: "/api/events",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const blockedMcpQueryLog = await app.inject({
+      method: "GET",
+      url: "/api/mcp/query-log"
+    });
+    const allowedMcpQueryLog = await app.inject({
+      method: "GET",
+      url: "/api/mcp/query-log",
+      headers: { authorization: "Bearer test-token" }
+    });
 
     expect(reviewResponse.statusCode).toBe(401);
     expect(healthResponse.statusCode).toBe(200);
+    expect(blockedReadiness.statusCode).toBe(401);
+    expect(allowedReadiness.statusCode).toBe(200);
+    expect(blockedContextReadiness.statusCode).toBe(401);
+    expect(allowedContextReadiness.statusCode).toBe(200);
+    expect(blockedEvents.statusCode).toBe(401);
+    expect(allowedEvents.statusCode).toBe(200);
+    expect(blockedMcpQueryLog.statusCode).toBe(401);
+    expect(allowedMcpQueryLog.statusCode).toBe(200);
     await app.close();
     authedContext.db.close();
   });
@@ -2507,6 +3794,56 @@ describe("Contextarr API", () => {
 
     expect(blocked.statusCode).toBe(401);
     expect(allowed.statusCode).toBe(200);
+    await app.close();
+    authedContext.db.close();
+  });
+
+  it("requires token auth on export brief routes", async () => {
+    db.close();
+    const authedContext = createTestContext("test-token");
+    const app = createApp(authedContext);
+    const preview = await app.inject({
+      method: "GET",
+      url: "/api/packs/ai-workstation-pack/exports/ai-workstation-codex/preview",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const payload = {
+      objectType: "pack",
+      artifact: preview.json()
+    };
+    const blockedList = await app.inject({ method: "GET", url: "/api/export-briefs" });
+    const blockedFetch = await app.inject({ method: "GET", url: "/api/export-briefs/export_brief_missing" });
+    const blockedSave = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      payload
+    });
+    const allowedSave = await app.inject({
+      method: "POST",
+      url: "/api/export-briefs",
+      headers: { authorization: "Bearer test-token" },
+      payload
+    });
+    const allowedList = await app.inject({
+      method: "GET",
+      url: "/api/export-briefs",
+      headers: { authorization: "Bearer test-token" }
+    });
+    const allowedFetch = await app.inject({
+      method: "GET",
+      url: `/api/export-briefs/${allowedSave.json().brief.id}`,
+      headers: { authorization: "Bearer test-token" }
+    });
+
+    expect(preview.statusCode).toBe(200);
+    expect(blockedList.statusCode).toBe(401);
+    expect(blockedFetch.statusCode).toBe(401);
+    expect(blockedSave.statusCode).toBe(401);
+    expect(allowedSave.statusCode).toBe(201);
+    expect(allowedList.statusCode).toBe(200);
+    expect(allowedList.json().briefs).toHaveLength(1);
+    expect(allowedFetch.statusCode).toBe(200);
+    expect(allowedFetch.json().brief.id).toBe(allowedSave.json().brief.id);
     await app.close();
     authedContext.db.close();
   });

@@ -32,7 +32,8 @@ describe("hash routes", () => {
   });
 
   it("parses review queue, composer, exports, and health routes", () => {
-    expect(parseHashRoute("#/review-queue")).toEqual({ name: "reviewQueue" });
+    expect(parseHashRoute("#/review-queue")).toEqual({ name: "reviewQueue", tab: "items" });
+    expect(parseHashRoute("#/review-queue/drafts")).toEqual({ name: "reviewQueue", tab: "drafts" });
     expect(parseHashRoute("#/composer")).toEqual({ name: "composer" });
     expect(parseHashRoute("#/composer/agent-kit")).toEqual({ name: "composer", mode: "agent-kit" });
     expect(parseHashRoute("#/composer/record-export")).toEqual({ name: "composer", mode: "record-export" });
@@ -66,6 +67,7 @@ describe("hash routes", () => {
     expect(agentKitHref("agent kit/id")).toBe("#/agent-kits/agent%20kit%2Fid");
     expect(collectorsHref()).toBe("#/collectors");
     expect(reviewQueueHref()).toBe("#/review-queue");
+    expect(reviewQueueHref("drafts")).toBe("#/review-queue/drafts");
     expect(composerHref()).toBe("#/composer");
     expect(composerHref("agent-kit")).toBe("#/composer/agent-kit");
     expect(composerHref("record-export")).toBe("#/composer/record-export");

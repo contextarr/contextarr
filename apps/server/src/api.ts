@@ -20,6 +20,18 @@ import {
   type BuildComposedExportOptions
 } from "@contextarr/export-profiles";
 import { importSkillToDraft, previewSkillImport, ImporterError, type SkillImporterKind } from "@contextarr/importers";
+import {
+  activateReviewCandidate,
+  dryRunReviewCandidateActivation,
+  getReviewCandidate,
+  getReviewCandidateActivationPlan,
+  listReviewCandidates,
+  ReviewCandidateActivationError,
+  type ReviewCandidateActivationMode,
+  type ReviewCandidateSourceKind,
+  type ReviewCandidateStatus,
+  type ReviewCandidateSummary
+} from "@contextarr/review-candidates";
 import { redactionRulesSchema, type AgentKitTemplate, type RedactionRules } from "@contextarr/schema";
 import {
   assertAgentKitDirectorySeparation,
@@ -28,10 +40,22 @@ import {
   assertDraftPacksDirectory,
   assertImportedSkillsDirectory,
   getAgentKitIndexDirs,
+  getReviewCandidateRoots,
   getSkillIndexDirs
 } from "./config";
 import { getAgentKitTemplate, loadAgentKitTemplates, type LoadedAgentKitTemplate } from "./agent-kit-template-loader";
 import type { ContextarrDatabase } from "./db";
+import {
+  ExportBriefError,
+  getExportBrief,
+  listExportBriefs,
+  normalizeExportBriefObjectType,
+  saveExportBrief,
+  type ExportBriefObjectType,
+  type SaveExportBriefBody
+} from "./export-briefs";
+import { ExposureReadinessError, getPackExposureReadiness } from "./exposure-readiness";
+import { getPackReadinessReport, ReadinessReportError } from "./readiness/readiness-engine";
 import {
   AgentKitWriteError,
   createAgentKitDraft,
@@ -45,6 +69,11 @@ import {
   normalizeComposedPackIdCandidate,
   type ComposeDraftRecord
 } from "./composed-pack-writer";
+import {
+  listReviewCandidateActivations,
+  markReviewCandidateActivationIndexed,
+  recordReviewCandidateActivation
+} from "./review-activation-history";
 import {
   getAgentKit,
   getAgentKitContextPacks,
@@ -84,6 +113,13 @@ import type {
   ServerConfig
 } from "./types";
 
+const LOCAL_OBSERVABILITY_DEFAULT_LIMIT = 25;
+const LOCAL_OBSERVABILITY_MAX_LIMIT = 100;
+const LOCAL_OBSERVABILITY_MAX_STRING_LENGTH = 240;
+const LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT = 5000;
+const EXPORT_BRIEF_DEFAULT_LIMIT = 25;
+const EXPORT_BRIEF_MAX_LIMIT = 100;
+
 export interface CreateAppOptions {
   config: ServerConfig;
   db: ContextarrDatabase;
@@ -92,6 +128,14 @@ export interface CreateAppOptions {
 export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
   const app = Fastify({
     logger: false
+  });
+
+  app.setErrorHandler((error, _request, reply) => {
+    const statusCode = httpStatusForError(error);
+    return reply.code(statusCode).send({
+      error: apiErrorCode(error, statusCode),
+      message: apiErrorMessage(error, statusCode, config)
+    });
   });
 
   app.addHook("onRequest", async (request, reply) => {
@@ -719,9 +763,17 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
   });
 
-  app.get("/api/packs", async () => {
+  app.get<{ Querystring: { starter?: string; starterCategory?: string } }>("/api/packs", async (request, reply) => {
+    const starter = parseBooleanQuery(request.query.starter);
+    if (starter === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "starter must be true or false." });
+    }
+
     return {
-      packs: getPacks(db)
+      packs: getPacks(db, {
+        starter,
+        starterCategory: request.query.starterCategory
+      })
     };
   });
 
@@ -741,6 +793,121 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
     }
 
     return health;
+  });
+
+  app.get<{ Params: { id: string } }>("/api/packs/:id/exposure-readiness", async (request, reply) => {
+    try {
+      const readiness = getPackExposureReadiness(db, config, request.params.id);
+      if (!readiness) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+      }
+
+      return readiness;
+    } catch (error) {
+      if (error instanceof ExposureReadinessError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.get<{ Params: { id: string } }>("/api/packs/:id/readiness", async (request, reply) => {
+    try {
+      const readiness = getPackReadinessReport(db, config, request.params.id);
+      if (!readiness) {
+        return reply.code(404).send({ error: "not_found", message: `Pack not found: ${request.params.id}` });
+      }
+
+      return readiness;
+    } catch (error) {
+      if (error instanceof ExposureReadinessError || error instanceof ReadinessReportError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.get<{ Querystring: { limit?: string; packId?: string; recordId?: string } }>("/api/events", async (request, reply) => {
+    const limit = parseLocalObservabilityLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply
+        .code(400)
+        .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
+    }
+    const scope = parseLocalObservabilityScope(request.query);
+    if (scope === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Local observability scope must use safe object IDs." });
+    }
+
+    return {
+      events: listLocalEvents(db, config, limit, scope)
+    };
+  });
+
+  app.get<{ Querystring: { limit?: string; packId?: string; recordId?: string } }>("/api/mcp/query-log", async (request, reply) => {
+    const limit = parseLocalObservabilityLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply
+        .code(400)
+        .send({ error: "invalid_query", message: "Local observability limit must be an integer from 1 to 100." });
+    }
+    const scope = parseLocalObservabilityScope(request.query);
+    if (scope === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Local observability scope must use safe object IDs." });
+    }
+
+    return {
+      queries: listMcpQueryLog(db, config, limit, scope)
+    };
+  });
+
+  app.post<{ Body: SaveExportBriefBody }>("/api/export-briefs", async (request, reply) => {
+    try {
+      return reply.code(201).send({
+        ok: true,
+        brief: saveExportBrief(db, request.body ?? {})
+      });
+    } catch (error) {
+      if (error instanceof ExportBriefError) {
+        return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+      }
+
+      throw error;
+    }
+  });
+
+  app.get<{ Querystring: { limit?: string; objectType?: string; objectId?: string } }>("/api/export-briefs", async (request, reply) => {
+    const limit = parseExportBriefListLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Export brief limit must be an integer from 1 to 100." });
+    }
+
+    const objectType = parseExportBriefListObjectType(request.query.objectType);
+    if (objectType === "invalid") {
+      return reply.code(400).send({
+        error: "invalid_query",
+        message: "Export brief objectType must be pack, skill, agent_kit, agent-kit, or composed."
+      });
+    }
+
+    return {
+      briefs: listExportBriefs(db, {
+        limit,
+        objectType,
+        objectId: parseExportBriefListObjectId(request.query.objectId)
+      })
+    };
+  });
+
+  app.get<{ Params: { id: string } }>("/api/export-briefs/:id", async (request, reply) => {
+    const brief = getExportBrief(db, request.params.id);
+    if (!brief) {
+      return reply.code(404).send({ error: "not_found", message: `Export brief not found: ${request.params.id}` });
+    }
+
+    return { brief };
   });
 
   app.get<{ Params: { id: string; profileId: string } }>("/api/packs/:id/exports/:profileId/preview", async (request, reply) => {
@@ -958,6 +1125,165 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
 
   app.get<{
     Querystring: {
+      sourceKind?: string;
+      status?: string;
+      q?: string;
+    };
+  }>("/api/review-candidates", async (request, reply) => {
+    const sourceKind = parseReviewCandidateSourceKind(request.query.sourceKind);
+    const status = parseReviewCandidateStatus(request.query.status);
+    if (sourceKind === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Review candidate sourceKind is invalid." });
+    }
+    if (status === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Review candidate status is invalid." });
+    }
+
+    const result = listReviewCandidates({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd()
+    });
+    const query = request.query.q?.trim().toLowerCase();
+    const skippedRoots = sourceKind
+      ? result.skippedRoots.filter((skippedRoot) => skippedRoot.sourceKind === sourceKind)
+      : result.skippedRoots;
+    const candidates = result.candidates.filter((candidate) => {
+      if (sourceKind && candidate.sourceKind !== sourceKind) {
+        return false;
+      }
+      if (status && candidate.status !== status) {
+        return false;
+      }
+      if (query) {
+        return [candidate.packId, candidate.name, candidate.pathLabel, candidate.sourceLabel]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    return {
+      candidates,
+      skippedRoots,
+      counts: countReviewCandidates(candidates, skippedRoots.length)
+    };
+  });
+
+  app.get<{
+    Querystring: {
+      limit?: string;
+      packId?: string;
+      candidateKey?: string;
+    };
+  }>("/api/review-candidate-activations", async (request, reply) => {
+    const limit = parseReviewCandidateActivationLimit(request.query.limit);
+    if (limit === "invalid") {
+      return reply.code(400).send({ error: "invalid_query", message: "Activation history limit must be an integer from 1 to 100." });
+    }
+
+    return {
+      activations: listReviewCandidateActivations(db, {
+        limit,
+        packId: request.query.packId?.trim() || undefined,
+        candidateKey: request.query.candidateKey?.trim() || undefined
+      })
+    };
+  });
+
+  app.get<{ Params: { key: string } }>("/api/review-candidates/:key/activation-plan", async (request, reply) => {
+    const plan = getReviewCandidateActivationPlan({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      activePacksRoot: config.packsDir,
+      key: request.params.key
+    });
+
+    if (!plan) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { plan };
+  });
+
+  app.post<{ Params: { key: string } }>("/api/review-candidates/:key/activation/dry-run", async (request, reply) => {
+    const dryRun = dryRunReviewCandidateActivation({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      activePacksRoot: config.packsDir,
+      key: request.params.key
+    });
+
+    if (!dryRun) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { dryRun };
+  });
+
+  app.post<{ Params: { key: string }; Body: ReviewCandidateActivationApplyBody }>(
+    "/api/review-candidates/:key/activation/apply",
+    async (request, reply) => {
+      const parsed = parseReviewCandidateActivationApplyBody(request.body ?? {});
+      if (!parsed.ok) {
+        return reply.code(400).send({ error: "invalid_activation_request", message: parsed.message });
+      }
+
+      try {
+        const activation = activateReviewCandidate({
+          roots: getReviewCandidateRoots(config),
+          activePackIds: getPacks(db).map((pack) => pack.id),
+          displayRoot: process.env.INIT_CWD ?? process.cwd(),
+          activePacksRoot: config.packsDir,
+          key: request.params.key,
+          proofId: parsed.value.proofId,
+          mode: parsed.value.mode
+        });
+
+        if (!activation) {
+          return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+        }
+
+        const pendingHistory = recordReviewCandidateActivation(db, activation);
+        const index = rebuildIndex(db, config.packsDir, getSkillIndexDirs(config), getAgentKitIndexDirs(config));
+        const history = markReviewCandidateActivationIndexed(db, pendingHistory.id, index.indexedAt) ?? pendingHistory;
+
+        return reply.code(201).send({
+          ok: true,
+          activation,
+          history,
+          pack: getPack(db, activation.packId),
+          index: sanitizeRebuildResultForApi(index)
+        });
+      } catch (error) {
+        if (error instanceof ReviewCandidateActivationError) {
+          return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  app.get<{ Params: { key: string } }>("/api/review-candidates/:key", async (request, reply) => {
+    const candidate = getReviewCandidate({
+      roots: getReviewCandidateRoots(config),
+      activePackIds: getPacks(db).map((pack) => pack.id),
+      displayRoot: process.env.INIT_CWD ?? process.cwd(),
+      key: request.params.key
+    });
+
+    if (!candidate) {
+      return reply.code(404).send({ error: "not_found", message: `Review candidate not found: ${request.params.key}` });
+    }
+
+    return { candidate };
+  });
+
+  app.get<{
+    Querystring: {
       status?: ReviewItemStatus;
       severity?: ReviewItemSeverity;
       type?: ReviewItemType;
@@ -1139,6 +1465,48 @@ function isHealthRequest(request: FastifyRequest): boolean {
   return request.method === "GET" && request.url.split("?")[0] === "/api/health";
 }
 
+function httpStatusForError(error: unknown): number {
+  const statusCode = typeof (error as { statusCode?: unknown }).statusCode === "number" ? (error as { statusCode: number }).statusCode : 500;
+  return statusCode >= 400 && statusCode < 600 ? statusCode : 500;
+}
+
+function apiErrorCode(error: unknown, statusCode: number): string {
+  if (errorCode(error) === "FST_ERR_CTP_INVALID_JSON_BODY") {
+    return "invalid_json";
+  }
+
+  if (statusCode === 400) {
+    return "bad_request";
+  }
+
+  if (statusCode >= 500) {
+    return "internal_error";
+  }
+
+  return "request_failed";
+}
+
+function apiErrorMessage(error: unknown, statusCode: number, config: ServerConfig): string {
+  if (errorCode(error) === "FST_ERR_CTP_INVALID_JSON_BODY") {
+    return "Request body must be valid JSON.";
+  }
+
+  if (statusCode >= 500) {
+    return "Request failed.";
+  }
+
+  return sanitizeLocalPathText(errorMessage(error) || "Request is invalid.", config.packsDir);
+}
+
+function errorCode(error: unknown): string | undefined {
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function getRequestToken(request: FastifyRequest): string | undefined {
   const authorization = getHeaderValue(request.headers.authorization);
   const bearerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
@@ -1151,6 +1519,400 @@ function getRequestToken(request: FastifyRequest): string | undefined {
 
 function getHeaderValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function parseBooleanQuery(value: string | undefined): boolean | "invalid" | undefined {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no"].includes(normalized)) {
+    return false;
+  }
+  return "invalid";
+}
+
+function parseReviewCandidateSourceKind(value: string | undefined): ReviewCandidateSourceKind | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["draft_pack", "composed_pack", "imported_pack", "restored_quarantine", "unknown"].includes(value)
+    ? (value as ReviewCandidateSourceKind)
+    : "invalid";
+}
+
+function parseReviewCandidateStatus(value: string | undefined): ReviewCandidateStatus | undefined | "invalid" {
+  if (!value || value === "all") {
+    return undefined;
+  }
+  return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
+    ? (value as ReviewCandidateStatus)
+    : "invalid";
+}
+
+function countReviewCandidates(candidates: ReviewCandidateSummary[], skippedRoots: number) {
+  return {
+    total: candidates.length,
+    readyForReview: candidates.filter((candidate) => candidate.status === "ready_for_review").length,
+    invalid: candidates.filter((candidate) => candidate.status === "invalid").length,
+    blocked: candidates.filter((candidate) => candidate.status === "blocked").length,
+    duplicateActiveId: candidates.filter((candidate) => candidate.status === "duplicate_active_id").length,
+    skippedRoots
+  };
+}
+
+function parseReviewCandidateActivationLimit(value: string | undefined): number | undefined | "invalid" {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+function parseLocalObservabilityLimit(value: string | undefined): number | "invalid" {
+  if (!value) {
+    return LOCAL_OBSERVABILITY_DEFAULT_LIMIT;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > LOCAL_OBSERVABILITY_MAX_LIMIT) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+interface LocalObservabilityScope {
+  packId?: string;
+  recordId?: string;
+}
+
+function parseLocalObservabilityScope(query: { packId?: string; recordId?: string }): LocalObservabilityScope | "invalid" {
+  const packId = parseLocalObservabilityScopeId(query.packId);
+  const recordId = parseLocalObservabilityScopeId(query.recordId);
+  if (packId === "invalid" || recordId === "invalid") {
+    return "invalid";
+  }
+  return {
+    ...(packId ? { packId } : {}),
+    ...(recordId ? { recordId } : {})
+  };
+}
+
+function parseLocalObservabilityScopeId(value: string | undefined): string | undefined | "invalid" {
+  const id = value?.trim();
+  if (!id) {
+    return undefined;
+  }
+  if (!/^[A-Za-z0-9_.:-]{1,200}$/.test(id)) {
+    return "invalid";
+  }
+  return id;
+}
+
+function parseExportBriefListLimit(value: string | undefined): number | "invalid" {
+  if (!value) {
+    return EXPORT_BRIEF_DEFAULT_LIMIT;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > EXPORT_BRIEF_MAX_LIMIT) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+function parseExportBriefListObjectType(value: string | undefined): ExportBriefObjectType | undefined | "invalid" {
+  if (!value) {
+    return undefined;
+  }
+
+  return normalizeExportBriefObjectType(value.trim()) ?? "invalid";
+}
+
+function parseExportBriefListObjectId(value: string | undefined): string | undefined {
+  const objectId = value?.trim();
+  return objectId || undefined;
+}
+
+interface LocalEventRow {
+  id: number;
+  type: string;
+  message: string;
+  created_at: string;
+  metadata_json: string;
+}
+
+interface LocalMcpQueryLogRow {
+  tool: string;
+  pack_id: string | null;
+  record_id: string | null;
+  profile_id: string | null;
+  status: string;
+  result_count: number;
+  query_hash: string | null;
+  query_length: number | null;
+  duration_ms: number;
+  created_at: string;
+  metadata_json: string;
+}
+
+function listLocalEvents(db: ContextarrDatabase, config: ServerConfig, limit: number, scope: LocalObservabilityScope = {}) {
+  const scoped = hasLocalObservabilityScope(scope);
+  const rows = db
+    .prepare(
+      `SELECT id, type, message, created_at, metadata_json
+       FROM events
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`
+    )
+    .all(scoped ? LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT : limit) as LocalEventRow[];
+
+  return rows
+    .filter((row) => !scoped || localObservabilityMetadataMatchesScope(row.metadata_json, scope))
+    .slice(0, limit)
+    .map((row) => {
+      const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+      return {
+        id: row.id,
+        type: row.type,
+        message: sanitizeLocalObservabilityMessage(row.message, config),
+        createdAt: row.created_at,
+        ...(metadata ? { metadata } : {})
+      };
+    });
+}
+
+function listMcpQueryLog(db: ContextarrDatabase, config: ServerConfig, limit: number, scope: LocalObservabilityScope = {}) {
+  const scoped = hasLocalObservabilityScope(scope);
+  const rows = db
+    .prepare(
+      `SELECT tool, pack_id, record_id, profile_id, status, result_count,
+        query_hash, query_length, duration_ms, created_at, metadata_json
+       FROM mcp_query_log
+       ORDER BY created_at DESC, rowid DESC
+       LIMIT ?`
+    )
+    .all(scoped ? LOCAL_OBSERVABILITY_SCOPED_SCAN_LIMIT : limit) as LocalMcpQueryLogRow[];
+
+  return rows
+    .filter((row) => !scoped || localMcpQueryMatchesScope(row, scope))
+    .slice(0, limit)
+    .map((row) => {
+      const metadata = sanitizeLocalObservabilityMetadata(row.metadata_json, config);
+      return {
+        tool: row.tool,
+        packId: row.pack_id,
+        recordId: row.record_id,
+        profileId: row.profile_id,
+        status: row.status,
+        resultCount: row.result_count,
+        queryHash: row.query_hash,
+        queryLength: row.query_length,
+        durationMs: row.duration_ms,
+        createdAt: row.created_at,
+        ...(metadata ? { metadata } : {})
+      };
+    });
+}
+
+function hasLocalObservabilityScope(scope: LocalObservabilityScope): boolean {
+  return Boolean(scope.packId || scope.recordId);
+}
+
+function localMcpQueryMatchesScope(row: LocalMcpQueryLogRow, scope: LocalObservabilityScope): boolean {
+  if (scope.packId && row.pack_id === scope.packId) {
+    return true;
+  }
+  if (scope.recordId && row.record_id === scope.recordId) {
+    return true;
+  }
+  return localObservabilityMetadataMatchesScope(row.metadata_json, scope);
+}
+
+function localObservabilityMetadataMatchesScope(value: string, scope: LocalObservabilityScope): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return false;
+  }
+  return localObservabilityValueMatchesScope(parsed, scope);
+}
+
+function localObservabilityValueMatchesScope(value: unknown, scope: LocalObservabilityScope, key = "", depth = 0): boolean {
+  if (depth > 4) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return localObservabilityStringMatchesScope(key, value, scope);
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => localObservabilityValueMatchesScope(item, scope, key, depth + 1));
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value).some(([childKey, childValue]) =>
+      localObservabilityValueMatchesScope(childValue, scope, childKey, depth + 1)
+    );
+  }
+
+  return false;
+}
+
+function localObservabilityStringMatchesScope(key: string, value: string, scope: LocalObservabilityScope): boolean {
+  const normalizedKey = key.toLowerCase();
+  if (scope.packId && ["packid", "objectid", "subjectid", "pack", "packids", "objectids"].includes(normalizedKey)) {
+    return value === scope.packId;
+  }
+  if (scope.recordId && ["recordid", "recordids"].includes(normalizedKey)) {
+    return value === scope.recordId;
+  }
+  return false;
+}
+
+function sanitizeLocalObservabilityMessage(value: string, config: ServerConfig): string {
+  const sanitized = sanitizeLocalObservabilityString("message", value, config);
+  return sanitized ?? "[redacted]";
+}
+
+function sanitizeLocalObservabilityMetadata(value: string, config: ServerConfig): Record<string, unknown> | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+
+  const sanitized = sanitizeLocalObservabilityValue(parsed, config);
+  if (!isRecord(sanitized)) {
+    return undefined;
+  }
+
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+}
+
+function sanitizeLocalObservabilityValue(value: unknown, config: ServerConfig, key = "", depth = 0): unknown {
+  if (isSensitiveLocalObservabilityKey(key)) {
+    return undefined;
+  }
+
+  if (value === null || typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    return sanitizeLocalObservabilityString(key, value, config);
+  }
+
+  if (Array.isArray(value)) {
+    if (depth >= 4) {
+      return undefined;
+    }
+
+    const items = value
+      .slice(0, 20)
+      .map((item) => sanitizeLocalObservabilityValue(item, config, key, depth + 1))
+      .filter((item) => item !== undefined);
+    return items.length > 0 ? items : undefined;
+  }
+
+  if (isRecord(value)) {
+    if (depth >= 4) {
+      return undefined;
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [childKey, childValue] of Object.entries(value)) {
+      const sanitizedValue = sanitizeLocalObservabilityValue(childValue, config, childKey, depth + 1);
+      if (sanitizedValue !== undefined) {
+        sanitized[childKey] = sanitizedValue;
+      }
+    }
+    return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+  }
+
+  return undefined;
+}
+
+function sanitizeLocalObservabilityString(key: string, value: string, config: ServerConfig): string | undefined {
+  if (isSensitiveLocalObservabilityStringKey(key)) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > LOCAL_OBSERVABILITY_MAX_STRING_LENGTH || trimmed.split(/\r?\n/).length > 3) {
+    return undefined;
+  }
+
+  return sanitizeLocalPathText(trimmed, config.packsDir);
+}
+
+function isSensitiveLocalObservabilityKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  if (normalized === "profile" || normalized === "profileid" || normalized === "estimatedtokens") {
+    return false;
+  }
+
+  return (
+    normalized === "q" ||
+    normalized.includes("query") ||
+    normalized.includes("prompt") ||
+    normalized.includes("input") ||
+    normalized.includes("body") ||
+    normalized.includes("bodies") ||
+    normalized.includes("content") ||
+    normalized.includes("context") ||
+    normalized.includes("secret") ||
+    normalized === "token" ||
+    normalized.endsWith("token") ||
+    normalized.includes("password") ||
+    normalized.includes("credential") ||
+    normalized.includes("reporoot") ||
+    normalized.includes("root") ||
+    normalized.includes("path") ||
+    normalized.includes("dir") ||
+    normalized.includes("file")
+  );
+}
+
+function isSensitiveLocalObservabilityStringKey(key: string): boolean {
+  const normalized = key.toLowerCase();
+  return normalized === "text" || normalized === "raw" || isSensitiveLocalObservabilityKey(key);
+}
+
+function parseReviewCandidateActivationApplyBody(
+  body: ReviewCandidateActivationApplyBody
+): { ok: true; value: { proofId: string; mode: ReviewCandidateActivationMode } } | { ok: false; message: string } {
+  if (!isRecord(body)) {
+    return { ok: false, message: "Activation apply body must be an object." };
+  }
+
+  const allowedKeys = new Set(["proofId", "mode"]);
+  const unknownKey = Object.keys(body).find((key) => !allowedKeys.has(key));
+  if (unknownKey) {
+    return { ok: false, message: `Activation apply field is not allowed: ${unknownKey}.` };
+  }
+
+  if (typeof body.proofId !== "string" || !/^[a-f0-9]{24}$/.test(body.proofId)) {
+    return { ok: false, message: "Activation proofId must be a 24-character proof ID from dry-run." };
+  }
+
+  const mode = body.mode ?? "move";
+  if (mode !== "move" && mode !== "copy") {
+    return { ok: false, message: "Activation mode must be move or copy." };
+  }
+
+  return { ok: true, value: { proofId: body.proofId, mode } };
 }
 
 function isReviewItemStatus(value: unknown): value is ReviewItemStatus {
@@ -1228,6 +1990,10 @@ function sanitizeLocalPathText(value: string, rootPath: string): string {
 
   return normalizedMessage
     .replace(/\b[A-Za-z]:\/[^\s"'`<>|]+/g, "[local path]")
+    .replace(
+      /(^|[\s"'`([{=,:;])\/(?:__w|app|github|home|tmp|var|Users|mnt|workspace|workspaces|runner|private|opt)\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g,
+      "$1[local path]"
+    )
     .replace(/(?<!:)\/\/[^/\s"'`<>|]+\/[^\s"'`<>|]+(?:\/[^\s"'`<>|]+)*/g, "[local path]")
     .replace(/\\\\[^\s"'`<>|]+/g, "[local path]");
 }
@@ -1287,6 +2053,11 @@ interface ContextPackCollectorBody {
   description?: unknown;
   maxRecords?: unknown;
   overwrite?: unknown;
+}
+
+interface ReviewCandidateActivationApplyBody {
+  proofId?: unknown;
+  mode?: unknown;
 }
 
 interface SaveAgentKitBody {

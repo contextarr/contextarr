@@ -1,0 +1,25 @@
+id: docker-containers-codex
+name: Docker Containers Pack Codex Export
+target: codex
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - docker-containers-pack.stack-overview
+    - docker-containers-pack.compose-files
+    - docker-containers-pack.container-inventory
+    - docker-containers-pack.networks-and-ports
+    - docker-containers-pack.volumes-and-storage
+    - docker-containers-pack.environment-variables
+    - docker-containers-pack.secrets-policy
+    - docker-containers-pack.update-policy
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

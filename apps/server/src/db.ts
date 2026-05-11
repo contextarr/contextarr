@@ -37,6 +37,12 @@ export function createSchema(db: ContextarrDatabase): void {
       requires_network INTEGER NOT NULL,
       accent_color TEXT,
       cover_image TEXT,
+      brand_id TEXT,
+      cover_recipe TEXT,
+      logo_variant TEXT,
+      starter_pack INTEGER NOT NULL DEFAULT 0,
+      starter_category TEXT,
+      starter_sort_order INTEGER,
       pack_path TEXT NOT NULL,
       manifest_json TEXT NOT NULL,
       validation_status TEXT NOT NULL DEFAULT 'valid',
@@ -358,8 +364,58 @@ export function createSchema(db: ContextarrDatabase): void {
       metadata_json TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS export_briefs (
+      id TEXT PRIMARY KEY,
+      object_type TEXT NOT NULL,
+      object_id TEXT NOT NULL,
+      profile_id TEXT NOT NULL,
+      target TEXT NOT NULL,
+      format TEXT NOT NULL,
+      privacy_mode TEXT NOT NULL,
+      filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      byte_length INTEGER NOT NULL,
+      estimated_tokens INTEGER NOT NULL,
+      included_count INTEGER NOT NULL,
+      excluded_count INTEGER NOT NULL,
+      source_count INTEGER NOT NULL,
+      warning_count INTEGER NOT NULL,
+      warning_codes_json TEXT NOT NULL,
+      generated_at TEXT NOT NULL,
+      saved_at TEXT NOT NULL,
+      content_snapshot TEXT,
+      content_snapshot_truncated INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS review_candidate_activations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      proof_id TEXT NOT NULL UNIQUE,
+      candidate_key TEXT NOT NULL,
+      pack_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      source_kind TEXT NOT NULL,
+      source_label TEXT NOT NULL,
+      source_path_label TEXT NOT NULL,
+      target_path_label TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      status TEXT NOT NULL,
+      activated_at TEXT NOT NULL,
+      index_refreshed_at TEXT,
+      validation_json TEXT NOT NULL,
+      security_json TEXT NOT NULL,
+      warnings_json TEXT NOT NULL,
+      effects_json TEXT NOT NULL,
+      activation_json TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_tool ON mcp_query_log(tool);
     CREATE INDEX IF NOT EXISTS idx_mcp_query_log_created_at ON mcp_query_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_export_briefs_object ON export_briefs(object_type, object_id);
+    CREATE INDEX IF NOT EXISTS idx_export_briefs_saved_at ON export_briefs(saved_at);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_pack ON review_candidate_activations(pack_id);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_candidate ON review_candidate_activations(candidate_key);
+    CREATE INDEX IF NOT EXISTS idx_review_candidate_activations_activated_at ON review_candidate_activations(activated_at);
 
     CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
       record_id UNINDEXED,
@@ -387,6 +443,12 @@ export function createSchema(db: ContextarrDatabase): void {
   `);
 
   ensureColumn(db, "packs", "cover_image", "TEXT");
+  ensureColumn(db, "packs", "brand_id", "TEXT");
+  ensureColumn(db, "packs", "cover_recipe", "TEXT");
+  ensureColumn(db, "packs", "logo_variant", "TEXT");
+  ensureColumn(db, "packs", "starter_pack", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "packs", "starter_category", "TEXT");
+  ensureColumn(db, "packs", "starter_sort_order", "INTEGER");
   ensureColumn(db, "packs", "review_queue_count", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "packs", "validation_status", "TEXT NOT NULL DEFAULT 'valid'");
   ensureColumn(db, "packs", "export_readiness", "TEXT NOT NULL DEFAULT 'ready'");

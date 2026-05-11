@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentKitHealthResponse,
   AgentKitTemplateSummary,
+  ExportArtifact,
   HealthResponse,
   PackSummary,
   ReviewItem,
@@ -30,6 +31,8 @@ const mocks = vi.hoisted(() => {
       getHealth: vi.fn(),
       getPacks: vi.fn(),
       getPack: vi.fn(),
+      getPackExposureReadiness: vi.fn(),
+      getPackReadiness: vi.fn(),
       getPackRecords: vi.fn(),
       getRecord: vi.fn(),
       getSkills: vi.fn(),
@@ -58,7 +61,18 @@ const mocks = vi.hoisted(() => {
       getSkillExportPreview: vi.fn(),
       composePreview: vi.fn(),
       saveComposedPack: vi.fn(),
+      saveExportBrief: vi.fn(),
+      listExportBriefs: vi.fn(),
+      getExportBrief: vi.fn(),
+      getEvents: vi.fn(),
+      getMcpQueryLog: vi.fn(),
       getReviewItems: vi.fn(),
+      getReviewCandidates: vi.fn(),
+      getReviewCandidate: vi.fn(),
+      getReviewCandidateActivationPlan: vi.fn(),
+      dryRunReviewCandidateActivation: vi.fn(),
+      getReviewCandidateActivations: vi.fn(),
+      applyReviewCandidateActivation: vi.fn(),
       updateReviewItemStatus: vi.fn()
     }
   };
@@ -107,6 +121,9 @@ describe("App Skill UI routes", () => {
     mocks.apiClient.getHealth.mockResolvedValue(healthFixture());
     mocks.apiClient.getPacks.mockResolvedValue([packFixture()]);
     mocks.apiClient.getPack.mockResolvedValue(packDetailFixture());
+    mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessFixture());
+    mocks.apiClient.getPackReadiness.mockResolvedValue(packReadinessFixture());
+    mocks.apiClient.getExportPreview.mockResolvedValue(packExportArtifactFixture());
     mocks.apiClient.getPackRecords.mockResolvedValue([]);
     mocks.apiClient.getRecord.mockResolvedValue({});
     mocks.apiClient.getSkills.mockResolvedValue([skillFixture()]);
@@ -242,7 +259,266 @@ describe("App Skill UI routes", () => {
       validation: { valid: true, errors: 0, warnings: 0, infos: 0 },
       draft: { status: "review_required", indexed: false }
     });
+    mocks.apiClient.composePreview.mockResolvedValue(composedExportArtifactFixture());
+    mocks.apiClient.listExportBriefs.mockResolvedValue([exportBriefFixture("brief-pack", packExportArtifactFixture())]);
+    mocks.apiClient.saveExportBrief.mockImplementation(async (request) =>
+      exportBriefFixture(`brief-${request.objectType}`, request.artifact, request.objectType, request.objectId, request.privacyMode)
+    );
+    mocks.apiClient.getExportBrief.mockResolvedValue(exportBriefFixture("brief-pack", packExportArtifactFixture()));
+    mocks.apiClient.getEvents.mockResolvedValue([
+      {
+        id: 1,
+        type: "export_brief.saved",
+        message: "Saved local export brief metadata.",
+        createdAt: "2026-05-11T00:00:00.000Z",
+        metadata: {
+          briefId: "brief-pack",
+          objectType: "pack",
+          objectId: "ai-workstation-pack",
+          packId: "ai-workstation-pack",
+          profileId: "ai-workstation-codex",
+          target: "codex",
+          warningCodes: []
+        }
+      },
+      {
+        id: 2,
+        type: "export_brief.saved",
+        message: "Saved unrelated local export brief metadata.",
+        createdAt: "2026-05-11T00:00:30.000Z",
+        metadata: {
+          objectId: "other-pack",
+          packId: "other-pack"
+        }
+      }
+    ]);
+    mocks.apiClient.getMcpQueryLog.mockResolvedValue([
+      {
+        tool: "get_pack_summary",
+        packId: "ai-workstation-pack",
+        recordId: null,
+        profileId: null,
+        status: "ok",
+        resultCount: 1,
+        queryHash: "hash-ai-workstation-pack",
+        queryLength: 18,
+        durationMs: 7,
+        createdAt: "2026-05-11T00:01:00.000Z",
+        metadata: { resultKinds: ["pack"] }
+      }
+    ]);
     mocks.apiClient.getReviewItems.mockResolvedValue({ items: [], counts: { total: 0, open: 0, filtered: 0 } });
+    mocks.apiClient.getReviewCandidates.mockResolvedValue({
+      candidates: [
+        {
+          key: "candidate-key",
+          sourceKind: "draft_pack",
+          sourceLabel: "draft-packs",
+          pathLabel: "draft-packs/local-draft",
+          packId: "local-draft-pack",
+          name: "Local Draft Pack",
+          version: "0.1.0",
+          status: "ready_for_review",
+          recommendedAction: "Review manually before activation, export, or MCP exposure.",
+          activeConflict: false,
+          validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+          security: {
+            status: "policy_clean",
+            recommendedAction: "quarantine",
+            blocking: false,
+            summary: null,
+            findingCount: 0
+          },
+          counts: { records: 1, sources: 1, exportProfiles: 1 }
+        }
+      ],
+      skippedRoots: [],
+      counts: { total: 1, readyForReview: 1, invalid: 0, blocked: 0, duplicateActiveId: 0, skippedRoots: 0, filtered: 1 }
+    });
+    mocks.apiClient.getReviewCandidateActivations.mockResolvedValue([]);
+    mocks.apiClient.getReviewCandidate.mockResolvedValue({
+      key: "candidate-key",
+      sourceKind: "draft_pack",
+      sourceLabel: "draft-packs",
+      pathLabel: "draft-packs/local-draft",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      version: "0.1.0",
+      status: "ready_for_review",
+      recommendedAction: "Review manually before activation, export, or MCP exposure.",
+      activeConflict: false,
+      validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+      security: {
+        status: "policy_clean",
+        recommendedAction: "quarantine",
+        blocking: false,
+        summary: null,
+        findingCount: 0
+      },
+      counts: { records: 1, sources: 1, exportProfiles: 1 },
+      validationIssues: [],
+      securityFindings: [],
+      records: [
+        {
+          id: "local-draft-pack.overview",
+          title: "Overview Metadata",
+          type: "overview",
+          privacy: "private",
+          reviewStatus: "draft",
+          sourceStatus: "draft",
+          tags: ["never_export"],
+          sources: ["local-draft-pack.source.overview"],
+          file: "records/overview.md"
+        }
+      ],
+      sources: [],
+      exportProfiles: []
+    });
+    mocks.apiClient.getReviewCandidateActivationPlan.mockResolvedValue({
+      schemaVersion: "contextarr.review-candidate-activation-plan.v1",
+      candidateKey: "candidate-key",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      status: "ready",
+      canActivate: true,
+      source: {
+        kind: "draft_pack",
+        label: "draft-packs",
+        pathLabel: "draft-packs/local-draft"
+      },
+      target: {
+        activePacksRootLabel: "demo-packs",
+        packId: "local-draft-pack",
+        pathLabel: "demo-packs/local-draft-pack",
+        activeConflict: false
+      },
+      checks: [
+        {
+          id: "validation",
+          label: "Validation",
+          status: "pass",
+          message: "Manifest, records, sources, and export profile metadata validate."
+        },
+        {
+          id: "write-boundary",
+          label: "Write Boundary",
+          status: "pass",
+          message: "This plan does not move files, update SQLite, export content, or expose MCP records."
+        }
+      ],
+      blockers: [],
+      warnings: [],
+      nextSteps: [
+        "Inspect the candidate records, sources, export profiles, validation issues, and scanner findings.",
+        "Move or copy the reviewed folder into demo-packs/local-draft-pack.",
+        "Run contextarr rescan --format json.",
+        "Check Pack Health and Exposure Readiness before export or MCP exposure."
+      ],
+      boundaries: [
+        "Read-only plan only; no files have been moved or copied.",
+        "No SQLite index mutation has run.",
+        "No export, MCP exposure, registry publish, or network action has run.",
+        "No record bodies are returned in this plan."
+      ]
+    });
+    mocks.apiClient.dryRunReviewCandidateActivation.mockResolvedValue({
+      schemaVersion: "contextarr.review-candidate-activation-dry-run.v1",
+      generatedAt: "2026-05-10T00:00:00.000Z",
+      proofId: "abc123def456abc123def456",
+      candidateKey: "candidate-key",
+      packId: "local-draft-pack",
+      name: "Local Draft Pack",
+      status: "ready",
+      canActivate: true,
+      source: {
+        kind: "draft_pack",
+        label: "draft-packs",
+        pathLabel: "draft-packs/local-draft"
+      },
+      target: {
+        activePacksRootLabel: "demo-packs",
+        packId: "local-draft-pack",
+        pathLabel: "demo-packs/local-draft-pack",
+        activeConflict: false
+      },
+      validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+      security: {
+        status: "policy_clean",
+        recommendedAction: "review",
+        blocking: false,
+        summary: null,
+        findingCount: 0
+      },
+      blockers: [],
+      warnings: [],
+      manualActions: [
+        "Inspect the candidate records, sources, export profiles, validation issues, and scanner findings.",
+        "Move or copy the reviewed folder into demo-packs/local-draft-pack."
+      ],
+      effects: {
+        filesMoved: false,
+        sqliteMutated: false,
+        exportsGenerated: false,
+        mcpExposed: false,
+        networkAccessed: false
+      },
+      boundaries: [
+        "Dry-run only; no candidate files were moved, copied, or deleted.",
+        "Dry-run only; no SQLite index rows were inserted, updated, or deleted.",
+        "Dry-run only; no export content was generated and no MCP visibility changed.",
+        "Dry-run only; no network access occurred."
+      ]
+    });
+    mocks.apiClient.applyReviewCandidateActivation.mockResolvedValue({
+      ok: true,
+      activation: {
+        schemaVersion: "contextarr.review-candidate-activation-result.v1",
+        activatedAt: "2026-05-10T00:05:00.000Z",
+        proofId: "abc123def456abc123def456",
+        candidateKey: "candidate-key",
+        packId: "local-draft-pack",
+        name: "Local Draft Pack",
+        mode: "move",
+        source: {
+          kind: "draft_pack",
+          label: "draft-packs",
+          pathLabel: "draft-packs/local-draft"
+        },
+        validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+        security: {
+          status: "policy_clean",
+          recommendedAction: "review",
+          blocking: false,
+          summary: null,
+          findingCount: 0
+        },
+        warnings: [],
+        target: {
+          activePacksRootLabel: "demo-packs",
+          packId: "local-draft-pack",
+          pathLabel: "demo-packs/local-draft-pack",
+          activeConflict: false
+        },
+        effects: {
+          filesMoved: true,
+          filesCopied: true,
+          sourceRemoved: true,
+          exportsGenerated: false,
+          mcpExposed: false,
+          networkAccessed: false
+        },
+        nextSteps: ["Review Pack Health and Exposure Readiness before export or MCP exposure."],
+        boundaries: [
+          "Activation moved or copied files only within configured local roots.",
+          "Activation did not generate exports.",
+          "Activation did not expose MCP records.",
+          "Activation did not perform network access."
+        ]
+      },
+      history: reviewCandidateActivationHistoryFixture(),
+      pack: { id: "local-draft-pack", name: "Local Draft Pack" },
+      index: { packsIndexed: 2 }
+    });
     mocks.apiClient.updateReviewItemStatus.mockResolvedValue({});
   });
 
@@ -272,7 +548,146 @@ describe("App Skill UI routes", () => {
 
     await waitForText("AI Workstation Pack");
     expect(document.body.textContent).toContain("Pack Library");
+    expect(document.body.textContent).toContain("Collect, review, export");
+    expect(Array.from(document.querySelectorAll(".first-pack-step")).map((link) => link.getAttribute("href"))).toEqual([
+      "#/collectors",
+      "#/review-queue/drafts",
+      "#/exports"
+    ]);
+    expect(document.querySelector(".first-pack-path")?.textContent).not.toMatch(
+      /Private Context|registry|skill-runtime|Derived Index Adapter/
+    );
     expect(document.body.textContent).not.toContain("Local API unavailable");
+  });
+
+  it("surfaces read-only exposure readiness in pack detail", async () => {
+    mountApp("#/packs/ai-workstation-pack");
+
+    await waitForText("AI Workstation Pack");
+    await waitForText("Exposure Readiness");
+    await waitForText("Context Readiness");
+    expect(document.body.textContent).toContain("Export Records");
+    expect(document.body.textContent).toContain("MCP Records");
+    expect(document.body.textContent).toContain("Source Coverage");
+    expect(document.body.textContent).toContain("Read-only report");
+    expect(document.body.textContent).toContain("Source Ready");
+    expect(document.body.textContent).toContain("Review needed");
+    expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(mocks.apiClient.getPackReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+
+    clickButton("Activity");
+    await waitForText("Activity v0");
+    await waitForText("Saved local export brief metadata.");
+    await waitForText("MCP Queries");
+    await waitForText("Get Pack Summary");
+    expect(mocks.apiClient.getEvents).toHaveBeenCalledWith({ limit: 100, packId: "ai-workstation-pack" });
+    expect(mocks.apiClient.getMcpQueryLog).toHaveBeenCalledWith({ limit: 100, packId: "ai-workstation-pack" });
+    expect(document.body.textContent).not.toContain("Saved unrelated local export brief metadata.");
+  });
+
+  it("clarifies Export Center readiness, privacy mode, and preview record exclusions", async () => {
+    mocks.apiClient.getPack.mockResolvedValue(packDetailWithExportProfilesFixture());
+    mocks.apiClient.getPackExposureReadiness.mockResolvedValue(packExposureReadinessWithExclusionsFixture());
+
+    mountApp("#/exports");
+
+    await waitForText("Export Center");
+    await waitForText("Local Export Briefs");
+    expect(mocks.apiClient.listExportBriefs).toHaveBeenCalledWith({ limit: 6 });
+    expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
+    await waitForText("Codex Pack Export");
+    await waitForText("Exposure Readiness includes 2 of 5 records");
+    expect(document.body.textContent).toContain(
+      "Draft Intake, composed, restored quarantine, private, secret, and never_export content remains excluded by default."
+    );
+
+    clickButton("Preview");
+    await waitForText("Pack Export Preview Body");
+
+    expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
+    expect(mocks.apiClient.getExportPreview).toHaveBeenCalledWith("ai-workstation-pack", "ai-workstation-codex");
+    expect(document.body.textContent).toContain("Privacy mode: Redacted");
+    expect(document.body.textContent).toContain("This preview includes 2 records and excludes 3 records.");
+    expect(document.body.textContent).toContain("Excluded reasons: private record, secret tag, never_export tag.");
+
+    await clickButtonAndFlush("Save Brief");
+    await waitForText("Saved local brief ai-workstation-codex.md.");
+    expect(mocks.apiClient.saveExportBrief).toHaveBeenCalledWith({
+      objectType: "pack",
+      objectId: "ai-workstation-pack",
+      privacyMode: "redacted",
+      artifact: expect.objectContaining({
+        filename: "ai-workstation-codex.md",
+        content: "# Pack Export Preview Body"
+      })
+    });
+  });
+
+  it("labels search and inactive shell controls for assistive technology", async () => {
+    mountApp("#/library");
+
+    await waitForText("AI Workstation Pack");
+    expect(document.querySelector("input[type='search']")?.getAttribute("aria-label")).toBe(
+      "Search packs, tags, authors, and descriptions"
+    );
+
+    expect(
+      Array.from(document.querySelectorAll(".topbar-actions button")).map((button) => button.getAttribute("aria-label"))
+    ).toEqual([
+      "Activity monitor unavailable in developer preview",
+      "Import shortcut unavailable in developer preview",
+      "Notifications unavailable in developer preview",
+      "Help center unavailable in developer preview",
+      "User profile unavailable in developer preview"
+    ]);
+  });
+
+  it("renders Draft Intake review candidates with guarded activation proof", async () => {
+    mocks.apiClient.getReviewCandidateActivations
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([reviewCandidateActivationHistoryFixture()]);
+
+    mountApp("#/review-queue/drafts");
+
+    await waitForMockResult(mocks.apiClient.getReviewCandidates, 0);
+    await waitForMockResult(mocks.apiClient.getReviewCandidateActivations, 0);
+    await flushPendingUpdates();
+    await waitForText("Draft Intake");
+    await waitForText("Local Draft Pack");
+    expect(document.body.textContent).toContain("Review manually before activation, export, or MCP exposure.");
+    expect(document.body.textContent).not.toContain("Activate Later");
+
+    await clickButtonAndFlush("Inspect");
+    await waitForMockResult(mocks.apiClient.getReviewCandidate, 0);
+    await flushPendingUpdates();
+    await waitForText("Overview Metadata");
+    expect(mocks.apiClient.getReviewCandidate).toHaveBeenCalledWith("candidate-key");
+    expect(mocks.apiClient.getReviewCandidateActivationPlan).toHaveBeenCalledWith("candidate-key");
+    expect(document.body.textContent).toContain("Manual Activation Plan");
+    expect(document.body.textContent).toContain("demo-packs/local-draft-pack");
+    await clickButtonAndFlush("Prepare Activation");
+    await waitForMockResult(mocks.apiClient.dryRunReviewCandidateActivation, 0);
+    await flushPendingUpdates();
+    expect(mocks.apiClient.dryRunReviewCandidateActivation).toHaveBeenCalledWith("candidate-key");
+    await waitForText("Activation Proof");
+    expect(document.body.textContent).toContain("abc123def456abc123def456");
+    await clickButtonAndFlush("Apply Activation");
+    await waitForMockResult(mocks.apiClient.applyReviewCandidateActivation, 0);
+    await flushPendingUpdates();
+    expect(mocks.apiClient.applyReviewCandidateActivation).toHaveBeenCalledWith("candidate-key", {
+      proofId: "abc123def456abc123def456",
+      mode: "move"
+    });
+    await waitForText("Activation Applied");
+    await waitForMockResult(mocks.apiClient.getReviewCandidateActivations, 1);
+    await waitForText("Activation History");
+    expect(document.body.textContent).toContain("proof abc123def456abc123def456");
+    expect(document.body.textContent).toContain("indexed");
+    expect(document.body.textContent).toContain("Index");
+    expect(document.body.textContent).not.toContain("Approve");
+    expect(document.body.textContent).not.toContain("Promote");
+    expect(document.body.textContent).not.toContain("Activate Now");
+    expect(document.body.textContent).not.toContain("Confirm Activation");
   });
 
   it("renders the Skill Library auth-required state when Skill loading is protected", async () => {
@@ -730,6 +1145,65 @@ describe("App Skill UI routes", () => {
     await waitForText("Draft pack saved for review");
   });
 
+  it("saves composed export previews as local briefs", async () => {
+    mocks.apiClient.getPackRecords.mockResolvedValue([
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        packId: "ai-workstation-pack",
+        title: "Local AI Stack",
+        type: "runbook",
+        confidence: "high",
+        sourceStatus: "verified",
+        freshness: "current",
+        privacy: "public_safe",
+        lastReviewed: "2026-05-07T00:00:00.000Z",
+        reviewStatus: "approved",
+        tags: ["local"],
+        sources: [],
+        filePath: "records/local-ai-stack.md"
+      }
+    ]);
+    const artifact = composedExportArtifactFixture();
+    mocks.apiClient.composePreview.mockResolvedValue(artifact);
+    mocks.apiClient.saveExportBrief.mockResolvedValue(
+      exportBriefFixture("brief-composed", artifact, "composed", "composed-context-export", "redacted")
+    );
+
+    mountApp("#/composer/record-export");
+
+    await waitForText("Local AI Stack");
+    expect(document.body.textContent).toContain("Local Export Briefs");
+    expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
+    const checkbox = Array.from(document.querySelectorAll<HTMLInputElement>(".composer-record input[type='checkbox']")).find(
+      (item) => !item.checked
+    );
+    expect(checkbox).toBeTruthy();
+    await act(async () => {
+      checkbox?.click();
+      await Promise.resolve();
+    });
+
+    await clickButtonAndFlush("Build Preview");
+    await waitForText("Composed Export Preview Body");
+    await clickButtonAndFlush("Save Brief");
+
+    expect(mocks.apiClient.composePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Composed Context Export",
+        target: "codex",
+        privacyMode: "redacted",
+        selections: [{ packId: "ai-workstation-pack", recordIds: ["ai-workstation-pack.local-ai-stack"] }]
+      })
+    );
+    expect(mocks.apiClient.saveExportBrief).toHaveBeenCalledWith({
+      objectType: "composed",
+      objectId: "composed-context-export",
+      privacyMode: "redacted",
+      artifact
+    });
+    await waitForText("Saved local brief composed-context-export.md.");
+  });
+
   it("shows Composer save-as-draft errors", async () => {
     mocks.apiClient.getPackRecords.mockResolvedValue([
       {
@@ -971,6 +1445,249 @@ function packDetailFixture() {
     },
     sources: [],
     exportProfiles: []
+  };
+}
+
+function packExportProfileFixture() {
+  return {
+    id: "ai-workstation-codex",
+    name: "Codex Pack Export",
+    target: "codex",
+    format: "markdown",
+    privacyMode: "redacted",
+    tokenBudget: 4000
+  };
+}
+
+function packDetailWithExportProfilesFixture() {
+  return {
+    ...packDetailFixture(),
+    exportProfiles: [packExportProfileFixture()]
+  };
+}
+
+function packExposureReadinessFixture() {
+  return {
+    packId: "ai-workstation-pack",
+    packName: "AI Workstation Pack",
+    policies: {
+      export: {
+        defaultPrivacyMode: "redacted",
+        recordPolicy: "approved public_safe records without secret, never_export, or imported_draft tags"
+      },
+      mcp: {
+        transport: "stdio",
+        defaultBodyPolicy: "approved public_safe records only; secret bodies are never returned",
+        allowPrivateByDefault: false
+      }
+    },
+    validation: {
+      valid: true,
+      status: "valid",
+      errors: 0,
+      warnings: 0
+    },
+    security: {
+      status: "policy_clean",
+      recommendedAction: "activate",
+      blocked: false
+    },
+    summary: {
+      recordCount: 5,
+      exportEligibleRecords: 5,
+      mcpEligibleRecords: 5,
+      blockedRecords: 0,
+      warningRecords: 0,
+      sourceBackedRecords: 5,
+      recordsMissingSourceCoverage: 0,
+      exportProfileCount: 8,
+      exportEligibleProfiles: 8,
+      blockedProfiles: 0,
+      warningProfiles: 0
+    },
+    exportProfiles: [],
+    records: [],
+    blockers: [],
+    warnings: []
+  };
+}
+
+function packExposureReadinessWithExclusionsFixture() {
+  const readiness = packExposureReadinessFixture();
+  return {
+    ...readiness,
+    summary: {
+      ...readiness.summary,
+      exportEligibleRecords: 2,
+      blockedRecords: 3
+    },
+    blockers: [
+      {
+        code: "record.default_export_excluded",
+        severity: "blocker" as const,
+        message: "Three records remain outside the default export policy."
+      }
+    ]
+  };
+}
+
+function packReadinessFixture() {
+  return {
+    schemaVersion: "contextarr.readiness-report.v1" as const,
+    packId: "ai-workstation-pack",
+    status: "review_needed" as const,
+    score: 88,
+    generatedAt: "2026-05-11T00:00:00.000Z",
+    dimensions: {
+      source: readinessDimensionFixture("source", "Source", "ready", 100),
+      review: readinessDimensionFixture("review", "Review", "review_needed", 78),
+      governance: readinessDimensionFixture("governance", "Governance", "review_needed", 80),
+      redaction: readinessDimensionFixture("redaction", "Redaction", "ready", 100),
+      export: readinessDimensionFixture("export", "Export", "ready", 95),
+      mcp: readinessDimensionFixture("mcp", "MCP", "ready", 95)
+    },
+    issues: [
+      {
+        code: "readiness.governance_missing",
+        severity: "warning" as const,
+        message: "Governance rules are not present for this pack.",
+        evidence: {
+          dimension: "governance",
+          rulesFile: "rules/governance.yaml"
+        }
+      }
+    ]
+  };
+}
+
+function readinessDimensionFixture(
+  id: "source" | "review" | "governance" | "redaction" | "export" | "mcp",
+  label: string,
+  status: "ready" | "review_needed" | "blocked",
+  score: number
+) {
+  return {
+    id,
+    label,
+    status,
+    score,
+    evidence: {}
+  };
+}
+
+function packExportArtifactFixture(): ExportArtifact {
+  return {
+    packId: "ai-workstation-pack",
+    packName: "AI Workstation Pack",
+    profileId: "ai-workstation-codex",
+    profileName: "Codex Pack Export",
+    target: "codex",
+    format: "markdown",
+    filename: "ai-workstation-codex.md",
+    mimeType: "text/markdown",
+    content: "# Pack Export Preview Body",
+    includedRecords: [
+      {
+        id: "ai-workstation-pack.local-ai-stack",
+        title: "Local AI Stack",
+        type: "runbook",
+        privacy: "public_safe",
+        tags: ["local"],
+        sources: ["source-a"]
+      },
+      {
+        id: "ai-workstation-pack.browser-lane",
+        title: "Browser Lane",
+        type: "runbook",
+        privacy: "public_safe",
+        tags: ["browser"],
+        sources: ["source-b"]
+      }
+    ],
+    excludedRecords: [
+      {
+        id: "ai-workstation-pack.private-note",
+        title: "Private Note",
+        type: "note",
+        privacy: "private",
+        tags: [],
+        sources: ["source-c"],
+        reason: "private record"
+      },
+      {
+        id: "ai-workstation-pack.secret-note",
+        title: "Secret Note",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["secret"],
+        sources: ["source-d"],
+        reason: "secret tag"
+      },
+      {
+        id: "ai-workstation-pack.draft-note",
+        title: "Draft Note",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["never_export"],
+        sources: ["source-e"],
+        reason: "never_export tag"
+      }
+    ],
+    sources: [
+      {
+        id: "source-a",
+        title: "Source A",
+        type: "markdown"
+      }
+    ],
+    warnings: [],
+    generatedAt: "2026-05-07T00:00:00.000Z",
+    byteLength: 26,
+    estimatedTokens: 7
+  };
+}
+
+function composedExportArtifactFixture() {
+  return {
+    ...packExportArtifactFixture(),
+    packId: "composed-context-export",
+    packName: "Composed Context Export",
+    profileId: "composed-preview",
+    profileName: "Composed Preview",
+    filename: "composed-context-export.md",
+    content: "# Composed Export Preview Body",
+    generatedAt: "2026-05-11T00:00:00.000Z"
+  };
+}
+
+function exportBriefFixture(
+  id: string,
+  artifact = packExportArtifactFixture(),
+  objectType: "pack" | "skill" | "agent_kit" | "composed" = "pack",
+  objectId = artifact.packId,
+  privacyMode: "redacted" | "public_safe" = "redacted"
+) {
+  return {
+    id,
+    objectType,
+    objectId,
+    profileId: artifact.profileId,
+    target: artifact.target,
+    format: artifact.format,
+    privacyMode,
+    filename: artifact.filename,
+    mimeType: artifact.mimeType,
+    sha256: "abc123",
+    byteLength: artifact.byteLength,
+    estimatedTokens: artifact.estimatedTokens,
+    includedCount: artifact.includedRecords.length,
+    excludedCount: artifact.excludedRecords.length,
+    sourceCount: artifact.sources.length,
+    warningCount: artifact.warnings.length,
+    warningCodes: artifact.warnings.map((warning) => warning.code),
+    generatedAt: artifact.generatedAt,
+    savedAt: "2026-05-11T00:00:00.000Z",
+    contentSnapshotTruncated: false
   };
 }
 
@@ -1257,6 +1974,73 @@ function reviewItemFixture(): ReviewItem {
     lastSeenAt: "2026-05-07T00:00:00.000Z",
     updatedAt: "2026-05-07T00:00:00.000Z",
     metadata: {}
+  };
+}
+
+function reviewCandidateActivationHistoryFixture() {
+  const activation = {
+    schemaVersion: "contextarr.review-candidate-activation-result.v1",
+    activatedAt: "2026-05-10T00:05:00.000Z",
+    proofId: "abc123def456abc123def456",
+    candidateKey: "candidate-key",
+    packId: "local-draft-pack",
+    name: "Local Draft Pack",
+    mode: "move",
+    source: {
+      kind: "draft_pack",
+      label: "draft-packs",
+      pathLabel: "draft-packs/local-draft"
+    },
+    validation: { status: "valid", errors: 0, warnings: 0, infos: 0, issueCount: 0 },
+    security: {
+      status: "policy_clean",
+      recommendedAction: "review",
+      blocking: false,
+      summary: null,
+      findingCount: 0
+    },
+    warnings: [],
+    target: {
+      activePacksRootLabel: "demo-packs",
+      packId: "local-draft-pack",
+      pathLabel: "demo-packs/local-draft-pack",
+      activeConflict: false
+    },
+    effects: {
+      filesMoved: true,
+      filesCopied: true,
+      sourceRemoved: true,
+      exportsGenerated: false,
+      mcpExposed: false,
+      networkAccessed: false
+    },
+    nextSteps: ["Review Pack Health and Exposure Readiness before export or MCP exposure."],
+    boundaries: [
+      "Activation moved or copied files only within configured local roots.",
+      "Activation did not generate exports.",
+      "Activation did not expose MCP records.",
+      "Activation did not perform network access."
+    ]
+  };
+
+  return {
+    schemaVersion: "contextarr.review-candidate-activation-history.v1",
+    id: 1,
+    proofId: activation.proofId,
+    candidateKey: activation.candidateKey,
+    packId: activation.packId,
+    name: activation.name,
+    status: "applied",
+    mode: activation.mode,
+    activatedAt: activation.activatedAt,
+    indexRefreshedAt: "2026-05-10T00:05:01.000Z",
+    source: activation.source,
+    target: activation.target,
+    validation: activation.validation,
+    security: activation.security,
+    warnings: activation.warnings,
+    effects: activation.effects,
+    activation
   };
 }
 

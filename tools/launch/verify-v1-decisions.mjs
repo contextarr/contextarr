@@ -53,11 +53,18 @@ if (!failed) {
     }
   }
 
-  const workflowScript = packageJson.scripts?.["workflow-scope:verify"];
-  if (!workflowScript) {
+  const workflowVerifyScript = packageJson.scripts?.["workflow-scope:verify"];
+  const workflowCheckScript = packageJson.scripts?.["workflow-scope:check"];
+  if (!workflowVerifyScript) {
     fail("Root package scripts must include workflow-scope:verify.");
-  } else if (!workflowScript.includes("pnpm v1-core:verify") || !workflowScript.includes("verify-v1-decisions.mjs")) {
-    fail("workflow-scope:verify must run v1-core:verify and verify-v1-decisions.mjs.");
+  } else if (!workflowVerifyScript.includes("pnpm v1-core:verify") || !workflowVerifyScript.includes("pnpm workflow-scope:check")) {
+    fail("workflow-scope:verify must run v1-core:verify and delegate leaf checks to workflow-scope:check.");
+  }
+
+  if (!workflowCheckScript) {
+    fail("Root package scripts must include workflow-scope:check.");
+  } else if (!workflowCheckScript.includes("verify-v1-decisions.mjs")) {
+    fail("workflow-scope:check must run verify-v1-decisions.mjs.");
   }
 }
 

@@ -1,0 +1,81 @@
+sources:
+  - id: home-assistant-pack-home-overview-source
+    type: manual_demo_note
+    title: Home Assistant Pack Home Overview Synthetic Source
+    path: ../raw/home-overview.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-device-groups-source
+    type: local_markdown
+    title: Home Assistant Pack Device Groups Synthetic Source
+    path: ../raw/device-groups.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-automation-map-source
+    type: official_docs_reference
+    title: Home Assistant Pack Automation Map Synthetic Source
+    path: ../raw/automation-map.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-dashboard-conventions-source
+    type: synthetic_example
+    title: Home Assistant Pack Dashboard Conventions Synthetic Source
+    path: ../raw/dashboard-conventions.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-backup-plan-source
+    type: configuration_summary
+    title: Home Assistant Pack Backup Plan Synthetic Source
+    path: ../raw/backup-plan.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-network-boundaries-source
+    type: operator_note
+    title: Home Assistant Pack Network Boundaries Synthetic Source
+    path: ../raw/network-boundaries.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-privacy-rules-source
+    type: review_checklist
+    title: Home Assistant Pack Privacy Rules Synthetic Source
+    path: ../raw/privacy-rules.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current
+  - id: home-assistant-pack-maintenance-routine-source
+    type: export_summary
+    title: Home Assistant Pack Maintenance Routine Synthetic Source
+    path: ../raw/maintenance-routine.md
+    retrieved_at: 2026-05-09T00:00:00Z
+    license: MIT
+    license_status: known_permissive
+    license_notes: Original public-safe demo source authored for Contextarr starter packs.
+    trust: community
+    status: current

@@ -243,7 +243,7 @@ function validationIssueToCandidate(
   rootPath?: string
 ): ReviewItemCandidate {
   const safeFile = sanitizeIssueFile(issue.file, rootPath);
-  const safePath = sanitizeIssuePath(issue.path);
+  const safePath = sanitizeIssuePath(issue.path, rootPath);
   const safeMessage = sanitizeIssueMessage(issue.message, rootPath);
   const reviewType = reviewTypeForValidationIssue(issue.code);
   const subject = objectType === "agent_kit" ? "Agent Kit" : objectType === "skill" ? "Skill" : "pack";
@@ -348,27 +348,31 @@ function sanitizeIssueFile(value?: string, rootPath?: string): string | undefine
 
   const normalized = normalizePath(value);
   const localPath = value.replace(/\//g, path.sep);
-  if (path.isAbsolute(localPath)) {
+  if (isAbsoluteLikePath(value) || path.isAbsolute(localPath)) {
     if (rootPath) {
-      const relative = path.relative(path.resolve(rootPath), localPath);
+      const relative = relativePathAcrossPlatforms(value, rootPath) ?? path.relative(path.resolve(rootPath), localPath);
       if (relative && !relative.startsWith("..") && !path.isAbsolute(relative)) {
         return normalizePath(relative);
       }
     }
 
-    return path.basename(localPath);
+    return basenameAcrossPlatforms(localPath);
   }
 
   if (normalized.startsWith("../") || normalized === "..") {
-    return path.basename(normalized);
+    return basenameAcrossPlatforms(normalized);
   }
 
   return normalized;
 }
 
-function sanitizeIssuePath(value?: string): string | undefined {
+function sanitizeIssuePath(value?: string, rootPath?: string): string | undefined {
   if (!value) {
     return undefined;
+  }
+
+  if (isAbsoluteLikePath(value)) {
+    return sanitizeIssueFile(value, rootPath);
   }
 
   return value.replace(/[^\w.[\]-]/g, "_").slice(0, 160);
@@ -390,6 +394,35 @@ function sanitizeIssueMessage(value: string, rootPath?: string): string {
 
 function normalizePath(value: string): string {
   return value.replace(/\\/g, "/");
+}
+
+function isAbsoluteLikePath(value: string): boolean {
+  return /^[A-Za-z]:[\\/]/.test(value) || /^[/\\]{2}[^/\\]/.test(value);
+}
+
+function relativePathAcrossPlatforms(value: string, rootPath: string): string | undefined {
+  const normalizedValue = trimTrailingSlashes(normalizePath(value));
+  const normalizedRoot = trimTrailingSlashes(normalizePath(rootPath));
+  const compareValue = normalizedValue.toLowerCase();
+  const compareRoot = normalizedRoot.toLowerCase();
+
+  if (compareValue === compareRoot) {
+    return "";
+  }
+
+  if (compareValue.startsWith(`${compareRoot}/`)) {
+    return normalizedValue.slice(normalizedRoot.length + 1);
+  }
+
+  return undefined;
+}
+
+function trimTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, "");
+}
+
+function basenameAcrossPlatforms(value: string): string {
+  return normalizePath(value).split("/").filter(Boolean).at(-1) ?? "";
 }
 
 function reviewRecordFreshness(

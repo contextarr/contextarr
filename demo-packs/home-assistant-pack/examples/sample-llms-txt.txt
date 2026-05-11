@@ -1,0 +1,16 @@
+Home Assistant Pack
+
+Public-safe starter context for a fictional Home Assistant installation.
+
+Records:
+- home-assistant-pack.home-overview
+- home-assistant-pack.device-groups
+- home-assistant-pack.automation-map
+- home-assistant-pack.dashboard-conventions
+- home-assistant-pack.backup-plan
+- home-assistant-pack.network-boundaries
+- home-assistant-pack.privacy-rules
+- home-assistant-pack.maintenance-routine
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

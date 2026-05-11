@@ -116,7 +116,7 @@ Examples:
 
 1. Contextarr Project Pack.
 2. AI Workstation Pack.
-3. Jellyfin Server Pack.
+3. Jellyfin Media Server Pack.
 4. Internal Support KB Pack.
 5. Claude Code Project Pack.
 6. Product Line Pack.

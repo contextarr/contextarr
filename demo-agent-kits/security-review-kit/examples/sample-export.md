@@ -12,7 +12,7 @@ Identify safety-sensitive areas from demo context while preserving non-execution
 
 Context Packs:
 - claude-code-project-pack
-- jellyfin-server-pack
+- jellyfin-media-server-pack
 
 Skills:
 - security-review-skill

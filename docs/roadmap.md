@@ -1,89 +1,92 @@
 # Contextarr Roadmap
 
-## Current v0.1 Preview
+Status note: [docs/implementation-status.md](implementation-status.md) is the shipped-versus-planned source of truth. This roadmap records direction and gates, not a claim that every planned surface is shipped.
 
-Contextarr currently supports:
+## Current Developer Preview
 
-- Pack schema validation and CLI validation.
-- Five fake public-safe demo packs.
+Contextarr currently supports a working local Context Pack loop:
+
+- Context Pack schema validation, CLI validation, deterministic validation reports, and local scanner reports.
+- Fifteen public-safe demo Context Packs, including 12 curated starter Context Packs.
 - Rebuildable SQLite index and local Fastify API.
 - React/Vite dashboard with Library, pack detail, record detail, Pack Health, Skill Health, Review Queue, Exports, and Composer.
 - Sanitized Markdown rendering and static HTML rendering.
-- Profile-driven exports for ChatGPT, Claude, Codex, Markdown, and JSON records.
+- Profile-driven Context Pack exports for ChatGPT, Claude, Codex, Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt targets.
 - CLI/core local importers for draft packs.
 - Read-only stdio MCP.
 - Docker Compose local preview.
-- Phase 12 terminology planning for Skills and Agent Kits.
+- Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
+- Context Pack collector v0 that creates private unreviewed draft packs under `draft-packs/` without activating them.
+- Per-pack Context Readiness API/CLI/UI reporting and bounded metadata-only Local Observability reads.
+- Explicit local Saved Export Brief save/list/fetch foundation for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots.
+
+The repo also contains advanced-preview data-only surfaces:
+
 - Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, deterministic Skill Health/Review Queue support, and profile-driven Skill exports.
 - Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, Agent Kit Composer save flow, Agent Kit Library/detail/health, and profile-driven Agent Kit exports.
-- Research Delta foundation for Context Packs: source license/hash/freshness metadata, deterministic validation reports, export readiness, redaction warning counts, and assistant handoff profile targets.
 - Read-only MCP tools for Skills and Agent Kits, including scoped Agent Kit context search and Agent Kit export previews.
 - Local Skill importers for draft Skill folders and gated local API writes.
 - Public-safe Agent Kit templates, read-only template APIs, and Composer template prefill for unreviewed local draft kits.
-- Phase 28 signing and trust model research docs for future checksums, signatures, private registry requirements, and marketplace non-goals.
-- Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
-- Registry Trust Foundation planning docs plus a local scanner foundation for deterministic text-only scanner reports. This is local policy infrastructure only; no public registry or marketplace exists today.
-- Context Pack collector v0 creates private unreviewed draft packs under `draft-packs/` without activating them.
 
-## Second PRD Direction
+These advanced-preview surfaces are present, but the first public release should prove the Context Pack adoption loop before presenting Skills and Agent Kits as equal product pillars.
 
-The second PRD keeps Context Packs as the core source-backed knowledge object and adds future data-only objects:
+## Product Direction
+
+Long term, Contextarr is a local-first AI artifact gateway for Context Packs, Skills, Agent Kits, and Export Briefs. The first public release should still explain the narrower core loop: local files become validated, redaction-aware Context Packs that can be exported or served through read-only MCP. See [master-plan.md](master-plan.md) for the full build order and [product-strategy.md](product-strategy.md) for category framing.
+
+Context Packs remain the core source-backed knowledge object.
 
 - Skills: non-executable instruction artifacts that tell agents how to work.
 - Agent Kits: self-describing, task-ready pairings of Context Packs and Skills that tell agents how a specific bundle should be used for a specific task.
 - Export Briefs: generated output artifacts for AI tools or humans.
+- Private Context: a future protected view and policy layer over sensitive local artifacts, not a separate hosted personal memory vault.
+- Context Readiness: a planned report layer for whether a Context Pack is source-backed, reviewed, governed, redacted, export-fit, and locally observable enough for AI assistant or agent use.
+- Local Observability: planned local evidence metadata for exports, MCP queries, readiness calculations, reviews, and warnings. It is not product telemetry.
+- Derived Index Adapters: a future bring-your-own-retrieval export lane for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. Contextarr remains the source-backed context layer; downstream indexes are derived and rebuildable.
 
 Contextarr prepares Agent Kits. It does not run them.
 
-When Agent Kits are implemented later, self-description fields and validation must be part of the Agent Kit schema and validator from the first Agent Kit phase. Do not defer self-description to later polish, and do not move Agent Kits earlier in the roadmap.
+## Core Stabilization Gate
 
-## Draft v1.0 Bridge PRD
+The v1 bridge plan freezes further Skills and Agent Kit expansion until Context Pack core readiness is explicitly accepted or superseded by a decision record.
 
-[contextarr_phase_by_phase_prd_to_v1.md](contextarr_phase_by_phase_prd_to_v1.md) is a draft bridge PRD and core-stabilization gate. It does not replace this roadmap or roll back the completed Skills and Agent Kit work. The intended direction is to keep the implemented path, while using the bridge PRD to freeze further Skills and Agent Kit expansion until the Context Pack core is v1.0-ready. Any sequencing conflict should be handled as a follow-up roadmap decision.
+The core readiness lane is:
 
-Phase 28 follows that gate as research only. Further Skills or Agent Kit expansion and any registry prototype remain frozen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
+1. Install.
+2. Validate demo packs.
+3. View in dashboard.
+4. Inspect records and sources.
+5. See Pack Health.
+6. Export Claude/Codex briefs.
+7. Query through read-only MCP.
+8. Delete SQLite and rebuild.
+9. Confirm nothing executes or phones home.
 
-The current v1 hardening lane adds release verification, backup/restore, and user docs for install, upgrade, troubleshooting, pack migrations, known issues, and release process. These docs support Context Pack core readiness; they do not unfreeze Phase 29 or expand Skills/Agent Kits.
-
-Context Pack Backup/Restore v0 is now part of the v1 core hardening lane. It creates local checksum-backed backup directories and restores packs into quarantine/review only, with validation-before-activation and no cloud, registry, signing, marketplace, or runtime behavior.
-
-Phase 3A: Registry Trust Foundation defines how a future trusted registry should work, including scanner limitations, registry artifacts, signing, encryption, quarantine, revocation, and launch gates. Its first implementation primitive is local-only scanner report generation. It does not move public marketplace, remote install, public uploads, hosted cloud, or registry implementation into v0.1 or v1.0.
-
-Context Pack Collectors v0 is now part of the v1 core hardening lane. It creates local private draft packs from starter templates or local text/Markdown folders under `CONTEXTARR_DRAFT_PACKS_DIR`. It does not activate drafts or expand Skills/Agent Kits.
+Context Readiness may strengthen Pack Health, Exposure Readiness, export previews, MCP logs, benchmarks, and docs after the core loop is stable. It must not derail the Context Pack v1 lane.
 
 ## Near-Term
 
-- Phase 13: Skill schema and validator. Complete.
-- Phase 14: fake public-safe demo Skills. Complete.
-- Phase 15: Skill index and API. Complete.
-- Phase 16: Skill Library UI. Complete.
-- Phase 17: Skill Health and Review Queue. Complete.
-- Phase 18: Skill export engine. Complete.
-- Phase 19: Agent Kit schema and validator. Complete.
-- Phase 20: fake public-safe demo Agent Kits. Complete.
-- Phase 21: Agent Kit index and API. Complete.
-- Phase 22: Agent Kit Composer UI. Complete.
-- Phase 23: Agent Kit Library, detail, and health. Complete.
-- Phase 24: Agent Kit export engine. Complete.
-- Phase 24R: Research Delta foundation catch-up. Complete.
-- Phase 25: Read-only MCP for Skills and Agent Kits. Complete.
-- Phase 26: Local Skill importers. Complete.
-- Phase 27: Agent Kit templates. Complete.
-- Phase 28: Signing and trust model research. Complete.
-- Phase 3A: Registry Trust Foundation. Planning/architecture added; local scanner foundation added; registry implementation remains deferred.
-- Context Pack Collectors v0: local draft Context Pack creation. Complete.
-- Public feedback on the pack format, validation rules, and export profile ergonomics.
-- More fixture coverage for pack health and import edge cases.
-- Better screenshots and a short demo video.
+- Repair stale release gates for the 15-pack demo set and 12 starter Context Packs.
+- Finish `v0.1.0-alpha.1` release docs and known limitations.
+- Keep reviewed screenshots current and add a short demo video.
+- Improve public-site and README framing around Core Now vs Advanced Preview.
+- Keep public feedback focused on pack format, validation rules, export profiles, and the local dashboard loop.
 - Complete v1 core release-hardening gates before any frozen expansion resumes.
+- Keep the new Context Readiness and Local Observability runtime slices narrow: per-pack read-only readiness, bounded metadata-only local evidence reads, and no policy enforcement, telemetry, or export/MCP widening.
 - Usability polish around pack authoring.
+- Keep Private Context, External Skill artifact preservation, and Local Event Hooks documented as future scoped tracks without expanding the current runtime.
+- Keep Derived Index Adapters in spec/docs mode until export-depth work outranks adoption hardening.
 
 ## Deferred
 
-- Phase 29: Private team registry prototype. Frozen behind the v1.0 core-stabilization gate.
+- Phase 29: Private team registry prototype. Frozen behind the v1 core-stabilization gate.
 - Official Pack Gallery, Verified Registry Prototype, Private Team Registry, and Marketplace remain post-v1 gated tracks.
+- Protected-pack unlock, app lock, and encrypted export/backup bundle flows for Private Context.
+- External Skill artifact archive, classifier, compatibility reports, and native-bundle export modes.
+- Local Event Hooks for metadata-only local automation.
+- Saved Export Brief history, regeneration, export depth, and MCP metadata exposure beyond the current explicit local save/list/fetch foundation.
+- Derived Index Adapter export profiles and recipes for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes.
 - Web importer UI.
-- API import endpoints.
-- Saving Composer output as a new pack.
+- Always-on API import endpoints.
 - Pack file mutation from review actions.
-- Hosted cloud, marketplace, telemetry, executable packs, and live sensitive-account connectors.
+- Built-in vector database, built-in graph database, code graph engine, managed RAG app, external database sync service, hosted cloud, marketplace, product telemetry, executable packs, Agent Kit runtime, mutating MCP, agent runners, hidden network calls, and live sensitive-account connectors.

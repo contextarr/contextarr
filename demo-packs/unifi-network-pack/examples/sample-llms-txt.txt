@@ -1,0 +1,16 @@
+UniFi Network Pack
+
+Public-safe starter context for a fictional UniFi network.
+
+Records:
+- unifi-network-pack.topology-overview
+- unifi-network-pack.wan-and-gateway
+- unifi-network-pack.vlans-and-subnets
+- unifi-network-pack.ssid-policy
+- unifi-network-pack.device-inventory
+- unifi-network-pack.firewall-notes
+- unifi-network-pack.wifi-troubleshooting
+- unifi-network-pack.maintenance-routine
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

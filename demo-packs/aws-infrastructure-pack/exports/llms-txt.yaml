@@ -1,0 +1,25 @@
+id: aws-infrastructure-llms-txt
+name: AWS Infrastructure Pack llms.txt Export
+target: llms_txt
+format: text
+privacy_mode: redacted
+include:
+  records:
+    - aws-infrastructure-pack.account-overview
+    - aws-infrastructure-pack.environment-map
+    - aws-infrastructure-pack.regions-and-services
+    - aws-infrastructure-pack.iam-boundaries
+    - aws-infrastructure-pack.networking-overview
+    - aws-infrastructure-pack.deployment-patterns
+    - aws-infrastructure-pack.cost-controls
+    - aws-infrastructure-pack.backup-and-recovery
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources

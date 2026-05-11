@@ -1,0 +1,39 @@
+{
+  "id": "docker-containers-pack",
+  "name": "Docker Containers Pack",
+  "version": "1.0.0",
+  "description": "Public-safe starter context for fictional Docker container operations.",
+  "type": "infrastructure",
+  "visibility": "local",
+  "trustLevel": "verified",
+  "author": "Contextarr Demo",
+  "license": "MIT",
+  "createdAt": "2026-05-09T00:00:00Z",
+  "updatedAt": "2026-05-09T00:00:00Z",
+  "lastReviewedAt": "2026-05-09T00:00:00Z",
+  "containsPersonalData": false,
+  "containsExecutableCode": false,
+  "requiresNetwork": false,
+  "starterPack": true,
+  "starterCategory": "containers",
+  "starterSortOrder": 6,
+  "permissions": {
+    "readVault": false,
+    "writeDrafts": false,
+    "runCommands": false,
+    "networkAccess": false
+  },
+  "recordsPath": "records",
+  "sourcesPath": "sources/sources.yaml",
+  "exportsPath": "exports",
+  "rulesPath": "rules",
+  "assets": {
+    "brandId": "docker",
+    "accentColor": "#2496ED",
+    "coverRecipe": "brand_hex_v1",
+    "logoVariant": "auto"
+  },
+  "compatibility": {
+    "contextarr": ">=0.1.0"
+  }
+}

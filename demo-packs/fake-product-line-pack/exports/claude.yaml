@@ -1,5 +1,5 @@
 id: fake-product-line-claude
-name: Fake Product Line Claude Export
+name: Product Line Claude Export
 target: claude
 format: markdown
 privacy_mode: redacted

@@ -31,6 +31,67 @@ function run(args) {
   }
 }
 
+function runCompose(args, options = {}) {
+  return spawnSync("docker", ["compose", "-p", projectName, ...args], {
+    stdio: options.stdio ?? "inherit",
+    shell: process.platform === "win32",
+    env: composeEnv,
+    cwd: repoRoot,
+  });
+}
+
+function cleanupSmokeAgentKit() {
+  if (!fs.existsSync(smokeAgentKitPath)) {
+    return;
+  }
+
+  // Linux CI receives root-owned files from the container bind mount, so remove
+  // the temporary smoke artifact from inside the running service before `down`.
+  const containerPath = `/app/agent-kits/${smokeAgentKitId}`;
+  const removedInContainer = runCompose(["exec", "-T", "app", "rm", "-rf", containerPath], { stdio: "pipe" });
+  if (removedInContainer.status !== 0 && fs.existsSync(smokeAgentKitPath)) {
+    fs.rmSync(smokeAgentKitPath, { recursive: true, force: true });
+  }
+}
+
+function countFiles(directory, predicate) {
+  if (!fs.existsSync(directory)) {
+    return 0;
+  }
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && predicate(entry.name))
+    .length;
+}
+
+function expectedDemoCounts() {
+  const demoRoot = path.join(repoRoot, "demo-packs");
+  const packDirs = fs
+    .readdirSync(demoRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(demoRoot, entry.name))
+    .filter((packDir) => fs.existsSync(path.join(packDir, "contextarr-pack.json")))
+    .sort();
+
+  let records = 0;
+  let starterPacks = 0;
+
+  for (const packDir of packDirs) {
+    const manifest = JSON.parse(fs.readFileSync(path.join(packDir, "contextarr-pack.json"), "utf8"));
+    if (manifest.starterPack === true) {
+      starterPacks += 1;
+    }
+    records += countFiles(path.join(packDir, "records"), (name) => name.endsWith(".md"));
+  }
+
+  if (starterPacks !== 12) {
+    throw new Error(`Expected 12 curated starter Context Packs, got ${starterPacks}.`);
+  }
+
+  return { packs: packDirs.length, records };
+}
+
 async function getJson(path) {
   const { statusCode, body } = await request(path);
   if (statusCode < 200 || statusCode >= 300) {
@@ -120,11 +181,12 @@ async function verify() {
   run(["build"]);
   run(["up", "-d"]);
 
+  const expected = expectedDemoCounts();
   const health = await waitForHealth();
   if (
     health.status !== "ok" ||
-    health.counts?.packs !== 5 ||
-    health.counts?.records !== 25 ||
+    health.counts?.packs !== expected.packs ||
+    health.counts?.records !== expected.records ||
     health.counts?.skills !== 8 ||
     health.counts?.skillInstructions !== 24 ||
     health.counts?.agentKits !== 8 ||
@@ -219,16 +281,26 @@ async function verify() {
   console.log("Contextarr Docker preview verified.");
 }
 
+let verifyError;
 try {
   await verify();
+} catch (error) {
+  verifyError = error;
 } finally {
-  const down = spawnSync("docker", ["compose", "-p", projectName, "down"], {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-    cwd: repoRoot,
-    env: composeEnv,
-  });
-  fs.rmSync(smokeAgentKitPath, { recursive: true, force: true });
+  let cleanupError;
+  try {
+    cleanupSmokeAgentKit();
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  const down = runCompose(["down"]);
+  if (verifyError) {
+    throw verifyError;
+  }
+  if (cleanupError) {
+    throw cleanupError;
+  }
   if (down.status !== 0) {
     process.exitCode = down.status ?? 1;
   }

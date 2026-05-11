@@ -1,10 +1,10 @@
 export const siteMeta = {
-  title: "Contextarr | Validated context, ready for agents",
+  title: "Contextarr | Trusted AI context, locally prepared",
   description:
-    "Contextarr is the source-backed context layer for AI assistants and agents. It validates local files, records, sources, and rules into ready-to-export Context Packs.",
+    "Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, redacts, exports, and exposes approved Context Packs through read-only MCP.",
   url: "https://contextarr.com",
   ogTitle: "Contextarr",
-  ogDescription: "Validated context. Ready for agents. Not an agent runner."
+  ogDescription: "Trusted AI context. Local-first Context Packs. No hosted vault. Not an agent runner."
 };
 
 export const links = {
@@ -19,21 +19,22 @@ export const proofChips = [
   "Source-backed",
   "Structured",
   "Validated",
-  "Agent-ready",
-  "Developer-first",
-  "Privacy-first"
+  "Export-ready",
+  "Local-first",
+  "Review-first"
 ];
 
 export const contextPackExamples = [
   "AI Workstation Pack",
-  "Jellyfin Server Pack",
+  "OpenAI Prompt Engineering Pack",
   "Claude Code Project Pack",
-  "Internal Support KB Pack",
-  "Fake Product Line Pack"
+  "Docker Containers Pack",
+  "Obsidian Vault Pack"
 ];
 
 export const futureDirectionLines = [
-  "Skills tell agents how to work.",
-  "Context Packs tell agents what to know.",
-  "Agent Kits combine both for a specific task."
+  "Skills are data-only instruction artifacts.",
+  "Agent Kits are data-only Context Pack and Skill pairings.",
+  "Both are advanced-preview surfaces after Context Pack core.",
+  "Contextarr prepares data. It does not run agents."
 ];

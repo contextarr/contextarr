@@ -1,0 +1,16 @@
+Google Workspace Pack
+
+Public-safe starter context for organizing fictional Google Workspace knowledge.
+
+Records:
+- google-workspace-pack.workspace-overview
+- google-workspace-pack.drive-folder-map
+- google-workspace-pack.shared-drive-policy
+- google-workspace-pack.docs-style-guide
+- google-workspace-pack.sheets-and-reporting
+- google-workspace-pack.apps-script-projects
+- google-workspace-pack.calendar-and-meet-conventions
+- google-workspace-pack.access-and-sharing-rules
+
+Use: validated local context for AI assistants.
+Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.

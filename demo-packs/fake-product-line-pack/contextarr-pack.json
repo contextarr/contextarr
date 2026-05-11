@@ -1,6 +1,6 @@
 {
   "id": "fake-product-line-pack",
-  "name": "Fake Product Line Pack",
+  "name": "Product Line Pack",
   "version": "1.0.0",
   "description": "Public-safe demo context for a fictional product line.",
   "type": "product_reference",

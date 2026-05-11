@@ -1,0 +1,62 @@
+{
+  "release": "v0.1.0-alpha.1",
+  "capturedAt": "2026-05-10",
+  "source": "Local Contextarr preview at http://127.0.0.1:5173 with API at http://127.0.0.1:3210",
+  "reviewed": true,
+  "privateDataReviewed": true,
+  "notes": [
+    "Screenshots use public-safe demo Context Packs only.",
+    "CLI output screenshot uses a read-only health command without absolute local paths.",
+    "Security boundary screenshot shows local draft collectors and review-required output."
+  ],
+  "screenshots": [
+    {
+      "file": "pack-library-grid.png",
+      "slot": "Pack Library grid",
+      "source": "Dashboard #/library cover view",
+      "reviewed": true
+    },
+    {
+      "file": "dense-table.png",
+      "slot": "Dense table",
+      "source": "Dashboard #/library table view",
+      "reviewed": true
+    },
+    {
+      "file": "pack-detail.png",
+      "slot": "Pack detail",
+      "source": "Dashboard #/packs/claude-code-project-pack",
+      "reviewed": true
+    },
+    {
+      "file": "record-source-detail.png",
+      "slot": "Record detail with source map",
+      "source": "Dashboard #/records/claude-code-project.repo-overview",
+      "reviewed": true
+    },
+    {
+      "file": "pack-health.png",
+      "slot": "Pack Health",
+      "source": "Dashboard #/health",
+      "reviewed": true
+    },
+    {
+      "file": "export-preview.png",
+      "slot": "Export preview",
+      "source": "Dashboard #/exports after previewing AI Workstation AGENTS.md export",
+      "reviewed": true
+    },
+    {
+      "file": "cli-output.png",
+      "slot": "CLI output",
+      "source": "pnpm -s --filter @contextarr/cli contextarr health --json",
+      "reviewed": true
+    },
+    {
+      "file": "security-boundary.png",
+      "slot": "Backup or security boundary",
+      "source": "Dashboard #/collectors showing private draft review boundary",
+      "reviewed": true
+    }
+  ]
+}

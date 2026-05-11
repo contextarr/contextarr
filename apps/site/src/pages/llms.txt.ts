@@ -2,21 +2,32 @@ import { links } from "../content/site";
 
 const body = `# Contextarr
 
-Contextarr is the source-backed context layer for AI assistants and agents. Validated. Ready for agents. Not an agent runner.
+Contextarr is a local-first Context Pack system for preparing trusted AI context from local files.
 
-It turns local files, records, source maps, validation rules, redaction rules, and export profiles into validated Context Packs.
+It turns local Markdown records, source maps, validation rules, redaction rules, review metadata, and export profiles into validated Context Packs.
 
-Core principles:
-- local files are source of truth
+Core status:
+- developer preview from main
+- core Context Pack workflows are the current adoption target
+- 15 public-safe demo Context Packs
+- 12 curated starter Context Packs
 - SQLite is a rebuildable derived index
-- Context Packs are data-only
+- dashboard, Pack Health, exports, CLI, and read-only MCP exist
+- Skills and Agent Kits are advanced-preview data objects; they are data-only
+- Contextarr prepares Agent Kits; it does not run them
+
+Boundaries:
+- no hosted cloud
+- no hosted vault
+- no public registry
+- no public marketplace
+- no package publishing
+- no remote install
 - no executable packs
-- no scripts
-- no shell commands
-- no hidden network calls
+- no executable Skills
+- no Agent Kit runtime
+- no telemetry
 - human review before trusted context
-- redaction-aware exports
-- read-only local MCP
 
 Repository:
 ${links.github}

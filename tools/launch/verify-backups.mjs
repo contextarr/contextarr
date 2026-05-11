@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const smokeRoot = path.join(repoRoot, ".contextarr-cache", "backup-smoke");
+const demoPacksRoot = path.join(repoRoot, "demo-packs");
 
 let failed = false;
 
@@ -27,6 +28,14 @@ function assertInsideRepo(targetPath) {
   return resolved;
 }
 
+function expectedDemoPackCount() {
+  return fs
+    .readdirSync(demoPacksRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .filter((entry) => fs.existsSync(path.join(demoPacksRoot, entry.name, "contextarr-pack.json")))
+    .length;
+}
+
 function prepare() {
   const resolved = assertInsideRepo(smokeRoot);
   fs.rmSync(resolved, { recursive: true, force: true });
@@ -35,6 +44,7 @@ function prepare() {
 }
 
 function check() {
+  const expectedPackCount = expectedDemoPackCount();
   const requiredFiles = ["docs/backups.md", "docs/restore.md"];
   for (const file of requiredFiles) {
     if (!fs.existsSync(path.join(repoRoot, file))) {
@@ -76,8 +86,8 @@ function check() {
     if (manifest.schemaVersion !== "contextarr.backup.v1") {
       fail("Backup smoke manifest has the wrong schema version.");
     }
-    if (manifest.summary?.packCount !== 5) {
-      fail(`Expected backup smoke packCount=5, got ${manifest.summary?.packCount}.`);
+    if (manifest.summary?.packCount !== expectedPackCount) {
+      fail(`Expected backup smoke packCount=${expectedPackCount}, got ${manifest.summary?.packCount}.`);
     }
     if (manifest.summary?.validationErrors !== 0 || manifest.summary?.validationWarnings !== 0) {
       fail("Backup smoke manifest must have zero validation errors and warnings.");
@@ -95,8 +105,8 @@ function check() {
     if (report.status !== "restored_to_quarantine") {
       fail(`Expected restored_to_quarantine, got ${report.status}.`);
     }
-    if (report.summary?.packCount !== 5 || report.summary?.validationErrors !== 0) {
-      fail("Restore smoke report must include five valid demo packs.");
+    if (report.summary?.packCount !== expectedPackCount || report.summary?.validationErrors !== 0) {
+      fail(`Restore smoke report must include ${expectedPackCount} valid demo packs.`);
     }
     if (report.summary?.scannerBlocked !== 0) {
       fail(`Restore smoke report must have zero scanner-blocked packs, got ${report.summary?.scannerBlocked}.`);
@@ -125,6 +135,7 @@ function check() {
 }
 
 function validateRestored() {
+  const expectedPackCount = expectedDemoPackCount();
   const restoredPath = ".contextarr-cache/backup-smoke/restored/backup-smoke";
   const result = spawnSync(
     process.execPath,
@@ -159,8 +170,8 @@ function validateRestored() {
     }
 
     const results = Array.isArray(report.results) ? report.results : [report];
-    if (results.length !== 5) {
-      fail(`Expected restored quarantine validation to include five packs, got ${results.length}.`);
+    if (results.length !== expectedPackCount) {
+      fail(`Expected restored quarantine validation to include ${expectedPackCount} packs, got ${results.length}.`);
     }
 
     for (const pack of results) {

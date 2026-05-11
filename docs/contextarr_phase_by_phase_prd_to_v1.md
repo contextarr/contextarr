@@ -5,6 +5,8 @@ Date: 2026-05-08
 Owner: Rob
 Status: Planning document
 
+Status note: This is a historical planning document. [docs/implementation-status.md](implementation-status.md) is the shipped-versus-planned source of truth for the current checkout.
+
 ## 1. Purpose
 
 This document defines the complete product path from the current Contextarr planning and early implementation state to Contextarr v1.0.
@@ -492,10 +494,10 @@ A new user can immediately understand the product without connecting private dat
 Create five demo packs:
 
 1. AI Workstation Pack.
-2. Jellyfin Server Pack.
+2. Jellyfin Media Server Pack.
 3. Claude Code Project Pack.
 4. Internal Support KB Pack.
-5. Fake Product Line Pack.
+5. Product Line Pack.
 
 Each demo pack includes:
 
@@ -552,7 +554,7 @@ Create or update:
 
 ```text
 demo-packs/ai-workstation-pack/**
-demo-packs/jellyfin-server-pack/**
+demo-packs/jellyfin-media-server-pack/**
 demo-packs/claude-code-project-pack/**
 demo-packs/internal-support-kb-pack/**
 demo-packs/fake-product-line-pack/**
@@ -1461,7 +1463,7 @@ docs/composer.md
 pnpm --filter @contextarr/server test
 pnpm --filter @contextarr/web test
 pnpm --filter @contextarr/cli test
-pnpm phase11:verify
+pnpm verify:core
 ```
 
 # Phase 12: v0.1 Public Preview Launch

@@ -47,6 +47,12 @@ export interface PackSummary {
   exportProfileCount: number;
   accentColor?: string | null;
   coverImage: string | null;
+  brandId?: string | null;
+  coverRecipe?: "brand_hex_v1" | "generated_v1" | string | null;
+  logoVariant?: "auto" | "light" | "dark" | "mono" | string | null;
+  starterPack?: boolean;
+  starterCategory?: string | null;
+  starterSortOrder?: number | null;
   reviewQueueCount: number;
   lastReviewedAt: string | null;
   updatedAt: string;
@@ -157,6 +163,9 @@ export interface AgentKitContextPackSummary {
   exportProfileCount: number;
   accentColor?: string | null;
   coverImage: string | null;
+  brandId?: string | null;
+  coverRecipe?: "brand_hex_v1" | "generated_v1" | string | null;
+  logoVariant?: "auto" | "light" | "dark" | "mono" | string | null;
   sortOrder?: number;
 }
 
@@ -371,6 +380,82 @@ export interface ExportArtifact {
   estimatedTokens: number;
 }
 
+export type ExportBriefObjectType = "pack" | "skill" | "agent_kit" | "composed";
+export type ExportBriefPrivacyMode = "redacted" | "public_safe";
+
+export interface ExportBrief {
+  id: string;
+  objectType: ExportBriefObjectType;
+  objectId: string;
+  profileId: string;
+  target: string;
+  format: string;
+  privacyMode: ExportBriefPrivacyMode;
+  filename: string;
+  mimeType: string;
+  sha256: string;
+  byteLength: number;
+  estimatedTokens: number;
+  includedCount: number;
+  excludedCount: number;
+  sourceCount: number;
+  warningCount: number;
+  warningCodes: string[];
+  generatedAt: string;
+  savedAt: string;
+  contentSnapshot?: string;
+  contentSnapshotTruncated: boolean;
+}
+
+export interface ExportBriefListQuery {
+  limit?: number;
+  objectType?: ExportBriefObjectType;
+  objectId?: string;
+}
+
+export interface SaveExportBriefRequest {
+  objectType: ExportBriefObjectType;
+  objectId: string;
+  privacyMode: ExportBriefPrivacyMode;
+  artifact: ExportArtifact;
+}
+
+export interface LocalEvent {
+  id: number;
+  type: string;
+  message: string;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LocalEventsResponse {
+  events: LocalEvent[];
+}
+
+export interface LocalObservabilityQuery {
+  limit?: number;
+  packId?: string;
+  recordId?: string;
+}
+
+export interface McpQueryLogEntry {
+  tool: string;
+  packId: string | null;
+  recordId: string | null;
+  profileId: string | null;
+  status: string;
+  resultCount: number;
+  queryHash: string | null;
+  queryLength: number | null;
+  durationMs: number;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface McpQueryLogResponse {
+  queries: McpQueryLogEntry[];
+}
+
 export interface ComposeSelection {
   packId: string;
   recordIds: string[];
@@ -439,6 +524,113 @@ export interface PackDetail extends PackSummary {
   } | null;
   sources: SourceSummary[];
   exportProfiles: ExportProfileSummary[];
+}
+
+export interface ExposureIssue {
+  code: string;
+  severity: "blocker" | "warning";
+  message: string;
+}
+
+export interface ExposureRecordReadiness {
+  id: string;
+  packId: string;
+  title: string;
+  type: string;
+  privacy: string;
+  reviewStatus: string;
+  freshness: string;
+  sourceStatus: string;
+  tags: string[];
+  exportEligible: boolean;
+  mcpEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface ExposureProfileReadiness {
+  id: string;
+  name: string;
+  target: string;
+  format: string;
+  privacyMode: string | null;
+  tokenBudget: number | null;
+  status: string;
+  exportEligible: boolean;
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export interface PackExposureReadiness {
+  packId: string;
+  packName: string;
+  policies: {
+    export: {
+      defaultPrivacyMode: "redacted";
+      recordPolicy: string;
+    };
+    mcp: {
+      transport: "stdio";
+      defaultBodyPolicy: string;
+      allowPrivateByDefault: false;
+    };
+  };
+  validation: {
+    valid: boolean;
+    status: string;
+    errors: number;
+    warnings: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocked: boolean;
+  };
+  summary: {
+    recordCount: number;
+    exportEligibleRecords: number;
+    mcpEligibleRecords: number;
+    blockedRecords: number;
+    warningRecords: number;
+    sourceBackedRecords: number;
+    recordsMissingSourceCoverage: number;
+    exportProfileCount: number;
+    exportEligibleProfiles: number;
+    blockedProfiles: number;
+    warningProfiles: number;
+  };
+  exportProfiles: ExposureProfileReadiness[];
+  records: ExposureRecordReadiness[];
+  blockers: ExposureIssue[];
+  warnings: ExposureIssue[];
+}
+
+export type PackReadinessStatus = "ready" | "review_needed" | "blocked";
+export type PackReadinessDimensionId = "source" | "review" | "governance" | "redaction" | "export" | "mcp";
+
+export interface PackReadinessIssue {
+  code: string;
+  severity: "blocker" | "warning";
+  message: string;
+  evidence: Record<string, unknown>;
+}
+
+export interface PackReadinessDimension {
+  id: PackReadinessDimensionId;
+  label: string;
+  status: PackReadinessStatus;
+  score: number;
+  evidence: Record<string, unknown>;
+}
+
+export interface PackReadinessReport {
+  schemaVersion: "contextarr.readiness-report.v1";
+  packId: string;
+  status: PackReadinessStatus;
+  score: number;
+  dimensions: Record<PackReadinessDimensionId, PackReadinessDimension>;
+  issues: PackReadinessIssue[];
+  generatedAt: string;
 }
 
 export interface SkillDocument {
@@ -650,6 +842,235 @@ export interface ReviewItemsResponse {
   };
 }
 
+export type ReviewCandidateSourceKind = "draft_pack" | "composed_pack" | "imported_pack" | "restored_quarantine" | "unknown";
+export type ReviewCandidateStatus = "ready_for_review" | "invalid" | "blocked" | "duplicate_active_id";
+export type ReviewCandidateActivationMode = "move" | "copy";
+
+export interface ReviewCandidateSummary {
+  key: string;
+  sourceKind: ReviewCandidateSourceKind;
+  sourceLabel: string;
+  pathLabel: string;
+  packId: string | null;
+  name: string;
+  version: string | null;
+  status: ReviewCandidateStatus;
+  recommendedAction: string;
+  activeConflict: boolean;
+  validation: {
+    status: string;
+    errors: number;
+    warnings: number;
+    infos: number;
+    issueCount: number;
+  };
+  security: {
+    status: string;
+    recommendedAction: string;
+    blocking: boolean;
+    summary: Record<string, number> | null;
+    findingCount: number;
+  };
+  counts: {
+    records: number;
+    sources: number;
+    exportProfiles: number;
+  };
+}
+
+export interface ReviewCandidateDetail extends ReviewCandidateSummary {
+  validationIssues: Array<{
+    severity: string;
+    code: string;
+    message: string;
+    file?: string;
+    path?: string;
+  }>;
+  securityFindings: Array<{
+    id: string;
+    code: string;
+    severity: string;
+    category: string;
+    file: string;
+    line?: number;
+    message: string;
+    recommendedAction: string;
+    blocking: boolean;
+  }>;
+  records: Array<{
+    id: string;
+    title: string;
+    type: string;
+    privacy: string;
+    reviewStatus: string;
+    sourceStatus: string;
+    tags: string[];
+    sources: string[];
+    file: string;
+  }>;
+  sources: Array<{
+    id: string;
+    type: string;
+    title: string;
+    url?: string | null;
+    path?: string | null;
+    trust?: string | null;
+    status?: string | null;
+    licenseStatus?: string | null;
+  }>;
+  exportProfiles: Array<{
+    id: string;
+    name: string;
+    target: string;
+    format: string;
+    privacyMode?: string | null;
+  }>;
+}
+
+export interface ReviewCandidateActivationPlan {
+  schemaVersion: "contextarr.review-candidate-activation-plan.v1";
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: "ready" | "blocked";
+  canActivate: boolean;
+  source: {
+    kind: ReviewCandidateSourceKind;
+    label: string;
+    pathLabel: string;
+  };
+  target: {
+    activePacksRootLabel: string;
+    packId: string | null;
+    pathLabel: string | null;
+    activeConflict: boolean;
+  };
+  checks: Array<{
+    id: string;
+    label: string;
+    status: "pass" | "warning" | "error";
+    message: string;
+  }>;
+  blockers: Array<{
+    code: string;
+    message: string;
+  }>;
+  warnings: Array<{
+    code: string;
+    message: string;
+  }>;
+  nextSteps: string[];
+  boundaries: string[];
+}
+
+export interface ReviewCandidateActivationDryRun {
+  schemaVersion: "contextarr.review-candidate-activation-dry-run.v1";
+  generatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string | null;
+  name: string;
+  status: "ready" | "blocked";
+  canActivate: boolean;
+  source: ReviewCandidateActivationPlan["source"];
+  target: ReviewCandidateActivationPlan["target"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  blockers: ReviewCandidateActivationPlan["blockers"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
+  manualActions: string[];
+  effects: {
+    filesMoved: false;
+    sqliteMutated: false;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  boundaries: string[];
+}
+
+export interface ReviewCandidateActivationResult {
+  schemaVersion: "contextarr.review-candidate-activation-result.v1";
+  activatedAt: string;
+  proofId: string;
+  candidateKey: string;
+  packId: string;
+  name: string;
+  mode: ReviewCandidateActivationMode;
+  source: ReviewCandidateActivationPlan["source"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
+  target: {
+    activePacksRootLabel: string;
+    packId: string;
+    pathLabel: string;
+    activeConflict: false;
+  };
+  effects: {
+    filesMoved: boolean;
+    filesCopied: boolean;
+    sourceRemoved: boolean;
+    exportsGenerated: false;
+    mcpExposed: false;
+    networkAccessed: false;
+  };
+  nextSteps: string[];
+  boundaries: string[];
+}
+
+export interface ReviewCandidateActivationHistoryItem {
+  schemaVersion: "contextarr.review-candidate-activation-history.v1";
+  id: number;
+  proofId: string;
+  candidateKey: string;
+  packId: string;
+  name: string;
+  status: "applied";
+  mode: ReviewCandidateActivationMode;
+  activatedAt: string;
+  indexRefreshedAt: string | null;
+  source: ReviewCandidateActivationPlan["source"];
+  target: ReviewCandidateActivationResult["target"];
+  validation: ReviewCandidateSummary["validation"];
+  security: ReviewCandidateSummary["security"];
+  warnings: ReviewCandidateActivationPlan["warnings"];
+  effects: ReviewCandidateActivationResult["effects"];
+  activation: ReviewCandidateActivationResult;
+}
+
+export interface ReviewCandidateActivationApplyRequest {
+  proofId: string;
+  mode?: ReviewCandidateActivationMode;
+}
+
+export interface ReviewCandidateActivationApplyResponse {
+  ok: boolean;
+  activation: ReviewCandidateActivationResult;
+  history?: ReviewCandidateActivationHistoryItem;
+  pack?: PackSummary | null;
+  index: Record<string, unknown>;
+}
+
+export interface ReviewCandidatesResponse {
+  candidates: ReviewCandidateSummary[];
+  skippedRoots: Array<{
+    sourceKind: ReviewCandidateSourceKind;
+    rootLabel: string;
+    reason: string;
+    message: string;
+  }>;
+  counts: {
+    total: number;
+    readyForReview: number;
+    invalid: number;
+    blocked: number;
+    duplicateActiveId: number;
+    skippedRoots: number;
+    filtered: number;
+  };
+}
+
 export interface HealthCheck {
   id: string;
   label: string;
@@ -734,7 +1155,7 @@ export type Route =
   | { name: "agentKits" }
   | { name: "agentKit"; agentKitId: string }
   | { name: "collectors" }
-  | { name: "reviewQueue" }
+  | { name: "reviewQueue"; tab?: "items" | "drafts" }
   | { name: "composer"; mode?: ComposerMode }
   | { name: "exports" }
   | { name: "health" };

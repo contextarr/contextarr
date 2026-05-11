@@ -1,0 +1,25 @@
+id: home-assistant-claude-md
+name: Home Assistant Pack CLAUDE.md Export
+target: claude_md
+format: markdown
+privacy_mode: redacted
+include:
+  records:
+    - home-assistant-pack.home-overview
+    - home-assistant-pack.device-groups
+    - home-assistant-pack.automation-map
+    - home-assistant-pack.dashboard-conventions
+    - home-assistant-pack.backup-plan
+    - home-assistant-pack.network-boundaries
+    - home-assistant-pack.privacy-rules
+    - home-assistant-pack.maintenance-routine
+exclude_tags:
+  - secret
+  - never_export
+  - imported_draft
+token_budget: 12000
+sections:
+  - summary
+  - key_facts
+  - constraints
+  - sources
