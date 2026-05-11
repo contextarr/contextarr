@@ -51,6 +51,7 @@ Contextarr does not run agents, execute Skills, call tools, or perform actions.
 | Webhooks | Later, and app-level only. No pack-defined webhooks and no MCP webhooks. Use Local Event Hooks for metadata-only automation. See [local-event-hooks.md](local-event-hooks.md). |
 | Skills as an organizer/server surface | Keep. Contextarr should organize, classify, preview, pair, export, and serve Skills without executing them. |
 | External pre-made Skills | Keep, but as untrusted external artifacts. Preserve original folders later, classify risk, and export only with explicit compatibility warnings. See [external-skills.md](external-skills.md). |
+| Vector stores, graph databases, RAG tools, and Graphify | Keep as downstream integration paths. Add Derived Index Adapters later so users can export redacted, source-mapped data into their chosen retrieval layer. Do not make Contextarr a vector database, graph engine, Graphify replacement, or managed RAG app. See [derived-index-adapters.md](derived-index-adapters.md). |
 | LiteLLM analogy | Useful internally. LiteLLM routes model access; Contextarr routes context, Skills, Agent Kits, and Export Briefs. Do not copy LiteLLM's execution-path role. |
 | Adoption focus | Keep narrow. The next adoption win is still the smallest undeniable core loop: install, inspect starter packs, export useful briefs, query read-only MCP, and prove nothing executes. |
 
@@ -72,6 +73,7 @@ Do not build now:
 - Mutating MCP.
 - Pack-defined hooks or webhooks.
 - Full-vault encryption by default.
+- Built-in vector database, graph database, code graph engine, managed RAG app, hidden embedding calls, always-on external indexer, or external database sync.
 
 ## Strategic Sequence
 
@@ -80,10 +82,11 @@ Do not build now:
 3. Private Context as a protected view over local artifacts.
 4. External Skill artifact archive and compatibility reporting.
 5. Saved Export Brief library and local evidence history.
-6. Official starter ecosystem.
-7. Private team registry.
-8. Public verified registry.
-9. Marketplace only if the trust model proves out.
+6. Derived Index Adapters for bring-your-own vector, graph, RAG, and Graphify-style systems.
+7. Official starter ecosystem.
+8. Private team registry.
+9. Public verified registry.
+10. Marketplace only if the trust model proves out.
 
 ## Adoption Test
 

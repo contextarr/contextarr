@@ -75,6 +75,8 @@ Contextarr prepares Agent Kits. It does not run them.
 - Executable packs, executable Skills, or executable Agent Kits.
 - Benchmark fixtures and context-quality package from PR #2.
 - Context Readiness list, recalculation, persisted evidence event writers, governance parsing/enforcement, token-budget reports, and export history.
+- Derived Index Adapter export profiles for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes.
+- Built-in vector database, built-in graph database, code graph engine, managed RAG app, hidden embedding calls, always-on external indexer, and external database sync service are not implemented and are not part of the current product.
 
 ## Starter Pack Status
 

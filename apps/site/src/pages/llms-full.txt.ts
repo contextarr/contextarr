@@ -18,7 +18,7 @@ Contextarr is a local-first Context Pack system for preparing trusted AI context
 
 It turns local Markdown records, source maps, validation rules, redaction rules, review metadata, and export profiles into validated Context Packs.
 
-Contextarr is not a chatbot, hosted memory vault, public marketplace, managed RAG app, or agent runner.
+Contextarr is not a chatbot, hosted memory vault, vector database, graph database, public marketplace, managed RAG app, or agent runner.
 
 ## Core object definitions
 

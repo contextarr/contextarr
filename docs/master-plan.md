@@ -45,7 +45,7 @@ Contextarr prepares and serves AI-ready artifacts. It does not run agents, execu
 | Context Pack | Source-backed knowledge and reusable context. | Local pack folder. | Core object, active release focus. |
 | Skill | Reusable method, instructions, output formats, examples, and task rules. | Local Skill folder. | Advanced-preview, data-only, frozen behind core gate. |
 | Agent Kit | Task-ready pairing of Context Packs, Skills, target, redaction, and usage instructions. | Local Agent Kit folder. | Advanced-preview, data-only, frozen behind core gate. |
-| Export Brief | Generated output for an AI tool or human. | Derived artifact. | Preview and CLI output exist; saved library is future. |
+| Export Brief | Generated output for an AI tool or human. | Derived artifact. | Explicit local save/list/fetch foundation exists; deeper export history and packaging are future. |
 | Private Context | Protected view and policy layer over sensitive artifacts. | Metadata and local policy over existing objects. | Future track; current privacy primitives exist. |
 | Registry Artifact | Shared Context Pack, Skill, Agent Kit, template, profile, or rule set. | Registry manifest plus artifact files. | Future trust and distribution track. |
 
@@ -61,10 +61,12 @@ These are binding unless a future decision record explicitly changes them:
 - API writes are local, authenticated control operations only.
 - CLI writes are explicit local operator actions only.
 - SQLite is derived and rebuildable, not the pack source of truth.
+- Vector stores, graph databases, RAG tools, and Graphify-style systems are downstream derived indexes, not Contextarr's source of truth.
 - Drafts, imports, restores, composed packs, and collector outputs start private, unreviewed, and excluded from default export and MCP.
 - No hidden network calls.
 - No product telemetry.
 - No hosted vault.
+- No built-in vector database, graph database, managed RAG app, AST/code graph engine, hidden embedding calls, or external database sync service.
 - No public marketplace before registry trust, signing, scanning, quarantine, revocation, abuse process, and manual review are proven.
 - No pack-defined webhooks, Skill-defined webhooks, MCP webhooks, webhook-triggered shell commands, or webhook-triggered agent actions.
 - No live Gmail, Slack, Drive, Jira, CRM, bank, brokerage, or other credentialed SaaS connectors in the core.
@@ -83,6 +85,8 @@ The current checkout already contains more than the earliest Context Pack plan:
 - Local Context Pack collectors and Composer save-as-draft-pack flows.
 - Backup/restore v0 with quarantine-only restore.
 - Advanced-preview non-executable Skills and Agent Kits across schemas, validation, demo content, indexing, API, UI, exports, and MCP.
+- Per-pack Context Readiness API/CLI/UI surfaces and bounded metadata-only Local Observability reads.
+- Explicit local Saved Export Brief save/list/fetch APIs and web actions for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots.
 
 The current release gaps are not vision gaps. They are adoption and hardening gaps:
 
@@ -248,31 +252,39 @@ Primary doc:
 
 - [private-context.md](private-context.md)
 
-### Stage 5: Export Briefs and Export Depth
+### Stage 5: Export Briefs, Export Depth, and Derived Index Adapters
 
-Status: future export-maturity track.
+Status: export-maturity track started. Saved Export Brief save/list/fetch exists; export depth and derived index adapters are future.
 
 Goal:
 
 - Treat Export Briefs as first-class generated artifacts and make export packaging intentional.
+- Let users bring their own vector store, graph database, RAG stack, Graphify workflow, or agent runtime without turning Contextarr into those systems.
 
 Build order:
 
-1. Saved Export Brief library metadata.
+1. Saved Export Brief library metadata foundation.
 2. Export history and output hash integration with Local Observability.
 3. Export depth levels: capsule, standard, deep, full, attachment_bundle, mcp_query.
 4. Target-depth warnings: too brief, too large, attachment recommended, MCP recommended, privacy risk.
 5. Attachment bundle generation for large-context workflows.
 6. MCP query entry briefs for MCP-capable tools.
+7. Derived Index Adapter spec for vector, RAG, graph, and Graphify seed exports.
+8. CLI-first derived export targets such as `vector_jsonl`, `rag_markdown`, `graph_seed_json`, `graph_edges_json`, and `graphify_seed`.
+9. Adapter recipes for Qdrant, Chroma, LanceDB, LlamaIndex, LangChain, Neo4j, Kuzu, and Graphify-adjacent workflows.
+10. Optional example adapter scripts only after user demand.
 
 Gate:
 
 - Export Briefs remain derived artifacts, not source of truth.
 - Draft, blocked, private, secret, and `never_export` content stays excluded by default.
+- Derived index exports preserve pack IDs, record IDs, source IDs, review status, privacy, redaction mode, freshness, export profile ID, generated time, and content hashes.
+- Contextarr does not add a built-in vector database, graph database, managed RAG layer, hidden embedding calls, always-on external indexer, or direct external database sync in this stage.
 
 Primary doc:
 
 - [prd-additions/export-depth-levels.md](prd-additions/export-depth-levels.md)
+- [derived-index-adapters.md](derived-index-adapters.md)
 
 ### Stage 6: Skills and Agent Kits Graduation
 
@@ -487,14 +499,14 @@ Gate:
 
 Use this queue until a decision record changes it:
 
-1. Finish this master plan and link it.
-2. Run docs/scope verification.
-3. Repair any `v0.1.0-alpha.1` release-check drift.
-4. Run `pnpm release:verify` and fix only release-blocking issues.
-5. Do a fresh Docker preview smoke from the release checklist.
-6. Refresh screenshots and add a short demo video path or script-ready recording plan.
-7. Polish public-site and README framing around Core Now versus Advanced Preview.
-8. Improve pack authoring, collectors, Draft Intake, and export preflight based on the first real user path.
+1. Keep the alpha branch release gates green while reviewing the recent readiness, observability, and saved-brief foundations.
+2. Do a fresh Docker preview smoke from the release checklist after any runtime change.
+3. Refresh screenshots only when UI changes make the reviewed alpha set stale.
+4. Record a short demo video from the script-backed demo path.
+5. Polish public-site and README framing around Core Now versus Advanced Preview.
+6. Improve pack authoring, collectors, Draft Intake, and export preflight based on the first real user path.
+7. Harden the current Context Readiness, Local Observability, and Saved Export Brief foundations before expanding them.
+8. Keep Derived Index Adapters in docs/spec mode until export-depth work outranks adoption hardening.
 9. Cut or prepare the alpha release artifact only after release gates pass.
 10. Gather alpha feedback before building future tracks.
 
@@ -514,15 +526,21 @@ Use this queue until a decision record changes it:
 | Composer save-as-draft-pack | Stage 2 | Yes, polish | Drafts stay private and unreviewed. |
 | Export profiles | Stage 1 and Stage 2 | Yes | Current targets stay core. |
 | Export Depth Levels | Stage 5 | Not yet | Accepted planning addition. |
-| Saved Export Brief library | Stage 5 | Not yet | Generated artifacts and metadata history. |
+| Saved Export Brief library | Stage 5 | Yes, foundation | Explicit local save/list/fetch exists; deeper history/regeneration remains future. |
+| Derived Index Adapters | Stage 5 | Docs now, code later | Bring-your-own retrieval layer through redacted, source-mapped exports. |
+| Vector/RAG export targets | Stage 5 | Not yet | Future `vector_jsonl`, `rag_markdown`, LlamaIndex, LangChain, Qdrant, Chroma, and LanceDB outputs. |
+| Graph and Graphify seed exports | Stage 5 | Not yet | Future graph nodes/edges, Neo4j/Kuzu CSV, and Graphify seed outputs; no graph engine. |
+| Built-in vector database | Rejected | No | External vector stores consume derived exports. |
+| Built-in graph database or code graph engine | Rejected | No | Graphify and graph databases stay downstream tools. |
+| Managed RAG app | Rejected | No | Contextarr prepares clean context; it does not become a RAG workspace. |
 | CLI agent mode | Stage 2 | Yes, polish | Stable JSON, redaction, bounded output, deterministic exits. |
 | API permission tiers | Stage 2 | Yes, harden | Local authenticated control. |
 | MCP read-only contract | All stages | Yes, preserve | No mutation or execution. |
 | MCP serving Context Packs | Stage 1 | Yes | Core. |
 | MCP serving Skills and Agent Kits | Stage 6 | Already preview, frozen | Re-harden before graduation. |
-| MCP serving Export Brief metadata | Stage 5 | Not yet | Saved briefs first. |
-| Context Readiness | Stage 3 | Not yet | Accepted planning track. |
-| Local Observability | Stage 3 | Not yet | Local metadata evidence, not telemetry. |
+| MCP serving Export Brief metadata | Stage 5 | Not yet | Saved briefs first; no MCP exposure in the current foundation. |
+| Context Readiness | Stage 3 | Yes, foundation | Per-pack read-only API/CLI/UI report exists; broader readiness list/governance/evidence remains future. |
+| Local Observability | Stage 3 | Yes, foundation | Bounded metadata-only event and MCP query-log reads exist; writers/history remain future. |
 | Context Quality Benchmark | Stage 3 | Not yet | Tie readiness to deterministic eval evidence. |
 | Agentic AI Readiness starter pack | Stage 3 | Not yet | Public-safe starter pack. |
 | Private Context | Stage 4 | Not yet | Protected view, not personal vault. |
@@ -576,6 +594,7 @@ Contextarr is fully built out when:
 - Context Packs are stable, authorable, validatable, reviewable, exportable, backed up, restorable, and queryable through read-only MCP.
 - Private Context can protect sensitive local artifacts with clear export and MCP rules.
 - Export Briefs can be saved, inspected, hashed, and regenerated from local source artifacts.
+- Derived Index Adapters can produce redacted, source-mapped exports for external vector, graph, RAG, and Graphify-style systems without making those systems part of Contextarr core.
 - Context Readiness and Local Observability can explain whether context is ready, what was exported, what was queried, what was redacted, and what warnings existed, all locally.
 - Skills and Agent Kits are supported as non-executable library objects.
 - External Skills can be preserved as untrusted artifacts, scanned, classified, adapted, and exported with explicit compatibility warnings.

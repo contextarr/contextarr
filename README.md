@@ -28,7 +28,7 @@ Read-only local MCP.
 
 The core object is the Context Pack: a local, source-backed, data-only folder with records, sources, validation rules, redaction rules, and export profiles.
 
-Contextarr is not a chatbot, hosted memory vault, managed RAG app, registry, marketplace, telemetry product, or agent runner.
+Contextarr is not a chatbot, hosted memory vault, vector database, graph database, managed RAG app, registry, marketplace, telemetry product, or agent runner.
 
 ## Core Working Now
 
@@ -63,6 +63,7 @@ Contextarr prepares Agent Kits. It does not run them.
 - No creator accounts or payments.
 - No executable packs, executable Skills, scripts inside packs, or Agent Kit runtime.
 - No direct Gmail, bank, brokerage, Slack, Google Drive, Jira, CRM, or sensitive-account connectors.
+- No built-in vector database, graph database, managed RAG layer, Graphify replacement, or external database sync.
 - No managed AI dependency.
 - No telemetry, product analytics, or hidden network calls.
 - No real private data in this repository.
@@ -166,6 +167,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Draft Intake v0 records sanitized local activation history only.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
 - Context Readiness currently has a per-pack read-only API report; Local Observability currently has bounded metadata-only event and MCP query-log reads.
+- Derived Index Adapters for vector stores, graph databases, RAG tools, and Graphify-style workflows are future exports only.
 - Skills and Agent Kits are advanced-preview data objects; they are data-only, not runtime features.
 - Public registry, marketplace, signing implementation, remote install, package publishing, cloud sync, and telemetry remain out of scope.
 
@@ -181,6 +183,7 @@ See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.m
 - [docs/composed-packs.md](docs/composed-packs.md)
 - [docs/config-reference.md](docs/config-reference.md)
 - [docs/export-profiles.md](docs/export-profiles.md)
+- [docs/derived-index-adapters.md](docs/derived-index-adapters.md)
 - [docs/faq.md](docs/faq.md)
 - [docs/implementation-status.md](docs/implementation-status.md)
 - [docs/install.md](docs/install.md)

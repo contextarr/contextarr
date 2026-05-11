@@ -17,6 +17,8 @@ Contextarr currently supports a working local Context Pack loop:
 - Docker Compose local preview.
 - Context Pack Backup/Restore v0 with local checksum-backed backup directories and quarantine-only restore.
 - Context Pack collector v0 that creates private unreviewed draft packs under `draft-packs/` without activating them.
+- Per-pack Context Readiness API/CLI/UI reporting and bounded metadata-only Local Observability reads.
+- Explicit local Saved Export Brief save/list/fetch foundation for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots.
 
 The repo also contains advanced-preview data-only surfaces:
 
@@ -40,6 +42,7 @@ Context Packs remain the core source-backed knowledge object.
 - Private Context: a future protected view and policy layer over sensitive local artifacts, not a separate hosted personal memory vault.
 - Context Readiness: a planned report layer for whether a Context Pack is source-backed, reviewed, governed, redacted, export-fit, and locally observable enough for AI assistant or agent use.
 - Local Observability: planned local evidence metadata for exports, MCP queries, readiness calculations, reviews, and warnings. It is not product telemetry.
+- Derived Index Adapters: a future bring-your-own-retrieval export lane for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. Contextarr remains the source-backed context layer; downstream indexes are derived and rebuildable.
 
 Contextarr prepares Agent Kits. It does not run them.
 
@@ -72,6 +75,7 @@ Context Readiness may strengthen Pack Health, Exposure Readiness, export preview
 - Keep the new Context Readiness and Local Observability runtime slices narrow: per-pack read-only readiness, bounded metadata-only local evidence reads, and no policy enforcement, telemetry, or export/MCP widening.
 - Usability polish around pack authoring.
 - Keep Private Context, External Skill artifact preservation, and Local Event Hooks documented as future scoped tracks without expanding the current runtime.
+- Keep Derived Index Adapters in spec/docs mode until export-depth work outranks adoption hardening.
 
 ## Deferred
 
@@ -80,8 +84,9 @@ Context Readiness may strengthen Pack Health, Exposure Readiness, export preview
 - Protected-pack unlock, app lock, and encrypted export/backup bundle flows for Private Context.
 - External Skill artifact archive, classifier, compatibility reports, and native-bundle export modes.
 - Local Event Hooks for metadata-only local automation.
-- Saved Export Brief library beyond current generated previews and CLI output artifacts.
+- Saved Export Brief history, regeneration, export depth, and MCP metadata exposure beyond the current explicit local save/list/fetch foundation.
+- Derived Index Adapter export profiles and recipes for vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes.
 - Web importer UI.
 - Always-on API import endpoints.
 - Pack file mutation from review actions.
-- Hosted cloud, marketplace, product telemetry, executable packs, Agent Kit runtime, mutating MCP, agent runners, hidden network calls, and live sensitive-account connectors.
+- Built-in vector database, built-in graph database, code graph engine, managed RAG app, external database sync service, hosted cloud, marketplace, product telemetry, executable packs, Agent Kit runtime, mutating MCP, agent runners, hidden network calls, and live sensitive-account connectors.

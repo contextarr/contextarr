@@ -8,6 +8,8 @@ Phase 22 continues the second PRD track with non-executable Skill schemas, publi
 
 The Agentic AI Context Readiness and Local Observability PRD started as an AR0 planning addition. The current runtime slice adds only a per-pack read-only Context Readiness API report and bounded metadata-only Local Observability reads. Future phases may add readiness list views, recalculation, UI, CLI commands, governance parsing, export history, token-budget reports, and release gates only after the Context Pack core lane remains stable.
 
+Derived Index Adapters are a future export-direction addition, not a database pivot. Contextarr may later emit redacted, source-mapped exports for external vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes, but those systems stay downstream derived indexes.
+
 ## Core Decisions
 
 - Use a TypeScript monorepo managed by pnpm.
@@ -21,6 +23,7 @@ The Agentic AI Context Readiness and Local Observability PRD started as an AR0 p
 - Use read-only stdio MCP as a local context access layer.
 - Keep Skills, Agent Kits, and Agent Kit templates data-only and non-executable.
 - Treat Private Context as a future protected policy/view layer over local artifacts, not as a hosted personal memory vault.
+- Keep vector stores, graph databases, RAG stacks, and Graphify-style systems downstream of explicit derived exports.
 
 ## Monorepo Shape
 
@@ -59,7 +62,7 @@ docs
 
 ## Source of Truth
 
-Pack and Skill folders are authoritative. SQLite tables, search indexes, generated exports, static render output, and MCP responses are derived and must be safe to rebuild from local files.
+Pack and Skill folders are authoritative. SQLite tables, search indexes, generated exports, static render output, MCP responses, and future vector/graph/RAG seed exports are derived and must be safe to rebuild from local files.
 
 ## Backend Direction
 
@@ -77,9 +80,13 @@ The shared renderer converts Markdown to sanitized HTML for both the web UI and 
 
 SQLite is the only v0 database. Do not add Postgres or a vector database in v0. SQLite FTS5 is implemented for local full-text record and Skill search, with safe fallback behavior for punctuation-heavy UI queries.
 
+Future Derived Index Adapters may produce local JSONL, Markdown, JSON, or CSV files for external retrieval systems. They must not turn Contextarr into a built-in vector database, graph database, code graph engine, managed RAG app, hidden embedding service, always-on external indexer, or external database sync service.
+
 Review item statuses are local SQLite app state. Rescans preserve statuses by deterministic fingerprints and mark missing generated issues as resolved, but review actions do not edit pack files.
 
 Generated exports are derived artifacts. The CLI may write them to ignored local folders such as `generated-exports/`; API previews return content only and do not write files.
+
+Derived index exports, when implemented, should preserve pack IDs, record IDs, source IDs, review status, privacy, redaction mode, freshness, export profile ID, generated time, and content hashes so downstream retrieval hits can be traced back to canonical Contextarr records.
 
 MCP query metadata is local SQLite app state. It records tool name, related ids, query hash and length, result count, timing, and sanitized metadata only. It must not store raw result content or full raw query text.
 

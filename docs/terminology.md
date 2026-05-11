@@ -36,6 +36,12 @@ An Export Brief is a generated output artifact for an AI tool or human. It may b
 
 An Export Brief is not source of truth. It is derived output.
 
+### Derived Index Adapter
+
+A Derived Index Adapter is a future export profile or recipe that prepares redacted, source-mapped Contextarr output for an external vector store, graph database, RAG stack, Graphify-style workflow, or agent runtime.
+
+The external index is derived and rebuildable. It is not Contextarr's source of truth.
+
 ## Relationship
 
 ```text
@@ -43,6 +49,7 @@ Context Packs tell agents what to know.
 Skills tell agents how to work.
 Agent Kits tell agents how this specific bundle should be used for this specific task.
 Export Briefs are generated from those ingredients.
+Derived Index Adapters feed downstream retrieval layers without making Contextarr a retrieval database.
 ```
 
 ## Phase 12 Boundary

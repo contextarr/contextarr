@@ -19,6 +19,9 @@ Contextarr is not:
 - A public marketplace.
 - An agent runner.
 - An Obsidian clone.
+- A vector database.
+- A graph database.
+- A code graph engine.
 - A generic RAG app.
 - A cloud sync product.
 
@@ -55,6 +58,11 @@ Contextarr v0 must not include:
 - Direct Jira connector.
 - Direct CRM connector.
 - Direct banking or brokerage connector.
+- Built-in vector database.
+- Built-in graph database.
+- Built-in embedding service.
+- External database sync service.
+- Always-on external indexer.
 - Agent runner.
 - Mutating MCP.
 - Mobile app.

@@ -30,6 +30,14 @@ The named Private Context UI, protected-pack unlock, app lock, and encrypted exp
 
 Only as future app-level Local Event Hooks. Packs, Skills, Agent Kits, and MCP must not define or trigger webhooks.
 
+## Can Contextarr Work With Vector Stores, Graph Databases, Or Graphify?
+
+That is the intended future path through Derived Index Adapters, not a product pivot.
+
+Contextarr should remain the canonical local context layer and produce redacted, source-mapped exports for external vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. Those indexes are derived and rebuildable. Contextarr is not a vector database, graph engine, Graphify replacement, or managed RAG app.
+
+See [derived-index-adapters.md](derived-index-adapters.md).
+
 ## Are Skills And Agent Kits Still Being Expanded?
 
 No further Skills or Agent Kit expansion should happen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.

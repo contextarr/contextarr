@@ -37,6 +37,7 @@ export const notIncludedYet = [
   "hosted cloud or hosted vault",
   "telemetry",
   "signing implementation",
+  "built-in vector or graph database",
   "executable packs or Skills",
   "Agent Kit runtime behavior"
 ];
@@ -50,6 +51,7 @@ export const homepageSecurityBoundaries = [
   "No scripts inside packs",
   "No shell commands",
   "No hidden network calls",
+  "No built-in vector or graph database",
   "No direct Gmail, bank, or brokerage connectors",
   "No agent runner",
   "Read-only MCP",
@@ -85,6 +87,9 @@ export const explicitNonGoals = [
   "Agent Kit runtime",
   "direct Gmail connector",
   "direct bank or brokerage connector",
+  "built-in vector database",
+  "built-in graph database",
+  "managed RAG app",
   "passive always-on capture",
   "managed AI subscription"
 ];

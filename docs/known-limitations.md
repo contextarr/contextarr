@@ -24,6 +24,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.
 - Private Context is documented as a future protected view; app lock, protected-pack unlock, and encrypted export/backup bundle flows are not implemented.
 - Local Event Hooks are not implemented.
+- Derived Index Adapters are documented as a future export lane only. Vector store, graph database, RAG, Graphify seed, and adapter-recipe exports are not implemented.
 - CLI/API path-redaction checks reduce accidental local path leakage in known outputs, but they are not a substitute for a full external security audit.
 
 ## Explicit Non-Launches
@@ -35,6 +36,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - No signing implementation.
 - No hosted cloud sync.
 - No telemetry.
+- No built-in vector database, graph database, code graph engine, managed RAG app, hidden embedding calls, always-on external indexer, or external database sync service.
 - No executable packs.
 - No executable Skills.
 - No Agent Kit runtime.
