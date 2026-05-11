@@ -31,6 +31,10 @@ Contextarr v0 must not include:
 - Telemetry.
 - Product analytics.
 - Hidden network calls.
+- Pack-defined webhooks.
+- Skill-defined webhooks.
+- MCP webhooks.
+- Webhook-triggered agent actions.
 - Passive always-on capture.
 - Real private data in the repository.
 - Claims of perfect prompt-injection detection.
@@ -111,9 +115,15 @@ Imported records default to `privacy: private`, `review_status: draft`, `source_
 
 Draft Intake scans `CONTEXTARR_DRAFT_PACKS_DIR`, `CONTEXTARR_COMPOSED_PACKS_DIR`, and optional path-delimited `CONTEXTARR_REVIEW_CANDIDATE_DIRS` as untrusted local candidate roots. It returns sanitized metadata, validation summaries, scanner summaries, duplicate-active-pack warnings, counts, and local activation history before or after activation. Local activation requires the current dry-run proof ID, rejects changed or blocked candidates, writes only into the configured active packs root, records a sanitized SQLite evidence row, and refreshes the derived local index. Draft Intake must not return record bodies, expose absolute local paths, approve candidates, export candidates, publish candidates, perform network access, or expose candidates through MCP.
 
+## Private Context
+
+Private Context is a future protected policy and view layer over sensitive local artifacts. Current privacy primitives already include private/sensitive/secret record classes, redacted exports, draft/quarantine exclusion, `never_export`, and private MCP exclusion defaults.
+
+Future protected-pack unlock, app lock, encrypted export bundles, or encrypted backup flows must keep the same local-first and metadata-minimizing boundaries. Full-vault encryption must not become a default requirement without a separate schema and portability decision.
+
 ## Skills and Agent Kits
 
-Phase 22 implements non-executable Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. Phase 25 exposes Skills and Agent Kits through read-only stdio MCP tools without execution or file mutation. Phase 26 imports local draft Skills only when explicitly enabled and keeps them private, unreviewed, and excluded from exports until reviewed. Phase 27 Agent Kit templates are public-safe data-only source files; generated template drafts are unreviewed local Agent Kits written only under `CONTEXTARR_AGENT_KITS_DIR`. A Skill is a non-executable instruction artifact. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
+Phase 22 implements non-executable Native Skill schemas, validation, fake demo Skills, read-only Skill API indexing, read-only Skill Library/detail UI screens, deterministic Skill health/review items, read-only Skill export previews, Agent Kit schemas/validation, fake demo Agent Kits, Agent Kit API indexing/search, and a validated local Agent Kit Composer save flow. Phase 23 adds read-only Agent Kit Library/detail/health views with local, derived status. Phase 24 adds read-only Agent Kit export previews with local path stripping and hard exclusion for secret or `never_export` content. Phase 25 exposes Skills and Agent Kits through read-only stdio MCP tools without execution or file mutation. Phase 26 imports local draft Skills only when explicitly enabled and keeps them private, unreviewed, and excluded from exports until reviewed. Phase 27 Agent Kit templates are public-safe data-only source files; generated template drafts are unreviewed local Agent Kits written only under `CONTEXTARR_AGENT_KITS_DIR`. A Native Skill is a non-executable instruction artifact. A future External Skill Artifact may preserve original third-party Skill files as untrusted archive material. An Agent Kit is a pairing of Context Packs and Skills for a specific task. An Export Brief is generated output.
 
 Skill health checks reuse the same local, deterministic review queue model as Context Packs. They do not fetch source URLs, probe local source paths, run commands, execute Skill content, or rewrite Skill files. Review item status changes are stored in SQLite only.
 
@@ -124,6 +134,8 @@ Phase 23 health/detail output remains read-only and local-only. It may surface r
 Phase 24 Agent Kit export output remains read-only and local-only. It may merge Context Pack records and Skill documents into generated previews, but it must not execute Skills, run Agent Kits, fetch URLs, call AI APIs, leak local source paths, or include secret or `never_export` content.
 
 Skill and Agent Kit manifest paths must stay inside their source folders. Skill and Agent Kit API responses must not expose local filesystem paths. Skill instructions and examples rendered in the web app must pass through the shared sanitized Markdown renderer. Future Skill and Agent Kit work must not add shell execution, browser automation, hidden network calls, API-calling Skills, runtime plugins, agent runners, marketplace behavior, telemetry, hosted cloud behavior, or unreviewed private data exposure.
+
+External Skill Artifact preservation, when implemented, must keep originals quarantined, sidecar-scanned, classified, and excluded from default MCP/export paths. Contextarr may create adapted Native Skill views, but it must not execute original scripts or use original tool declarations as Contextarr permissions.
 
 ## Trusted Registry Foundation
 

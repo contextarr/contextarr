@@ -294,15 +294,19 @@ describe("contextarr CLI", () => {
       const root = tempDir();
       const draftRoot = path.join(root, "draft-packs");
       const quarantineRoot = path.join(root, "restored");
+      const importedRoot = path.join(root, "imported-packs", "phase9-smoke");
       fs.mkdirSync(draftRoot, { recursive: true });
       fs.mkdirSync(quarantineRoot, { recursive: true });
+      fs.mkdirSync(importedRoot, { recursive: true });
       fs.cpSync(fixture("valid-minimal-pack"), path.join(draftRoot, "valid-draft"), { recursive: true });
       fs.cpSync(path.join(scannerFixturesDir, "shell-command-pack"), path.join(quarantineRoot, "blocked-draft"), { recursive: true });
+      fs.cpSync(fixture("valid-minimal-pack"), path.join(importedRoot, "valid-import"), { recursive: true });
       process.env.CONTEXTARR_DRAFT_PACKS_DIR = draftRoot;
       process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS = quarantineRoot;
 
       const jsonOutput = createIo();
       const textOutput = createIo();
+      const importedOutput = createIo();
       const invalidOutput = createIo();
 
       expect(await runCli(["rescan", "--json"], createIo().io)).toBe(0);
@@ -322,6 +326,34 @@ describe("contextarr CLI", () => {
       expect(textOutput.stdout).toContain("blocked");
       expectNoAbsolutePaths(textOutput.stdout);
       expect(textOutput.stderr).toBe("");
+
+      process.env.CONTEXTARR_REVIEW_CANDIDATE_DIRS = `${quarantineRoot}${path.delimiter}${importedRoot}`;
+      expect(await runCli(["review-candidates", "--source-kind", "imported_pack", "--json"], importedOutput.io)).toBe(0);
+      const importedJson = JSON.parse(importedOutput.stdout);
+      expect(importedJson).toMatchObject({
+        schemaVersion: "contextarr.cli.review-candidates.v1",
+        filters: { sourceKind: "imported_pack" },
+        total: 1,
+        returned: 1,
+        counts: {
+          total: 1,
+          readyForReview: 1,
+          invalid: 0,
+          blocked: 0,
+          duplicateActiveId: 0,
+          skippedRoots: 0
+        },
+        skippedRoots: [],
+        candidates: [
+          expect.objectContaining({
+            sourceKind: "imported_pack",
+            packId: "valid-minimal-pack",
+            status: "ready_for_review"
+          })
+        ]
+      });
+      expectNoAbsolutePaths(importedOutput.stdout);
+      expect(importedOutput.stderr).toBe("");
 
       expect(await runCli(["review-candidates", "--status", "published"], invalidOutput.io)).toBe(2);
       expect(invalidOutput.stderr).toContain("Unsupported review candidate status");

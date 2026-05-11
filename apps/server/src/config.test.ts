@@ -120,20 +120,23 @@ describe("server config", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-config-"));
     const quarantineA = path.join(root, "restored-a");
     const quarantineB = path.join(root, "restored-b");
+    const importedRoot = path.join(root, "imported-packs", "phase9-smoke");
     fs.mkdirSync(quarantineA, { recursive: true });
     fs.mkdirSync(quarantineB, { recursive: true });
+    fs.mkdirSync(importedRoot, { recursive: true });
 
     const config = loadConfig({
       INIT_CWD: root,
-      CONTEXTARR_REVIEW_CANDIDATE_DIRS: `./restored-a${path.delimiter}${quarantineB}`
+      CONTEXTARR_REVIEW_CANDIDATE_DIRS: `./restored-a${path.delimiter}${quarantineB}${path.delimiter}${importedRoot}`
     });
 
-    expect(config.reviewCandidateDirs).toEqual([quarantineA, quarantineB]);
+    expect(config.reviewCandidateDirs).toEqual([quarantineA, quarantineB, importedRoot]);
     expect(getReviewCandidateRoots(config)).toEqual([
       { rootPath: path.join(root, "draft-packs"), sourceKind: "draft_pack", label: "draft-packs" },
       { rootPath: path.join(root, "composed-packs"), sourceKind: "composed_pack", label: "composed-packs" },
       { rootPath: quarantineA, sourceKind: "restored_quarantine", label: "restored-a" },
-      { rootPath: quarantineB, sourceKind: "restored_quarantine", label: "restored-b" }
+      { rootPath: quarantineB, sourceKind: "restored_quarantine", label: "restored-b" },
+      { rootPath: importedRoot, sourceKind: "imported_pack", label: "phase9-smoke" }
     ]);
   });
 

@@ -14,7 +14,7 @@ Supported kinds are `folder`, `markdown`, `prompt-template`, `claude-skill`, and
 
 ## Definition
 
-A Skill is a local, source-backed, non-executable instruction artifact that tells an AI assistant or agent how to do a specific kind of work.
+A Contextarr Native Skill is a local, source-backed, non-executable instruction artifact that tells an AI assistant or agent how to do a specific kind of work.
 
 Examples:
 
@@ -46,9 +46,15 @@ Skills are reusable task capability modules. They tell agents how to work across
 
 Agent Kit usage instructions are kit-specific operating instructions. An Agent Kit must not require a separate Skill whose only purpose is explaining how to use that Agent Kit.
 
+## External Skills
+
+Current Skill support imports selected external prompt or Skill inputs into private, unreviewed, data-only Contextarr Native Skill drafts. It does not preserve script-bearing external Skill folders as original artifacts yet.
+
+The desired future model is documented in [external-skills.md](external-skills.md): preserve external Skills as untrusted artifacts, classify risk and compatibility, optionally create an adapted Contextarr Native Skill view, and never execute the original.
+
 ## Safety Rules
 
-Skills must remain data-only. A Skill must not include scripts, shell commands, browser automation, hidden network calls, API keys, credential prompts, runtime plugins, background tasks, or tool execution logic.
+Contextarr Native Skills must remain data-only. A Native Skill must not include scripts, shell commands, browser automation, hidden network calls, API keys, credential prompts, runtime plugins, background tasks, or tool execution logic.
 
 Contextarr can validate, review, index, preview, pair, and export Skills as data-only artifacts. Contextarr must not execute Skills.
 

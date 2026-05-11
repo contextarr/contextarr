@@ -268,6 +268,31 @@ describe("@contextarr/review-candidates", () => {
       })
     ).toThrow("Activation proof does not match");
   });
+
+  it("discovers pack roots inside restored backup containers without treating the container as a candidate", () => {
+    const root = tempRoot();
+    const restoredRoot = path.join(root, "restored");
+    const batchRoot = path.join(restoredRoot, "backup-smoke");
+    const packRoot = path.join(batchRoot, "valid-a");
+    fs.cpSync(validPackFixture, packRoot, { recursive: true });
+
+    const result = listReviewCandidates({
+      roots: [{ rootPath: restoredRoot, sourceKind: "restored_quarantine", label: "restored" }],
+      displayRoot: root
+    });
+
+    expect(result.counts).toMatchObject({ total: 1, readyForReview: 1, skippedRoots: 0 });
+    expect(result.candidates).toEqual([
+      expect.objectContaining({
+        sourceKind: "restored_quarantine",
+        pathLabel: "restored/backup-smoke/valid-a",
+        packId: "valid-minimal-pack",
+        counts: { records: 1, sources: 1, exportProfiles: 1 }
+      })
+    ]);
+    expect(result.candidates.map((candidate) => candidate.pathLabel)).not.toContain("restored/backup-smoke");
+    expect(JSON.stringify(result)).not.toContain(root);
+  });
 });
 
 function tempRoot(): string {

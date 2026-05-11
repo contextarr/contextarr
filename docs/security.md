@@ -16,6 +16,7 @@ Contextarr v0.1 is local-first, data-only, and human-review centered.
 - No managed AI dependency.
 - No direct Gmail, banking, brokerage, or sensitive account connectors.
 - No real private data in this public repository.
+- No pack-defined webhooks, Skill-defined webhooks, MCP webhooks, or webhook-triggered actions.
 
 ## Pack Safety
 
@@ -43,11 +44,13 @@ The future public marketplace remains out of scope until the registry trust mode
 
 ## Skills And Agent Kits
 
-Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Phase 23 adds read-only Agent Kit Library and detail views plus local health/status artifacts. Phase 24 adds read-only Agent Kit export previews that strip local source paths and exclude secret or `never_export` content. Phase 25 exposes Skills and Agent Kits to MCP clients without mutation or execution. Phase 26 local Skill imports are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; generated draft Skills remain private, unreviewed, and excluded from export by tags. Phase 27 Agent Kit templates are committed public-safe source files only; generated kits remain unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`. Contextarr prepares Agent Kits. It does not run them.
+Contextarr Native Skills are non-executable instruction artifacts. Phase 18 stores them as local files, validates them with Zod and safety scans, indexes them into read-only SQLite/API views, displays them in read-only UI screens, generates deterministic health/review items without editing Skill files, and builds read-only export previews. Phase 22 adds non-executable Agent Kit schemas, fake demo Agent Kits, Agent Kit indexing/API/search, and a validated local Composer save flow. Phase 23 adds read-only Agent Kit Library and detail views plus local health/status artifacts. Phase 24 adds read-only Agent Kit export previews that strip local source paths and exclude secret or `never_export` content. Phase 25 exposes Skills and Agent Kits to MCP clients without mutation or execution. Phase 26 local Skill imports are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`; generated draft Skills remain private, unreviewed, and excluded from export by tags. Phase 27 Agent Kit templates are committed public-safe source files only; generated kits remain unreviewed local drafts under `CONTEXTARR_AGENT_KITS_DIR`. Contextarr prepares Agent Kits. It does not run them.
+
+Future External Skill Artifact support may preserve original third-party Skill folders, including script-bearing resources, as quarantined untrusted archive material with safety and compatibility reports. Contextarr still must not execute those resources, expose them through default MCP, or treat downstream runtime capabilities as Contextarr capabilities.
 
 Agent Kit saves are constrained to `CONTEXTARR_AGENT_KITS_DIR`, defaulting to ignored `agent-kits/`. The browser sends object IDs and metadata only; it never sends an output path. Saved kits are validated before they are indexed.
 
-Skill imports are constrained to `CONTEXTARR_IMPORTED_SKILLS_DIR`, defaulting to ignored `imported-skills/`. The browser sends a local input path and import metadata only; it never sends an output path. Script-like files, executable extensions, unsafe filenames, shell-command patterns, and credential-like content are blocked from imported draft Skills.
+Skill imports are constrained to `CONTEXTARR_IMPORTED_SKILLS_DIR`, defaulting to ignored `imported-skills/`. The browser sends a local input path and import metadata only; it never sends an output path. Script-like files, executable extensions, unsafe filenames, shell-command patterns, and credential-like content are blocked from current imported Native Skill drafts.
 
 Skill review status changes are local SQLite state only. They never rewrite `contextarr-skill.json`, instruction Markdown, examples, source maps, export profiles, or rules.
 

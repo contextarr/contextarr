@@ -588,10 +588,36 @@ function discoverCandidatePaths(rootPath: string): string[] {
     return [rootPath];
   }
 
+  const discovered = fs
+    .readdirSync(rootPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => {
+      const childPath = path.join(rootPath, entry.name);
+      if (fs.existsSync(path.join(childPath, "contextarr-pack.json"))) {
+        return [childPath];
+      }
+
+      const nestedPacks = discoverNestedPackPaths(childPath, 2);
+      return nestedPacks.length > 0 ? nestedPacks : [childPath];
+    })
+    .sort((left, right) => left.localeCompare(right));
+
+  return [...new Set(discovered)];
+}
+
+function discoverNestedPackPaths(rootPath: string, remainingDepth: number): string[] {
+  if (remainingDepth < 0) {
+    return [];
+  }
+
+  if (fs.existsSync(path.join(rootPath, "contextarr-pack.json"))) {
+    return [rootPath];
+  }
+
   return fs
     .readdirSync(rootPath, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(rootPath, entry.name))
+    .flatMap((entry) => discoverNestedPackPaths(path.join(rootPath, entry.name), remainingDepth - 1))
     .sort((left, right) => left.localeCompare(right));
 }
 

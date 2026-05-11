@@ -19,6 +19,11 @@ function read(relativePath) {
 const requiredFiles = [
   "docs/security-review-v1.md",
   "docs/abuse-cases.md",
+  "docs/master-plan.md",
+  "docs/product-strategy.md",
+  "docs/private-context.md",
+  "docs/external-skills.md",
+  "docs/local-event-hooks.md",
   "packages/pack-validator/src/security-fixtures.test.ts"
 ];
 
@@ -31,8 +36,14 @@ for (const file of requiredFiles) {
 if (!failed) {
   const review = read("docs/security-review-v1.md");
   const abuse = read("docs/abuse-cases.md");
+  const masterPlan = read("docs/master-plan.md");
+  const productStrategy = read("docs/product-strategy.md");
+  const privateContext = read("docs/private-context.md");
+  const externalSkills = read("docs/external-skills.md");
+  const localEventHooks = read("docs/local-event-hooks.md");
   const packageJson = JSON.parse(read("package.json"));
   const combined = `${review}\n${abuse}`;
+  const boundaryDocs = `${masterPlan}\n${productStrategy}\n${privateContext}\n${externalSkills}\n${localEventHooks}`;
 
   const requiredText = [
     "pnpm security:verify",
@@ -53,6 +64,22 @@ if (!failed) {
   for (const text of requiredText) {
     if (!combined.includes(text)) {
       fail(`Security docs are missing required text: ${text}`);
+    }
+  }
+
+  const requiredBoundaryText = [
+    "No hidden network calls",
+    "No product telemetry",
+    "No hosted vault",
+    "Contextarr never executes them",
+    "not a separate personal memory vault",
+    "No hooks, webhooks, remote delivery, or event-triggered actions are implemented",
+    "Context Packs, Skills, Agent Kits, and registry artifacts must not define hooks"
+  ];
+
+  for (const text of requiredBoundaryText) {
+    if (!boundaryDocs.includes(text)) {
+      fail(`Boundary docs are missing required security text: ${text}`);
     }
   }
 
@@ -84,6 +111,7 @@ if (!failed) {
       "packages/pack-validator/src/security-fixtures.test.ts",
       "apps/server/src/api.test.ts",
       "apps/mcp/src/tools.test.ts",
+      "apps/mcp/src/protocol.test.ts",
       "tools/launch/verify-security.mjs"
     ]) {
       if (!securityCheckScript.includes(required)) {

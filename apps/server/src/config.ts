@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import type { ReviewCandidateRoot } from "@contextarr/review-candidates";
+import type { ReviewCandidateRoot, ReviewCandidateSourceKind } from "@contextarr/review-candidates";
 import type { ServerConfig } from "./types";
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
@@ -70,10 +70,29 @@ export function getReviewCandidateRoots(
     { rootPath: config.composedPacksDir, sourceKind: "composed_pack", label: "composed-packs" },
     ...config.reviewCandidateDirs.map((rootPath) => ({
       rootPath,
-      sourceKind: "restored_quarantine" as const,
+      sourceKind: sourceKindForReviewCandidateDir(rootPath),
       label: path.basename(path.resolve(rootPath)) || "review-candidates"
     }))
   ];
+}
+
+function sourceKindForReviewCandidateDir(rootPath: string): ReviewCandidateSourceKind {
+  const normalized = path.resolve(rootPath).replace(/\\/g, "/").toLowerCase();
+  const segments = normalized.split("/").filter(Boolean);
+  const lastSegment = segments.at(-1) ?? "";
+
+  if (segments.some((segment) => /(^|[-_])import(ed)?($|[-_])/.test(segment)) || /(^|[-_])import(ed)?($|[-_])/.test(lastSegment)) {
+    return "imported_pack";
+  }
+
+  if (
+    segments.some((segment) => /(^|[-_])(restore|restored|quarantine|backup)($|[-_])/.test(segment)) ||
+    /(^|[-_])(restore|restored|quarantine|backup)($|[-_])/.test(lastSegment)
+  ) {
+    return "restored_quarantine";
+  }
+
+  return "unknown";
 }
 
 export function assertSkillDirectorySeparation(config: Pick<ServerConfig, "skillsDir" | "importedSkillsDir">): void {

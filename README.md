@@ -14,6 +14,8 @@ Status: Context Pack Core Preview from `main`. Core Context Pack workflows are b
 
 For exact shipped-versus-planned claims, use [docs/implementation-status.md](docs/implementation-status.md) as the source of truth.
 
+For the full build order and where future ideas are slotted, use [docs/master-plan.md](docs/master-plan.md).
+
 ## What Contextarr Is
 
 ```text
@@ -180,9 +182,14 @@ See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.m
 - [docs/install.md](docs/install.md)
 - [docs/known-issues.md](docs/known-issues.md)
 - [docs/known-limitations.md](docs/known-limitations.md)
+- [docs/master-plan.md](docs/master-plan.md)
 - [docs/mcp.md](docs/mcp.md)
 - [docs/pack-authoring.md](docs/pack-authoring.md)
 - [docs/pack-migrations.md](docs/pack-migrations.md)
+- [docs/product-strategy.md](docs/product-strategy.md)
+- [docs/private-context.md](docs/private-context.md)
+- [docs/external-skills.md](docs/external-skills.md)
+- [docs/local-event-hooks.md](docs/local-event-hooks.md)
 - [docs/prd-additions/agentic-ai-context-readiness-local-observability.md](docs/prd-additions/agentic-ai-context-readiness-local-observability.md)
 - [docs/decision-records/decision-agentic-ai-context-readiness.md](docs/decision-records/decision-agentic-ai-context-readiness.md)
 - [docs/quickstart.md](docs/quickstart.md)

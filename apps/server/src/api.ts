@@ -29,7 +29,8 @@ import {
   ReviewCandidateActivationError,
   type ReviewCandidateActivationMode,
   type ReviewCandidateSourceKind,
-  type ReviewCandidateStatus
+  type ReviewCandidateStatus,
+  type ReviewCandidateSummary
 } from "@contextarr/review-candidates";
 import { redactionRulesSchema, type AgentKitTemplate, type RedactionRules } from "@contextarr/schema";
 import {
@@ -1029,6 +1030,9 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
       displayRoot: process.env.INIT_CWD ?? process.cwd()
     });
     const query = request.query.q?.trim().toLowerCase();
+    const skippedRoots = sourceKind
+      ? result.skippedRoots.filter((skippedRoot) => skippedRoot.sourceKind === sourceKind)
+      : result.skippedRoots;
     const candidates = result.candidates.filter((candidate) => {
       if (sourceKind && candidate.sourceKind !== sourceKind) {
         return false;
@@ -1046,11 +1050,8 @@ export function createApp({ config, db }: CreateAppOptions): FastifyInstance {
 
     return {
       candidates,
-      skippedRoots: result.skippedRoots,
-      counts: {
-        ...result.counts,
-        filtered: candidates.length
-      }
+      skippedRoots,
+      counts: countReviewCandidates(candidates, skippedRoots.length)
     };
   });
 
@@ -1436,6 +1437,17 @@ function parseReviewCandidateStatus(value: string | undefined): ReviewCandidateS
   return ["ready_for_review", "invalid", "blocked", "duplicate_active_id"].includes(value)
     ? (value as ReviewCandidateStatus)
     : "invalid";
+}
+
+function countReviewCandidates(candidates: ReviewCandidateSummary[], skippedRoots: number) {
+  return {
+    total: candidates.length,
+    readyForReview: candidates.filter((candidate) => candidate.status === "ready_for_review").length,
+    invalid: candidates.filter((candidate) => candidate.status === "invalid").length,
+    blocked: candidates.filter((candidate) => candidate.status === "blocked").length,
+    duplicateActiveId: candidates.filter((candidate) => candidate.status === "duplicate_active_id").length,
+    skippedRoots
+  };
 }
 
 function parseReviewCandidateActivationLimit(value: string | undefined): number | undefined | "invalid" {

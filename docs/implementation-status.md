@@ -1,6 +1,6 @@
 # Implementation Status
 
-This file is the shipped-versus-planned source of truth for implementation claims. Roadmaps and PRD additions define target behavior; this status file records what is present in this checkout.
+This file is the shipped-versus-planned source of truth for implementation claims. Roadmaps and PRD additions define target behavior; this status file records what is present in this checkout. Use [master-plan.md](master-plan.md) for build sequencing and idea intake.
 
 ## Core Working Now
 

@@ -1962,6 +1962,9 @@ function filterReviewCandidateResult(
   }
 ): ReviewCandidateCommandResult {
   const query = filters.query?.trim().toLowerCase();
+  const skippedRoots = filters.sourceKind
+    ? result.skippedRoots.filter((skippedRoot) => skippedRoot.sourceKind === filters.sourceKind)
+    : result.skippedRoots;
   const candidates = result.candidates.filter((candidate) => {
     if (filters.sourceKind && candidate.sourceKind !== filters.sourceKind) {
       return false;
@@ -1986,9 +1989,20 @@ function filterReviewCandidateResult(
     limit: filters.limit,
     total: candidates.length,
     returned: Math.min(candidates.length, filters.limit),
-    counts: result.counts,
-    skippedRoots: result.skippedRoots,
+    counts: countReviewCandidates(candidates, skippedRoots.length),
+    skippedRoots,
     candidates: candidates.slice(0, filters.limit)
+  };
+}
+
+function countReviewCandidates(candidates: ReviewCandidateSummary[], skippedRoots: number): ReviewCandidateListResult["counts"] {
+  return {
+    total: candidates.length,
+    readyForReview: candidates.filter((candidate) => candidate.status === "ready_for_review").length,
+    invalid: candidates.filter((candidate) => candidate.status === "invalid").length,
+    blocked: candidates.filter((candidate) => candidate.status === "blocked").length,
+    duplicateActiveId: candidates.filter((candidate) => candidate.status === "duplicate_active_id").length,
+    skippedRoots
   };
 }
 

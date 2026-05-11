@@ -14,7 +14,13 @@ Context Packs remain the core source-of-truth object in Contextarr. Pack folders
 
 A Skill is a structured, reusable, non-executable instruction artifact. It tells an AI assistant or agent how to perform a type of work.
 
-In Contextarr, a Skill is data-only. It may contain instructions, decision rules, examples, output formats, constraints, safety rules, compatibility metadata, and review metadata. It must not contain executable scripts, shell commands, hidden network calls, API keys, browser automation, tool execution logic, credential prompts, background tasks, or runtime plugins.
+In Contextarr, a Native Skill is data-only. It may contain instructions, decision rules, examples, output formats, constraints, safety rules, compatibility metadata, and review metadata. It must not contain executable scripts, shell commands, hidden network calls, API keys, browser automation, tool execution logic, credential prompts, background tasks, or runtime plugins.
+
+External Skill artifacts from other ecosystems are a future import class, not a weakening of the Native Skill rule. Contextarr may eventually preserve their original folders as untrusted artifacts, classify their risks, and export compatible bundles with warnings. Contextarr must not execute them.
+
+### Private Context
+
+Private Context is a protected view and policy layer over sensitive Context Packs, records, Skills, Agent Kits, and Export Briefs. It is not a separate personal memory vault.
 
 ### Agent Kit
 

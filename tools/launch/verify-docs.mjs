@@ -21,6 +21,11 @@ const requiredFiles = [
   "docs/export-profiles.md",
   "docs/mcp.md",
   "docs/roadmap.md",
+  "docs/master-plan.md",
+  "docs/product-strategy.md",
+  "docs/private-context.md",
+  "docs/external-skills.md",
+  "docs/local-event-hooks.md",
   "docs/demo-script.md",
   "docs/release-checklist.md",
   "docs/screenshots/README.md",
@@ -64,6 +69,11 @@ if (!failed) {
   const architecture = read("docs/architecture.md");
   const agentKits = read("docs/agent-kits.md");
   const roadmap = read("docs/roadmap.md");
+  const masterPlan = read("docs/master-plan.md");
+  const productStrategy = read("docs/product-strategy.md");
+  const privateContext = read("docs/private-context.md");
+  const externalSkills = read("docs/external-skills.md");
+  const localEventHooks = read("docs/local-event-hooks.md");
   const apiDocs = read("docs/api.md");
   const collectorsDocs = read("docs/collectors.md");
   const composedPacksDocs = read("docs/composed-packs.md");
@@ -186,6 +196,39 @@ if (!failed) {
   }
   if (!securityModel.includes("Contextarr prepares Agent Kits. It does not run them.")) {
     fail("Security model must preserve the Agent Kit non-runtime boundary.");
+  }
+  for (const [label, content, required] of [
+    [
+      "master plan",
+      masterPlan,
+      ["Status: planning control document.", "No hidden network calls.", "No hosted vault.", "No product telemetry."]
+    ],
+    [
+      "product strategy",
+      productStrategy,
+      ["Status: idea harvest and product direction note.", "Do not build now:", "Hosted core app."]
+    ],
+    [
+      "private context",
+      privateContext,
+      ["Status: future product layer.", "not a separate personal memory vault", "Protected records should not appear through MCP"]
+    ],
+    [
+      "external skills",
+      externalSkills,
+      ["Status: future import and packaging direction.", "Never execute them.", "There should be no `approved for execution` state"]
+    ],
+    [
+      "local event hooks",
+      localEventHooks,
+      ["Status: future automation design.", "Webhooks are app settings, not pack content.", "Webhooks exposed through MCP."]
+    ]
+  ]) {
+    for (const text of required) {
+      if (!content.includes(text)) {
+        fail(`Launch ${label} docs are missing required text: ${text}`);
+      }
+    }
   }
 
   const requiredCollectorsText = [

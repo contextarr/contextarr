@@ -69,7 +69,7 @@
     "trust-loop:verify": "vitest run apps/mcp/src/tools.test.ts packages/export-profiles/src/index.test.ts packages/review-candidates/src/index.test.ts apps/server/src/api.test.ts apps/web/src/App.render.test.tsx",
     "compatibility:check": "vitest run packages/pack-validator/src/compatibility.test.ts",
     "compatibility:verify": "pnpm v1-core:verify && pnpm compatibility:check",
-    "security:check": "pnpm scanner:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts && node tools/launch/verify-security.mjs",
+    "security:check": "pnpm scanner:verify && vitest run packages/pack-validator/src/security-fixtures.test.ts apps/server/src/api.test.ts apps/mcp/src/tools.test.ts apps/mcp/src/protocol.test.ts && node tools/launch/verify-security.mjs",
     "security:verify": "pnpm v1-core:verify && pnpm security:check",
     "scanner:verify": "pnpm --filter @contextarr/security-scanner typecheck && pnpm --filter @contextarr/security-scanner test && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/clean-context-pack --format json && pnpm --filter @contextarr/cli contextarr scan packages/security-scanner/test/fixtures/suspicious-but-reviewable-pack --format json && node tools/launch/verify-scanner.mjs",
     "phase3a:verify": "pnpm docs:verify && pnpm scanner:verify",

@@ -20,7 +20,10 @@ This page tracks public-launch limitations for the current developer preview. It
 - Draft Intake v0 includes explicit proof-gated local activation and sanitized local activation history. It does not include multi-user approval workflows, remote install, publishing, export exposure, or MCP exposure for candidate packs.
 - Exposure Readiness v0 is a read-only active-pack report. It explains default export and read-only MCP eligibility, but it does not approve packs, enforce policy, change export behavior, or widen MCP exposure.
 - Local Skill importers are disabled unless `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
+- Local Skill importers currently create data-only Contextarr Native Skill drafts and skip script-bearing resources; full External Skill Artifact preservation is not implemented.
 - Skills and Agent Kits are advanced-preview data objects. They do not execute.
+- Private Context is documented as a future protected view; app lock, protected-pack unlock, and encrypted export/backup bundle flows are not implemented.
+- Local Event Hooks are not implemented.
 - CLI/API path-redaction checks reduce accidental local path leakage in known outputs, but they are not a substitute for a full external security audit.
 
 ## Explicit Non-Launches
@@ -35,6 +38,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - No executable packs.
 - No executable Skills.
 - No Agent Kit runtime.
+- No Local Event Hooks or remote webhook delivery.
 - No direct Gmail, bank, or brokerage connectors.
 
 ## Screenshot Requirements

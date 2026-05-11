@@ -4,6 +4,8 @@
 
 Phase 9 importers convert local inputs into generated draft pack folders. Phase 26 extends the same local importer package with draft Skill imports.
 
+Current Skill imports generate data-only Contextarr Native Skill drafts. A future External Skill Artifact archive should preserve original pre-made Skill folders as untrusted source material with classification, safety reports, and compatibility reports. See [external-skills.md](external-skills.md).
+
 ## Command
 
 ```bash
@@ -60,4 +62,6 @@ The local API Skill import flow is disabled by default. Set `CONTEXTARR_ENABLE_L
 
 ## Safety
 
-Importers do not fetch URLs, execute files, call external APIs, call AI services, upload data, approve records or Skill documents, or mutate existing approved objects. Script-like files, executable extensions, unsafe filenames, shell-command patterns, and credential-like content are blocked from Skill imports.
+Importers do not fetch URLs, execute files, call external APIs, call AI services, upload data, approve records or Skill documents, or mutate existing approved objects. Script-like files, executable extensions, unsafe filenames, shell-command patterns, and credential-like content are skipped or blocked from current data-only Skill draft imports.
+
+When External Skill Artifact preservation is implemented, script-bearing files should be preserved only inside an untrusted original archive with explicit warnings. They must not be indexed as executable Contextarr Native Skill content or exposed through default export/MCP paths.

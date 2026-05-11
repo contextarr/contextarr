@@ -30,11 +30,14 @@ These advanced-preview surfaces are present, but the first public release should
 
 ## Product Direction
 
+Long term, Contextarr is a local-first AI artifact gateway for Context Packs, Skills, Agent Kits, and Export Briefs. The first public release should still explain the narrower core loop: local files become validated, redaction-aware Context Packs that can be exported or served through read-only MCP. See [master-plan.md](master-plan.md) for the full build order and [product-strategy.md](product-strategy.md) for category framing.
+
 Context Packs remain the core source-backed knowledge object.
 
 - Skills: non-executable instruction artifacts that tell agents how to work.
 - Agent Kits: self-describing, task-ready pairings of Context Packs and Skills that tell agents how a specific bundle should be used for a specific task.
 - Export Briefs: generated output artifacts for AI tools or humans.
+- Private Context: a future protected view and policy layer over sensitive local artifacts, not a separate hosted personal memory vault.
 - Context Readiness: a planned report layer for whether a Context Pack is source-backed, reviewed, governed, redacted, export-fit, and locally observable enough for AI assistant or agent use.
 - Local Observability: planned local evidence metadata for exports, MCP queries, readiness calculations, reviews, and warnings. It is not product telemetry.
 
@@ -68,11 +71,16 @@ Context Readiness may strengthen Pack Health, Exposure Readiness, export preview
 - Complete v1 core release-hardening gates before any frozen expansion resumes.
 - Keep Agentic AI Context Readiness and Local Observability in AR0 docs-only status until a later scoped phase adds schemas and tests.
 - Usability polish around pack authoring.
+- Keep Private Context, External Skill artifact preservation, and Local Event Hooks documented as future scoped tracks without expanding the current runtime.
 
 ## Deferred
 
 - Phase 29: Private team registry prototype. Frozen behind the v1 core-stabilization gate.
 - Official Pack Gallery, Verified Registry Prototype, Private Team Registry, and Marketplace remain post-v1 gated tracks.
+- Protected-pack unlock, app lock, and encrypted export/backup bundle flows for Private Context.
+- External Skill artifact archive, classifier, compatibility reports, and native-bundle export modes.
+- Local Event Hooks for metadata-only local automation.
+- Saved Export Brief library beyond current generated previews and CLI output artifacts.
 - Web importer UI.
 - Always-on API import endpoints.
 - Pack file mutation from review actions.

@@ -36,6 +36,10 @@ Contextarr v0 must not include:
 - Executable registry artifacts.
 - Script packs.
 - Shell commands inside packs.
+- Pack-defined webhooks.
+- Skill-defined webhooks.
+- MCP webhooks.
+- Webhook-triggered shell commands or agent actions.
 - Remote install with auto-activation.
 - Remote logo fetching.
 - Live SaaS, cloud, source-control, or workspace connectors from starter packs.
