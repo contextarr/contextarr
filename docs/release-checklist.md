@@ -75,6 +75,17 @@ The `v0.1.0-alpha.1` release notes should include:
 - No public registry or marketplace.
 - No npm publish unless explicitly approved.
 
+## Wave 1 Evidence Packet
+
+Before proposing any tag or public release action, generate or refresh the local evidence packet:
+
+```bash
+node tools/launch/collect-release-evidence.mjs
+node tools/launch/collect-release-evidence.mjs --out docs/audits/v0.1.0-alpha.1-wave1-release-evidence.md
+```
+
+The packet must include the current git branch and commit, release gate status summary, Docker smoke port and observed results, screenshot manifest status, and a no-public-action statement. This command does not publish, tag, deploy, update registries or marketplaces, enable telemetry, or generate screenshots or video.
+
 ## Screenshot Requirements
 
 Do not commit generated screenshots unless they are intentionally reviewed and approved. The reviewed alpha screenshot set is under `docs/screenshots/v0.1.0-alpha.1/` and must pass `pnpm screenshots:verify`. The alpha screenshot set covers:

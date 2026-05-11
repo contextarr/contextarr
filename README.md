@@ -8,9 +8,9 @@
 
 # Contextarr
 
-Contextarr is a local-first Context Pack system for preparing trusted AI context. It validates, renders, redacts, exports, and exposes approved context through CLI, API, dashboard, and read-only MCP. It does not run agents.
+Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, renders, redacts, exports, and exposes approved Context Packs through CLI, API, dashboard, and read-only MCP. It does not run agents.
 
-Status: Context Pack Core Preview from `main`. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects; they do not execute, and Contextarr does not run agents.
+Status: Context Pack Core Preview from `main`. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview data-only objects; they do not execute, and Contextarr does not run agents.
 
 For exact shipped-versus-planned claims, use [docs/implementation-status.md](docs/implementation-status.md) as the source of truth.
 
@@ -28,7 +28,7 @@ Read-only local MCP.
 
 The core object is the Context Pack: a local, source-backed, data-only folder with records, sources, validation rules, redaction rules, and export profiles.
 
-Contextarr is not a chatbot, hosted memory vault, managed RAG app, public marketplace, registry, or agent runner.
+Contextarr is not a chatbot, hosted memory vault, managed RAG app, registry, marketplace, telemetry product, or agent runner.
 
 ## Core Working Now
 
@@ -50,14 +50,15 @@ These surfaces exist in the checkout, but they are not the public headline for t
 - Local Skill importers, gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Agent Kit templates that create unreviewed local draft Agent Kits only.
 
-Skills and Agent Kits are advanced-preview, data-only, non-executable, and frozen until Context Pack core stabilizes.
+Skills and Agent Kits are advanced-preview, data-only, non-executable, and frozen until Context Pack core stabilizes. Treat them as local validation, indexing, preview, and export data only.
 
 Contextarr prepares Agent Kits. It does not run them.
 
 ## Not Included
 
-- No hosted cloud.
+- No hosted cloud or hosted vault.
 - No public registry or public marketplace.
+- No private registry, marketplace, package publishing, or remote distribution workflow in this release.
 - No remote install or auto-activation.
 - No creator accounts or payments.
 - No executable packs, executable Skills, scripts inside packs, or Agent Kit runtime.
@@ -150,7 +151,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - Context Readiness is planned as a future report layer; Local Observability is planned as local evidence metadata only, not product telemetry.
-- The scanner is a gate, not a guarantee; human review remains required before activation, export, registry exposure, or MCP exposure.
+- The scanner is a gate, not a guarantee; human review remains required before activation, export, or MCP exposure. No registry or marketplace exposure exists in the current product.
 
 See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security-model.md), [docs/non-goals.md](docs/non-goals.md), and [docs/known-limitations.md](docs/known-limitations.md).
 
@@ -165,8 +166,8 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Draft Intake v0 records sanitized local activation history only.
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
 - Context Readiness and Local Observability are accepted planning additions only.
-- Skills and Agent Kits are advanced-preview data objects, not runtime features.
-- Public registry, marketplace, signing implementation, remote install, cloud sync, and telemetry remain out of scope.
+- Skills and Agent Kits are advanced-preview data objects; they are data-only, not runtime features.
+- Public registry, marketplace, signing implementation, remote install, package publishing, cloud sync, and telemetry remain out of scope.
 
 See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.md](docs/known-issues.md), [docs/release-checklist.md](docs/release-checklist.md), and [RELEASE_NOTES.md](RELEASE_NOTES.md).
 

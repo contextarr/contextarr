@@ -28,6 +28,7 @@ This is a draft alpha release-note lane for Context Pack core readiness. No GitH
 - Draft, imported, composed, and restored/quarantine-shaped Context Pack outputs are tested to remain outside active API/export/search surfaces after rescan.
 - `pnpm release:verify` is the local alpha candidate gate. It does not tag, publish, push, deploy, create a GitHub release, update a public registry or marketplace, or enable telemetry.
 - `docs/audits/v0.1.0-alpha.1-release-candidate-evidence.md` records the local release candidate path and the explicit-approval boundary for tags or public release actions.
+- Wave 1 local evidence packets can be generated with `node tools/launch/collect-release-evidence.mjs`; the collector records git branch and commit, release gate status summary, Docker smoke port/results, screenshot manifest status, and a no-public-action statement without running Docker, generating screenshots or video, or performing public actions.
 
 ### Planning Additions
 

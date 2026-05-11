@@ -27,12 +27,14 @@ const requiredFiles = [
   "docs/faq.md",
   "docs/known-limitations.md",
   "docs/known-issues.md",
+  "docs/audits/v0.1.0-alpha.1-release-candidate-evidence.md",
+  "tools/launch/collect-release-evidence.mjs",
   "RELEASE_NOTES.md"
 ];
 
 for (const file of requiredFiles) {
   if (!fs.existsSync(path.join(repoRoot, file))) {
-    fail(`Missing release hardening doc: ${file}`);
+    fail(`Missing release hardening file: ${file}`);
   }
 }
 
@@ -41,6 +43,8 @@ if (!failed) {
   const roadmap = read("docs/roadmap.md");
   const releaseProcess = read("docs/release-process.md");
   const releaseChecklist = read("docs/release-checklist.md");
+  const releaseEvidence = read("docs/audits/v0.1.0-alpha.1-release-candidate-evidence.md");
+  const releaseEvidenceScript = read("tools/launch/collect-release-evidence.mjs");
   const knownLimitations = read("docs/known-limitations.md");
   const knownIssues = read("docs/known-issues.md");
   const packageJson = JSON.parse(read("package.json"));
@@ -51,6 +55,8 @@ if (!failed) {
     releaseChecklist,
     knownLimitations,
     knownIssues,
+    releaseEvidence,
+    releaseEvidenceScript,
     read("docs/faq.md"),
     read("RELEASE_NOTES.md")
   ].join("\n");
@@ -130,6 +136,11 @@ if (!failed) {
     "No support guarantee",
     "SQLite is a derived",
     "Context Pack core readiness",
+    "Wave 1 Release Evidence",
+    "collect-release-evidence.mjs",
+    "Docker smoke port",
+    "screenshot manifest status",
+    "no-public-action statement",
     "advanced-preview",
     "frozen behind the v1 bridge gate",
     "Contextarr prepares Agent Kits. It does not run them."

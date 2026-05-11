@@ -10,7 +10,7 @@ For launch-facing limitations, see [known-limitations.md](known-limitations.md).
 - Context Pack collectors v0 create local draft packs only. They do not activate packs, approve review status, or move drafts into the active pack directory.
 - Composer save-as-draft-pack for Context Packs is implemented as a local draft workflow only. Draft Intake activation is a separate explicit proof-gated step; Composer itself does not activate, approve, or publish composed packs.
 - Draft Intake v0 has proof-gated local activation, but no multi-user approval workflow, publish action, export exposure, or MCP exposure for candidates.
-- Reviewed alpha screenshots exist, but no demo video has been approved.
+- Reviewed alpha screenshots exist and `docs/demo-script.md` now provides a script-ready local recording/checklist path, but no demo video has been reviewed or approved.
 - Docker Compose is a local preview path, not a hardened production deployment.
 - Skills and Agent Kits exist as advanced-preview data-only work but are frozen behind the v1 bridge gate.
 

@@ -28,6 +28,17 @@ All checks must pass before an alpha release candidate can be proposed.
 
 Latest recorded checkpoint for `v0.1.0-alpha.1`: on branch `codex/contextarr-overnight-alpha`, the Stage 1 release gate passed, `pnpm release:verify` passed, and `pnpm docs:verify` plus `pnpm screenshots:verify` passed after the checkpoint. This checkpoint did not push, tag, create a GitHub release, deploy, publish a package, update a registry or marketplace, or enable telemetry.
 
+## Wave 1 Release Evidence Packet
+
+Generate a local evidence packet from the current checkout and the recorded release-candidate evidence:
+
+```bash
+node tools/launch/collect-release-evidence.mjs
+node tools/launch/collect-release-evidence.mjs --out docs/audits/v0.1.0-alpha.1-wave1-release-evidence.md
+```
+
+The packet records the current git branch and commit, the release gate status summary, the Docker smoke port and observed results, screenshot manifest status, and the no-public-action statement. The collector does not run Docker, generate screenshots or video, push, tag, publish, deploy, create a GitHub release, update a registry or marketplace, or enable telemetry.
+
 ## Manual Review
 
 - Confirm README commands are current.

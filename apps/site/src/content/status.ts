@@ -17,12 +17,12 @@ export const coreWorkingNow = [
 ];
 
 export const advancedPreview = [
-  "non-executable Skills",
-  "non-executable Agent Kits",
-  "Skill and Agent Kit validation",
-  "Skill and Agent Kit read-only API/UI views",
-  "Skill and Agent Kit export previews",
-  "read-only MCP tools for Skills and Agent Kits",
+  "advanced-preview data-only Skills",
+  "advanced-preview data-only Agent Kits",
+  "Skill and Agent Kit validation only",
+  "Skill and Agent Kit read-only API/UI views where implemented",
+  "Skill and Agent Kit export previews where implemented",
+  "read-only MCP tools for Skills and Agent Kits where implemented",
   "local Skill imports behind an explicit flag",
   "Agent Kit templates for unreviewed local drafts"
 ];
@@ -32,8 +32,9 @@ export const notIncludedYet = [
   "npm package publishing",
   "public registry",
   "public marketplace",
+  "private registry workflow",
   "remote install or auto-activation",
-  "hosted cloud sync",
+  "hosted cloud or hosted vault",
   "telemetry",
   "signing implementation",
   "executable packs or Skills",
@@ -41,8 +42,10 @@ export const notIncludedYet = [
 ];
 
 export const homepageSecurityBoundaries = [
-  "No hosted cloud",
+  "No hosted vault",
   "No telemetry",
+  "No registry or marketplace",
+  "No package publishing",
   "No executable packs",
   "No scripts inside packs",
   "No shell commands",
@@ -57,6 +60,9 @@ export const exactSecurityBoundaryBullets = [
   "No executable packs",
   "No executable Skills",
   "No Agent Kit runtime",
+  "No public registry",
+  "No marketplace",
+  "No package publishing",
   "No scripts inside packs",
   "No shell commands",
   "No hidden network calls",
@@ -71,6 +77,8 @@ export const explicitNonGoals = [
   "hosted cloud vault",
   "public marketplace",
   "public registry",
+  "private registry workflow",
+  "package publishing",
   "executable packs",
   "script packs",
   "Skill execution",

@@ -1,10 +1,10 @@
 export const siteMeta = {
   title: "Contextarr | Trusted AI context, locally prepared",
   description:
-    "Contextarr is a local-first Context Pack system for preparing trusted AI context. It validates, redacts, exports, and exposes approved context through read-only MCP.",
+    "Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, redacts, exports, and exposes approved Context Packs through read-only MCP.",
   url: "https://contextarr.com",
   ogTitle: "Contextarr",
-  ogDescription: "Trusted AI context. Local-first Context Packs. Not an agent runner."
+  ogDescription: "Trusted AI context. Local-first Context Packs. No hosted vault. Not an agent runner."
 };
 
 export const links = {
@@ -20,8 +20,8 @@ export const proofChips = [
   "Structured",
   "Validated",
   "Export-ready",
-  "Developer-first",
-  "Privacy-first"
+  "Local-first",
+  "Review-first"
 ];
 
 export const contextPackExamples = [
@@ -33,8 +33,8 @@ export const contextPackExamples = [
 ];
 
 export const futureDirectionLines = [
-  "Skills tell agents how to work.",
-  "Context Packs tell agents what to know.",
-  "Agent Kits combine both for a specific task.",
-  "Contextarr prepares Agent Kits. It does not run them."
+  "Skills are data-only instruction artifacts.",
+  "Agent Kits are data-only Context Pack and Skill pairings.",
+  "Both are advanced-preview surfaces after Context Pack core.",
+  "Contextarr prepares data. It does not run agents."
 ];

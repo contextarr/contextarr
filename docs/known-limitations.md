@@ -7,7 +7,7 @@ This page tracks public-launch limitations for the current developer preview. It
 - No tagged GitHub release has been created.
 - No npm package is published; the root package remains `private: true`.
 - No public support guarantee exists yet.
-- Reviewed `v0.1.0-alpha.1` screenshots exist for the local dashboard and CLI health proof, but no demo video has been approved.
+- Reviewed `v0.1.0-alpha.1` screenshots exist for the local dashboard and CLI health proof, and `docs/demo-script.md` now provides a script-ready local recording/checklist path, but no demo video has been reviewed or approved.
 - Docker Compose is a local preview path, not a hardened production deployment.
 
 ## Product Limits

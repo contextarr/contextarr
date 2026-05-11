@@ -14,7 +14,7 @@ const body = `# Contextarr
 
 ## Product summary
 
-Contextarr is a local-first Context Pack system for AI assistants and agents. Validated context files in, AI-ready exports out, human-readable dashboard, and read-only local MCP.
+Contextarr is a local-first Context Pack system for preparing trusted AI context from local files. Validated context files in, AI-ready exports out, human-readable dashboard, and read-only local MCP.
 
 It turns local Markdown records, source maps, validation rules, redaction rules, review metadata, and export profiles into validated Context Packs.
 
@@ -36,7 +36,7 @@ A local stdio read-only interface for pack summaries, record lookups, search, pr
 
 ## Current status
 
-Developer preview from main. Core Context Pack workflows are being stabilized. Skills and Agent Kits are advanced-preview data objects and do not execute.
+Developer preview from main. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview data-only objects and do not execute.
 
 The repo currently includes 15 public-safe demo Context Packs, including 12 curated starter Context Packs.
 
@@ -61,6 +61,8 @@ ${list(exactSecurityBoundaryBullets)}
 - no hosted cloud vault
 - no public marketplace
 - no public registry
+- no package publishing
+- no remote install
 - AI-drafted content requires human review
 
 ## Skills and Agent Kits note
