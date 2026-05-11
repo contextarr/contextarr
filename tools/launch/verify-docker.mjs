@@ -31,6 +31,29 @@ function run(args) {
   }
 }
 
+function runCompose(args, options = {}) {
+  return spawnSync("docker", ["compose", "-p", projectName, ...args], {
+    stdio: options.stdio ?? "inherit",
+    shell: process.platform === "win32",
+    env: composeEnv,
+    cwd: repoRoot,
+  });
+}
+
+function cleanupSmokeAgentKit() {
+  if (!fs.existsSync(smokeAgentKitPath)) {
+    return;
+  }
+
+  // Linux CI receives root-owned files from the container bind mount, so remove
+  // the temporary smoke artifact from inside the running service before `down`.
+  const containerPath = `/app/agent-kits/${smokeAgentKitId}`;
+  const removedInContainer = runCompose(["exec", "-T", "app", "rm", "-rf", containerPath], { stdio: "pipe" });
+  if (removedInContainer.status !== 0 && fs.existsSync(smokeAgentKitPath)) {
+    fs.rmSync(smokeAgentKitPath, { recursive: true, force: true });
+  }
+}
+
 function countFiles(directory, predicate) {
   if (!fs.existsSync(directory)) {
     return 0;
@@ -258,16 +281,26 @@ async function verify() {
   console.log("Contextarr Docker preview verified.");
 }
 
+let verifyError;
 try {
   await verify();
+} catch (error) {
+  verifyError = error;
 } finally {
-  const down = spawnSync("docker", ["compose", "-p", projectName, "down"], {
-    stdio: "inherit",
-    shell: process.platform === "win32",
-    cwd: repoRoot,
-    env: composeEnv,
-  });
-  fs.rmSync(smokeAgentKitPath, { recursive: true, force: true });
+  let cleanupError;
+  try {
+    cleanupSmokeAgentKit();
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  const down = runCompose(["down"]);
+  if (verifyError) {
+    throw verifyError;
+  }
+  if (cleanupError) {
+    throw cleanupError;
+  }
   if (down.status !== 0) {
     process.exitCode = down.status ?? 1;
   }
