@@ -1,16 +1,34 @@
-GitHub Workflow Pack
+# GitHub Workflow Pack llms.txt Sample
 
-Public-safe starter context for fictional GitHub repository workflows.
+pack_id: github-workflow-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for fictional GitHub repository workflows.
 
-Records:
-- github-workflow-pack.repository-overview
-- github-workflow-pack.branch-policy
-- github-workflow-pack.pull-request-template
-- github-workflow-pack.issue-triage
-- github-workflow-pack.actions-workflows
-- github-workflow-pack.release-process
-- github-workflow-pack.code-review-rules
-- github-workflow-pack.security-alerts
+records:
+github-workflow-pack.actions-workflows: Actions Workflows
+github-workflow-pack.branch-policy: Branch Policy
+github-workflow-pack.code-review-rules: Code Review Rules
+github-workflow-pack.issue-triage: Issue Triage
+github-workflow-pack.pull-request-template: Pull Request Template
+github-workflow-pack.release-process: Release Process
+github-workflow-pack.repository-overview: Repository Overview
+github-workflow-pack.security-alerts: Security Alerts
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+github-workflow-pack-repository-overview-source: GitHub Workflow Pack Repository Overview Synthetic Source
+github-workflow-pack-branch-policy-source: GitHub Workflow Pack Branch Policy Synthetic Source
+github-workflow-pack-pull-request-template-source: GitHub Workflow Pack Pull Request Template Synthetic Source
+github-workflow-pack-issue-triage-source: GitHub Workflow Pack Issue Triage Synthetic Source
+github-workflow-pack-actions-workflows-source: GitHub Workflow Pack Actions Workflows Synthetic Source
+github-workflow-pack-release-process-source: GitHub Workflow Pack Release Process Synthetic Source
+github-workflow-pack-code-review-rules-source: GitHub Workflow Pack Code Review Rules Synthetic Source
+github-workflow-pack-security-alerts-source: GitHub Workflow Pack Security Alerts Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

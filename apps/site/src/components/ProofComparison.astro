@@ -1,0 +1,27 @@
+---
+import { proofComparisonRows } from "../content/site";
+---
+
+<section class="section proof-comparison-section" id="why-contextarr">
+  <div class="container proof-comparison">
+    <div class="section-heading">
+      <p class="eyebrow">Why it matters</p>
+      <h2>Better context beats bigger prompts.</h2>
+      <p>
+        Contextarr makes the handoff reviewable: approved records, source links, redaction rules, and target-specific
+        exports travel together.
+      </p>
+    </div>
+    <div class="proof-comparison-grid">
+      {
+        proofComparisonRows.map((item) => (
+          <article class="proof-step">
+            <span>{item.label}</span>
+            <h3>{item.title}</h3>
+            <p>{item.text}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>

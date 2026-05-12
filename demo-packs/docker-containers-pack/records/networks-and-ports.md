@@ -19,12 +19,16 @@ review_status: approved
 
 # Networks And Ports
 
-Captures network intent and exposure classifications without live port numbers.
+Network documentation stays at policy level and omits exact ports or host firewall rules.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `edge` is for ingress-facing containers that terminate or forward web traffic.
+- `app-internal` is for service-to-service traffic between private applications.
+- `data-internal` is for databases and indexes that should never be directly exposed.
+- `ops-internal` is for monitoring and backup coordination.
+- Any host-published port requires a justification note and review date.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

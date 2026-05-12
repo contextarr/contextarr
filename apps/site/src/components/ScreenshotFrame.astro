@@ -2,7 +2,7 @@
 interface Props {
   imageSrc?: string;
   alt?: string;
-  caption: string;
+  caption?: string;
 }
 
 const { imageSrc, alt = "Contextarr dashboard screenshot", caption } = Astro.props;
@@ -11,10 +11,6 @@ const hasScreenshot = Boolean(imageSrc);
 
 <figure class="screenshot-frame">
   <div class="screenshot-window">
-    <div class="window-bar">
-      <strong>Product proof</strong>
-      <span>local preview</span>
-    </div>
     {
       hasScreenshot ? (
         <img src={imageSrc} alt={alt} loading="lazy" />
@@ -39,5 +35,5 @@ const hasScreenshot = Boolean(imageSrc);
       )
     }
   </div>
-  <figcaption>{caption}</figcaption>
+  {caption && <figcaption>{caption}</figcaption>}
 </figure>

@@ -19,12 +19,16 @@ review_status: approved
 
 # Regions And Services
 
-Lists representative service categories and region preferences for context planning.
+The footprint uses one fictional primary region and one fictional recovery region.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- The primary region is chosen for operator latency and broad managed-service coverage.
+- The recovery region stores backup copies and supports recovery-drill notes.
+- Core service categories are static hosting, private compute, managed database, object storage, queues, and audit logging.
+- Optional services require a note explaining why simpler local or managed options were insufficient.
+- Region expansion is treated as a cost and complexity event.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

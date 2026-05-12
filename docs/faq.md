@@ -1,59 +1,139 @@
-# FAQ
+# Frequently Asked Questions
 
-## Is Contextarr Cloud Hosted?
+Simple answers about Contextarr, Context Packs, privacy, exports, read-only MCP, and the roadmap surfaces that stay non-executing.
 
-No. The current product is local-first and self-hosted.
+## General
 
-Public websites, docs, screenshots, download pages, and public-safe static demos can be hosted separately. The core app, pack storage, local SQLite index, imports, exports, and MCP surfaces stay local by default.
+### What is Contextarr?
 
-## Is SQLite The Source Of Truth?
+Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, renders, redacts, exports, and serves approved context to the AI tools you already use.
 
-No. SQLite is a derived, rebuildable index. Context Pack files are the source of truth.
+### What problem does Contextarr solve?
 
-## Can Contextarr Execute Skills Or Agent Kits?
+AI tools often start without the background that matters. Contextarr gives you a reusable way to maintain that context once, review it locally, and reuse the right version across assistants, coding agents, local tools, and read-only MCP.
 
-No. Contextarr prepares, validates, previews, and exports data-only artifacts. It does not run agents, execute Skills, execute Agent Kits, run shell commands, or call tools.
+### What does "arr" stand for?
 
-## Can Contextarr Import Pre-Made Skills?
+In Contextarr, "arr" stands for **Assemble, Review, Route**.
 
-Current Skill importers can turn selected external inputs into private data-only Contextarr Native Skill drafts. They skip executable or script-like resources.
+Contextarr assembles trusted context from local sources, reviews it through validation, redaction, freshness, and human approval, then routes the right version through human-readable HTML, exports, CLI, API, Docker, and read-only MCP.
 
-The intended future model is to preserve full External Skill Artifacts as untrusted originals, classify their risks, and optionally export compatible bundles with explicit warnings. Contextarr still will not execute them.
+### Is Contextarr an AI chatbot or agent runner?
 
-## Is Private Context Implemented?
+No. Contextarr prepares context. It does not replace ChatGPT, Claude, Codex, local agents, or IDE tools, and it does not run agents.
 
-Partly. Current privacy, redaction, draft/quarantine, `never_export`, and private MCP exclusion rules already protect sensitive content from default export and MCP paths.
+## Context Packs
 
-The named Private Context UI, protected-pack unlock, app lock, and encrypted export/backup bundle flows are future work.
+### What is a Context Pack?
 
-## Are Webhooks Planned?
+A Context Pack is a structured, source-backed bundle of AI-ready context. It can describe a project, system, product, workflow, knowledge base, support process, technical environment, or operating procedure.
 
-Only as future app-level Local Event Hooks. Packs, Skills, Agent Kits, and MCP must not define or trigger webhooks.
+### What goes inside a Context Pack?
 
-## Can Contextarr Work With Vector Stores, Graph Databases, Or Graphify?
+A pack can include Markdown records, source maps, metadata, validation rules, redaction rules, export profiles, examples, and review status. It should not include credentials, secrets, executable scripts, or private data that does not need to be exported.
 
-That is the intended future path through Derived Index Adapters, not a product pivot.
+### Are Context Packs executable?
 
-Contextarr should remain the canonical local context layer and produce redacted, source-mapped exports for external vector stores, graph databases, RAG tools, Graphify-style workflows, and agent runtimes. Those indexes are derived and rebuildable. Contextarr is not a vector database, graph engine, Graphify replacement, or managed RAG app.
+No. Context Packs are data-only. They are read, validated, rendered, and exported, but they do not run code, execute commands, make network calls, automate browsers, or perform actions.
 
-See [derived-index-adapters.md](derived-index-adapters.md).
+### Are Context Packs human-readable?
 
-## Are Skills And Agent Kits Still Being Expanded?
+Yes. Contextarr is built around local files, Markdown records, source maps, validation reports, and sanitized static HTML renders so humans can inspect context before handing it to AI tools.
 
-No further Skills or Agent Kit expansion should happen until Context Pack core v1.0 readiness is explicitly accepted or superseded by a decision record.
+## Privacy and Security
 
-## Is There A Marketplace?
+### Where is my data stored?
 
-No. Marketplace and public registry behavior are explicitly blocked.
+Contextarr uses local pack files as the source of truth. SQLite is a rebuildable local index for search, health, review queues, and dashboard state, not the canonical store.
 
-## Can I Put Private Data In Demo Packs?
+### Does Contextarr upload my data?
 
-No. Committed demo packs and fixtures must remain fake and public-safe.
+No hidden upload is part of the product model. Nothing should leave your machine unless you explicitly export it, copy it, connect a downstream AI tool, or configure an integration.
 
-## How Do I Check The Core?
+### Does Contextarr collect telemetry?
 
-```bash
-pnpm v1-core:verify
-pnpm compatibility:verify
-pnpm security:verify
-```
+No. Telemetry, product analytics, hidden tracking, and phone-home behavior are out of scope for the current product.
+
+### Can I inspect what will be exported?
+
+Yes. Export previews, redaction rules, source summaries, review state, and human-readable renders are core to the product loop.
+
+## Exports and AI Tools
+
+### What AI tools can Contextarr target?
+
+Current export profiles include ChatGPT, Claude, Codex, generic Markdown, JSON records, AGENTS.md, CLAUDE.md, and llms.txt.
+
+Generated Markdown briefs can also be used with other AI tools that accept pasted or file-based context.
+
+### Why have different export formats?
+
+Different tools need different context shapes. A coding agent may need implementation constraints and acceptance criteria, while a chatbot may need a cleaner brief. Export profiles keep those outputs target-ready.
+
+### Can I use Contextarr without MCP?
+
+Yes. MCP is useful, but Contextarr also supports human-readable HTML, local dashboard views, CLI workflows, local API access, Markdown exports, JSON records, AGENTS.md, CLAUDE.md, and llms.txt.
+
+### What is read-only MCP?
+
+Read-only MCP lets AI clients inspect approved Contextarr content without giving Contextarr permission to mutate files, run commands, call network services, or access secrets.
+
+## Local Files and Source Ownership
+
+### Why use local files as the source of truth?
+
+Local files are portable, inspectable, versionable, and not locked inside a single AI provider. You can open them in an editor, store them in Git, back them up, render them, validate them, and export them.
+
+### Can I rebuild the local database?
+
+Yes. A core design goal is that the derived SQLite index can be rebuilt from pack folders.
+
+### Does Contextarr replace Obsidian?
+
+No. Contextarr can work with Markdown and Obsidian-style files, but its job is to turn context into reviewed, structured, AI-ready packs and exports.
+
+## Review, Health, and Redaction
+
+### What is Pack Health?
+
+Pack Health shows whether a Context Pack is valid, reviewed, current, source-backed, safe, and export-ready. It can flag missing fields, stale sources, broken references, redaction warnings, or unreviewed drafts.
+
+### Why does human review matter?
+
+AI-drafted or imported context should not automatically become trusted context. Human review helps prevent stale facts, unsafe exports, sensitive-data leaks, and false confidence.
+
+### What is redaction?
+
+Redaction means masking, removing, or excluding sensitive information before an export, such as secrets, API keys, emails, customer details, private notes, internal URLs, or financial details.
+
+## Skills, Agent Kits, and Roadmap
+
+### What are Skills?
+
+Native Contextarr Skills are future non-executing instruction artifacts that describe how an AI should perform a type of work. Imported external Skill artifacts may later contain scripts or assets from their source ecosystem, but Contextarr will preserve, scan, classify, and package them without mutation or execution.
+
+### What are Agent Kits?
+
+Agent Kits are future task-ready bundles that pair Context Packs, Skills, targets, and export rules. Context Packs tell AI what to know. Skills tell AI how to work. Agent Kits combine both for a task.
+
+### Does Contextarr run Agent Kits?
+
+No. Contextarr prepares and exports Agent Kits. Execution belongs to the downstream assistant, coding agent, IDE, or local agent runtime.
+
+### Will Contextarr have a public marketplace?
+
+Not early. Public registries and marketplaces create serious trust and supply-chain risk, so the current product focuses on the local Context Pack loop first.
+
+## Setup and Open Source
+
+### Do I need Docker?
+
+Docker is the recommended local preview path for the public demo experience, but the repo also includes local development scripts for contributors.
+
+### Is Contextarr open source?
+
+Contextarr is intended to start with an inspectable open-source, self-hosted core: schemas, validators, pack format, dashboard, exports, CLI, and read-only MCP.
+
+### Why should I trust Contextarr?
+
+The trust model is local files, explicit validation, human review, redaction, source maps, human-readable rendering, no hidden execution, no telemetry, and read-only MCP.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Hardware And OS
 
-Describes synthetic hardware class, storage posture, and operating-system notes without hostnames.
+The server is described by capability class rather than exact hardware identifiers.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Host class is a compact always-on media box with hardware-assisted transcoding available.
+- Operating system class is a stable server OS with scheduled maintenance review.
+- Storage uses locally attached and network-backed tiers without device paths.
+- GPU acceleration is enabled only when confirmed by a maintenance note.
+- Hardware changes require compatibility and rollback summaries.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

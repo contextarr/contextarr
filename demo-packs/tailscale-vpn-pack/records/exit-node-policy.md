@@ -19,12 +19,16 @@ review_status: approved
 
 # Exit Node Policy
 
-Summarizes when exit nodes are allowed and what context must be reviewed.
+Exit nodes are sensitive because they can change traffic path and privacy expectations.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Exit-node use is disabled by default for routine homelab access.
+- Temporary use requires a reason, owner role, and review window.
+- Travel or untrusted-network scenarios are documented at policy level only.
+- Exit-node devices must not also be experimental lab nodes.
+- Usage evidence is summarized as policy review notes, not traffic logs.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

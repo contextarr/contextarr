@@ -1,16 +1,34 @@
-OpenAI Prompt Engineering Pack
+# OpenAI Prompt Engineering Pack llms.txt Sample
 
-Public-safe starter context for prompt engineering review workflows.
+pack_id: openai-prompt-engineering-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for prompt engineering review workflows.
 
-Records:
-- openai-prompt-engineering-pack.overview
-- openai-prompt-engineering-pack.model-usage-policy
-- openai-prompt-engineering-pack.chatgpt-projects
-- openai-prompt-engineering-pack.prompt-library-conventions
-- openai-prompt-engineering-pack.api-usage-boundaries
-- openai-prompt-engineering-pack.data-handling-rules
-- openai-prompt-engineering-pack.evaluation-patterns
-- openai-prompt-engineering-pack.preferred-output-formats
+records:
+openai-prompt-engineering-pack.api-usage-boundaries: API Usage Boundaries
+openai-prompt-engineering-pack.chatgpt-projects: ChatGPT Projects
+openai-prompt-engineering-pack.data-handling-rules: Data Handling Rules
+openai-prompt-engineering-pack.evaluation-patterns: Evaluation Patterns
+openai-prompt-engineering-pack.model-usage-policy: Model Usage Policy
+openai-prompt-engineering-pack.overview: Pack Overview
+openai-prompt-engineering-pack.preferred-output-formats: Preferred Output Formats
+openai-prompt-engineering-pack.prompt-library-conventions: Prompt Library Conventions
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+openai-prompt-engineering-pack-overview-source: OpenAI Prompt Engineering Pack Pack Overview Synthetic Source
+openai-prompt-engineering-pack-model-usage-policy-source: OpenAI Prompt Engineering Pack Model Usage Policy Synthetic Source
+openai-prompt-engineering-pack-chatgpt-projects-source: OpenAI Prompt Engineering Pack ChatGPT Projects Synthetic Source
+openai-prompt-engineering-pack-prompt-library-conventions-source: OpenAI Prompt Engineering Pack Prompt Library Conventions Synthetic Source
+openai-prompt-engineering-pack-api-usage-boundaries-source: OpenAI Prompt Engineering Pack API Usage Boundaries Synthetic Source
+openai-prompt-engineering-pack-data-handling-rules-source: OpenAI Prompt Engineering Pack Data Handling Rules Synthetic Source
+openai-prompt-engineering-pack-evaluation-patterns-source: OpenAI Prompt Engineering Pack Evaluation Patterns Synthetic Source
+openai-prompt-engineering-pack-preferred-output-formats-source: OpenAI Prompt Engineering Pack Preferred Output Formats Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

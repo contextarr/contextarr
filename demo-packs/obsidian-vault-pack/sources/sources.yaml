@@ -2,7 +2,7 @@ sources:
   - id: obsidian-vault-pack-vault-overview-source
     type: manual_demo_note
     title: Obsidian Vault Pack Vault Overview Synthetic Source
-    path: ../raw/vault-overview.md
+    path: raw/vault-overview.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -12,7 +12,7 @@ sources:
   - id: obsidian-vault-pack-folder-map-source
     type: local_markdown
     title: Obsidian Vault Pack Folder Map Synthetic Source
-    path: ../raw/folder-map.md
+    path: raw/folder-map.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -22,7 +22,7 @@ sources:
   - id: obsidian-vault-pack-note-conventions-source
     type: official_docs_reference
     title: Obsidian Vault Pack Note Conventions Synthetic Source
-    path: ../raw/note-conventions.md
+    path: raw/note-conventions.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -32,7 +32,7 @@ sources:
   - id: obsidian-vault-pack-frontmatter-rules-source
     type: synthetic_example
     title: Obsidian Vault Pack Frontmatter Rules Synthetic Source
-    path: ../raw/frontmatter-rules.md
+    path: raw/frontmatter-rules.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -42,7 +42,7 @@ sources:
   - id: obsidian-vault-pack-linking-patterns-source
     type: configuration_summary
     title: Obsidian Vault Pack Linking Patterns Synthetic Source
-    path: ../raw/linking-patterns.md
+    path: raw/linking-patterns.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -52,7 +52,7 @@ sources:
   - id: obsidian-vault-pack-daily-notes-source
     type: operator_note
     title: Obsidian Vault Pack Daily Notes Synthetic Source
-    path: ../raw/daily-notes.md
+    path: raw/daily-notes.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -62,7 +62,7 @@ sources:
   - id: obsidian-vault-pack-import-boundaries-source
     type: review_checklist
     title: Obsidian Vault Pack Import Boundaries Synthetic Source
-    path: ../raw/import-boundaries.md
+    path: raw/import-boundaries.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -72,7 +72,7 @@ sources:
   - id: obsidian-vault-pack-export-rules-source
     type: export_summary
     title: Obsidian Vault Pack Export Rules Synthetic Source
-    path: ../raw/export-rules.md
+    path: raw/export-rules.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive

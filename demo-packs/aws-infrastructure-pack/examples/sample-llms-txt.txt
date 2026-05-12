@@ -1,16 +1,34 @@
-AWS Infrastructure Pack
+# AWS Infrastructure Pack llms.txt Sample
 
-Public-safe starter context for fictional AWS infrastructure documentation.
+pack_id: aws-infrastructure-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for fictional AWS infrastructure documentation.
 
-Records:
-- aws-infrastructure-pack.account-overview
-- aws-infrastructure-pack.environment-map
-- aws-infrastructure-pack.regions-and-services
-- aws-infrastructure-pack.iam-boundaries
-- aws-infrastructure-pack.networking-overview
-- aws-infrastructure-pack.deployment-patterns
-- aws-infrastructure-pack.cost-controls
-- aws-infrastructure-pack.backup-and-recovery
+records:
+aws-infrastructure-pack.account-overview: Account Overview
+aws-infrastructure-pack.backup-and-recovery: Backup And Recovery
+aws-infrastructure-pack.cost-controls: Cost Controls
+aws-infrastructure-pack.deployment-patterns: Deployment Patterns
+aws-infrastructure-pack.environment-map: Environment Map
+aws-infrastructure-pack.iam-boundaries: IAM Boundaries
+aws-infrastructure-pack.networking-overview: Networking Overview
+aws-infrastructure-pack.regions-and-services: Regions And Services
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+aws-infrastructure-pack-account-overview-source: AWS Infrastructure Pack Account Overview Synthetic Source
+aws-infrastructure-pack-environment-map-source: AWS Infrastructure Pack Environment Map Synthetic Source
+aws-infrastructure-pack-regions-and-services-source: AWS Infrastructure Pack Regions And Services Synthetic Source
+aws-infrastructure-pack-iam-boundaries-source: AWS Infrastructure Pack IAM Boundaries Synthetic Source
+aws-infrastructure-pack-networking-overview-source: AWS Infrastructure Pack Networking Overview Synthetic Source
+aws-infrastructure-pack-deployment-patterns-source: AWS Infrastructure Pack Deployment Patterns Synthetic Source
+aws-infrastructure-pack-cost-controls-source: AWS Infrastructure Pack Cost Controls Synthetic Source
+aws-infrastructure-pack-backup-and-recovery-source: AWS Infrastructure Pack Backup And Recovery Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

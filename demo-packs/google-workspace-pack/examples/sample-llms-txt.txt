@@ -1,16 +1,34 @@
-Google Workspace Pack
+# Google Workspace Pack llms.txt Sample
 
-Public-safe starter context for organizing fictional Google Workspace knowledge.
+pack_id: google-workspace-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for organizing fictional Google Workspace knowledge.
 
-Records:
-- google-workspace-pack.workspace-overview
-- google-workspace-pack.drive-folder-map
-- google-workspace-pack.shared-drive-policy
-- google-workspace-pack.docs-style-guide
-- google-workspace-pack.sheets-and-reporting
-- google-workspace-pack.apps-script-projects
-- google-workspace-pack.calendar-and-meet-conventions
-- google-workspace-pack.access-and-sharing-rules
+records:
+google-workspace-pack.access-and-sharing-rules: Access And Sharing Rules
+google-workspace-pack.apps-script-projects: Apps Script Projects
+google-workspace-pack.calendar-and-meet-conventions: Calendar And Meet Conventions
+google-workspace-pack.docs-style-guide: Docs Style Guide
+google-workspace-pack.drive-folder-map: Drive Folder Map
+google-workspace-pack.shared-drive-policy: Shared Drive Policy
+google-workspace-pack.sheets-and-reporting: Sheets And Reporting
+google-workspace-pack.workspace-overview: Workspace Overview
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+google-workspace-pack-workspace-overview-source: Google Workspace Pack Workspace Overview Synthetic Source
+google-workspace-pack-drive-folder-map-source: Google Workspace Pack Drive Folder Map Synthetic Source
+google-workspace-pack-shared-drive-policy-source: Google Workspace Pack Shared Drive Policy Synthetic Source
+google-workspace-pack-docs-style-guide-source: Google Workspace Pack Docs Style Guide Synthetic Source
+google-workspace-pack-sheets-and-reporting-source: Google Workspace Pack Sheets And Reporting Synthetic Source
+google-workspace-pack-apps-script-projects-source: Google Workspace Pack Apps Script Projects Synthetic Source
+google-workspace-pack-calendar-and-meet-conventions-source: Google Workspace Pack Calendar And Meet Conventions Synthetic Source
+google-workspace-pack-access-and-sharing-rules-source: Google Workspace Pack Access And Sharing Rules Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

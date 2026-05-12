@@ -19,12 +19,16 @@ review_status: approved
 
 # Device Inventory
 
-Lists sample device roles, trust posture, and documentation fields without names or keys.
+Device inventory uses role categories and trust posture.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Maintainer workstation class has administrative access to documented service categories.
+- Mobile device class has limited personal access and no route-advertising role.
+- Lab server class can expose selected internal services after review.
+- Media server class is reachable by approved clients but cannot administer the tailnet.
+- Temporary collaborator class expires after the project window closes.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -5,16 +5,23 @@ import ScreenshotFrame from "./ScreenshotFrame.astro";
 
 <section class="hero-rebuild">
   <div class="container hero-inner">
-    <p class="status-badge">Context Packs / source-backed / export-ready</p>
-    <h1>Trusted AI context. Locally prepared.</h1>
+    <h1>Own your AI context. Validate it <span>locally</span>. Export it anywhere.</h1>
     <p class="hero-subtitle">
-      Contextarr is a local-first Context Pack system that turns local files, records, sources, and rules into
-      validated exports and read-only MCP context for AI tools. It is not an agent runner.
+      Build validated Context Packs from local files, notes, sources, and rules, then reuse them across the AI tools you
+      already use.
+    </p>
+    <p class="hero-targets">
+      Use Context Packs through human-readable HTML, exports, CLI, API, Docker, and read-only MCP.
+    </p>
+    <p class="hero-targets">
+      Current profiles include ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt;
+      generated Markdown briefs can be used with other AI tools.
     </p>
 
     <div class="hero-actions">
       <a class="button button-primary" href={links.github}>View the repo</a>
-      <a class="button button-secondary" href={links.verification}>Run locally</a>
+      <a class="button button-secondary" href="/run-locally">Run locally</a>
+      <a class="button button-quiet" href={links.demoPacks}>View demo packs</a>
     </div>
 
     <ul class="proof-chips" aria-label="Product proof points">
@@ -26,7 +33,6 @@ import ScreenshotFrame from "./ScreenshotFrame.astro";
     <ScreenshotFrame
       imageSrc="/screenshots/contextarr-dashboard.png"
       alt="Contextarr Pack Library dashboard showing local packs, health, review, exports, and source-backed context"
-      caption="Captured from the running local dashboard. No generated product screenshots."
     />
   </div>
 </section>

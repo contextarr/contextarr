@@ -1,16 +1,34 @@
-﻿Claude Code Project Pack
+# Claude Code Project Pack llms.txt Sample
 
-Public-safe starter context for a fictional Claude Code repository workflow.
+pack_id: claude-code-project-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for a fictional Claude Code repository workflow.
 
-Records:
-- claude-code-project-pack.project-overview
-- claude-code-project-pack.repo-structure
-- claude-code-project-pack.current-phase
-- claude-code-project.agent-instructions
-- claude-code-project-pack.coding-conventions
-- claude-code-project-pack.testing-and-validation
-- claude-code-project-pack.forbidden-actions
-- claude-code-project-pack.agent-final-report-format
+records:
+claude-code-project-pack.agent-final-report-format: Agent Final Report Format
+claude-code-project-pack.coding-conventions: Coding Conventions
+claude-code-project-pack.current-phase: Current Phase
+claude-code-project-pack.forbidden-actions: Forbidden Actions
+claude-code-project-pack.implementation-rules: Implementation Rules
+claude-code-project-pack.project-overview: Project Overview
+claude-code-project-pack.repo-structure: Repo Structure
+claude-code-project-pack.testing-and-validation: Testing And Validation
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+claude-code-project-pack-project-overview-source: Claude Code Project Pack Project Overview Synthetic Source
+claude-code-project-pack-repo-structure-source: Claude Code Project Pack Repo Structure Synthetic Source
+claude-code-project-pack-current-phase-source: Claude Code Project Pack Current Phase Synthetic Source
+claude-code-project-pack-agent-instructions-source: Claude Code Project Pack Agent Instructions Synthetic Source
+claude-code-project-pack-coding-conventions-source: Claude Code Project Pack Coding Conventions Synthetic Source
+claude-code-project-pack-testing-and-validation-source: Claude Code Project Pack Testing And Validation Synthetic Source
+claude-code-project-pack-forbidden-actions-source: Claude Code Project Pack Forbidden Actions Synthetic Source
+claude-code-project-pack-agent-final-report-format-source: Claude Code Project Pack Agent Final Report Format Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

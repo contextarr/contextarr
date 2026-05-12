@@ -19,12 +19,16 @@ review_status: approved
 
 # Container Inventory
 
-Lists sample service categories, runtime expectations, and review status fields.
+Inventory uses role-based synthetic names to discuss exposure and dependencies safely.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `edge-proxy-demo` is the only internet-adjacent category.
+- `media-catalog-demo` reads media volumes and writes metadata to an internal data store.
+- `notes-vault-demo` is private-only and depends on scheduled backups.
+- `metrics-shelf-demo` collects health summaries and retention-safe logs.
+- `backup-runner-demo` coordinates copy status without storing secret material.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

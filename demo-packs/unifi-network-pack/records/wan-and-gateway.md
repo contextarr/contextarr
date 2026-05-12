@@ -19,12 +19,16 @@ review_status: approved
 
 # WAN And Gateway
 
-Documents high-level internet handoff and gateway ownership without addresses.
+Internet handoff is described as availability context only.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Primary WAN is monitored for reachability, latency class, and outage notes.
+- Gateway configuration backups are checked after significant network changes.
+- DNS and DHCP ownership stays with the gateway category unless reviewed.
+- Failover is documented as a future option, not assumed live capability.
+- The pack excludes provider names, account details, public addresses, and line identifiers.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

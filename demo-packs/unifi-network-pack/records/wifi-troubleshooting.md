@@ -19,12 +19,16 @@ review_status: approved
 
 # WiFi Troubleshooting
 
-Collects safe diagnostic categories and observation notes for assistant briefs.
+Troubleshooting is symptom-first and avoids client identifiers or radio tuning commands.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Coverage symptoms are grouped by living area, office area, utility area, and outdoor fringe.
+- Roaming symptoms are tracked by client class rather than device name.
+- IoT onboarding issues are reviewed separately from general WiFi quality.
+- Radio setting changes require before-and-after notes.
+- Screenshots must be redacted before becoming context pack material.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

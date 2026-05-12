@@ -1,6 +1,6 @@
-﻿---
-id: claude-code-project.agent-instructions
-title: Agent Instructions
+---
+id: claude-code-project-pack.implementation-rules
+title: Implementation Rules
 type: project_note
 pack: claude-code-project-pack
 tags:
@@ -18,14 +18,47 @@ sources:
 review_status: approved
 ---
 
-# Agent Instructions
+# Implementation Rules
 
-Defines scoped editing, deterministic output, final reporting, and non-execution constraints for assistant changes.
+## Summary
 
-## Starter Context
+Implementation Rules describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
 
-This is original synthetic demo context for Claude Code Project Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+## Key Facts
 
-## Agent Boundary
+| Area | Demo detail | Why it matters |
+| --- | --- | --- |
+| Scope | This record keeps agent instructions scoped to a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. | Keeps the pack specific without exposing private operational data. |
+| Review use | It is synthetic, public-safe, and intended to make target exports more useful. | Keeps the pack specific without exposing private operational data. |
+| AI value | Unreviewed or sensitive details stay out of default exports. | Keeps the pack specific without exposing private operational data. |
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+## Important Boundaries
+
+- Do not push, publish, deploy, tag releases, or change package distribution settings.
+- Do not invent missing requirements; flag unknowns in the final report.
+- Do not expose private repository paths, credentials, live issue links, or user names.
+- This record is synthetic demo content and is not a live connector, credential source, or automation runbook.
+
+## Do Not Assume
+
+- Do not assume omitted private files, identities, metrics, or service names exist.
+- Do not treat this record as permission to mutate repositories, cloud resources, accounts, documents, or local machines.
+- Do not expand the scenario beyond the reviewed source notes listed in the pack.
+
+## Useful AI Questions
+
+- What does this record let an assistant safely understand about Claude Code Project Pack?
+- Which assumptions should be checked before using this context in an export?
+- What should stay out of a public-safe brief for this pack?
+
+## Redaction Notes
+
+- Replace environment-specific identifiers with role labels before export.
+- Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
+- Prefer source summaries and reviewed boundaries over raw operational dumps.
+
+## Source Notes
+
+- Record ID: `claude-code-project-pack.implementation-rules`
+- Source material is a synthetic local note in this pack's `raw/` folder.
+- Review status is approved for public-safe demos, but the context remains non-executable.

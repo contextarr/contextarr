@@ -2,10 +2,9 @@ sources:
   - id: legacy-source
     type: markdown
     title: Legacy Source
-    path: ../raw/legacy-note.md
+    path: raw/legacy-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     license_status: known_permissive
     trust: local
     status: current
-

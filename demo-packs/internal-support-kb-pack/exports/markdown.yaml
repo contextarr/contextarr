@@ -10,9 +10,13 @@ include:
     - internal-support.customer-safe-response-rules
     - internal-support.known-issues
     - internal-support.review-workflow
+    - internal-support.article-taxonomy
+    - internal-support.macro-library
+    - internal-support.quality-review-rubric
 exclude_tags:
   - secret
   - never_export
+  - imported_draft
 token_budget: 18000
 sections:
   - summary

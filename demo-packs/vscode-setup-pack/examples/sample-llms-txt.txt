@@ -1,16 +1,34 @@
-VS Code Setup Pack
+# VS Code Setup Pack llms.txt Sample
 
-Public-safe starter context for a fictional VS Code developer setup.
+pack_id: vscode-setup-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for a fictional VS Code developer setup.
 
-Records:
-- vscode-setup-pack.editor-overview
-- vscode-setup-pack.workspace-settings
-- vscode-setup-pack.extension-groups
-- vscode-setup-pack.language-tooling
-- vscode-setup-pack.task-conventions
-- vscode-setup-pack.debugging-notes
-- vscode-setup-pack.accessibility-settings
-- vscode-setup-pack.known-editor-issues
+records:
+vscode-setup-pack.accessibility-settings: Accessibility Settings
+vscode-setup-pack.debugging-notes: Debugging Notes
+vscode-setup-pack.editor-overview: Editor Overview
+vscode-setup-pack.extension-groups: Extension Groups
+vscode-setup-pack.known-editor-issues: Known Editor Issues
+vscode-setup-pack.language-tooling: Language Tooling
+vscode-setup-pack.task-conventions: Task Conventions
+vscode-setup-pack.workspace-settings: Workspace Settings
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+vscode-setup-pack-editor-overview-source: VS Code Setup Pack Editor Overview Synthetic Source
+vscode-setup-pack-workspace-settings-source: VS Code Setup Pack Workspace Settings Synthetic Source
+vscode-setup-pack-extension-groups-source: VS Code Setup Pack Extension Groups Synthetic Source
+vscode-setup-pack-language-tooling-source: VS Code Setup Pack Language Tooling Synthetic Source
+vscode-setup-pack-task-conventions-source: VS Code Setup Pack Task Conventions Synthetic Source
+vscode-setup-pack-debugging-notes-source: VS Code Setup Pack Debugging Notes Synthetic Source
+vscode-setup-pack-accessibility-settings-source: VS Code Setup Pack Accessibility Settings Synthetic Source
+vscode-setup-pack-known-editor-issues-source: VS Code Setup Pack Known Editor Issues Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

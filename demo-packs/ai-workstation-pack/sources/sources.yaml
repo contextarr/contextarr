@@ -2,7 +2,7 @@ sources:
   - id: ai-workstation-operator-note
     type: markdown
     title: Fictional Workstation Operator Note
-    path: ../raw/operator-note.md
+    path: raw/operator-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -10,7 +10,7 @@ sources:
   - id: ai-workstation-stack-note
     type: markdown
     title: Fictional Local AI Stack Note
-    path: ../raw/stack-note.md
+    path: raw/stack-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -18,7 +18,7 @@ sources:
   - id: ai-workstation-storage-note
     type: markdown
     title: Fictional Storage Planning Note
-    path: ../raw/storage-note.md
+    path: raw/storage-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -26,7 +26,7 @@ sources:
   - id: ai-workstation-network-note
     type: markdown
     title: Fictional Network Planning Note
-    path: ../raw/network-note.md
+    path: raw/network-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -34,8 +34,32 @@ sources:
   - id: ai-workstation-workflow-note
     type: markdown
     title: Fictional Troubleshooting Workflow Note
-    path: ../raw/workflow-note.md
+    path: raw/workflow-note.md
     retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: ai-workstation-capacity-note
+    type: markdown
+    title: Fictional Capacity Planning Note
+    path: raw/capacity-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: ai-workstation-maintenance-note
+    type: markdown
+    title: Fictional Maintenance Cadence Note
+    path: raw/maintenance-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: ai-workstation-safety-note
+    type: markdown
+    title: Fictional Safety Boundaries Note
+    path: raw/safety-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
     license: MIT
     trust: official
     status: current

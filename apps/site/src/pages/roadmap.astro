@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { advancedPreview, coreWorkingNow, explicitNonGoals, notIncludedYet } from "../content/status";
+import { advancedPreview, coreWorkingNow } from "../content/status";
 
 const nearTerm = [
   "repair stale release gates for the committed starter-pack set",
@@ -11,42 +11,38 @@ const nearTerm = [
 ];
 
 const laterDirection = [
-  "keep Skills and Agent Kits as data-only advanced-preview surfaces until Context Pack core is accepted",
+  "keep Skills and Agent Kits as non-executing advanced-preview surfaces until Context Pack core is accepted",
   "keep registry, marketplace, signing, and distribution ideas out of the Wave 1 public product surface",
-  "keep hosted vaults, telemetry, package publishing, and remote install behavior out of scope"
+  "keep hosted vaults, telemetry, package publishing, and remote install behavior out of scope",
+  "preserve imported external Skill artifacts without mutation or execution"
 ];
 ---
 
 <BaseLayout title="Roadmap | Contextarr" currentPath="/roadmap">
   <section class="page-hero">
-    <div class="container narrow">
+    <div class="container">
       <p class="eyebrow">Roadmap</p>
       <h1>Roadmap</h1>
       <p>
         Current status: Context Pack Core developer preview. Core Context Pack workflows are the adoption target.
-        Skills and Agent Kits are advanced-preview data-only objects and do not execute.
+        Skills and Agent Kits are advanced-preview, non-executing surfaces. Native Skills stay data-only; imported
+        external Skill artifacts may later be preserved as untrusted files.
       </p>
     </div>
   </section>
 
   <section class="section">
     <div class="container status-grid">
-      <article class="status-card">
+      <article class="status-card roadmap-page-card">
         <h2>Core working now</h2>
         <ul class="check-list">
           {coreWorkingNow.map((item) => <li>{item}</li>)}
         </ul>
       </article>
-      <article class="status-card">
+      <article class="status-card roadmap-page-card">
         <h2>Advanced preview</h2>
         <ul class="check-list">
           {advancedPreview.map((item) => <li>{item}</li>)}
-        </ul>
-      </article>
-      <article class="status-card status-card-muted">
-        <h2>Not included</h2>
-        <ul class="dash-list">
-          {notIncludedYet.map((item) => <li>{item}</li>)}
         </ul>
       </article>
     </div>
@@ -54,32 +50,20 @@ const laterDirection = [
 
   <section class="section section-tight">
     <div class="container roadmap-columns">
-      <article>
+      <article class="roadmap-page-card">
         <p class="eyebrow">Near-term</p>
         <h2>Prove the Context Pack loop.</h2>
         <ul class="dash-list">
           {nearTerm.map((item) => <li>{item}</li>)}
         </ul>
       </article>
-      <article>
+      <article class="roadmap-page-card">
         <p class="eyebrow">Guardrails</p>
         <h2>Keep Wave 1 focused.</h2>
         <ul class="dash-list">
           {laterDirection.map((item) => <li>{item}</li>)}
         </ul>
       </article>
-    </div>
-  </section>
-
-  <section class="section security-band">
-    <div class="container split-layout">
-      <div>
-        <p class="eyebrow">Explicit non-goals</p>
-        <h2>Contextarr stays narrow on purpose.</h2>
-      </div>
-      <ul class="boundary-list">
-        {explicitNonGoals.map((item) => <li>{item}</li>)}
-      </ul>
     </div>
   </section>
 </BaseLayout>

@@ -1,69 +1,106 @@
 ---
-import { contextPackExamples } from "../content/site";
+import { links } from "../content/site";
 
-const manifestSnippet = `{
-  "pack_id": "ai-workstation-pack",
-  "version": "0.7.0",
-  "records": ["records/*.md"],
-  "source_map": "sources.json",
-  "export_profiles": ["chatgpt", "claude", "codex", "json_records"],
-  "review_status": "human-reviewed"
-}`;
-
-const anatomyItems = [
+const packFiles = [
   {
-    label: "01",
-    title: "Build Context Packs",
-    text: "Turn local files, Markdown records, source maps, validation rules, and export profiles into reusable AI-ready context."
+    name: "contextarr-pack.json",
+    note: "manifest"
   },
   {
-    label: "02",
-    title: "Review and validate",
-    text: "Catch missing fields, stale records, broken source references, sensitive exports, and unreviewed drafts before context reaches an AI tool."
+    name: "records/",
+    note: "Markdown records"
   },
   {
-    label: "03",
-    title: "Export anywhere",
-    text: "Generate profile-driven context for ChatGPT, Claude, Codex, Claude Code, generic Markdown, JSON records, and read-only MCP clients."
+    name: "sources/sources.yaml",
+    note: "source map"
+  },
+  {
+    name: "rules/",
+    note: "validation and redaction"
+  },
+  {
+    name: "exports/",
+    note: "target profiles"
+  },
+  {
+    name: "examples/",
+    note: "optional fixtures"
+  }
+];
+
+const packChips = ["manifest", "records", "sources", "rules", "exports"];
+
+const contextarrActions = [
+  {
+    label: "Validate",
+    text: "Schema checks, source coverage, freshness, review state, redaction, and export readiness.",
+    details: ["schema", "sources", "review", "redaction"]
+  },
+  {
+    label: "Render",
+    text: "Approved records become human-readable Markdown and sanitized static HTML.",
+    details: ["Markdown", "HTML", "reviewable"]
+  },
+  {
+    label: "Export",
+    text: "Generate target-ready briefs, JSON records, AGENTS.md, CLAUDE.md, llms.txt, or read-only MCP context.",
+    details: ["ChatGPT", "Claude", "Codex", "MCP"]
   }
 ];
 ---
 
 <section class="section pack-anatomy-section" id="context-packs">
-  <div class="container anatomy-layout">
-    <div class="anatomy-copy">
-      <p class="eyebrow">Core object</p>
-      <h2>Context Packs are the unit of reuse.</h2>
+  <div class="container anatomy-redesign">
+    <div class="anatomy-heading">
+      <h2>A Context Pack is the reusable source of truth.</h2>
       <p class="lede">
-        A Context Pack is a structured, versioned, source-backed bundle of reusable context for humans and AI tools.
+        Keep records, sources, rules, and export profiles in a local folder. Contextarr validates the pack, renders it
+        for humans, and generates approved outputs for AI tools without running agents.
       </p>
-      <div class="example-panel compact-examples">
-        <p class="panel-label">Examples</p>
-        <ul class="example-list">
-          {contextPackExamples.map((item) => <li>{item}</li>)}
-        </ul>
-      </div>
     </div>
 
-    <div class="anatomy-stack">
-      <div class="manifest-window" aria-label="Context Pack manifest example">
-        <div class="manifest-titlebar">
-          <strong>contextarr-pack.json</strong>
-          <span>data-only</span>
+    <div class="pack-anatomy-grid" aria-label="Context Pack anatomy and outputs">
+      <article class="pack-anatomy-card pack-anatomy-card-main">
+        <span class="anatomy-kicker">Pack anatomy</span>
+        <h3>Local folder, readable files.</h3>
+        <div class="pack-file-tree" aria-label="Example Context Pack files">
+          {packFiles.map((file) => (
+            <div class="pack-file-row">
+              <strong>{file.name}</strong>
+              <span>{file.note}</span>
+            </div>
+          ))}
         </div>
-        <pre><code>{manifestSnippet}</code></pre>
-      </div>
+        <p>Local files stay readable, versioned, and owned by the user.</p>
+        <ul class="pack-chip-list">
+          {packChips.map((chip) => <li>{chip}</li>)}
+        </ul>
+      </article>
 
-      <div class="anatomy-grid">
+      <div class="pack-action-grid">
         {
-          anatomyItems.map((item) => (
-            <article class="anatomy-card">
-              <span>{item.label}</span>
-              <h3>{item.title}</h3>
+          contextarrActions.map((item) => (
+            <article class="pack-anatomy-card pack-action-card">
+              <span class="anatomy-kicker">{item.label}</span>
               <p>{item.text}</p>
+              <ul class="pack-chip-list">
+                {item.details.map((detail) => <li>{detail}</li>)}
+              </ul>
             </article>
           ))
         }
+      </div>
+    </div>
+
+    <div class="format-cta-strip">
+      <div>
+        <strong>Ready to inspect the format?</strong>
+        <p>Open the repo, run the local preview, or read the pack format before creating your first pack.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="button button-primary" href={links.github}>View the repo</a>
+        <a class="button button-secondary" href={links.verification}>Run locally</a>
+        <a class="button button-quiet" href={links.packFormat}>Read pack format</a>
       </div>
     </div>
   </div>

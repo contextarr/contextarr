@@ -3,33 +3,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Hero from "../components/Hero.astro";
 import PackAnatomy from "../components/PackAnatomy.astro";
 import Pipeline from "../components/Pipeline.astro";
-import StatusSection from "../components/StatusSection.astro";
-import SecurityBoundaries from "../components/SecurityBoundaries.astro";
-import { futureDirectionLines, links } from "../content/site";
+import LocalInstall from "../components/LocalInstall.astro";
+import AudiencePositioning from "../components/AudiencePositioning.astro";
+import ProofComparison from "../components/ProofComparison.astro";
+import { links } from "../content/site";
 ---
 
 <BaseLayout currentPath="/">
   <Hero />
-  <PackAnatomy />
   <Pipeline />
-  <StatusSection />
-  <SecurityBoundaries />
-
-  <section class="section future-section" id="future">
-    <div class="container split-layout">
-      <div>
-        <p class="eyebrow">Advanced preview</p>
-        <h2>Skills and Agent Kits stay data-only while Context Packs stabilize.</h2>
-        <p>
-          These surfaces exist for local validation, indexing, read-only views, and export previews where implemented.
-          The current adoption target is still the core Context Pack loop.
-        </p>
-      </div>
-      <div class="future-lines">
-        {futureDirectionLines.map((line) => <p>{line}</p>)}
-      </div>
-    </div>
-  </section>
+  <PackAnatomy />
+  <LocalInstall />
+  <AudiencePositioning />
+  <ProofComparison />
 
   <section class="section final-cta">
     <div class="container cta-panel">

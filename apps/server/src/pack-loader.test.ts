@@ -36,8 +36,8 @@ describe("loadPacks", () => {
   it("loads expected demo totals", () => {
     const result = loadPacks(demoPacksDir);
 
-    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(111);
-    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(111);
+    expect(result.packs.reduce((count, pack) => count + pack.records.length, 0)).toBe(120);
+    expect(result.packs.reduce((count, pack) => count + pack.sources.length, 0)).toBe(120);
     expect(result.packs.reduce((count, pack) => count + pack.exportProfiles.length, 0)).toBe(120);
   });
 

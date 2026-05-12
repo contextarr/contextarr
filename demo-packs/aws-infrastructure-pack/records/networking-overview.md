@@ -19,12 +19,16 @@ review_status: approved
 
 # Networking Overview
 
-Describes synthetic VPC, subnet, DNS, and edge-routing concepts at summary level.
+The network model is a small hub-and-spoke pattern for a homelab-backed cloud project.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Public ingress is limited to a static edge and one application gateway category.
+- Private application services reach databases through internal routing only.
+- Administrative access is assumed to use reviewed identity-aware paths.
+- Egress is grouped by workload family so unusual outbound dependencies are reviewable.
+- Diagrams should use zones and labels, never real CIDR blocks or endpoints.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -1,11 +1,31 @@
 {
   "release": "v0.1.0-alpha.1",
-  "capturedAt": "2026-05-10",
+  "capturedAt": "2026-05-11",
   "source": "Local Contextarr preview at http://127.0.0.1:5173 with API at http://127.0.0.1:3210",
   "reviewed": true,
   "privateDataReviewed": true,
+  "inventory": {
+    "demoPacks": 15,
+    "starterPacks": 12,
+    "records": 120,
+    "skills": 8
+  },
+  "publicHomepageImage": {
+    "file": "pack-library-grid.png",
+    "siteCopy": "apps/site/public/screenshots/contextarr-dashboard.png",
+    "approvedForHomepage": true,
+    "approvedForOpenGraph": true,
+    "view": "wide Pack Library cover view",
+    "forbiddenLegacyLabels": [
+      "Jellyfin Server Pack",
+      "Notion Workspace Pack",
+      "16 packs",
+      "80 records"
+    ]
+  },
   "notes": [
     "Screenshots use public-safe demo Context Packs only.",
+    "The homepage screenshot is the current wide Pack Library capture with 15 packs, 120 records, and 8 skills.",
     "CLI output screenshot uses a read-only health command without absolute local paths.",
     "Security boundary screenshot shows local draft collectors and review-required output."
   ],
@@ -13,7 +33,7 @@
     {
       "file": "pack-library-grid.png",
       "slot": "Pack Library grid",
-      "source": "Dashboard #/library cover view",
+      "source": "Dashboard #/library wide cover view",
       "reviewed": true
     },
     {

@@ -17,6 +17,9 @@ const requiredFiles = [
   "docs/implementation-status.md",
   "docs/known-limitations.md",
   "docs/known-issues.md",
+  "docs/faq.md",
+  "docs/public-surface.md",
+  "docs/public-surface-contract.json",
   "docs/composed-packs.md",
   "docs/pack-authoring.md",
   "docs/export-profiles.md",
@@ -82,6 +85,7 @@ if (!failed) {
   const serverReadme = read("apps/server/README.md");
   const envExample = read(".env.example");
   const releaseChecklist = read("docs/release-checklist.md");
+  const faq = read("docs/faq.md");
   const cliAgentMode = read("docs/cli-agent-mode.md");
   const packageJson = JSON.parse(read("package.json"));
   const mcpPackageJson = JSON.parse(read("apps/mcp/package.json"));
@@ -97,7 +101,7 @@ if (!failed) {
     "## Security Boundaries",
     "## Current Limitations",
     "Contextarr prepares Agent Kits. It does not run them.",
-    "Skills and Agent Kits are advanced-preview data objects",
+    "Skills and Agent Kits are advanced-preview, non-executing surfaces",
     "12 curated starter Context Packs",
     "15 public-safe demo packs",
     "docs/implementation-status.md",
@@ -116,6 +120,19 @@ if (!failed) {
     }
   }
 
+  const requiredFaqText = [
+    "Assemble, Review, Route",
+    "human-readable HTML",
+    "SQLite is a rebuildable local index",
+    "does not run agents",
+    "without mutation or execution"
+  ];
+  for (const text of requiredFaqText) {
+    if (!faq.includes(text)) {
+      fail(`FAQ docs are missing text: ${text}`);
+    }
+  }
+
   const forbiddenReadmeText = [
     "Current scope:",
     "Phase 12 terminology docs for Context Packs",
@@ -129,7 +146,7 @@ if (!failed) {
 
   const requiredStatusText = [
     "## Core Working Now",
-    "## Advanced Preview, Data-Only, Frozen",
+    "## Advanced Preview, Non-Executing, Frozen",
     "## Planned Or Guarded",
     "12 curated starter packs",
     "Contextarr prepares Agent Kits. It does not run them."
@@ -210,8 +227,8 @@ if (!failed) {
   if (!agentKits.includes("POST /api/agent-kits") || !agentKits.includes("CONTEXTARR_AGENT_KITS_DIR")) {
     fail("Agent Kits docs must describe Composer saves and the local Agent Kits directory.");
   }
-  if (!roadmap.includes("advanced-preview data-only surfaces")) {
-    fail("Roadmap must describe Skills and Agent Kits as advanced-preview data-only surfaces.");
+  if (!roadmap.includes("non-executing advanced-preview surfaces")) {
+    fail("Roadmap must describe Skills and Agent Kits as non-executing advanced-preview surfaces.");
   }
   if (!securityModel.includes("Contextarr prepares Agent Kits. It does not run them.")) {
     fail("Security model must preserve the Agent Kit non-runtime boundary.");
@@ -324,6 +341,7 @@ if (!failed) {
     "verify:release",
     "site:verify",
     "screenshots:verify",
+    "public-surface:verify",
     "release:verify"
   ];
   for (const script of requiredScripts) {

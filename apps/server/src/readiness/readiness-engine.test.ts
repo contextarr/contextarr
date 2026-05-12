@@ -124,7 +124,7 @@ describe("getPackReadinessReport", () => {
           severity: "blocker",
           evidence: expect.objectContaining({
             dimension: "export",
-            recordCount: 5
+            recordCount: 8
           })
         })
       ])
@@ -143,7 +143,7 @@ describe("getPackReadinessReport", () => {
       score: 0,
       evidence: expect.objectContaining({
         mcpEligibleRecords: 0,
-        recordCount: 5
+        recordCount: 8
       })
     });
     expect(report.issues).toEqual(
@@ -153,7 +153,7 @@ describe("getPackReadinessReport", () => {
           severity: "blocker",
           evidence: expect.objectContaining({
             dimension: "mcp",
-            recordCount: 5
+            recordCount: 8
           })
         })
       ])

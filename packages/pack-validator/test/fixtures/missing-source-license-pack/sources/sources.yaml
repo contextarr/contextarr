@@ -2,7 +2,7 @@ sources:
   - id: manual-source
     type: markdown
     title: Manual Source
-    path: ../raw/manual-note.md
+    path: raw/manual-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     trust: local
     status: current

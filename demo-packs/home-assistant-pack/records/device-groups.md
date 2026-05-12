@@ -19,12 +19,16 @@ review_status: approved
 
 # Device Groups
 
-Lists sample device classes and ownership labels without addresses or personal routines.
+Devices are grouped by operational role rather than brand, exact room, or unique identifier.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Lighting devices are split between everyday scenes and utility visibility.
+- Climate devices include thermostat class, air-quality class, and circulation helper class.
+- Presence-safe sensors report coarse occupancy state only and exclude personal tracking.
+- Energy monitors are used for trend awareness, not billing-grade claims.
+- Security-sensitive devices are restricted and excluded from public examples.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

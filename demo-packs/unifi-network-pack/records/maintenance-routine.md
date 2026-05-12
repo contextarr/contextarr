@@ -19,12 +19,16 @@ review_status: approved
 
 # Maintenance Routine
 
-Documents update windows, config backup checks, and evidence capture practices.
+Maintenance keeps the fictional network understandable and recoverable.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Monthly review checks controller backup status, device firmware age, and stale client categories.
+- Quarterly review checks segmentation notes, SSID purpose, and guest-access cleanup.
+- Changes are batched into quiet windows and documented with expected impact.
+- Post-change evidence records core browsing, media playback, and management reachability.
+- Emergency changes are followed by a cleanup note in the next review window.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

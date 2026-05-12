@@ -1,0 +1,696 @@
+# Verification Ledger
+
+Generated: 2026-05-12 09:36:38 -03:00
+Root: `D:\Codex\contextarr`
+Status: RECORDED
+
+## Claim
+
+Contextarr demo packs are launch-audited, source-backed, public-safe, and covered by hardened source-path validation.
+
+## Proof Run
+
+- pnpm --filter @contextarr/pack-validator test
+- pnpm demo:validate
+- pnpm scanner:verify
+- pnpm phase2:verify
+- pnpm v1-core:verify
+- pnpm public-surface:verify
+- pnpm screenshots:verify
+- pnpm site:verify
+- pnpm release:verify
+- git diff --check
+
+## Observed Result
+
+All 15 demo packs validate with zero errors and zero warnings. Local source paths resolve to committed pack-local files and validator tests now cover symlink escape. Sample exports are target-specific for ChatGPT, Claude, Codex, AGENTS.md, CLAUDE.md, and llms.txt. Full release verification passed on 2026-05-12.
+
+## Changed Files
+
+- demo-packs/**
+- packages/pack-validator/src/index.ts
+- packages/pack-validator/src/index.test.ts
+- packages/pack-validator/test/**/raw/**
+- apps/site/**
+- docs/**
+
+## File Hashes
+
+- None recorded.
+
+## Git Summary
+
+- Repo: D:/Codex/contextarr
+- HEAD: 23dea1f
+- Status:
+-   M README.md
+-    M apps/cli/src/index.test.ts
+-    M apps/mcp/src/tools.test.ts
+-    M apps/server/src/api.test.ts
+-    M apps/server/src/composed-pack-writer.ts
+-    M apps/server/src/indexer.test.ts
+-    M apps/server/src/pack-loader.test.ts
+-    M apps/server/src/readiness/readiness-engine.test.ts
+-    M apps/site/public/screenshots/contextarr-dashboard.png
+-    M apps/site/src/components/Footer.astro
+-    M apps/site/src/components/Header.astro
+-    M apps/site/src/components/Hero.astro
+-    M apps/site/src/components/PackAnatomy.astro
+-    M apps/site/src/components/Pipeline.astro
+-    M apps/site/src/components/ScreenshotFrame.astro
+-    M apps/site/src/components/SecurityBoundaries.astro
+-    M apps/site/src/components/StatusSection.astro
+-    M apps/site/src/content/site.ts
+-    M apps/site/src/content/status.ts
+-    M apps/site/src/pages/index.astro
+-    M apps/site/src/pages/llms-full.txt.ts
+-    M apps/site/src/pages/llms.txt.ts
+-    M apps/site/src/pages/privacy.astro
+-    M apps/site/src/pages/roadmap.astro
+-    M apps/site/src/pages/security.astro
+-    M apps/site/src/styles/global.css
+-    M apps/web/src/App.render.test.tsx
+-    M demo-packs/ai-workstation-pack/examples/sample-agents-md.md
+-    M demo-packs/ai-workstation-pack/examples/sample-claude-md.md
+-    M demo-packs/ai-workstation-pack/examples/sample-llms-txt.txt
+-    M demo-packs/ai-workstation-pack/exports/agents-md.yaml
+-    M demo-packs/ai-workstation-pack/exports/chatgpt.yaml
+-    M demo-packs/ai-workstation-pack/exports/claude-md.yaml
+-    M demo-packs/ai-workstation-pack/exports/claude.yaml
+-    M demo-packs/ai-workstation-pack/exports/codex.yaml
+-    M demo-packs/ai-workstation-pack/exports/json-records.yaml
+-    M demo-packs/ai-workstation-pack/exports/llms-txt.yaml
+-    M demo-packs/ai-workstation-pack/exports/markdown.yaml
+-    M demo-packs/ai-workstation-pack/sources/sources.yaml
+-    M demo-packs/aws-infrastructure-pack/examples/sample-agents-md.md
+-    M demo-packs/aws-infrastructure-pack/examples/sample-chatgpt.md
+-    M demo-packs/aws-infrastructure-pack/examples/sample-claude-md.md
+-    M demo-packs/aws-infrastructure-pack/examples/sample-claude.md
+-    M demo-packs/aws-infrastructure-pack/examples/sample-codex.md
+-    M demo-packs/aws-infrastructure-pack/examples/sample-llms-txt.txt
+-    M demo-packs/aws-infrastructure-pack/records/account-overview.md
+-    M demo-packs/aws-infrastructure-pack/records/backup-and-recovery.md
+-    M demo-packs/aws-infrastructure-pack/records/cost-controls.md
+-    M demo-packs/aws-infrastructure-pack/records/deployment-patterns.md
+-    M demo-packs/aws-infrastructure-pack/records/environment-map.md
+-    M demo-packs/aws-infrastructure-pack/records/iam-boundaries.md
+-    M demo-packs/aws-infrastructure-pack/records/networking-overview.md
+-    M demo-packs/aws-infrastructure-pack/records/regions-and-services.md
+-    M demo-packs/aws-infrastructure-pack/sources/sources.yaml
+-    M demo-packs/claude-code-project-pack/examples/sample-agents-md.md
+-    M demo-packs/claude-code-project-pack/examples/sample-chatgpt.md
+-    M demo-packs/claude-code-project-pack/examples/sample-claude-md.md
+-    M demo-packs/claude-code-project-pack/examples/sample-claude.md
+-    M demo-packs/claude-code-project-pack/examples/sample-codex.md
+-    M demo-packs/claude-code-project-pack/examples/sample-llms-txt.txt
+-    M demo-packs/claude-code-project-pack/exports/agents-md.yaml
+-    M demo-packs/claude-code-project-pack/exports/chatgpt.yaml
+-    M demo-packs/claude-code-project-pack/exports/claude-md.yaml
+-    M demo-packs/claude-code-project-pack/exports/claude.yaml
+-    M demo-packs/claude-code-project-pack/exports/codex.yaml
+-    M demo-packs/claude-code-project-pack/exports/json-records.yaml
+-    M demo-packs/claude-code-project-pack/exports/llms-txt.yaml
+-    M demo-packs/claude-code-project-pack/exports/markdown.yaml
+-    M demo-packs/claude-code-project-pack/records/agent-final-report-format.md
+-    M demo-packs/claude-code-project-pack/records/coding-conventions.md
+-    M demo-packs/claude-code-project-pack/records/current-phase.md
+-    M demo-packs/claude-code-project-pack/records/forbidden-actions.md
+-    M demo-packs/claude-code-project-pack/records/implementation-rules.md
+-    M demo-packs/claude-code-project-pack/records/project-overview.md
+-    M demo-packs/claude-code-project-pack/records/repo-structure.md
+-    M demo-packs/claude-code-project-pack/records/testing-and-validation.md
+-    M demo-packs/claude-code-project-pack/sources/sources.yaml
+-    M demo-packs/docker-containers-pack/examples/sample-agents-md.md
+-    M demo-packs/docker-containers-pack/examples/sample-chatgpt.md
+-    M demo-packs/docker-containers-pack/examples/sample-claude-md.md
+-    M demo-packs/docker-containers-pack/examples/sample-claude.md
+-    M demo-packs/docker-containers-pack/examples/sample-codex.md
+-    M demo-packs/docker-containers-pack/examples/sample-llms-txt.txt
+-    M demo-packs/docker-containers-pack/records/compose-files.md
+-    M demo-packs/docker-containers-pack/records/container-inventory.md
+-    M demo-packs/docker-containers-pack/records/environment-variables.md
+-    M demo-packs/docker-containers-pack/records/networks-and-ports.md
+-    M demo-packs/docker-containers-pack/records/secrets-policy.md
+-    M demo-packs/docker-containers-pack/records/stack-overview.md
+-    M demo-packs/docker-containers-pack/records/update-policy.md
+-    M demo-packs/docker-containers-pack/records/volumes-and-storage.md
+-    M demo-packs/docker-containers-pack/sources/sources.yaml
+-    M demo-packs/fake-product-line-pack/examples/sample-agents-md.md
+-    M demo-packs/fake-product-line-pack/examples/sample-claude-md.md
+-    M demo-packs/fake-product-line-pack/examples/sample-llms-txt.txt
+-    M demo-packs/fake-product-line-pack/exports/agents-md.yaml
+-    M demo-packs/fake-product-line-pack/exports/chatgpt.yaml
+-    M demo-packs/fake-product-line-pack/exports/claude-md.yaml
+-    M demo-packs/fake-product-line-pack/exports/claude.yaml
+-    M demo-packs/fake-product-line-pack/exports/codex.yaml
+-    M demo-packs/fake-product-line-pack/exports/json-records.yaml
+-    M demo-packs/fake-product-line-pack/exports/llms-txt.yaml
+-    M demo-packs/fake-product-line-pack/exports/markdown.yaml
+-    M demo-packs/fake-product-line-pack/sources/sources.yaml
+-    M demo-packs/github-workflow-pack/examples/sample-agents-md.md
+-    M demo-packs/github-workflow-pack/examples/sample-chatgpt.md
+-    M demo-packs/github-workflow-pack/examples/sample-claude-md.md
+-    M demo-packs/github-workflow-pack/examples/sample-claude.md
+-    M demo-packs/github-workflow-pack/examples/sample-codex.md
+-    M demo-packs/github-workflow-pack/examples/sample-llms-txt.txt
+-    M demo-packs/github-workflow-pack/records/actions-workflows.md
+-    M demo-packs/github-workflow-pack/records/branch-policy.md
+-    M demo-packs/github-workflow-pack/records/code-review-rules.md
+-    M demo-packs/github-workflow-pack/records/issue-triage.md
+-    M demo-packs/github-workflow-pack/records/pull-request-template.md
+-    M demo-packs/github-workflow-pack/records/release-process.md
+-    M demo-packs/github-workflow-pack/records/repository-overview.md
+-    M demo-packs/github-workflow-pack/records/security-alerts.md
+-    M demo-packs/github-workflow-pack/sources/sources.yaml
+-    M demo-packs/google-workspace-pack/examples/sample-agents-md.md
+-    M demo-packs/google-workspace-pack/examples/sample-chatgpt.md
+-    M demo-packs/google-workspace-pack/examples/sample-claude-md.md
+-    M demo-packs/google-workspace-pack/examples/sample-claude.md
+-    M demo-packs/google-workspace-pack/examples/sample-codex.md
+-    M demo-packs/google-workspace-pack/examples/sample-llms-txt.txt
+-    M demo-packs/google-workspace-pack/records/access-and-sharing-rules.md
+-    M demo-packs/google-workspace-pack/records/apps-script-projects.md
+-    M demo-packs/google-workspace-pack/records/calendar-and-meet-conventions.md
+-    M demo-packs/google-workspace-pack/records/docs-style-guide.md
+-    M demo-packs/google-workspace-pack/records/drive-folder-map.md
+-    M demo-packs/google-workspace-pack/records/shared-drive-policy.md
+-    M demo-packs/google-workspace-pack/records/sheets-and-reporting.md
+-    M demo-packs/google-workspace-pack/records/workspace-overview.md
+-    M demo-packs/google-workspace-pack/sources/sources.yaml
+-    M demo-packs/home-assistant-pack/examples/sample-agents-md.md
+-    M demo-packs/home-assistant-pack/examples/sample-chatgpt.md
+-    M demo-packs/home-assistant-pack/examples/sample-claude-md.md
+-    M demo-packs/home-assistant-pack/examples/sample-claude.md
+-    M demo-packs/home-assistant-pack/examples/sample-codex.md
+-    M demo-packs/home-assistant-pack/examples/sample-llms-txt.txt
+-    M demo-packs/home-assistant-pack/records/automation-map.md
+-    M demo-packs/home-assistant-pack/records/backup-plan.md
+-    M demo-packs/home-assistant-pack/records/dashboard-conventions.md
+-    M demo-packs/home-assistant-pack/records/device-groups.md
+-    M demo-packs/home-assistant-pack/records/home-overview.md
+-    M demo-packs/home-assistant-pack/records/maintenance-routine.md
+-    M demo-packs/home-assistant-pack/records/network-boundaries.md
+-    M demo-packs/home-assistant-pack/records/privacy-rules.md
+-    M demo-packs/home-assistant-pack/sources/sources.yaml
+-    M demo-packs/internal-support-kb-pack/examples/sample-agents-md.md
+-    M demo-packs/internal-support-kb-pack/examples/sample-claude-md.md
+-    M demo-packs/internal-support-kb-pack/examples/sample-llms-txt.txt
+-    M demo-packs/internal-support-kb-pack/exports/agents-md.yaml
+-    M demo-packs/internal-support-kb-pack/exports/chatgpt.yaml
+-    M demo-packs/internal-support-kb-pack/exports/claude-md.yaml
+-    M demo-packs/internal-support-kb-pack/exports/claude.yaml
+-    M demo-packs/internal-support-kb-pack/exports/codex.yaml
+-    M demo-packs/internal-support-kb-pack/exports/json-records.yaml
+-    M demo-packs/internal-support-kb-pack/exports/llms-txt.yaml
+-    M demo-packs/internal-support-kb-pack/exports/markdown.yaml
+-    M demo-packs/internal-support-kb-pack/sources/sources.yaml
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-agents-md.md
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-chatgpt.md
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-claude-md.md
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-claude.md
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-codex.md
+-    M demo-packs/jellyfin-media-server-pack/examples/sample-llms-txt.txt
+-    M demo-packs/jellyfin-media-server-pack/records/backup-policy.md
+-    M demo-packs/jellyfin-media-server-pack/records/clients-and-users.md
+-    M demo-packs/jellyfin-media-server-pack/records/hardware-and-os.md
+-    M demo-packs/jellyfin-media-server-pack/records/library-structure.md
+-    M demo-packs/jellyfin-media-server-pack/records/network-access.md
+-    M demo-packs/jellyfin-media-server-pack/records/server-overview.md
+-    M demo-packs/jellyfin-media-server-pack/records/storage-map.md
+-    M demo-packs/jellyfin-media-server-pack/records/transcoding-policy.md
+-    M demo-packs/jellyfin-media-server-pack/sources/sources.yaml
+-    M demo-packs/obsidian-vault-pack/examples/sample-agents-md.md
+-    M demo-packs/obsidian-vault-pack/examples/sample-chatgpt.md
+-    M demo-packs/obsidian-vault-pack/examples/sample-claude-md.md
+-    M demo-packs/obsidian-vault-pack/examples/sample-claude.md
+-    M demo-packs/obsidian-vault-pack/examples/sample-codex.md
+-    M demo-packs/obsidian-vault-pack/examples/sample-llms-txt.txt
+-    M demo-packs/obsidian-vault-pack/records/daily-notes.md
+-    M demo-packs/obsidian-vault-pack/records/export-rules.md
+-    M demo-packs/obsidian-vault-pack/records/folder-map.md
+-    M demo-packs/obsidian-vault-pack/records/frontmatter-rules.md
+-    M demo-packs/obsidian-vault-pack/records/import-boundaries.md
+-    M demo-packs/obsidian-vault-pack/records/linking-patterns.md
+-    M demo-packs/obsidian-vault-pack/records/note-conventions.md
+-    M demo-packs/obsidian-vault-pack/records/vault-overview.md
+-    M demo-packs/obsidian-vault-pack/sources/sources.yaml
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-agents-md.md
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-chatgpt.md
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-claude-md.md
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-claude.md
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-codex.md
+-    M demo-packs/openai-prompt-engineering-pack/examples/sample-llms-txt.txt
+-    M demo-packs/openai-prompt-engineering-pack/records/api-usage-boundaries.md
+-    M demo-packs/openai-prompt-engineering-pack/records/chatgpt-projects.md
+-    M demo-packs/openai-prompt-engineering-pack/records/data-handling-rules.md
+-    M demo-packs/openai-prompt-engineering-pack/records/evaluation-patterns.md
+-    M demo-packs/openai-prompt-engineering-pack/records/model-usage-policy.md
+-    M demo-packs/openai-prompt-engineering-pack/records/overview.md
+-    M demo-packs/openai-prompt-engineering-pack/records/preferred-output-formats.md
+-    M demo-packs/openai-prompt-engineering-pack/records/prompt-library-conventions.md
+-    M demo-packs/openai-prompt-engineering-pack/sources/sources.yaml
+-    M demo-packs/tailscale-vpn-pack/examples/sample-agents-md.md
+-    M demo-packs/tailscale-vpn-pack/examples/sample-chatgpt.md
+-    M demo-packs/tailscale-vpn-pack/examples/sample-claude-md.md
+-    M demo-packs/tailscale-vpn-pack/examples/sample-claude.md
+-    M demo-packs/tailscale-vpn-pack/examples/sample-codex.md
+-    M demo-packs/tailscale-vpn-pack/examples/sample-llms-txt.txt
+-    M demo-packs/tailscale-vpn-pack/records/access-controls.md
+-    M demo-packs/tailscale-vpn-pack/records/device-inventory.md
+-    M demo-packs/tailscale-vpn-pack/records/exit-node-policy.md
+-    M demo-packs/tailscale-vpn-pack/records/review-cadence.md
+-    M demo-packs/tailscale-vpn-pack/records/sharing-rules.md
+-    M demo-packs/tailscale-vpn-pack/records/subnet-routes.md
+-    M demo-packs/tailscale-vpn-pack/records/tailnet-overview.md
+-    M demo-packs/tailscale-vpn-pack/records/troubleshooting.md
+-    M demo-packs/tailscale-vpn-pack/sources/sources.yaml
+-    M demo-packs/unifi-network-pack/examples/sample-agents-md.md
+-    M demo-packs/unifi-network-pack/examples/sample-chatgpt.md
+-    M demo-packs/unifi-network-pack/examples/sample-claude-md.md
+-    M demo-packs/unifi-network-pack/examples/sample-claude.md
+-    M demo-packs/unifi-network-pack/examples/sample-codex.md
+-    M demo-packs/unifi-network-pack/examples/sample-llms-txt.txt
+-    M demo-packs/unifi-network-pack/records/device-inventory.md
+-    M demo-packs/unifi-network-pack/records/firewall-notes.md
+-    M demo-packs/unifi-network-pack/records/maintenance-routine.md
+-    M demo-packs/unifi-network-pack/records/ssid-policy.md
+-    M demo-packs/unifi-network-pack/records/topology-overview.md
+-    M demo-packs/unifi-network-pack/records/vlans-and-subnets.md
+-    M demo-packs/unifi-network-pack/records/wan-and-gateway.md
+-    M demo-packs/unifi-network-pack/records/wifi-troubleshooting.md
+-    M demo-packs/unifi-network-pack/sources/sources.yaml
+-    M demo-packs/vscode-setup-pack/examples/sample-agents-md.md
+-    M demo-packs/vscode-setup-pack/examples/sample-chatgpt.md
+-    M demo-packs/vscode-setup-pack/examples/sample-claude-md.md
+-    M demo-packs/vscode-setup-pack/examples/sample-claude.md
+-    M demo-packs/vscode-setup-pack/examples/sample-codex.md
+-    M demo-packs/vscode-setup-pack/examples/sample-llms-txt.txt
+-    M demo-packs/vscode-setup-pack/records/accessibility-settings.md
+-    M demo-packs/vscode-setup-pack/records/debugging-notes.md
+-    M demo-packs/vscode-setup-pack/records/editor-overview.md
+-    M demo-packs/vscode-setup-pack/records/extension-groups.md
+-    M demo-packs/vscode-setup-pack/records/known-editor-issues.md
+-    M demo-packs/vscode-setup-pack/records/language-tooling.md
+-    M demo-packs/vscode-setup-pack/records/task-conventions.md
+-    M demo-packs/vscode-setup-pack/records/workspace-settings.md
+-    M demo-packs/vscode-setup-pack/sources/sources.yaml
+-    M docs/architecture.md
+-    M docs/decision-records/decision-starter-context-packs.md
+-    M docs/faq.md
+-    M docs/implementation-status.md
+-    M docs/known-limitations.md
+-    M docs/release-checklist.md
+-    M docs/roadmap.md
+-    M docs/screenshots/README.md
+-    M docs/screenshots/v0.1.0-alpha.1/manifest.json
+-    M docs/screenshots/v0.1.0-alpha.1/pack-library-grid.png
+-    M docs/sqlite-index.md
+-    M package.json
+-    M packages/agent-kit-validator/test/fixtures/context-packs/sensitive-pack/sources/sources.yaml
+-    M packages/agent-kit-validator/test/fixtures/context-packs/valid-minimal-pack/sources/sources.yaml
+-    M packages/collectors/src/index.ts
+-    M packages/export-profiles/src/index.test.ts
+-    M packages/importers/src/index.ts
+-    M packages/pack-validator/src/demo-packs.test.ts
+-    M packages/pack-validator/src/index.test.ts
+-    M packages/pack-validator/src/index.ts
+-    M packages/pack-validator/test/compatibility/legacy-v0-1-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/copyleft-source-license-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/deterministic-validation-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/duplicate-records-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/executable-file-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/invalid-export-profile-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/invalid-permissions-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/missing-readme-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/missing-source-license-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/missing-source-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/redaction-warning-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/secret-content-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/shell-command-content-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/stale-source-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/unknown-source-license-pack/sources/sources.yaml
+-    M packages/pack-validator/test/fixtures/valid-minimal-pack/sources/sources.yaml
+-    M packages/renderer/src/static.test.ts
+-    M tools/launch/verify-advanced-preview.mjs
+-    M tools/launch/verify-docs.mjs
+-   ?? apps/site/src/components/AudiencePositioning.astro
+-   ?? apps/site/src/components/LocalInstall.astro
+-   ?? apps/site/src/components/ProofComparison.astro
+-   ?? apps/site/src/pages/demo-packs.astro
+-   ?? apps/site/src/pages/docs.astro
+-   ?? apps/site/src/pages/faq.astro
+-   ?? apps/site/src/pages/how-it-works.astro
+-   ?? apps/site/src/pages/pack-format.astro
+-   ?? apps/site/src/pages/run-locally.astro
+-   ?? apps/site/src/pages/use-cases.astro
+-   ?? demo-packs/ai-workstation-pack/examples/sample-chatgpt.md
+-   ?? demo-packs/ai-workstation-pack/examples/sample-claude.md
+-   ?? demo-packs/ai-workstation-pack/examples/sample-codex.md
+-   ?? demo-packs/ai-workstation-pack/raw/
+-   ?? demo-packs/ai-workstation-pack/records/capacity-planning.md
+-   ?? demo-packs/ai-workstation-pack/records/maintenance-cadence.md
+-   ?? demo-packs/ai-workstation-pack/records/safety-boundaries.md
+-   ?? demo-packs/aws-infrastructure-pack/raw/
+-   ?? demo-packs/claude-code-project-pack/raw/
+-   ?? demo-packs/docker-containers-pack/raw/
+-   ?? demo-packs/fake-product-line-pack/examples/sample-chatgpt.md
+-   ?? demo-packs/fake-product-line-pack/examples/sample-claude.md
+-   ?? demo-packs/fake-product-line-pack/examples/sample-codex.md
+-   ?? demo-packs/fake-product-line-pack/raw/
+-   ?? demo-packs/fake-product-line-pack/records/buyer-guide.md
+-   ?? demo-packs/fake-product-line-pack/records/compatibility-requirements.md
+-   ?? demo-packs/fake-product-line-pack/records/packaging-tiers.md
+-   ?? demo-packs/github-workflow-pack/raw/
+-   ?? demo-packs/google-workspace-pack/raw/
+-   ?? demo-packs/home-assistant-pack/raw/
+-   ?? demo-packs/internal-support-kb-pack/examples/sample-chatgpt.md
+-   ?? demo-packs/internal-support-kb-pack/examples/sample-claude.md
+-   ?? demo-packs/internal-support-kb-pack/examples/sample-codex.md
+-   ?? demo-packs/internal-support-kb-pack/raw/
+-   ?? demo-packs/internal-support-kb-pack/records/article-taxonomy.md
+-   ?? demo-packs/internal-support-kb-pack/records/macro-library.md
+-   ?? demo-packs/internal-support-kb-pack/records/quality-review-rubric.md
+-   ?? demo-packs/jellyfin-media-server-pack/raw/
+-   ?? demo-packs/obsidian-vault-pack/raw/
+-   ?? demo-packs/openai-prompt-engineering-pack/raw/
+-   ?? demo-packs/tailscale-vpn-pack/raw/
+-   ?? demo-packs/unifi-network-pack/raw/
+-   ?? demo-packs/vscode-setup-pack/raw/
+-   ?? docs/launch-site-polish-plan.md
+-   ?? docs/public-surface-contract.json
+-   ?? docs/public-surface.md
+-   ?? packages/agent-kit-validator/test/fixtures/context-packs/sensitive-pack/raw/
+-   ?? packages/agent-kit-validator/test/fixtures/context-packs/valid-minimal-pack/raw/
+-   ?? packages/pack-validator/test/compatibility/legacy-v0-1-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/copyleft-source-license-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/deterministic-validation-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/duplicate-records-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/executable-file-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/invalid-export-profile-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/invalid-permissions-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/missing-readme-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/missing-source-license-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/missing-source-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/redaction-warning-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/secret-content-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/shell-command-content-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/stale-source-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/unknown-source-license-pack/raw/
+-   ?? packages/pack-validator/test/fixtures/valid-minimal-pack/raw/
+-   ?? tools/launch/verify-public-surface.mjs
+- Diff stat:
+-   README.md                                          |   22 +-
+-    apps/cli/src/index.test.ts                         |   12 +-
+-    apps/mcp/src/tools.test.ts                         |    2 +-
+-    apps/server/src/api.test.ts                        |   48 +-
+-    apps/server/src/composed-pack-writer.ts            |   33 +-
+-    apps/server/src/indexer.test.ts                    |   12 +-
+-    apps/server/src/pack-loader.test.ts                |    4 +-
+-    apps/server/src/readiness/readiness-engine.test.ts |    6 +-
+-    .../public/screenshots/contextarr-dashboard.png    |  Bin 615772 -> 1230393 bytes
+-    apps/site/src/components/Footer.astro              |    9 +-
+-    apps/site/src/components/Header.astro              |    7 +-
+-    apps/site/src/components/Hero.astro                |   16 +-
+-    apps/site/src/components/PackAnatomy.astro         |  121 +-
+-    apps/site/src/components/Pipeline.astro            |   72 +-
+-    apps/site/src/components/ScreenshotFrame.astro     |    8 +-
+-    apps/site/src/components/SecurityBoundaries.astro  |    2 +-
+-    apps/site/src/components/StatusSection.astro       |   17 +-
+-    apps/site/src/content/site.ts                      |  332 ++++-
+-    apps/site/src/content/status.ts                    |   58 +-
+-    apps/site/src/pages/index.astro                    |   30 +-
+-    apps/site/src/pages/llms-full.txt.ts               |   16 +-
+-    apps/site/src/pages/llms.txt.ts                    |    5 +-
+-    apps/site/src/pages/privacy.astro                  |    4 +-
+-    apps/site/src/pages/roadmap.astro                  |   38 +-
+-    apps/site/src/pages/security.astro                 |   16 +-
+-    apps/site/src/styles/global.css                    | 1452 ++++++++++++++++----
+-    apps/web/src/App.render.test.tsx                   |   61 +-
+-    .../examples/sample-agents-md.md                   |   33 +-
+-    .../examples/sample-claude-md.md                   |   37 +-
+-    .../examples/sample-llms-txt.txt                   |   35 +-
+-    .../ai-workstation-pack/exports/agents-md.yaml     |    4 +
+-    .../ai-workstation-pack/exports/chatgpt.yaml       |    4 +
+-    .../ai-workstation-pack/exports/claude-md.yaml     |    4 +
+-    demo-packs/ai-workstation-pack/exports/claude.yaml |    4 +
+-    demo-packs/ai-workstation-pack/exports/codex.yaml  |    4 +
+-    .../ai-workstation-pack/exports/json-records.yaml  |    4 +
+-    .../ai-workstation-pack/exports/llms-txt.yaml      |    4 +
+-    .../ai-workstation-pack/exports/markdown.yaml      |    4 +
+-    .../ai-workstation-pack/sources/sources.yaml       |   34 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../examples/sample-codex.md                       |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/account-overview.md                    |   14 +-
+-    .../records/backup-and-recovery.md                 |   14 +-
+-    .../records/cost-controls.md                       |   14 +-
+-    .../records/deployment-patterns.md                 |   14 +-
+-    .../records/environment-map.md                     |   14 +-
+-    .../records/iam-boundaries.md                      |   14 +-
+-    .../records/networking-overview.md                 |   14 +-
+-    .../records/regions-and-services.md                |   14 +-
+-    .../aws-infrastructure-pack/sources/sources.yaml   |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../examples/sample-codex.md                       |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../exports/agents-md.yaml                         |    4 +-
+-    .../claude-code-project-pack/exports/chatgpt.yaml  |    4 +-
+-    .../exports/claude-md.yaml                         |    4 +-
+-    .../claude-code-project-pack/exports/claude.yaml   |    4 +-
+-    .../claude-code-project-pack/exports/codex.yaml    |    4 +-
+-    .../exports/json-records.yaml                      |    4 +-
+-    .../claude-code-project-pack/exports/llms-txt.yaml |    4 +-
+-    .../claude-code-project-pack/exports/markdown.yaml |    4 +-
+-    .../records/agent-final-report-format.md           |   43 +-
+-    .../records/coding-conventions.md                  |   43 +-
+-    .../records/current-phase.md                       |   43 +-
+-    .../records/forbidden-actions.md                   |   43 +-
+-    .../records/implementation-rules.md                |   51 +-
+-    .../records/project-overview.md                    |   43 +-
+-    .../records/repo-structure.md                      |   43 +-
+-    .../records/testing-and-validation.md              |   43 +-
+-    .../claude-code-project-pack/sources/sources.yaml  |   18 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../examples/sample-codex.md                       |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/compose-files.md                       |   14 +-
+-    .../records/container-inventory.md                 |   14 +-
+-    .../records/environment-variables.md               |   14 +-
+-    .../records/networks-and-ports.md                  |   14 +-
+-    .../records/secrets-policy.md                      |   14 +-
+-    .../records/stack-overview.md                      |   14 +-
+-    .../records/update-policy.md                       |   14 +-
+-    .../records/volumes-and-storage.md                 |   14 +-
+-    .../docker-containers-pack/sources/sources.yaml    |   16 +-
+-    .../examples/sample-agents-md.md                   |   33 +-
+-    .../examples/sample-claude-md.md                   |   37 +-
+-    .../examples/sample-llms-txt.txt                   |   35 +-
+-    .../fake-product-line-pack/exports/agents-md.yaml  |    4 +
+-    .../fake-product-line-pack/exports/chatgpt.yaml    |    4 +
+-    .../fake-product-line-pack/exports/claude-md.yaml  |    4 +
+-    .../fake-product-line-pack/exports/claude.yaml     |    4 +
+-    .../fake-product-line-pack/exports/codex.yaml      |    4 +
+-    .../exports/json-records.yaml                      |    4 +
+-    .../fake-product-line-pack/exports/llms-txt.yaml   |    4 +
+-    .../fake-product-line-pack/exports/markdown.yaml   |    4 +
+-    .../fake-product-line-pack/sources/sources.yaml    |   34 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../github-workflow-pack/examples/sample-claude.md |   54 +-
+-    .../github-workflow-pack/examples/sample-codex.md  |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/actions-workflows.md                   |   43 +-
+-    .../github-workflow-pack/records/branch-policy.md  |   43 +-
+-    .../records/code-review-rules.md                   |   43 +-
+-    .../github-workflow-pack/records/issue-triage.md   |   43 +-
+-    .../records/pull-request-template.md               |   43 +-
+-    .../records/release-process.md                     |   43 +-
+-    .../records/repository-overview.md                 |   43 +-
+-    .../records/security-alerts.md                     |   43 +-
+-    .../github-workflow-pack/sources/sources.yaml      |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../google-workspace-pack/examples/sample-codex.md |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/access-and-sharing-rules.md            |   43 +-
+-    .../records/apps-script-projects.md                |   43 +-
+-    .../records/calendar-and-meet-conventions.md       |   43 +-
+-    .../records/docs-style-guide.md                    |   43 +-
+-    .../records/drive-folder-map.md                    |   43 +-
+-    .../records/shared-drive-policy.md                 |   43 +-
+-    .../records/sheets-and-reporting.md                |   43 +-
+-    .../records/workspace-overview.md                  |   43 +-
+-    .../google-workspace-pack/sources/sources.yaml     |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../home-assistant-pack/examples/sample-chatgpt.md |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../home-assistant-pack/examples/sample-claude.md  |   54 +-
+-    .../home-assistant-pack/examples/sample-codex.md   |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../home-assistant-pack/records/automation-map.md  |   14 +-
+-    .../home-assistant-pack/records/backup-plan.md     |   14 +-
+-    .../records/dashboard-conventions.md               |   14 +-
+-    .../home-assistant-pack/records/device-groups.md   |   14 +-
+-    .../home-assistant-pack/records/home-overview.md   |   14 +-
+-    .../records/maintenance-routine.md                 |   14 +-
+-    .../records/network-boundaries.md                  |   14 +-
+-    .../home-assistant-pack/records/privacy-rules.md   |   14 +-
+-    .../home-assistant-pack/sources/sources.yaml       |   16 +-
+-    .../examples/sample-agents-md.md                   |   33 +-
+-    .../examples/sample-claude-md.md                   |   37 +-
+-    .../examples/sample-llms-txt.txt                   |   35 +-
+-    .../exports/agents-md.yaml                         |    4 +
+-    .../internal-support-kb-pack/exports/chatgpt.yaml  |    4 +
+-    .../exports/claude-md.yaml                         |    4 +
+-    .../internal-support-kb-pack/exports/claude.yaml   |    4 +
+-    .../internal-support-kb-pack/exports/codex.yaml    |    4 +
+-    .../exports/json-records.yaml                      |    4 +
+-    .../internal-support-kb-pack/exports/llms-txt.yaml |    4 +
+-    .../internal-support-kb-pack/exports/markdown.yaml |    4 +
+-    .../internal-support-kb-pack/sources/sources.yaml  |   34 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../examples/sample-codex.md                       |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/backup-policy.md                       |   14 +-
+-    .../records/clients-and-users.md                   |   14 +-
+-    .../records/hardware-and-os.md                     |   14 +-
+-    .../records/library-structure.md                   |   14 +-
+-    .../records/network-access.md                      |   14 +-
+-    .../records/server-overview.md                     |   14 +-
+-    .../records/storage-map.md                         |   14 +-
+-    .../records/transcoding-policy.md                  |   14 +-
+-    .../sources/sources.yaml                           |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../obsidian-vault-pack/examples/sample-chatgpt.md |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../obsidian-vault-pack/examples/sample-claude.md  |   54 +-
+-    .../obsidian-vault-pack/examples/sample-codex.md   |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../obsidian-vault-pack/records/daily-notes.md     |   43 +-
+-    .../obsidian-vault-pack/records/export-rules.md    |   43 +-
+-    .../obsidian-vault-pack/records/folder-map.md      |   43 +-
+-    .../records/frontmatter-rules.md                   |   43 +-
+-    .../records/import-boundaries.md                   |   43 +-
+-    .../records/linking-patterns.md                    |   43 +-
+-    .../records/note-conventions.md                    |   43 +-
+-    .../obsidian-vault-pack/records/vault-overview.md  |   43 +-
+-    .../obsidian-vault-pack/sources/sources.yaml       |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../examples/sample-chatgpt.md                     |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../examples/sample-claude.md                      |   54 +-
+-    .../examples/sample-codex.md                       |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../records/api-usage-boundaries.md                |   43 +-
+-    .../records/chatgpt-projects.md                    |   43 +-
+-    .../records/data-handling-rules.md                 |   43 +-
+-    .../records/evaluation-patterns.md                 |   43 +-
+-    .../records/model-usage-policy.md                  |   43 +-
+-    .../records/overview.md                            |   43 +-
+-    .../records/preferred-output-formats.md            |   43 +-
+-    .../records/prompt-library-conventions.md          |   43 +-
+-    .../sources/sources.yaml                           |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../tailscale-vpn-pack/examples/sample-chatgpt.md  |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../tailscale-vpn-pack/examples/sample-claude.md   |   54 +-
+-    .../tailscale-vpn-pack/examples/sample-codex.md    |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../tailscale-vpn-pack/records/access-controls.md  |   14 +-
+-    .../tailscale-vpn-pack/records/device-inventory.md |   14 +-
+-    .../tailscale-vpn-pack/records/exit-node-policy.md |   14 +-
+-    .../tailscale-vpn-pack/records/review-cadence.md   |   14 +-
+-    .../tailscale-vpn-pack/records/sharing-rules.md    |   14 +-
+-    .../tailscale-vpn-pack/records/subnet-routes.md    |   14 +-
+-    .../tailscale-vpn-pack/records/tailnet-overview.md |   14 +-
+-    .../tailscale-vpn-pack/records/troubleshooting.md  |   14 +-
+-    demo-packs/tailscale-vpn-pack/sources/sources.yaml |   16 +-
+-    .../examples/sample-agents-md.md                   |   41 +-
+-    .../unifi-network-pack/examples/sample-chatgpt.md  |   48 +-
+-    .../examples/sample-claude-md.md                   |   47 +-
+-    .../unifi-network-pack/examples/sample-claude.md   |   54 +-
+-    .../unifi-network-pack/examples/sample-codex.md    |   61 +-
+-    .../examples/sample-llms-txt.txt                   |   44 +-
+-    .../unifi-network-pack/records/device-inventory.md |   14 +-
+-    .../unifi-network-pack/records/firewall-notes.md   |   14 +-
+-    .../records/maintenance-routine.md                 |   14 +-
+-    .../unifi-network-pack/records/ssid-policy.md      |   14 +-
+-    .../records/topology-overview.md                   |   14 +-
+-    .../records/vlans-and-subnets.md                   |   14 +-
+-    .../unifi-network-pack/records/wan-and-gateway.md  |   14 +-
+-    .../records/wifi-troubleshooting.md                |   14 +-
+-    demo-packs/unifi-network-pack/sources/sources.yaml |   16 +-
+-    .../vscode-setup-pack/examples/sample-agents-md.md |   41 +-
+-    .../vscode-setup-pack/examples/sample-chatgpt.md   |   48 +-
+-    .../vscode-setup-pack/examples/sample-claude-md.md |   47 +-
+-    .../vscode-setup-pack/examples/sample-claude.md    |   54 +-
+-    .../vscode-setup-pack/examples/sample-codex.md     |   61 +-
+-    .../vscode-setup-pack/examples/sample-llms-txt.txt |   44 +-
+-    .../records/accessibility-settings.md              |   43 +-
+-    .../vscode-setup-pack/records/debugging-notes.md   |   43 +-
+-    .../vscode-setup-pack/records/editor-overview.md   |   43 +-
+-    .../vscode-setup-pack/records/extension-groups.md  |   43 +-
+-    .../records/known-editor-issues.md                 |   43 +-
+-    .../vscode-setup-pack/records/language-tooling.md  |   43 +-
+-    .../vscode-setup-pack/records/task-conventions.md  |   43 +-
+-    .../records/workspace-settings.md                  |   43 +-
+-    demo-packs/vscode-setup-pack/sources/sources.yaml  |   16 +-
+-    docs/architecture.md                               |    2 +-
+-    .../decision-starter-context-packs.md              |    2 +-
+-    docs/faq.md                                        |  142 +-
+-    docs/implementation-status.md                      |    4 +-
+-    docs/known-limitations.md                          |    4 +-
+-    docs/release-checklist.md                          |    6 +-
+-    docs/roadmap.md                                    |    2 +-
+-    docs/screenshots/README.md                         |    8 +
+-    docs/screenshots/v0.1.0-alpha.1/manifest.json      |   24 +-
+-    .../v0.1.0-alpha.1/pack-library-grid.png           |  Bin 615772 -> 1230393 bytes
+-    docs/sqlite-index.md                               |    4 +-
+-    package.json                                       |    3 +-
+-    .../sensitive-pack/sources/sources.yaml            |    2 +-
+-    .../valid-minimal-pack/sources/sources.yaml        |    2 +-
+-    packages/collectors/src/index.ts                   |   38 +-
+-    packages/export-profiles/src/index.test.ts         |   31 +-
+-    packages/importers/src/index.ts                    |   90 +-
+-    packages/pack-validator/src/demo-packs.test.ts     |   30 +-
+-    packages/pack-validator/src/index.test.ts          |   79 ++
+-    packages/pack-validator/src/index.ts               |   52 +-
+-    .../legacy-v0-1-pack/sources/sources.yaml          |    3 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../duplicate-records-pack/sources/sources.yaml    |    2 +-
+-    .../executable-file-pack/sources/sources.yaml      |    2 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../invalid-permissions-pack/sources/sources.yaml  |    2 +-
+-    .../missing-readme-pack/sources/sources.yaml       |    2 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../missing-source-pack/sources/sources.yaml       |    2 +-
+-    .../redaction-warning-pack/sources/sources.yaml    |    2 +-
+-    .../secret-content-pack/sources/sources.yaml       |    2 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../stale-source-pack/sources/sources.yaml         |    2 +-
+-    .../sources/sources.yaml                           |    2 +-
+-    .../valid-minimal-pack/sources/sources.yaml        |    2 +-
+-    packages/renderer/src/static.test.ts               |    4 +-
+-    tools/launch/verify-advanced-preview.mjs           |   10 +-
+-    tools/launch/verify-docs.mjs                       |   26 +-
+-    290 files changed, 7677 insertions(+), 2347 deletions(-)
+
+## Residual Risk
+
+Worktree remains intentionally dirty and should be reviewed as a PR before public launch. Demo content is synthetic and should receive one human content pass for tone, but validation, safety, source backing, and release gates are green.

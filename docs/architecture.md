@@ -21,7 +21,7 @@ Derived Index Adapters are a future export-direction addition, not a database pi
 - Use sanitized Markdown rendering for human-readable records and static output.
 - Use Docker Compose for local operation.
 - Use read-only stdio MCP as a local context access layer.
-- Keep Skills, Agent Kits, and Agent Kit templates data-only and non-executable.
+- Keep Contextarr Native Skills, Agent Kits, and Agent Kit templates non-executing. Native Skills are data-only; future imported external Skill artifacts may be preserved unmodified and unexecuted.
 - Treat Private Context as a future protected policy/view layer over local artifacts, not as a hosted personal memory vault.
 - Keep vector stores, graph databases, RAG stacks, and Graphify-style systems downstream of explicit derived exports.
 

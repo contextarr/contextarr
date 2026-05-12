@@ -19,12 +19,16 @@ review_status: approved
 
 # Firewall Notes
 
-Summarizes firewall intent and change-control practices without rule exports.
+Firewall notes record intent, review ownership, and risk category without rule exports.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Default posture is deny between client zones unless an approved service path exists.
+- Guest and IoT traffic are blocked from management surfaces.
+- Lab-to-core exceptions expire at the end of a test window.
+- Media discovery exceptions are narrow and documented by purpose.
+- Firewall changes require a plain-English reason and rollback expectation.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -1,0 +1,272 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { links } from "../content/site";
+
+const arrSteps = [
+  {
+    label: "Assemble",
+    text: "Bring trusted context together from local Markdown, records, sources, rules, and pack folders."
+  },
+  {
+    label: "Review",
+    text: "Check structure, source coverage, freshness, redaction, and human approval before context is trusted."
+  },
+  {
+    label: "Route",
+    text: "Send the right version through human-readable HTML, exports, CLI, API, Docker, and read-only MCP."
+  }
+];
+
+const faqSections = [
+  {
+    label: "General",
+    questions: [
+      {
+        question: "What is Contextarr?",
+        answer:
+          "Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, renders, redacts, exports, and serves approved context to the AI tools you already use."
+      },
+      {
+        question: "What problem does Contextarr solve?",
+        answer:
+          "AI tools often start without the background that matters. Contextarr gives you a reusable way to maintain that context once, review it locally, and reuse the right version across assistants, coding agents, local tools, and read-only MCP."
+      },
+      {
+        question: "What does \"arr\" stand for?",
+        answer:
+          "In Contextarr, \"arr\" stands for Assemble, Review, Route: assemble trusted context from local sources, review it for safety and freshness, then route the right version to the AI tools you use."
+      },
+      {
+        question: "Is Contextarr an AI chatbot or agent runner?",
+        answer:
+          "No. Contextarr prepares context. It does not replace ChatGPT, Claude, Codex, local agents, or IDE tools, and it does not run agents."
+      }
+    ]
+  },
+  {
+    label: "Context Packs",
+    questions: [
+      {
+        question: "What is a Context Pack?",
+        answer:
+          "A Context Pack is a structured, source-backed bundle of AI-ready context. It can describe a project, system, product, workflow, knowledge base, support process, technical environment, or operating procedure."
+      },
+      {
+        question: "What goes inside a Context Pack?",
+        answer:
+          "A pack can include Markdown records, source maps, metadata, validation rules, redaction rules, export profiles, examples, and review status. It should not include credentials, secrets, executable scripts, or private data that does not need to be exported."
+      },
+      {
+        question: "Are Context Packs executable?",
+        answer:
+          "No. Context Packs are data-only. They are read, validated, rendered, and exported, but they do not run code, execute commands, make network calls, automate browsers, or perform actions."
+      },
+      {
+        question: "Are Context Packs human-readable?",
+        answer:
+          "Yes. Contextarr is built around local files, Markdown records, source maps, validation reports, and sanitized static HTML renders so humans can inspect context before handing it to AI tools."
+      }
+    ]
+  },
+  {
+    label: "Privacy and Security",
+    questions: [
+      {
+        question: "Where is my data stored?",
+        answer:
+          "Contextarr uses local pack files as the source of truth. SQLite is a rebuildable local index for search, health, review queues, and dashboard state, not the canonical store."
+      },
+      {
+        question: "Does Contextarr upload my data?",
+        answer:
+          "No hidden upload is part of the product model. Nothing should leave your machine unless you explicitly export it, copy it, connect a downstream AI tool, or configure an integration."
+      },
+      {
+        question: "Does Contextarr collect telemetry?",
+        answer:
+          "No. Telemetry, product analytics, hidden tracking, and phone-home behavior are out of scope for the current product."
+      },
+      {
+        question: "Can I inspect what will be exported?",
+        answer:
+          "Yes. Export previews, redaction rules, source summaries, review state, and human-readable renders are core to the product loop."
+      }
+    ]
+  },
+  {
+    label: "Exports and AI Tools",
+    questions: [
+      {
+        question: "What AI tools can Contextarr target?",
+        answer:
+          "Current export profiles include ChatGPT, Claude, Codex, generic Markdown, JSON records, AGENTS.md, CLAUDE.md, and llms.txt. Generated Markdown briefs can also be used with other AI tools that accept pasted or file-based context."
+      },
+      {
+        question: "Why have different export formats?",
+        answer:
+          "Different tools need different context shapes. A coding agent may need implementation constraints and acceptance criteria, while a chatbot may need a cleaner brief. Export profiles keep those outputs target-ready."
+      },
+      {
+        question: "Can I use Contextarr without MCP?",
+        answer:
+          "Yes. MCP is useful, but Contextarr also supports human-readable HTML, local dashboard views, CLI workflows, local API access, Markdown exports, JSON records, AGENTS.md, CLAUDE.md, and llms.txt."
+      },
+      {
+        question: "What is read-only MCP?",
+        answer:
+          "Read-only MCP lets AI clients inspect approved Contextarr content without giving Contextarr permission to mutate files, run commands, call network services, or access secrets."
+      }
+    ]
+  },
+  {
+    label: "Local Files and Source Ownership",
+    questions: [
+      {
+        question: "Why use local files as the source of truth?",
+        answer:
+          "Local files are portable, inspectable, versionable, and not locked inside a single AI provider. You can open them in an editor, store them in Git, back them up, render them, validate them, and export them."
+      },
+      {
+        question: "Can I rebuild the local database?",
+        answer:
+          "Yes. A core design goal is that the derived SQLite index can be rebuilt from pack folders."
+      },
+      {
+        question: "Does Contextarr replace Obsidian?",
+        answer:
+          "No. Contextarr can work with Markdown and Obsidian-style files, but its job is to turn context into reviewed, structured, AI-ready packs and exports."
+      }
+    ]
+  },
+  {
+    label: "Review, Health, and Redaction",
+    questions: [
+      {
+        question: "What is Pack Health?",
+        answer:
+          "Pack Health shows whether a Context Pack is valid, reviewed, current, source-backed, safe, and export-ready. It can flag missing fields, stale sources, broken references, redaction warnings, or unreviewed drafts."
+      },
+      {
+        question: "Why does human review matter?",
+        answer:
+          "AI-drafted or imported context should not automatically become trusted context. Human review helps prevent stale facts, unsafe exports, sensitive-data leaks, and false confidence."
+      },
+      {
+        question: "What is redaction?",
+        answer:
+          "Redaction means masking, removing, or excluding sensitive information before an export, such as secrets, API keys, emails, customer details, private notes, internal URLs, or financial details."
+      }
+    ]
+  },
+  {
+    label: "Skills, Agent Kits, and Roadmap",
+    questions: [
+      {
+        question: "What are Skills?",
+        answer:
+          "Native Contextarr Skills are future non-executing instruction artifacts that describe how an AI should perform a type of work. Imported external Skill artifacts may later contain scripts or assets from their source ecosystem, but Contextarr will preserve, scan, classify, and package them without mutation or execution."
+      },
+      {
+        question: "What are Agent Kits?",
+        answer:
+          "Agent Kits are future task-ready bundles that pair Context Packs, Skills, targets, and export rules. Context Packs tell AI what to know. Skills tell AI how to work. Agent Kits combine both for a task."
+      },
+      {
+        question: "Does Contextarr run Agent Kits?",
+        answer:
+          "No. Contextarr prepares and exports Agent Kits. Execution belongs to the downstream assistant, coding agent, IDE, or local agent runtime."
+      },
+      {
+        question: "Will Contextarr have a public marketplace?",
+        answer:
+          "Not early. Public registries and marketplaces create serious trust and supply-chain risk, so the current product focuses on the local Context Pack loop first."
+      }
+    ]
+  },
+  {
+    label: "Setup and Open Source",
+    questions: [
+      {
+        question: "Do I need Docker?",
+        answer:
+          "Docker is the recommended local preview path for the public demo experience, but the repo also includes local development scripts for contributors."
+      },
+      {
+        question: "Is Contextarr open source?",
+        answer:
+          "Contextarr is intended to start with an inspectable open-source, self-hosted core: schemas, validators, pack format, dashboard, exports, CLI, and read-only MCP."
+      },
+      {
+        question: "Why should I trust Contextarr?",
+        answer:
+          "The trust model is local files, explicit validation, human review, redaction, source maps, human-readable rendering, no hidden execution, no telemetry, and read-only MCP."
+      }
+    ]
+  }
+];
+---
+
+<BaseLayout title="FAQ | Contextarr" currentPath="/faq">
+  <section class="page-hero faq-hero">
+    <div class="container">
+      <p class="eyebrow">FAQ</p>
+      <h1>Frequently asked questions</h1>
+      <p>
+        Simple answers about Contextarr, Context Packs, privacy, exports, read-only MCP, and the roadmap surfaces
+        that stay non-executing.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-tight faq-arr-section">
+    <div class="container">
+      <div class="faq-arr-intro">
+        <p class="eyebrow">Assemble, Review, Route</p>
+        <h2>The name follows the product loop.</h2>
+      </div>
+      <div class="faq-arr-grid">
+        {arrSteps.map((step) => (
+          <article class="faq-arr-card">
+            <h3>{step.label}</h3>
+            <p>{step.text}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {
+    faqSections.map((section) => (
+      <section class="section section-tight faq-section">
+        <div class="container">
+          <div class="faq-section-header">
+            <p class="eyebrow">{section.label}</p>
+          </div>
+          <div class="faq-grid">
+            {section.questions.map((item) => (
+              <article class="content-card faq-card">
+                <h2>{item.question}</h2>
+                <p>{item.answer}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="section final-cta">
+    <div class="container cta-panel">
+      <p class="eyebrow">Still looking?</p>
+      <h2>Read the source docs or inspect the repo.</h2>
+      <p>
+        The public website is the short path. The GitHub repository keeps the detailed pack format, security model,
+        implementation status, and release checklist.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href={links.github}>View on GitHub</a>
+        <a class="button button-secondary" href={links.docs}>Read docs</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

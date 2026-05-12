@@ -19,12 +19,16 @@ review_status: approved
 
 # Account Overview
 
-Summarizes fictional account boundaries, owners, and documentation status without identifiers.
+The demo organization uses sandbox, staging, and production account categories without account numbers, ARNs, real users, or billing identifiers.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Sandbox is disposable and time-boxed for provider feature trials.
+- Staging mirrors production shape with synthetic data only.
+- Production hosts static front ends, queue-backed jobs, and a small metrics collector.
+- Billing and change ownership are documented by role, not by personal identity.
+- No record is a live account inventory, credential source, or deployment target.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

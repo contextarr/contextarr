@@ -75,18 +75,18 @@ for (const forbidden of ["./demo-skills", "./demo-agent-kits", "skillsIndexed: 8
 }
 
 requireText("README.md", "## Advanced Preview");
-requireText("README.md", "Skills and Agent Kits are advanced-preview data objects");
+requireText("README.md", "Skills and Agent Kits are advanced-preview, non-executing surfaces");
 requireText("README.md", "Contextarr prepares Agent Kits. It does not run them.");
-requireText("docs/implementation-status.md", "## Advanced Preview, Data-Only, Frozen");
-requireText("docs/implementation-status.md", "Skills and Agent Kits are data-only and non-executable.");
-requireText("docs/roadmap.md", "advanced-preview data-only surfaces");
+requireText("docs/implementation-status.md", "## Advanced Preview, Non-Executing, Frozen");
+requireText("docs/implementation-status.md", "future imported external Skill artifacts may be preserved unmodified");
+requireText("docs/roadmap.md", "non-executing advanced-preview surfaces");
 requireText("docs/roadmap.md", "The v1 bridge plan freezes further Skills and Agent Kit expansion");
 requireText("docs/security-model.md", "Contextarr prepares Agent Kits. It does not run them.");
 requireText("docs/security-model.md", "Future Skill and Agent Kit work must not add shell execution");
 requireText("docs/mcp.md", "does not mutate pack, Skill, or Agent Kit files");
 requireText("docs/mcp.md", "execute Skills");
 requireText("docs/mcp.md", "run Agent Kits");
-requireText("docs/skills.md", "Skills must remain data-only.");
+requireText("docs/skills.md", "Contextarr Native Skills must remain data-only.");
 requireText("docs/skills.md", "Contextarr must not execute Skills.");
 requireText("docs/agent-kits.md", "Contextarr prepares Agent Kits. It does not run them.");
 requireText("docs/agent-kits.md", "does not execute Skills, run Agent Kits");

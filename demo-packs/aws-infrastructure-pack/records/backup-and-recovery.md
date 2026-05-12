@@ -19,12 +19,16 @@ review_status: approved
 
 # Backup And Recovery
 
-Documents fictional recovery objectives, snapshot review, and evidence capture expectations.
+Backup coverage is documented as recoverability intent, not as a live restore runbook.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Object storage keeps versioned copies for user-upload-like demo assets.
+- Managed databases have scheduled snapshots and a recovery-region copy.
+- Configuration state is represented in reviewed infrastructure notes rather than hidden console changes.
+- Recovery drills validate health checks with synthetic data.
+- Backup status is reviewed before deployments and after major dependency changes.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

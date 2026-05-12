@@ -87,19 +87,17 @@ describe("demo packs", () => {
       expect(fs.existsSync(path.join(packPath, requiredFile)), `${packId} missing ${requiredFile}`).toBe(true);
     }
 
-    if (starterPackIds.has(packId)) {
-      for (const requiredSample of ["sample-chatgpt.md", "sample-claude.md", "sample-codex.md"]) {
-        expect(
-          fs.existsSync(path.join(packPath, "examples", requiredSample)),
-          `${packId} missing examples/${requiredSample}`
-        ).toBe(true);
-      }
+    for (const requiredSample of ["sample-chatgpt.md", "sample-claude.md", "sample-codex.md"]) {
+      expect(
+        fs.existsSync(path.join(packPath, "examples", requiredSample)),
+        `${packId} missing examples/${requiredSample}`
+      ).toBe(true);
     }
 
     const recordFiles = fs.readdirSync(path.join(packPath, "records")).filter((file) => file.endsWith(".md"));
     const exportFiles = fs.readdirSync(path.join(packPath, "exports")).filter((file) => file.endsWith(".yaml"));
 
-    expect(recordFiles).toHaveLength(starterPackIds.has(packId) ? 8 : 5);
+    expect(recordFiles).toHaveLength(8);
     expect(exportFiles).toHaveLength(8);
   });
 
@@ -175,10 +173,24 @@ describe("demo packs", () => {
       });
       expect(expectedStarterTrustLevels.has(source.trust)).toBe(true);
       expect(source.type).toBeTruthy();
-      expect(source.path).toMatch(/^\.\.\/raw\/[a-z0-9-]+\.md$/);
+      expect(source.path).toMatch(/^raw\/[a-z0-9-]+\.md$/);
       expect(path.isAbsolute(source.path)).toBe(false);
       expect(source.path).not.toMatch(/https?:\/\//i);
+      expect(fs.existsSync(path.join(demoPacksDir, packId, source.path))).toBe(true);
       expect(source.license_notes).toContain("Original public-safe demo source");
+    }
+  });
+
+  it.each(expectedPackIds)("%s keeps source paths pack-local and backed by raw notes", (packId) => {
+    const sources = readSources(packId);
+    const packPath = path.join(demoPacksDir, packId);
+
+    for (const source of sources) {
+      expect(source.path).toMatch(/^raw\/[a-z0-9-]+\.md$/);
+      expect(path.isAbsolute(source.path)).toBe(false);
+      expect(source.path).not.toContain("..");
+      expect(source.path).not.toMatch(/https?:\/\//i);
+      expect(fs.existsSync(path.join(packPath, source.path))).toBe(true);
     }
   });
 

@@ -19,12 +19,16 @@ review_status: approved
 
 # Compose Files
 
-Describes where compose definitions are documented without including runnable YAML.
+Compose files are represented as documentation groups, not runnable source.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `core-services` covers ingress, status surfaces, and identity-adjacent helpers.
+- `media-services` covers cataloging, metadata helpers, and read-heavy workloads.
+- `ops-services` covers monitoring, log aggregation, and backup coordination.
+- `lab-services` covers short-lived tests and must be disabled when unattended.
+- Shared fragments may define labels and healthcheck intent, but no compose YAML is included.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

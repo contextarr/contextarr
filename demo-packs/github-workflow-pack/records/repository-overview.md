@@ -19,12 +19,45 @@ review_status: approved
 
 # Repository Overview
 
-Summarizes a fictional repository group, ownership model, and public-safe support context.
+## Summary
 
-## Starter Context
+Repository Overview describes a fictional open-source repository called Northstar Docs that uses reviewed issues, pull requests, and release notes. It gives maintainers who want AI agents to understand contribution workflow without live GitHub access a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
 
-This is original synthetic demo context for GitHub Workflow Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+## Key Facts
 
-## Agent Boundary
+| Area | Demo detail | Why it matters |
+| --- | --- | --- |
+| Scope | Default branch is protected conceptually; release notes are drafted from reviewed changes. | Keeps the pack specific without exposing private operational data. |
+| Review use | Maintainer lanes: triage, implementation, review, docs, and release coordination. | Keeps the pack specific without exposing private operational data. |
+| AI value | AI value: summarize repo state without granting repository write access. | Keeps the pack specific without exposing private operational data. |
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+## Important Boundaries
+
+- Do not treat this pack as a GitHub connector or automation token.
+- Do not invent security disclosure outcomes, maintainer approvals, or release dates.
+- Do not include real organization names, repository URLs, issue numbers, or contributor emails.
+- This record is synthetic demo content and is not a live connector, credential source, or automation runbook.
+
+## Do Not Assume
+
+- Do not assume omitted private files, identities, metrics, or service names exist.
+- Do not treat this record as permission to mutate repositories, cloud resources, accounts, documents, or local machines.
+- Do not expand the scenario beyond the reviewed source notes listed in the pack.
+
+## Useful AI Questions
+
+- What does this record let an assistant safely understand about GitHub Workflow Pack?
+- Which assumptions should be checked before using this context in an export?
+- What should stay out of a public-safe brief for this pack?
+
+## Redaction Notes
+
+- Replace environment-specific identifiers with role labels before export.
+- Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
+- Prefer source summaries and reviewed boundaries over raw operational dumps.
+
+## Source Notes
+
+- Record ID: `github-workflow-pack.repository-overview`
+- Source material is a synthetic local note in this pack's `raw/` folder.
+- Review status is approved for public-safe demos, but the context remains non-executable.

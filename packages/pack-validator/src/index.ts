@@ -498,7 +498,8 @@ function validateSourceMetadata(
   manifest: ContextPackManifest,
   source: Source,
   issues: ValidationIssue[],
-  currentDate: Date
+  currentDate: Date,
+  sourcesFile: string
 ): void {
   const sourceFile = manifest.sourcesPath;
   const licenseStatus = normalizeSourceLicenseStatus(source);
@@ -556,15 +557,49 @@ function validateSourceMetadata(
     );
   }
 
-  if (source.path && path.isAbsolute(source.path)) {
+  if (source.path && isAbsoluteSourcePath(source.path)) {
     addIssue(
       issues,
-      "warning",
-      "source.absolute_path",
-      `Source "${source.id}" should not expose absolute local paths.`,
+      "error",
+      "source.path_absolute",
+      `Source "${source.id}" path must be a relative pack-local file path. Use source.url for remote references.`,
       sourceFile,
       `sources.${source.id}.path`
     );
+  } else if (source.path) {
+    const resolvedSourcePath = path.resolve(packPath, source.path);
+    if (!isInsidePath(packPath, resolvedSourcePath)) {
+      addIssue(
+        issues,
+        "error",
+        "source.path_outside_pack",
+        `Source "${source.id}" path must resolve inside the pack root.`,
+        sourceFile,
+        `sources.${source.id}.path`
+      );
+    } else if (!fs.existsSync(resolvedSourcePath) || !fs.statSync(resolvedSourcePath).isFile()) {
+      addIssue(
+        issues,
+        "error",
+        "source.path_missing",
+        `Source "${source.id}" path does not resolve to a committed pack-local file.`,
+        sourceFile,
+        `sources.${source.id}.path`
+      );
+    } else {
+      const realPackPath = fs.realpathSync.native(packPath);
+      const realSourcePath = fs.realpathSync.native(resolvedSourcePath);
+      if (!isInsidePath(realPackPath, realSourcePath)) {
+        addIssue(
+          issues,
+          "error",
+          "source.path_outside_pack",
+          `Source "${source.id}" path must resolve inside the pack root.`,
+          sourceFile,
+          `sources.${source.id}.path`
+        );
+      }
+    }
   }
 }
 
@@ -639,7 +674,7 @@ function validateSourceMap(
   const sourceIds = new Set(sourceMap.sources.map((source) => source.id));
 
   for (const source of sourceMap.sources) {
-    validateSourceMetadata(packPath, manifest, source, issues, currentDate);
+    validateSourceMetadata(packPath, manifest, source, issues, currentDate, sourcesFile);
   }
 
   for (const { metadata: record } of records) {
@@ -1120,6 +1155,15 @@ function addIssue(
 
 function relativePath(root: string, file: string): string {
   return normalizePath(path.relative(root, file));
+}
+
+function isInsidePath(root: string, file: string): boolean {
+  const relative = path.relative(root, file);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+function isAbsoluteSourcePath(value: string): boolean {
+  return path.isAbsolute(value) || path.win32.isAbsolute(value) || path.posix.isAbsolute(value);
 }
 
 function normalizePath(value: string): string {

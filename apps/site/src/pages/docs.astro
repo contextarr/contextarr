@@ -1,0 +1,52 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { docsIndexGroups, links } from "../content/site";
+---
+
+<BaseLayout
+  title="Docs | Contextarr"
+  description="Contextarr documentation index for quickstart, pack format, exports, CLI, API, MCP, and security."
+  currentPath="/docs"
+>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">Docs</p>
+      <h1>Find the right repo docs fast.</h1>
+      <p>
+        This website stays focused on orientation. The full working docs live in GitHub with the code, schemas, tests,
+        and release checks.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container docs-index-grid">
+      {docsIndexGroups.map((group) => (
+        <article class="docs-index-card">
+          <h2>{group.title}</h2>
+          <ul>
+            {group.links.map((item) => (
+              <li><a href={item.href}>{item.label}</a></li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">Source of truth</p>
+        <h2>Docs and implementation move together.</h2>
+      </div>
+      <div class="route-copy">
+        <p>
+          The repo checks public copy against implementation status, inventory, screenshots, and launch boundaries so
+          the site does not drift from the current build.
+        </p>
+        <a class="button button-primary" href={links.docs}>Open GitHub docs</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

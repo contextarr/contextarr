@@ -10,9 +10,13 @@ include:
     - ai-workstation.storage-layout
     - ai-workstation.networking-notes
     - ai-workstation.troubleshooting-workflow
+    - ai-workstation.capacity-planning
+    - ai-workstation.maintenance-cadence
+    - ai-workstation.safety-boundaries
 exclude_tags:
   - secret
   - never_export
+  - imported_draft
 token_budget: 24000
 sections:
   - records

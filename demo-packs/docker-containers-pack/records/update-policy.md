@@ -19,12 +19,16 @@ review_status: approved
 
 # Update Policy
 
-Documents update cadence, smoke checks, and rollback evidence for fictional services.
+Updates are staged by service risk and rollback clarity.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Low-risk dashboard and metrics services update during the routine maintenance window.
+- Ingress, identity-adjacent, and data-store changes require a pre-check and rollback note.
+- Media and indexing services update after confirming no long-running jobs are active.
+- Failed updates are documented by symptom, suspected cause, and next safe retry window.
+- Image pinning is reviewed quarterly, but exact tags are not included.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

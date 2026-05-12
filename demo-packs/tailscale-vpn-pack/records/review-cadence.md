@@ -19,12 +19,16 @@ review_status: approved
 
 # Review Cadence
 
-Documents periodic access, device, and route review expectations.
+Tailnet review keeps access narrow and removes stale exceptions.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Monthly review checks inactive devices, temporary collaborators, and expired sharing notes.
+- Quarterly review checks access-control intent, route categories, and exit-node exceptions.
+- Incident review focuses on scope, cleanup, and documentation accuracy.
+- New devices start in the lowest access category until their purpose is documented.
+- Review evidence is kept as summaries, not live admin-panel exports.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

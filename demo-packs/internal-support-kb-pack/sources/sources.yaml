@@ -2,7 +2,7 @@ sources:
   - id: support-intake-note
     type: markdown
     title: Fictional Support Intake Note
-    path: ../raw/intake-note.md
+    path: raw/intake-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -10,7 +10,7 @@ sources:
   - id: support-escalation-note
     type: markdown
     title: Fictional Escalation Note
-    path: ../raw/escalation-note.md
+    path: raw/escalation-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -18,7 +18,7 @@ sources:
   - id: support-response-note
     type: markdown
     title: Fictional Response Safety Note
-    path: ../raw/response-note.md
+    path: raw/response-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -26,7 +26,7 @@ sources:
   - id: support-known-issues-note
     type: markdown
     title: Fictional Known Issues Note
-    path: ../raw/known-issues-note.md
+    path: raw/known-issues-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -34,8 +34,32 @@ sources:
   - id: support-review-note
     type: markdown
     title: Fictional Review Workflow Note
-    path: ../raw/review-note.md
+    path: raw/review-note.md
     retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-taxonomy-note
+    type: markdown
+    title: Fictional Article Taxonomy Note
+    path: raw/taxonomy-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-macro-note
+    type: markdown
+    title: Fictional Macro Library Note
+    path: raw/macro-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: support-quality-note
+    type: markdown
+    title: Fictional Quality Review Note
+    path: raw/quality-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
     license: MIT
     trust: official
     status: current

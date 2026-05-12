@@ -1,21 +1,52 @@
-# OpenAI Prompt Engineering Pack - Codex Sample
+# OpenAI Prompt Engineering Pack - Codex Sample Brief
 
-Validated public-safe starter context for local assistant workflows.
+Sample preview for target: Codex.
+Pack ID: `openai-prompt-engineering-pack`.
 
-## Included Records
+## Scope
 
-- openai-prompt-engineering-pack.overview
-- openai-prompt-engineering-pack.model-usage-policy
-- openai-prompt-engineering-pack.chatgpt-projects
-- openai-prompt-engineering-pack.prompt-library-conventions
-- openai-prompt-engineering-pack.api-usage-boundaries
-- openai-prompt-engineering-pack.data-handling-rules
-- openai-prompt-engineering-pack.evaluation-patterns
-- openai-prompt-engineering-pack.preferred-output-formats
+Use the approved records to update docs, examples, tests, dashboard copy, or review notes that refer to this fictional pack. Keep changes inside the repository and do not operate on live services.
+
+## Affected Records
+
+- `openai-prompt-engineering-pack.api-usage-boundaries` - API Usage Boundaries
+- `openai-prompt-engineering-pack.chatgpt-projects` - ChatGPT Projects
+- `openai-prompt-engineering-pack.data-handling-rules` - Data Handling Rules
+- `openai-prompt-engineering-pack.evaluation-patterns` - Evaluation Patterns
+- `openai-prompt-engineering-pack.model-usage-policy` - Model Usage Policy
+- `openai-prompt-engineering-pack.overview` - Pack Overview
+- `openai-prompt-engineering-pack.preferred-output-formats` - Preferred Output Formats
+- `openai-prompt-engineering-pack.prompt-library-conventions` - Prompt Library Conventions
 
 ## Constraints
 
-- No private data.
-- No credentials.
-- No executable commands.
-- Third-party names and marks identify domains only and do not imply endorsement.
+- Preserve the pack's public-safe, source-backed, non-executable boundaries.
+- Do not add credentials, real account identifiers, hostnames, personal data, executable scripts, shell commands, live URLs, or direct connector behavior.
+- Do not claim third-party endorsement. Third-party names are identifiers only.
+- Keep raw sources as source material and records as reviewed summaries.
+
+## Forbidden Actions
+
+- No deployments, releases, package publishing, registry work, marketplace work, telemetry, cloud sync, or agent runtime behavior.
+- No mutation of real systems, accounts, networks, repositories, or local user files outside the requested repo scope.
+
+## Acceptance Criteria
+
+- Changes cite the record IDs used.
+- Output stays consistent with the pack manifest, source map, rules, and export profiles.
+- Any uncertainty is called out instead of invented.
+- Human-readable HTML, exports, CLI/API use, Docker preview, and read-only MCP remain framed as Contextarr outputs, not agent execution.
+
+## Validation Checks
+
+- Run pack validation if records, sources, rules, or exports change.
+- Re-run public-surface or site checks if launch-facing copy changes.
+- Use security/scanner checks when editing boundaries, sources, or examples.
+
+## Final Report Format
+
+- Records used
+- Files changed
+- Validation checks run
+- Safety notes
+- Remaining questions

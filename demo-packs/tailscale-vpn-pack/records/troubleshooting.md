@@ -19,12 +19,16 @@ review_status: approved
 
 # Troubleshooting
 
-Lists safe diagnostic categories, health observations, and owner handoff notes.
+Troubleshooting context focuses on safe observation categories and handoff notes.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Connectivity issues are grouped as device offline, service unreachable, lookup failure, route mismatch, or permission mismatch.
+- Health notes capture observed symptom, affected device class, affected service class, and last known change.
+- Authentication issues are escalated without collecting secrets.
+- Route issues are reviewed against approved access categories before changing policy.
+- Logs must be summarized and redacted before inclusion.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

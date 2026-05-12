@@ -1,16 +1,34 @@
-Docker Containers Pack
+# Docker Containers Pack llms.txt Sample
 
-Public-safe starter context for fictional Docker container operations.
+pack_id: docker-containers-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for fictional Docker container operations.
 
-Records:
-- docker-containers-pack.stack-overview
-- docker-containers-pack.compose-files
-- docker-containers-pack.container-inventory
-- docker-containers-pack.networks-and-ports
-- docker-containers-pack.volumes-and-storage
-- docker-containers-pack.environment-variables
-- docker-containers-pack.secrets-policy
-- docker-containers-pack.update-policy
+records:
+docker-containers-pack.compose-files: Compose Files
+docker-containers-pack.container-inventory: Container Inventory
+docker-containers-pack.environment-variables: Environment Variables
+docker-containers-pack.networks-and-ports: Networks And Ports
+docker-containers-pack.secrets-policy: Secrets Policy
+docker-containers-pack.stack-overview: Stack Overview
+docker-containers-pack.update-policy: Update Policy
+docker-containers-pack.volumes-and-storage: Volumes And Storage
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+docker-containers-pack-stack-overview-source: Docker Containers Pack Stack Overview Synthetic Source
+docker-containers-pack-compose-files-source: Docker Containers Pack Compose Files Synthetic Source
+docker-containers-pack-container-inventory-source: Docker Containers Pack Container Inventory Synthetic Source
+docker-containers-pack-networks-and-ports-source: Docker Containers Pack Networks And Ports Synthetic Source
+docker-containers-pack-volumes-and-storage-source: Docker Containers Pack Volumes And Storage Synthetic Source
+docker-containers-pack-environment-variables-source: Docker Containers Pack Environment Variables Synthetic Source
+docker-containers-pack-secrets-policy-source: Docker Containers Pack Secrets Policy Synthetic Source
+docker-containers-pack-update-policy-source: Docker Containers Pack Update Policy Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

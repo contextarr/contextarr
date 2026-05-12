@@ -81,6 +81,112 @@ describe("validatePack", () => {
     expect(result.issues).toContainEqual(expect.objectContaining({ code: "record.source_missing" }));
   });
 
+  it("reports relative source paths that resolve outside the pack root", () => {
+    withTempValidPack("contextarr-source-path-outside-", (packPath) => {
+      const sourcesPath = path.join(packPath, "sources", "sources.yaml");
+      fs.writeFileSync(
+        sourcesPath,
+        fs.readFileSync(sourcesPath, "utf8").replace("raw/manual-note.md", "../../outside/manual-note.md"),
+        "utf8"
+      );
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "source.path_outside_pack",
+          file: "sources/sources.yaml",
+          path: "sources.manual-source.path"
+        })
+      );
+    });
+  });
+
+  it.each([
+    ["POSIX absolute path", "/etc/passwd"],
+    ["Windows drive path", "C:\\Users\\Rob\\secret.md"],
+    ["Windows UNC path", "\\\\server\\share\\secret.md"]
+  ])("reports %s source paths as blocking errors", (_label, sourcePath) => {
+    withTempValidPack("contextarr-source-path-absolute-", (packPath) => {
+      const sourcesPath = path.join(packPath, "sources", "sources.yaml");
+      fs.writeFileSync(
+        sourcesPath,
+        fs.readFileSync(sourcesPath, "utf8").replace("path: raw/manual-note.md", `path: ${JSON.stringify(sourcePath)}`),
+        "utf8"
+      );
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "source.path_absolute",
+          file: "sources/sources.yaml",
+          path: "sources.manual-source.path"
+        })
+      );
+    });
+  });
+
+  it("reports source paths that stay inside the pack but do not exist", () => {
+    withTempValidPack("contextarr-source-path-missing-", (packPath) => {
+      const sourcesPath = path.join(packPath, "sources", "sources.yaml");
+      fs.writeFileSync(
+        sourcesPath,
+        fs.readFileSync(sourcesPath, "utf8").replace("raw/manual-note.md", "raw/missing-note.md"),
+        "utf8"
+      );
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "source.path_missing",
+          file: "sources/sources.yaml",
+          path: "sources.manual-source.path"
+        })
+      );
+    });
+  });
+
+  it("reports pack-local source path symlinks that escape the pack root", () => {
+    withTempValidPack("contextarr-source-path-symlink-", (packPath) => {
+      const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "contextarr-source-path-outside-"));
+      const outsideSource = path.join(outsideDir, "manual-note.md");
+      fs.writeFileSync(outsideSource, "outside source note\n", "utf8");
+
+      const linkedSource = path.join(packPath, "raw", "manual-note.md");
+      fs.rmSync(linkedSource);
+      try {
+        fs.symlinkSync(outsideSource, linkedSource, "file");
+      } catch {
+        fs.rmSync(outsideDir, { force: true, recursive: true });
+        return;
+      }
+
+      try {
+        const result = validatePack(packPath);
+
+        expect(result.valid).toBe(false);
+        expect(result.issues).toContainEqual(
+          expect.objectContaining({
+            severity: "error",
+            code: "source.path_outside_pack",
+            file: "sources/sources.yaml",
+            path: "sources.manual-source.path"
+          })
+        );
+      } finally {
+        fs.rmSync(outsideDir, { force: true, recursive: true });
+      }
+    });
+  });
+
   it("reports invalid export profiles", () => {
     const result = validatePack(fixture("invalid-export-profile-pack"));
 

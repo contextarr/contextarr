@@ -1,0 +1,80 @@
+---
+import { installCommands, links } from "../content/site";
+
+const installCommandText = installCommands.join("\n");
+---
+
+<section class="section install-section" id="run-locally">
+  <div class="container install-panel">
+    <div>
+      <p class="eyebrow">Run locally</p>
+      <h2>Three commands to see the loop.</h2>
+      <p>
+        The Docker preview runs the local dashboard against the public-safe demo packs. Source files stay in the
+        checkout, and the app binds to localhost by default.
+      </p>
+    </div>
+    <div class="terminal-card" aria-label="Local install commands">
+      <div class="terminal-bar">
+        <span>local preview</span>
+        <a href={links.docs}>docs</a>
+      </div>
+      <pre><code data-copy-text>{installCommandText}</code></pre>
+      <div class="terminal-copy-row">
+        <button
+          class="terminal-copy"
+          type="button"
+          data-copy-button
+          aria-label="Copy local preview commands"
+          title="Copy"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+            <path d="M5 15V7a2 2 0 0 1 2-2h8"></path>
+          </svg>
+          <span>Copy</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const copyText = async (text: string) => {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("Clipboard API unavailable");
+    }
+    await navigator.clipboard.writeText(text);
+  };
+
+  document.querySelectorAll<HTMLButtonElement>("[data-copy-button]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const terminal = button.closest(".terminal-card");
+      const code = terminal?.querySelector<HTMLElement>("[data-copy-text]");
+      if (!code?.textContent) {
+        return;
+      }
+
+      const label = button.querySelector("span");
+      const originalLabel = label?.textContent ?? "Copy";
+
+      try {
+        await copyText(code.textContent);
+        button.dataset.copied = "true";
+        if (label) {
+          label.textContent = "Copied";
+        }
+        window.setTimeout(() => {
+          delete button.dataset.copied;
+          if (label) {
+            label.textContent = originalLabel;
+          }
+        }, 1600);
+      } catch {
+        if (label) {
+          label.textContent = "Copy failed";
+        }
+      }
+    });
+  });
+</script>

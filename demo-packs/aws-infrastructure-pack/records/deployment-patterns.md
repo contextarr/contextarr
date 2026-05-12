@@ -19,12 +19,16 @@ review_status: approved
 
 # Deployment Patterns
 
-Captures release lanes, approval notes, and rollback expectations without runnable commands.
+Deployments are conservative: small changes, reviewable artifacts, and rollback expectations.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Static assets are promoted as immutable build outputs.
+- Background workers are deployed behind queue-drain checks and synthetic health signals.
+- Database changes are split from application rollouts when rollback would be unclear.
+- Staging smoke notes mention checked behavior but not commands or live URLs.
+- Production promotion pauses when monitoring or backup status is unknown.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -596,7 +596,7 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.listExportBriefs).toHaveBeenCalledWith({ limit: 6 });
     expect(document.body.textContent).toContain("Saved previews are local derived artifacts, not source of truth.");
     await waitForText("Codex Pack Export");
-    await waitForText("Exposure Readiness includes 2 of 5 records");
+    await waitForText("Exposure Readiness includes 2 of 8 records");
     expect(document.body.textContent).toContain(
       "Draft Intake, composed, restored quarantine, private, secret, and never_export content remains excluded by default."
     );
@@ -607,8 +607,10 @@ describe("App Skill UI routes", () => {
     expect(mocks.apiClient.getPackExposureReadiness).toHaveBeenCalledWith("ai-workstation-pack");
     expect(mocks.apiClient.getExportPreview).toHaveBeenCalledWith("ai-workstation-pack", "ai-workstation-codex");
     expect(document.body.textContent).toContain("Privacy mode: Redacted");
-    expect(document.body.textContent).toContain("This preview includes 2 records and excludes 3 records.");
-    expect(document.body.textContent).toContain("Excluded reasons: private record, secret tag, never_export tag.");
+    expect(document.body.textContent).toContain("This preview includes 2 records and excludes 6 records.");
+    expect(document.body.textContent).toContain(
+      "Excluded reasons: private record (2), secret tag (2), never_export tag, imported_draft tag."
+    );
 
     await clickButtonAndFlush("Save Brief");
     await waitForText("Saved local brief ai-workstation-codex.md.");
@@ -1352,8 +1354,8 @@ function healthFixture(): HealthResponse {
     lastIndexedAt: "2026-05-07T00:00:00.000Z",
     counts: {
       packs: 1,
-      records: 5,
-      sources: 5,
+      records: 8,
+      sources: 8,
       exportProfiles: 8,
       skills: 1,
       skillInstructions: 3,
@@ -1391,8 +1393,8 @@ function packFixture(): PackSummary {
     licenseMissingCount: 0,
     licenseUnknownCount: 0,
     licenseRiskCount: 0,
-    recordCount: 5,
-    sourceCount: 5,
+    recordCount: 8,
+    sourceCount: 8,
     exportProfileCount: 8,
     accentColor: "#2563EB",
     coverImage: null,
@@ -1411,8 +1413,8 @@ function packDetailFixture() {
     packPath: "demo-packs/ai-workstation-pack",
     manifest: {},
     counts: {
-      records: 5,
-      sources: 5,
+      records: 8,
+      sources: 8,
       exportProfiles: 8
     },
     validation: {
@@ -1438,8 +1440,8 @@ function packDetailFixture() {
       status: "healthy",
       validationErrors: 0,
       validationWarnings: 0,
-      recordCount: 5,
-      sourceCount: 5,
+      recordCount: 8,
+      sourceCount: 8,
       exportProfileCount: 8,
       updatedAt: "2026-05-07T00:00:00.000Z"
     },
@@ -1493,12 +1495,12 @@ function packExposureReadinessFixture() {
       blocked: false
     },
     summary: {
-      recordCount: 5,
-      exportEligibleRecords: 5,
-      mcpEligibleRecords: 5,
+      recordCount: 8,
+      exportEligibleRecords: 8,
+      mcpEligibleRecords: 8,
       blockedRecords: 0,
       warningRecords: 0,
-      sourceBackedRecords: 5,
+      sourceBackedRecords: 8,
       recordsMissingSourceCoverage: 0,
       exportProfileCount: 8,
       exportEligibleProfiles: 8,
@@ -1519,7 +1521,7 @@ function packExposureReadinessWithExclusionsFixture() {
     summary: {
       ...readiness.summary,
       exportEligibleRecords: 2,
-      blockedRecords: 3
+      blockedRecords: 6
     },
     blockers: [
       {
@@ -1631,6 +1633,33 @@ function packExportArtifactFixture(): ExportArtifact {
         tags: ["never_export"],
         sources: ["source-e"],
         reason: "never_export tag"
+      },
+      {
+        id: "ai-workstation-pack.private-runbook",
+        title: "Private Runbook",
+        type: "runbook",
+        privacy: "private",
+        tags: [],
+        sources: ["source-f"],
+        reason: "private record"
+      },
+      {
+        id: "ai-workstation-pack.redaction-note",
+        title: "Redaction Note",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["secret"],
+        sources: ["source-g"],
+        reason: "secret tag"
+      },
+      {
+        id: "ai-workstation-pack.imported-draft",
+        title: "Imported Draft",
+        type: "note",
+        privacy: "public_safe",
+        tags: ["imported_draft"],
+        sources: ["source-h"],
+        reason: "imported_draft tag"
       }
     ],
     sources: [
