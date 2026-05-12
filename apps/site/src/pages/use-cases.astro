@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { useCaseCards } from "../content/site";
+---
+
+<BaseLayout
+  title="Use cases | Contextarr"
+  description="Use Contextarr for coding agents, homelabs, Markdown notes, internal KBs, consultants, and local AI stacks."
+  currentPath="/use-cases"
+>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">Use cases</p>
+      <h1>Reusable context for the tools you already use.</h1>
+      <p>
+        Contextarr is for people who use multiple AI tools and do not want to keep rebuilding the same project, system,
+        workflow, or knowledge-base context by hand.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container launch-card-grid launch-card-grid-three">
+      {useCaseCards.map((useCase) => (
+        <article class="launch-card">
+          <h2>{useCase.title}</h2>
+          <p>{useCase.text}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">Common thread</p>
+        <h2>Own the context. Reuse the output.</h2>
+      </div>
+      <p class="route-copy">
+        The same pack can render human-readable HTML, generate target-specific briefs, output JSON records, or serve
+        approved records through read-only MCP.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

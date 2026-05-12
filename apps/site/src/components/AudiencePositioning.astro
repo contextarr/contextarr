@@ -1,0 +1,20 @@
+---
+import { audienceRows, notAProductRows } from "../content/site";
+---
+
+<section class="section positioning-section" aria-label="Who Contextarr is for and what it is not">
+  <div class="container positioning-grid">
+    <div class="positioning-panel">
+      <p class="eyebrow">Who it is for</p>
+      <ul class="compact-pill-row">
+        {audienceRows.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+    <div class="positioning-panel positioning-panel-muted">
+      <p class="eyebrow">What it is not</p>
+      <ul class="compact-pill-row">
+        {notAProductRows.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </div>
+</section>

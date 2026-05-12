@@ -8,7 +8,7 @@ Accepted.
 
 Contextarr needs realistic local examples that demonstrate Context Packs, export profiles, brand-aware cards, and object-library filtering without becoming a marketplace, remote registry, connector system, or agent runtime.
 
-The repo already includes non-executable Skills and Agent Kits as data-only objects. This decision adapts starter-pack language to that shipped state: Skills and Agent Kits exist, but they do not execute.
+The repo already includes non-executing Skills and Agent Kits as advanced-preview objects. Contextarr Native Skills are data-only, while future imported external Skill artifacts may be preserved unmodified and unexecuted. This decision adapts starter-pack language to that shipped state: Skills and Agent Kits exist, but Contextarr does not execute them.
 
 ## Decision
 

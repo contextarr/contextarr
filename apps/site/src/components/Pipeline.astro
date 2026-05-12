@@ -1,32 +1,47 @@
 ---
 const steps = [
   {
-    title: "Local files",
-    text: "Markdown, JSON, source maps, rules, and profiles stay on disk."
+    number: "01",
+    title: "Source",
+    text: "Markdown, JSON, source maps, rules, and export profiles stay in folders the user controls.",
+    meta: "local files",
+    tone: "green"
   },
   {
+    number: "02",
     title: "Validate",
-    text: "Schemas and deterministic checks catch missing or unsafe context."
+    text: "Schema checks and safety rules catch missing, stale, unsafe, or unreviewed context.",
+    meta: "checked locally",
+    tone: "green"
   },
   {
+    number: "03",
     title: "Index",
-    text: "SQLite is rebuilt from packs and remains derived local state."
+    text: "A rebuildable SQLite index powers search, health, review, and local views.",
+    meta: "derived state",
+    tone: "blue"
   },
   {
+    number: "04",
     title: "Review",
-    text: "Health and review queues keep draft context visible."
+    text: "Health signals and review queues keep drafts out of trusted exports and MCP.",
+    meta: "human reviewed",
+    tone: "blue"
   },
   {
-    title: "Render",
-    text: "Records become sanitized Markdown or static HTML."
-  },
-  {
+    number: "05",
     title: "Export",
-    text: "Profiles generate target-ready artifacts with redaction rules."
+    text: "Profiles produce AI briefs, redaction reports, source summaries, and JSON records.",
+    meta: "target ready",
+    tone: "blue"
   },
   {
-    title: "Read-only MCP",
-    text: "Clients can inspect approved context without mutating files."
+    number: "06",
+    title: "Serve",
+    text: "Static HTML, CLI, API, Docker, and read-only MCP expose approved context without mutation.",
+    meta: "reviewable output",
+    tone: "green",
+    final: true
   }
 ];
 ---
@@ -35,21 +50,36 @@ const steps = [
   <div class="container pipeline-layout">
     <div class="section-heading pipeline-heading">
       <p class="eyebrow">How it works</p>
-      <h2>One local pipeline from source material to AI-ready context.</h2>
+      <h2>
+        Local sources <span class="accent-green">in.</span><br />
+        Validated Context Packs <span class="accent-blue">out.</span>
+      </h2>
       <p>
-        Your source files stay local. SQLite is a rebuildable index. Exports are generated artifacts. MCP is read-only.
+        Contextarr keeps context in local files, validates it, builds a rebuildable index, and generates trusted
+        outputs for AI tools.
       </p>
     </div>
-    <ol class="pipeline" aria-label="Contextarr workflow">
+    <div class="pipeline-flow" aria-label="Contextarr workflow">
       {
-        steps.map((step, index) => (
-          <li>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{step.title}</strong>
+        steps.map((step) => (
+          <article
+            class={`pipeline-node pipeline-node-${step.number}${step.final ? " pipeline-node-final" : ""}`}
+          >
+            <div class="pipeline-card-top">
+              <span class={`pipeline-number pipeline-tone-${step.tone}`}>{step.number}</span>
+            </div>
+            <h3>{step.title}</h3>
             <p>{step.text}</p>
-          </li>
+            <span class={`pipeline-meta pipeline-tone-${step.tone}`}>{step.meta}</span>
+          </article>
         ))
       }
-    </ol>
+    </div>
+    <div class="pipeline-trust-strip" aria-label="Contextarr trust properties">
+      <span>Files stay local</span>
+      <span>SQLite is rebuildable</span>
+      <span>HTML renders are reviewable</span>
+      <span>MCP is read-only</span>
+    </div>
   </div>
 </section>

@@ -1,0 +1,62 @@
+---
+import LocalInstall from "../components/LocalInstall.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { links, runLocallySteps } from "../content/site";
+---
+
+<BaseLayout
+  title="Run locally | Contextarr"
+  description="Run Contextarr locally with Docker, inspect demo packs, render HTML, export briefs, and use read-only MCP."
+  currentPath="/run-locally"
+>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">Run locally</p>
+      <h1>Try the local Context Pack loop.</h1>
+      <p>
+        The Docker preview runs the dashboard against public-safe demo packs. Source files stay in the checkout, and
+        Contextarr binds to localhost by default.
+      </p>
+    </div>
+  </section>
+
+  <LocalInstall />
+
+  <section class="section section-tight">
+    <div class="container">
+      <div class="section-heading">
+        <p class="eyebrow">Local workflow</p>
+        <h2>Inspect, validate, render, export, serve.</h2>
+        <p>Use the dashboard first, then drop to CLI commands when you want repeatable checks.</p>
+      </div>
+      <div class="launch-card-grid launch-card-grid-three">
+        {runLocallySteps.map((step) => (
+          <article class="launch-card command-step-card">
+            <h2>{step.title}</h2>
+            <p>{step.text}</p>
+            <pre><code>{step.command}</code></pre>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">Next</p>
+        <h2>Move from demo packs to your first pack.</h2>
+      </div>
+      <div class="route-copy">
+        <p>
+          Start with a starter pack, review Draft Intake, activate only after review, then export a Codex or Claude
+          brief from approved records.
+        </p>
+        <div class="page-hero-actions">
+          <a class="button button-primary" href="/demo-packs">View demo packs</a>
+          <a class="button button-secondary" href={links.quickstart}>Quickstart docs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

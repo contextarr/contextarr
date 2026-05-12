@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { links, packFormatRows } from "../content/site";
+---
+
+<BaseLayout
+  title="Pack format | Contextarr"
+  description="Contextarr Context Packs are local folders with records, sources, rules, export profiles, and examples."
+  currentPath="/pack-format"
+>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">Pack format</p>
+      <h1>A Context Pack is a local source of truth.</h1>
+      <p>
+        Keep records, sources, rules, and export profiles in a local folder. Contextarr validates the pack, renders it
+        for humans, and generates approved outputs for AI tools without running agents.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container format-page-grid">
+      <article class="format-anatomy-card">
+        <p class="anatomy-kicker">Pack anatomy</p>
+        <div class="pack-file-tree">
+          {packFormatRows.map(([path, label]) => (
+            <div class="pack-file-row">
+              <strong>{path}</strong>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+        <p>Local files stay readable, versioned, and owned by the user.</p>
+      </article>
+
+      <div class="format-action-grid">
+        <article class="launch-card">
+          <p class="anatomy-kicker">Validate</p>
+          <p>Schema checks, source coverage, freshness, review state, redaction, and export readiness.</p>
+          <ul class="pack-chip-list">
+            <li>schema</li>
+            <li>sources</li>
+            <li>review</li>
+            <li>redaction</li>
+          </ul>
+        </article>
+        <article class="launch-card">
+          <p class="anatomy-kicker">Render</p>
+          <p>Approved records become human-readable Markdown and sanitized static HTML.</p>
+          <ul class="pack-chip-list">
+            <li>Markdown</li>
+            <li>HTML</li>
+            <li>reviewable</li>
+          </ul>
+        </article>
+        <article class="launch-card">
+          <p class="anatomy-kicker">Export</p>
+          <p>Generate target-ready briefs, JSON records, AGENTS.md, CLAUDE.md, llms.txt, or read-only MCP context.</p>
+          <ul class="pack-chip-list">
+            <li>ChatGPT</li>
+            <li>Claude</li>
+            <li>Codex</li>
+            <li>MCP</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">Technical docs</p>
+        <h2>Use the website for orientation, GitHub for details.</h2>
+      </div>
+      <div class="route-copy">
+        <p>The full schema, authoring rules, and export profile details live in the repository docs.</p>
+        <div class="page-hero-actions">
+          <a class="button button-primary" href={links.packFormat}>Read pack format docs</a>
+          <a class="button button-secondary" href={links.packAuthoring}>Pack authoring</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

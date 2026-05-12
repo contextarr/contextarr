@@ -1,5 +1,5 @@
 ---
-import { advancedPreview, coreWorkingNow, notIncludedYet } from "../content/status";
+import { advancedPreview, coreWorkingNow } from "../content/status";
 ---
 
 <section class="section status-section" id="status">
@@ -8,18 +8,17 @@ import { advancedPreview, coreWorkingNow, notIncludedYet } from "../content/stat
       <p class="eyebrow">Current build status</p>
       <h2>Developer preview. Core Context Packs first.</h2>
       <p>
-        Contextarr is not production ready. The current repo has a real local Context Pack loop with starter packs,
-        validation, a rebuildable SQLite index, dashboard, exports, and read-only MCP. Skills and Agent Kits are
-        advanced-preview data-only objects, not runtime features.
+        The current repo has a real local Context Pack loop with starter packs, validation, a rebuildable SQLite index,
+        dashboard, exports, and read-only MCP. Skills and Agent Kits are advanced-preview, non-executing surfaces.
       </p>
       <div class="phase-callout">
         <span>Current status</span>
         <strong>Core Context Pack stabilization</strong>
-        <p>Skills and Agent Kits are data-only and frozen behind the v1 bridge gate. Contextarr prepares Agent Kits; it does not run them.</p>
+        <p>Skills and Agent Kits are preview surfaces for validation, read-only views, and export previews. Contextarr prepares them; it does not run them.</p>
       </div>
     </div>
     <div class="status-grid">
-      <article class="status-card">
+      <article class="status-card status-card-muted status-card-secondary">
         <h3>Core working now</h3>
         <ul class="check-list">
           {coreWorkingNow.map((item) => <li>{item}</li>)}
@@ -29,12 +28,6 @@ import { advancedPreview, coreWorkingNow, notIncludedYet } from "../content/stat
         <h3>Advanced preview</h3>
         <ul class="check-list">
           {advancedPreview.map((item) => <li>{item}</li>)}
-        </ul>
-      </article>
-      <article class="status-card status-card-muted">
-        <h3>Not included</h3>
-        <ul class="dash-list">
-          {notIncludedYet.map((item) => <li>{item}</li>)}
         </ul>
       </article>
     </div>

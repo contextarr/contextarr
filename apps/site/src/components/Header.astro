@@ -7,10 +7,11 @@ interface Props {
 
 const { currentPath = "/" } = Astro.props;
 const navItems = [
-  { label: "GitHub", href: links.github },
+  { label: "How it works", href: "/how-it-works" },
+  { label: "Use cases", href: "/use-cases" },
   { label: "Security", href: "/security" },
   { label: "Roadmap", href: "/roadmap" },
-  { label: "Docs", href: links.docs }
+  { label: "Docs", href: "/docs" }
 ];
 ---
 
@@ -35,7 +36,7 @@ const navItems = [
       }
     </nav>
     <div class="header-actions">
-      <a class="button button-quiet header-secondary" href="/security">Security model</a>
+      <a class="button button-quiet header-secondary" href="/run-locally">Run locally</a>
       <a class="button button-primary" href={links.github}>View on GitHub</a>
     </div>
   </div>

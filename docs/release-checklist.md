@@ -14,6 +14,7 @@ pnpm v1-core:idempotent
 pnpm advanced-preview:verify
 pnpm limitations:verify
 pnpm screenshots:verify
+pnpm public-surface:verify
 pnpm exports:verify
 pnpm exposure:verify
 pnpm trust-loop:verify
@@ -58,6 +59,7 @@ git status --short --branch
 - Confirm the first-pack adoption path stays local and review-first with `pnpm first-pack:verify`: starter selection, cache-only collector/import drafts, Draft Intake visibility, dry-run proof, and default non-exposure before activation.
 - Confirm draft/import/restore/compose/collector outputs remain review-bound and absent from active API/export/search surfaces.
 - Create a local backup, restore it into quarantine, and confirm the restore report shows no automatic activation.
+- Confirm the public website, README, screenshot, and social prep copy match the current repo inventory with `pnpm public-surface:verify`.
 - Confirm the Astro public site builds through `pnpm site:verify`.
 - Clean up smoke-only containers and volumes after verification.
 
@@ -70,7 +72,7 @@ The `v0.1.0-alpha.1` release notes should include:
 - Demo flow.
 - Verification commands.
 - Latest local gate evidence, including Docker smoke port and cleanup status.
-- Reviewed screenshot set.
+- Reviewed screenshot set and current public homepage image.
 - Trust-loop MCP/default export preview proof.
 - Security boundaries.
 - No support guarantee yet.
@@ -90,7 +92,7 @@ The packet must include the current git branch and commit, release gate status s
 
 ## Screenshot Requirements
 
-Do not commit generated screenshots unless they are intentionally reviewed and approved. The reviewed alpha screenshot set is under `docs/screenshots/v0.1.0-alpha.1/` and must pass `pnpm screenshots:verify`. The alpha screenshot set covers:
+Do not commit generated screenshots unless they are intentionally reviewed and approved. The reviewed alpha screenshot set is under `docs/screenshots/v0.1.0-alpha.1/` and must pass `pnpm screenshots:verify`. The public homepage image must show 15 packs / 120 records / 8 skills and pass `pnpm public-surface:verify`. The alpha screenshot set covers:
 
 - Pack Library grid.
 - Dense table.

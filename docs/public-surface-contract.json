@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "contextarr.public-surface-contract.v1",
+  "product": {
+    "name": "Contextarr",
+    "canonicalDescription": "Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control.",
+    "shortTagline": "Own your AI context. Validate it locally. Export it anywhere.",
+    "currentStatus": "Context Pack Core Preview",
+    "statusBranch": "main",
+    "notProductionReady": true
+  },
+  "website": {
+    "url": "https://contextarr.com",
+    "status": "ready_for_first_live_deploy",
+    "coreAppHosted": false,
+    "allowedHostedSurfaces": [
+      "public website",
+      "docs links",
+      "public-safe screenshots",
+      "download and install instructions"
+    ],
+    "routes": [
+      "/",
+      "/how-it-works",
+      "/use-cases",
+      "/run-locally",
+      "/demo-packs",
+      "/security",
+      "/pack-format",
+      "/roadmap",
+      "/docs",
+      "/faq",
+      "/privacy"
+    ]
+  },
+  "inventory": {
+    "demoPacks": 15,
+    "starterPacks": 12,
+    "records": 120,
+    "skills": 8,
+    "demoPackNames": [
+      "AI Workstation Pack",
+      "AWS Infrastructure Pack",
+      "Claude Code Project Pack",
+      "Docker Containers Pack",
+      "Product Line Pack",
+      "GitHub Workflow Pack",
+      "Google Workspace Pack",
+      "Home Assistant Pack",
+      "Internal Support KB Pack",
+      "Jellyfin Media Server Pack",
+      "Obsidian Vault Pack",
+      "OpenAI Prompt Engineering Pack",
+      "Tailscale VPN Pack",
+      "UniFi Network Pack",
+      "VS Code Setup Pack"
+    ]
+  },
+  "screenshots": {
+    "homepageSource": "docs/screenshots/v0.1.0-alpha.1/pack-library-grid.png",
+    "homepageSiteCopy": "apps/site/public/screenshots/contextarr-dashboard.png",
+    "approvedForHomepage": true,
+    "approvedForOpenGraph": true,
+    "minimumWidth": 2000,
+    "minimumHeight": 1000,
+    "forbiddenLegacyLabels": [
+      "Jellyfin Server Pack",
+      "Notion Workspace Pack",
+      "16 packs",
+      "80 records"
+    ]
+  },
+  "publicCopy": {
+    "requiredPhrases": [
+      "local-first Context Pack system",
+      "Own your AI context",
+      "Assemble, Review, Route",
+      "View demo packs",
+      "human-readable HTML",
+      "read-only MCP",
+      "not an agent runner",
+      "Contextarr prepares context. It does not run agents.",
+      "No hosted vault",
+      "SQLite is rebuildable",
+      "Imported external Skills may be preserved"
+    ],
+    "forbiddenPhrases": [
+      "self-hosted context automation"
+    ]
+  }
+}

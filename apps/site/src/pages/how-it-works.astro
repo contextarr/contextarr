@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { howItWorksCards, links } from "../content/site";
+---
+
+<BaseLayout
+  title="How it works | Contextarr"
+  description="Contextarr assembles, reviews, and routes local Context Packs for AI tools without running agents."
+  currentPath="/how-it-works"
+>
+  <section class="page-hero">
+    <div class="container">
+      <p class="eyebrow">How it works</p>
+      <h1>Assemble. Review. Route.</h1>
+      <p>
+        Contextarr is a local-first system for context Assembly, Review, and Routing. It turns local sources into
+        validated Context Packs, then routes approved outputs to the AI tools you already use.
+      </p>
+      <div class="page-hero-actions">
+        <a class="button button-primary" href="/run-locally">Run locally</a>
+        <a class="button button-secondary" href="/faq">Read the FAQ</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container launch-card-grid launch-card-grid-three">
+      {howItWorksCards.map((card) => (
+        <article class="launch-card">
+          <p class="card-label">{card.title}</p>
+          <p>{card.text}</p>
+          <ul class="pack-chip-list">
+            {card.chips.map((chip) => <li>{chip}</li>)}
+          </ul>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">The loop</p>
+        <h2>Local sources in. Validated Context Packs out.</h2>
+      </div>
+      <div class="route-copy">
+        <p>
+          Pack files stay on disk. SQLite is rebuilt from those files. Human-readable HTML and export briefs are
+          generated artifacts. Read-only MCP can inspect approved context without mutating files.
+        </p>
+        <div class="page-hero-actions">
+          <a class="button button-secondary" href="/pack-format">View pack format</a>
+          <a class="button button-quiet" href={links.demoPacks}>Browse demo packs</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -20,7 +20,7 @@ Contextarr currently supports a working local Context Pack loop:
 - Per-pack Context Readiness API/CLI/UI reporting and bounded metadata-only Local Observability reads.
 - Explicit local Saved Export Brief save/list/fetch foundation for generated preview artifact metadata, hashes, counts, warning codes, and bounded safe snapshots.
 
-The repo also contains advanced-preview data-only surfaces:
+The repo also contains non-executing advanced-preview surfaces:
 
 - Skill schema validation, public-safe demo Skills, read-only Skill indexing/API, Skill Library/detail UI, deterministic Skill Health/Review Queue support, and profile-driven Skill exports.
 - Agent Kit schema validation, public-safe demo Agent Kits, read-only Agent Kit indexing/API/search, Agent Kit Composer save flow, Agent Kit Library/detail/health, and profile-driven Agent Kit exports.

@@ -62,8 +62,8 @@ The v1 clean-rescan gate derives its expected Context Pack counts from `demo-pac
 
 - 15 demo Context Packs indexed.
 - 12 curated starter Context Packs among those demos.
-- 111 records indexed.
-- 111 sources indexed.
+- 120 records indexed.
+- 120 sources indexed.
 - 120 Context Pack export profiles indexed.
 - 0 skipped Context Packs.
 - 0 skipped Skills.

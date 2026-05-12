@@ -20,6 +20,18 @@ It turns local Markdown records, source maps, validation rules, redaction rules,
 
 Contextarr is not a chatbot, hosted memory vault, vector database, graph database, public marketplace, managed RAG app, or agent runner.
 
+Contextarr prepares context. It does not run agents.
+
+## Public website routes
+
+- /how-it-works: Assemble, Review, Route.
+- /use-cases: Coding agents, homelabs, Markdown, internal KBs, consultants, and local AI users.
+- /run-locally: Docker preview, CLI checks, rendered HTML, exports, and read-only MCP.
+- /demo-packs: Current public-safe demo Context Packs.
+- /pack-format: Context Pack anatomy and boundaries.
+- /docs: Website index to GitHub documentation.
+- /faq: Naming, privacy, Context Packs, exports, MCP, and roadmap questions.
+
 ## Core object definitions
 
 Context Pack:
@@ -36,7 +48,7 @@ A local stdio read-only interface for pack summaries, record lookups, search, pr
 
 ## Current status
 
-Developer preview from main. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview data-only objects and do not execute.
+Developer preview from main. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview, non-executing surfaces. Native Skills are data-only; future imported external Skill artifacts may be preserved unmodified and unexecuted.
 
 The repo currently includes 15 public-safe demo Context Packs, including 12 curated starter Context Packs.
 
@@ -69,7 +81,7 @@ ${list(exactSecurityBoundaryBullets)}
 
 ${futureDirectionLines.join("\n")}
 
-These objects are data-only and frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
+These objects are non-executing and frozen behind the v1 bridge gate until Context Pack core readiness is accepted or superseded by a decision record.
 
 ## Repository
 

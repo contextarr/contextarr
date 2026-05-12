@@ -13,7 +13,8 @@ Core status:
 - 12 curated starter Context Packs
 - SQLite is a rebuildable derived index
 - dashboard, Pack Health, exports, CLI, and read-only MCP exist
-- Skills and Agent Kits are advanced-preview data objects; they are data-only
+- Skills and Agent Kits are advanced-preview, non-executing surfaces
+- native Skills are data-only; future imported external Skill artifacts may be preserved unmodified and unexecuted
 - Contextarr prepares Agent Kits; it does not run them
 
 Boundaries:
@@ -24,7 +25,7 @@ Boundaries:
 - no package publishing
 - no remote install
 - no executable packs
-- no executable Skills
+- no Skill execution
 - no Agent Kit runtime
 - no telemetry
 - human review before trusted context

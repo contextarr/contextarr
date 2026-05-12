@@ -10,11 +10,21 @@
 
 Contextarr is a local-first Context Pack system for preparing trusted AI context from files you control. It validates, renders, redacts, exports, and exposes approved Context Packs through CLI, API, dashboard, and read-only MCP. It does not run agents.
 
-Status: Context Pack Core Preview from `main`. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview data-only objects; they do not execute, and Contextarr does not run agents.
+Status: Context Pack Core Preview from `main`. Core Context Pack workflows are the current adoption target. Skills and Agent Kits are advanced-preview, non-executing surfaces. Native Skills are data-only; future imported external Skill artifacts may be preserved unmodified and unexecuted.
 
 For exact shipped-versus-planned claims, use [docs/implementation-status.md](docs/implementation-status.md) as the source of truth.
 
 For the full build order and where future ideas are slotted, use [docs/master-plan.md](docs/master-plan.md).
+
+## What does "arr" stand for?
+
+In Contextarr, "arr" means **Assemble, Review, Route**.
+
+Contextarr assembles trusted context from local sources, reviews it through validation, redaction, freshness, and human approval, then routes the right version to AI tools through human-readable HTML, exports, CLI, API, Docker, and read-only MCP.
+
+Contextarr prepares context. It does not run agents.
+
+See [docs/faq.md](docs/faq.md) for common questions about Context Packs, privacy, exports, Skills, Agent Kits, and the current launch boundaries.
 
 ## What Contextarr Is
 
@@ -44,13 +54,13 @@ Contextarr is not a chatbot, hosted memory vault, vector database, graph databas
 
 These surfaces exist in the checkout, but they are not the public headline for the first release:
 
-- Non-executable Skills as data-only instruction artifacts.
-- Non-executable Agent Kits as data-only compositions of Context Packs and Skills.
+- Non-executing Contextarr Native Skills as data-only instruction artifacts.
+- Non-executing Agent Kits as compositions of Context Packs and Skills.
 - Skill and Agent Kit validation, indexing, read-only API/UI views, export previews, and read-only MCP tools where implemented.
 - Local Skill importers, gated behind `CONTEXTARR_ENABLE_LOCAL_IMPORTS=true`.
 - Agent Kit templates that create unreviewed local draft Agent Kits only.
 
-Skills and Agent Kits are advanced-preview, data-only, non-executable, and frozen until Context Pack core stabilizes. Treat them as local validation, indexing, preview, and export data only.
+Skills and Agent Kits are advanced-preview, non-executing surfaces and frozen until Context Pack core stabilizes. Native Skills remain data-only. Future imported external Skill artifacts may be preserved, scanned, classified, and exported to compatible downstream tools without mutation or execution by Contextarr.
 
 Contextarr prepares Agent Kits. It does not run them.
 
@@ -164,7 +174,7 @@ Contextarr v0 must stay local-first, data-only, and review-first:
 - `pnpm trust-loop:verify` proves draft/composed/quarantine candidates, non-public records, secret records, and `never_export` records stay out of read-only MCP and default export preview surfaces.
 - Exposure Readiness is a read-only report. It does not approve packs, change export behavior, or widen MCP exposure.
 - Context Readiness is a read-only report layer; Local Observability exposes bounded local evidence metadata only, not product telemetry.
-- The scanner is a gate, not a guarantee; human review remains required before activation, export, or MCP exposure. No registry or marketplace exposure exists in the current product.
+- The scanner is a gate, not a guarantee; human review remains required before activation, export, or MCP exposure. No public registry or marketplace exposure exists in the current product.
 
 See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security-model.md), [docs/non-goals.md](docs/non-goals.md), and [docs/known-limitations.md](docs/known-limitations.md).
 
@@ -180,7 +190,7 @@ See [docs/security.md](docs/security.md), [docs/security-model.md](docs/security
 - Exposure Readiness v0 reports eligibility reasons only; it is not an enforcement or activation workflow.
 - Context Readiness currently has a per-pack read-only API report; Local Observability currently has bounded metadata-only event and MCP query-log reads.
 - Derived Index Adapters for vector stores, graph databases, RAG tools, and Graphify-style workflows are future exports only.
-- Skills and Agent Kits are advanced-preview data objects; they are data-only, not runtime features.
+- Skills and Agent Kits are advanced-preview, non-executing surfaces; Native Skills are data-only, while future imported external Skill artifacts may be preserved unmodified and unexecuted.
 - Public registry, marketplace, signing implementation, remote install, package publishing, cloud sync, and telemetry remain out of scope.
 
 See [docs/known-limitations.md](docs/known-limitations.md), [docs/known-issues.md](docs/known-issues.md), [docs/release-checklist.md](docs/release-checklist.md), and [RELEASE_NOTES.md](RELEASE_NOTES.md).

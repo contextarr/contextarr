@@ -12,6 +12,14 @@ The reviewed alpha set lives in `docs/screenshots/v0.1.0-alpha.1/` and is verifi
 pnpm screenshots:verify
 ```
 
+The homepage and Open Graph proof image is the wide Pack Library screenshot at `docs/screenshots/v0.1.0-alpha.1/pack-library-grid.png`. The public site copy at `apps/site/public/screenshots/contextarr-dashboard.png` must match it byte-for-byte and show the current verified dashboard count: 15 packs / 120 records / 8 skills.
+
+Run the public-surface guard after any screenshot, README, site, social, or release-copy update:
+
+```bash
+pnpm public-surface:verify
+```
+
 Required alpha screenshot slots:
 
 - Pack Library grid.
