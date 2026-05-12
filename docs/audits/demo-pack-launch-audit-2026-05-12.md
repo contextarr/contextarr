@@ -1,4 +1,4 @@
-﻿# Verification Ledger
+# Verification Ledger
 
 Generated: 2026-05-12 09:36:38 -03:00
 Root: `D:\Codex\contextarr`
@@ -694,4 +694,3 @@ All 15 demo packs validate with zero errors and zero warnings. Local source path
 ## Residual Risk
 
 Worktree remains intentionally dirty and should be reviewed as a PR before public launch. Demo content is synthetic and should receive one human content pass for tone, but validation, safety, source backing, and release gates are green.
-
