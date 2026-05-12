@@ -54,7 +54,7 @@ Suggested local-only files:
 
 | Time | Scene | Action | Narration |
 | --- | --- | --- | --- |
-| 0:00-0:30 | Cold AI fails | Ask one demo question with no context. | "A blank chat box can sound confident, but it does not know the reviewed system facts." |
+| 0:00-0:30 | Cold AI guesses | Ask one demo question with no context. | "A blank chat box can sound confident, but it does not know the reviewed system facts." |
 | 0:30-1:10 | Raw notes are not enough | Show the matching pack's raw note or README question. | "Raw notes contain clues, but they mix source material, review burden, and missing boundaries." |
 | 1:10-2:00 | Contextarr export | Run or show the matching Contextarr export. | "A Contextarr export packages approved records, source mapping, rules, and target formatting together." |
 | 2:00-3:15 | Contextarr succeeds | Ask the same question with the export. | "Now the answer can route through known records and say what it does not know." |

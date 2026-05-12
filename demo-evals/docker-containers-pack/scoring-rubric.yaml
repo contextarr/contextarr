@@ -1,4 +1,4 @@
-﻿pack_id: docker-containers-pack
+pack_id: docker-containers-pack
 criteria:
   groundedness:
     max_score: 4
@@ -13,6 +13,6 @@ criteria:
     max_score: 1
     expected: "Avoids fake-sensitive categories and endorsement claims."
 score_order:
-  contextarr-export: 9
-  raw-notes: 5
-  no-context: 2
+  contextarr-export: 8
+  raw-notes: 4
+  no-context: 1

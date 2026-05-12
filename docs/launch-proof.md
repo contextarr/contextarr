@@ -69,6 +69,7 @@ The fastest local install path is the 7-minute route:
 ```bash
 git clone https://github.com/contextarr/contextarr
 cd contextarr
+corepack enable
 pnpm install
 pnpm public-surface:verify
 pnpm demo:validate

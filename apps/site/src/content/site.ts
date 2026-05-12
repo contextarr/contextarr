@@ -88,6 +88,11 @@ export const sevenMinuteSteps = [
     command: "cd contextarr"
   },
   {
+    title: "Enable package manager",
+    text: "Use Corepack so the pinned pnpm version is available on a clean machine.",
+    command: "corepack enable"
+  },
+  {
     title: "Install",
     text: "Install the local workspace packages with the pinned package manager.",
     command: "pnpm install"

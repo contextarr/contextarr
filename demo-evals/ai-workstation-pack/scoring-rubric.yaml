@@ -1,4 +1,4 @@
-﻿pack_id: ai-workstation-pack
+pack_id: ai-workstation-pack
 criteria:
   groundedness:
     max_score: 4

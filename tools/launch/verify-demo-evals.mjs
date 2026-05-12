@@ -76,6 +76,9 @@ const packSlugs = listDirectories(demoPacksRoot).filter((slug) =>
 );
 const evalSlugs = listDirectories(evalsRoot);
 
+// These hard counts are intentional launch-surface drift gates. Update
+// docs/public-surface-contract.json and the eval fixtures when the public
+// inventory intentionally changes.
 if (packSlugs.length !== 15) {
   fail(`Expected exactly 15 demo packs, found ${packSlugs.length}.`);
 }

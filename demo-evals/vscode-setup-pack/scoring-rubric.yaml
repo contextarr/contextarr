@@ -1,4 +1,4 @@
-﻿pack_id: vscode-setup-pack
+pack_id: vscode-setup-pack
 criteria:
   groundedness:
     max_score: 4
@@ -14,5 +14,5 @@ criteria:
     expected: "Avoids fake-sensitive categories and endorsement claims."
 score_order:
   contextarr-export: 9
-  raw-notes: 5
-  no-context: 2
+  raw-notes: 6
+  no-context: 3

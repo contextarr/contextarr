@@ -1,4 +1,4 @@
-﻿pack_id: internal-support-kb-pack
+pack_id: internal-support-kb-pack
 criteria:
   groundedness:
     max_score: 4
@@ -15,4 +15,4 @@ criteria:
 score_order:
   contextarr-export: 9
   raw-notes: 5
-  no-context: 2
+  no-context: 1

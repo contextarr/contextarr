@@ -1,4 +1,4 @@
-﻿pack_id: jellyfin-media-server-pack
+pack_id: jellyfin-media-server-pack
 criteria:
   groundedness:
     max_score: 4
@@ -14,5 +14,5 @@ criteria:
     expected: "Avoids fake-sensitive categories and endorsement claims."
 score_order:
   contextarr-export: 9
-  raw-notes: 5
+  raw-notes: 6
   no-context: 2

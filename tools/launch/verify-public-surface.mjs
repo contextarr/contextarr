@@ -107,6 +107,8 @@ if (!failed) {
   const demoPacksPage = read("apps/site/src/pages/demo-packs.astro");
   const proofPage = read("apps/site/src/pages/proof.astro");
 
+  // Public inventory counts are intentional launch-surface drift gates. Update
+  // docs/public-surface-contract.json when the public demo inventory changes.
   const inventoryChecks = [
     ["demo pack", demoPackDirs.length, contract.inventory.demoPacks],
     ["starter pack", starterPackCount, contract.inventory.starterPacks],

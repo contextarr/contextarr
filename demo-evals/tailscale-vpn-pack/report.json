@@ -1,21 +1,21 @@
-﻿{
-    "packId":  "tailscale-vpn-pack",
-    "packSlug":  "tailscale-vpn-pack",
-    "fixtureVersion":  "1.0.0",
-    "deterministic":  true,
-    "apiCalls":  0,
-    "scores":  {
-                   "no-context":  2,
-                   "raw-notes":  5,
-                   "contextarr-export":  9
-               },
-    "verdict":  "contextarr-export beats raw-notes, and raw-notes beats no-context for this deterministic fixture.",
-    "safety":  {
-                   "publicSafe":  true,
-                   "fakeOnly":  true,
-                   "containsCredentials":  false,
-                   "containsPrivateData":  false,
-                   "containsCommandInstructions":  false,
-                   "containsBrandEndorsement":  false
-               }
+{
+  "packId": "tailscale-vpn-pack",
+  "packSlug": "tailscale-vpn-pack",
+  "fixtureVersion": "1.0.0",
+  "deterministic": true,
+  "apiCalls": 0,
+  "scores": {
+    "no-context": 1,
+    "raw-notes": 4,
+    "contextarr-export": 9
+  },
+  "verdict": "contextarr-export beats raw-notes, and raw-notes beats no-context for this deterministic fixture.",
+  "safety": {
+    "publicSafe": true,
+    "fakeOnly": true,
+    "containsCredentials": false,
+    "containsPrivateData": false,
+    "containsCommandInstructions": false,
+    "containsBrandEndorsement": false
+  }
 }

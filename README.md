@@ -87,6 +87,7 @@ Requirements:
 - Docker Desktop, optional, for the Compose preview.
 
 ```bash
+corepack enable
 pnpm install
 pnpm dev
 ```
@@ -124,6 +125,7 @@ Try Contextarr in 7 minutes:
 ```bash
 git clone https://github.com/contextarr/contextarr
 cd contextarr
+corepack enable
 pnpm install
 pnpm public-surface:verify
 pnpm demo:validate
