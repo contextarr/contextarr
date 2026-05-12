@@ -6,7 +6,7 @@ import Pipeline from "../components/Pipeline.astro";
 import LocalInstall from "../components/LocalInstall.astro";
 import AudiencePositioning from "../components/AudiencePositioning.astro";
 import ProofComparison from "../components/ProofComparison.astro";
-import { links } from "../content/site";
+import { contextFitRows, links } from "../content/site";
 ---
 
 <BaseLayout currentPath="/">
@@ -14,6 +14,46 @@ import { links } from "../content/site";
   <Pipeline />
   <PackAnatomy />
   <LocalInstall />
+  <section class="section proof-cta-section">
+    <div class="container route-split">
+      <div>
+        <p class="eyebrow">Launch proof</p>
+        <h2>See the proof before you trust the pitch.</h2>
+      </div>
+      <div class="route-copy">
+        <p>
+          The proof route shows the 5-minute demo, all 15 demo evals, trust receipts, and the No context / Raw notes /
+          Contextarr export comparison.
+        </p>
+        <div class="page-hero-actions">
+          <a class="button button-primary" href="/proof">See the proof</a>
+          <a class="button button-secondary" href="/run-locally#seven-minute-path">Try Contextarr in 7 minutes</a>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section section-tight fit-section">
+    <div class="container">
+      <div class="section-heading">
+        <p class="eyebrow">Where Contextarr fits</p>
+        <h2>Between blind chat and unreviewed notes.</h2>
+      </div>
+      <div class="fit-table fit-table-compact" role="table" aria-label="Where Contextarr fits">
+        <div class="fit-row fit-row-head" role="row">
+          <span role="columnheader">Approach</span>
+          <span role="columnheader">Fit</span>
+          <span role="columnheader">Result</span>
+        </div>
+        {contextFitRows.map((row) => (
+          <div class="fit-row" role="row">
+            <span role="cell">{row.option}</span>
+            <span role="cell">{row.fit}</span>
+            <span role="cell">{row.outcome}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
   <AudiencePositioning />
   <ProofComparison />
 

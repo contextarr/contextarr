@@ -22,7 +22,7 @@ review_status: approved
 
 ## Summary
 
-Implementation Rules describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
+Implementation Rules describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs. These rules turn a vague request into a bounded implementation brief rather than a broad rewrite.
 
 ## Key Facts
 
@@ -31,6 +31,23 @@ Implementation Rules describes a fictional TypeScript repository named Meridian 
 | Scope | This record keeps agent instructions scoped to a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. | Keeps the pack specific without exposing private operational data. |
 | Review use | It is synthetic, public-safe, and intended to make target exports more useful. | Keeps the pack specific without exposing private operational data. |
 | AI value | Unreviewed or sensitive details stay out of default exports. | Keeps the pack specific without exposing private operational data. |
+
+## Brief Requirements
+
+| Brief field | Public-safe content |
+| --- | --- |
+| Objective | One UI behavior to fix, stated in user-visible terms. |
+| Scope | The fictional surface, component family, or record group involved. |
+| Non-goals | No publishing, deployment, credential handling, large redesign, or unrelated cleanup. |
+| Evidence | Reviewed records and raw notes that justify the implementation direction. |
+| Verification | Targeted validation expectation described without executable commands. |
+
+## Agent Hand-Off Rules
+
+- Preserve existing user-authored work and treat unknown ownership as a reason to inspect before editing.
+- Keep copy changes aligned with known limitations and implementation status.
+- When a pack-format behavior changes, update fixtures and validator expectations together.
+- Final reports should separate changed files, behavior improved, validation performed, and residual concerns.
 
 ## Important Boundaries
 

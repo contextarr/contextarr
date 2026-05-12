@@ -31,6 +31,17 @@ The fictional support team keeps responses concise, evidence-backed, and free of
 | Give one next step | Keep customer action clear |
 | Preserve tone | Be calm, direct, and helpful |
 
+## Boundary Examples
+
+| Internal signal | Customer-safe wording pattern | Avoid promising |
+|---|---|---|
+| Tier-two review needed | The team is reviewing the documented support path. | Do not promise a fix time or named owner. |
+| Known issue suspected | This may match a known pattern under review. | Do not cite internal incident labels. |
+| Missing article | The available guidance does not fully cover this case. | Do not invent a procedure. |
+| Product limitation | The current documented behavior does not support that request. | Do not imply roadmap commitments. |
+
+When escalation is recommended, the assistant should produce a concise handoff summary with symptom, reviewed article, missing detail, and safe next question. It should leave private ticket notes, customer history, and internal priority language out of the customer-facing response.
+
 ## Notes
 
 This record is safe to export because it contains no real customers, accounts, or incidents.

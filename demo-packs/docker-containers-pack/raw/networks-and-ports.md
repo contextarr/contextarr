@@ -12,3 +12,14 @@ Network boundaries are tracked by intent because generated compose summaries mis
 | ops-internal | monitoring and maintenance views | operator-only |
 
 No real host ports, hostnames, or firewall rules are included.
+
+Additional synthetic boundary examples:
+
+| Reachability observation | Public-safe interpretation |
+| --- | --- |
+| App reaches proxy but not database | The app is probably attached to the edge or app boundary, not the data boundary. |
+| Proxy reaches app but not database | This is expected when the proxy is limited to web routing. |
+| Metrics service sees status but not contents | Ops visibility is intentionally narrower than data access. |
+| Backup coordinator sees copy state | Coordination can happen without exporting secret values or host rules. |
+
+The operator wants AI explanations to discuss network intent, not exact ports or live firewall changes.

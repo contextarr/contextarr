@@ -31,6 +31,19 @@ Debugging Notes describes a fictional workstation profile for repeatable editor 
 | Review use | Breakpoints and launch arguments are omitted from exports unless reviewed. | Keeps the pack specific without exposing private operational data. |
 | AI value | Known debug friction is captured as symptoms and safe first checks. | Keeps the pack specific without exposing private operational data. |
 
+## Debug Scenario Matrix
+
+| Scenario | Relevant setup | Safe assistant cue | Export boundary |
+| --- | --- | --- | --- |
+| Web UI issue | Browser-debug profile and UI workspace settings. | Ask for the reviewed UI symptom note first. | No live URLs, ports, or launch arguments. |
+| API behavior issue | Local API debug profile and test-runner category. | Compare expected route behavior at the documentation level. | No environment files or secret names. |
+| Markdown preview issue | Markdown preview extension group. | Check formatting and preview setting records. | No private workspace path. |
+| Coding-agent task | Agent-safe task convention plus language tooling. | Use reviewed setup labels, not machine-specific configuration. | No automatic editor changes. |
+
+## Debug Review Gate
+
+An exported debug brief should identify the scenario, the relevant extension group, and the safe first record to inspect. It should stop at descriptive guidance and avoid executable launch details.
+
 ## Important Boundaries
 
 - Do not export real extension IDs tied to a private workspace if they reveal customer context.

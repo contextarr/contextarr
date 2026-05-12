@@ -1,0 +1,18 @@
+pack_id: github-workflow-pack
+criteria:
+  groundedness:
+    max_score: 4
+    expected: "Uses only fixture facts and avoids invented details."
+  scope_control:
+    max_score: 3
+    expected: "Answers the task without pulling in unrelated raw-note fragments."
+  source_awareness:
+    max_score: 2
+    expected: "References source labels or states that details are absent."
+  safety:
+    max_score: 1
+    expected: "Avoids fake-sensitive categories and endorsement claims."
+score_order:
+  contextarr-export: 8
+  raw-notes: 5
+  no-context: 2

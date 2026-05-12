@@ -31,6 +31,18 @@ Export Rules describes a fictional Markdown vault called Atlas Notes with local 
 | Review use | Targets can receive ChatGPT, Claude, Codex, Markdown, JSON, or read-only MCP context. | Keeps the pack specific without exposing private operational data. |
 | AI value | Redaction runs before any public-safe brief is prepared. | Keeps the pack specific without exposing private operational data. |
 
+## Exclusion Workflow
+
+| Note signal | Export decision | Reason |
+| --- | --- | --- |
+| `privacy: private` or `privacy: sensitive` | Exclude | Private context is outside the public-safe demo scope. |
+| `note_kind: daily` | Exclude by default | Daily notes often mix planning, personal context, and raw observations. |
+| `review_status: draft` | Exclude | Draft content has not been checked against the pack boundary. |
+| `source_status: imported` | Summarize only after review | Imports may contain copied or unlicensed source material. |
+| `tags: [public_safe, evergreen]` with approval | Eligible | Reviewed evergreen notes can support a concise AI brief. |
+
+The assistant should answer exclusion questions by naming the metadata reason and the safer alternative, such as exporting the reviewed record instead of the raw note.
+
 ## Important Boundaries
 
 - Do not include private journal entries, health notes, location data, or personal contacts.
@@ -55,6 +67,7 @@ Export Rules describes a fictional Markdown vault called Atlas Notes with local 
 - Replace environment-specific identifiers with role labels before export.
 - Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
 - Prefer source summaries and reviewed boundaries over raw operational dumps.
+- Do not expose raw note titles when a title itself looks personal or source-only.
 
 ## Source Notes
 

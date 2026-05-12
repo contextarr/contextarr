@@ -29,6 +29,22 @@ Network documentation stays at policy level and omits exact ports or host firewa
 - `ops-internal` is for monitoring and backup coordination.
 - Any host-published port requires a justification note and review date.
 
+## Boundary Reasoning
+
+| Question | Safe answer pattern |
+| --- | --- |
+| App can reach proxy but not database | The app may share the edge or app network while lacking membership in the data network. |
+| Proxy can reach app but not storage | The proxy should only route web traffic and should not attach to stateful storage boundaries. |
+| Metrics can see health but not secrets | Ops visibility is separate from secret material and database contents. |
+| Backup coordinator sees data status | Backup coordination can be internal without exposing host ports or credentials. |
+
+## Fictional Network Map
+
+- `edge-proxy-demo` bridges `edge` to selected app-facing services.
+- `media-catalog-demo` attaches to `app-internal` and `data-internal` because it needs metadata storage.
+- `notes-vault-demo` attaches to `app-internal` only unless a reviewed data dependency exists.
+- `database-ledger-demo` stays on `data-internal` and has no direct edge relationship.
+
 ## Assistant Use
 
 Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -1,0 +1,21 @@
+{
+  "packId": "google-workspace-pack",
+  "packSlug": "google-workspace-pack",
+  "fixtureVersion": "1.0.0",
+  "deterministic": true,
+  "apiCalls": 0,
+  "scores": {
+    "no-context": 3,
+    "raw-notes": 6,
+    "contextarr-export": 9
+  },
+  "verdict": "contextarr-export beats raw-notes, and raw-notes beats no-context for this deterministic fixture.",
+  "safety": {
+    "publicSafe": true,
+    "fakeOnly": true,
+    "containsCredentials": false,
+    "containsPrivateData": false,
+    "containsCommandInstructions": false,
+    "containsBrandEndorsement": false
+  }
+}

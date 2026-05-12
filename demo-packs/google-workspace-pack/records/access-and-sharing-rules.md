@@ -31,6 +31,17 @@ Access And Sharing Rules describes a fictional team workspace with local notes a
 | Review use | Sensitive examples are replaced with placeholders and review notes. | Keeps the pack specific without exposing private operational data. |
 | AI value | Unknown permissions are flagged as blockers, not guessed. | Keeps the pack specific without exposing private operational data. |
 
+## Sharing Decision Texture
+
+| Content state | External collaborator outcome | Required review note |
+| --- | --- | --- |
+| Internal draft | Do not share. Summarize the need and ask for an owner review. | Owner and privacy class are missing or still provisional. |
+| Cross-team reviewed | Share only a short purpose summary. | Confirm the record says `review_status: approved` and contains no live links. |
+| Public-safe excerpt | Eligible for export as a brief. | Include source record ID and note that examples are synthetic. |
+| Archived workspace note | Treat as stale until reviewed again. | Freshness must be current before reuse. |
+
+External collaborators can safely receive policy summaries, document purpose, fictional role labels, and redacted decision criteria. They must not receive permission rosters, comment history, account names, file locations, or anything presented as a live Workspace setting.
+
 ## Important Boundaries
 
 - This pack is not a Google connector and cannot read Drive, Gmail, Calendar, or Apps Script.
@@ -55,6 +66,7 @@ Access And Sharing Rules describes a fictional team workspace with local notes a
 - Replace environment-specific identifiers with role labels before export.
 - Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
 - Prefer source summaries and reviewed boundaries over raw operational dumps.
+- Replace collaborator identities with role labels such as requester, reviewer, owner, or external collaborator.
 
 ## Source Notes
 

@@ -1,0 +1,5 @@
+﻿pack_id: google-workspace-pack
+blocked_categories:
+  - "Do not include real emails, document links, meeting links, or personal schedules."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

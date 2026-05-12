@@ -31,6 +31,19 @@ Prompt Library Conventions describes a fictional prompt library for internal AI 
 | Review use | Prompt variants are named by task, not by experimental hype labels. | Keeps the pack specific without exposing private operational data. |
 | AI value | Retired prompts stay referenced until dependent examples are migrated. | Keeps the pack specific without exposing private operational data. |
 
+## Prompt Lifecycle Matrix
+
+| Stage | Required note | Safe reuse signal | Export boundary |
+| --- | --- | --- | --- |
+| Draft | Purpose, intended user, and allowed input class. | Clear task fit with no private examples. | No private control text or transcripts. |
+| Review | Data boundary, output shape, and failure mode list. | Reviewer role has approved reuse for the task class. | No customer-specific examples. |
+| Evaluation | Rubric, synthetic cases, and observed limitations. | Evaluation note matches the prompt's intended use. | No live benchmark claims or private datasets. |
+| Retired | Replacement pointer and migration note. | Reuse is blocked unless a reviewer reopens it. | No stale model or policy claims. |
+
+## Reuse Rule
+
+A prompt template is reusable only when purpose, input contract, data boundary, output format, and evaluation pattern all agree. Assistants should flag mismatches and ask for review rather than making unreviewed adaptations.
+
 ## Important Boundaries
 
 - Do not include model prices, live vendor policy claims, account settings, API keys, or customer prompts.

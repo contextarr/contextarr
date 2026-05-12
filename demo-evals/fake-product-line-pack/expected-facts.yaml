@@ -1,0 +1,11 @@
+﻿pack_id: fake-product-line-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional line has Core, Plus, and Studio tiers."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Compatibility notes are framed as buyer guidance, not warranty promises."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

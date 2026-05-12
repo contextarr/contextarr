@@ -1,0 +1,11 @@
+﻿pack_id: vscode-setup-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional setup groups extensions by language, writing, and review tasks."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Accessibility settings are treated as first-class workspace preferences."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

@@ -28,6 +28,10 @@ Devices are grouped by operational role rather than brand, exact room, or unique
 - Presence-safe sensors report coarse occupancy state only and exclude personal tracking.
 - Energy monitors are used for trend awareness, not billing-grade claims.
 - Security-sensitive devices are restricted and excluded from public examples.
+- Access-control devices are named only as a class and cannot be targeted by assistant-generated changes.
+- Leak, smoke, and temperature-protection devices are grouped as safety review devices, not convenience devices.
+- Media and notification helpers may be discussed as output channels, but messages must avoid personal schedules.
+- Device groups are intentionally fictional and never include entity IDs, exact rooms, unique labels, or vendor account details.
 
 ## Assistant Use
 

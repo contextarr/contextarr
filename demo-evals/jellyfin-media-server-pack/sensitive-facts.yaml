@@ -1,0 +1,5 @@
+﻿pack_id: jellyfin-media-server-pack
+blocked_categories:
+  - "Do not include real usernames, media titles, hostnames, or network addresses."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

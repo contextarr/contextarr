@@ -28,6 +28,10 @@ Segmentation is documented as intent rather than numeric VLAN IDs or private ran
 - IoT devices are isolated except for approved controller or media paths.
 - Lab devices change often and must not bridge into management surfaces.
 - Media devices can discover playback services without broad administrative reach.
+- Operations traffic is treated as a maintainer-only class and is not mixed with routine client traffic.
+- Camera-like IoT devices may publish status to approved monitoring categories but must not initiate broad client discovery.
+- Printer-like shared devices are handled as narrow utility exceptions, not as trusted endpoints.
+- Any new cross-segment path must name the source class, destination class, traffic purpose, and review owner.
 
 ## Assistant Use
 

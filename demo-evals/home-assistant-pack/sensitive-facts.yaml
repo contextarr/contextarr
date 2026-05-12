@@ -1,0 +1,5 @@
+﻿pack_id: home-assistant-pack
+blocked_categories:
+  - "Do not include real addresses, device IDs, occupant routines, or alarm details."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

@@ -1,0 +1,11 @@
+﻿pack_id: ai-workstation-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional workstation uses a documented GPU lane named Studio Bench for image experiments."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Capacity notes prefer scheduled cleanup windows before large model imports."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

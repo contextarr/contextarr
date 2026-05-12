@@ -31,6 +31,17 @@ Frontmatter Rules describes a fictional Markdown vault called Atlas Notes with l
 | Review use | Missing privacy defaults to review-needed in examples. | Keeps the pack specific without exposing private operational data. |
 | AI value | Never-export tags override target profile convenience. | Keeps the pack specific without exposing private operational data. |
 
+## Frontmatter Taxonomy
+
+| Field | Allowed demo values | Export meaning |
+| --- | --- | --- |
+| review_status | draft, needs_review, approved, stale | Only approved records can appear in a public-safe brief. |
+| privacy | public_safe, private, sensitive, source_only | Anything except public_safe is excluded. |
+| source_status | source_backed, inferred, imported, unsourced | Inferred or unsourced notes need review before export. |
+| note_kind | evergreen, project, daily, journal, import | Daily, journal, and import notes are excluded by default. |
+
+If privacy is missing, the assistant should treat the note as review-needed. If a tag says `never-export`, that tag wins over every other field, including an approved review status.
+
 ## Important Boundaries
 
 - Do not include private journal entries, health notes, location data, or personal contacts.
@@ -55,6 +66,7 @@ Frontmatter Rules describes a fictional Markdown vault called Atlas Notes with l
 - Replace environment-specific identifiers with role labels before export.
 - Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
 - Prefer source summaries and reviewed boundaries over raw operational dumps.
+- Use taxonomy fields to explain exclusion decisions, not to infer private note content.
 
 ## Source Notes
 

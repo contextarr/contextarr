@@ -1,7 +1,7 @@
 ---
 import LocalInstall from "../components/LocalInstall.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { links, runLocallySteps } from "../content/site";
+import { links, runLocallySteps, sevenMinuteSteps } from "../content/site";
 ---
 
 <BaseLayout
@@ -17,10 +17,39 @@ import { links, runLocallySteps } from "../content/site";
         The Docker preview runs the dashboard against public-safe demo packs. Source files stay in the checkout, and
         Contextarr binds to localhost by default.
       </p>
+      <div class="page-hero-actions">
+        <a class="button button-primary" href="#seven-minute-path">Try Contextarr in 7 minutes</a>
+        <a class="button button-secondary" href="/proof">See the proof</a>
+      </div>
     </div>
   </section>
 
   <LocalInstall />
+
+  <section class="section seven-minute-section" id="seven-minute-path">
+    <div class="container">
+      <div class="section-heading">
+        <p class="eyebrow">Try Contextarr in 7 minutes</p>
+        <h2>The shortest honest proof path.</h2>
+        <p>
+          Use this lane when you want to see the public-safe loop quickly: install, verify, run, inspect, and create a
+          Contextarr export without any public action.
+        </p>
+      </div>
+      <div class="seven-minute-list">
+        {sevenMinuteSteps.map((step, index) => (
+          <article class="seven-minute-step">
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <h2>{step.title}</h2>
+              <p>{step.text}</p>
+              <pre><code>{step.command}</code></pre>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
 
   <section class="section section-tight">
     <div class="container">
