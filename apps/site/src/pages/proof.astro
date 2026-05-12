@@ -1,0 +1,126 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  contextFitRows,
+  demoPackCards,
+  launchProofReceipts,
+  links,
+  proofDemoSummary
+} from "../content/site";
+---
+
+<BaseLayout
+  title="Launch proof | Contextarr"
+  description="Contextarr launch proof: 5-minute demo path, 15 demo evals, export comparison, trust receipts, and local validation commands."
+  currentPath="/proof"
+>
+  <section class="page-hero proof-page-hero">
+    <div class="container">
+      <p class="eyebrow">Launch proof</p>
+      <h1>Cold AI fails. Contextarr export succeeds.</h1>
+      <p>
+        The launch proof is a local-only demo layer for showing that raw notes become reviewed, source-backed,
+        target-ready context. It compares No context, Raw notes, and a Contextarr export without deployment,
+        external AI APIs, telemetry, or agent execution.
+      </p>
+      <div class="page-hero-actions">
+        <a class="button button-primary" href={links.launchProof}>Read docs/launch-proof.md</a>
+        <a class="button button-secondary" href="/run-locally">Try Contextarr in 7 minutes</a>
+        <a class="button button-quiet" href="/demo-packs">View demo evals</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container proof-split">
+      <div class="section-heading">
+        <p class="eyebrow">5-minute proof demo</p>
+        <h2>Show the failure, then show the receipt.</h2>
+        <p>
+          The proof path is intentionally small: one question, one pack, one export, and the visible evidence that the
+          answer came from reviewed files rather than a pasted prompt guess.
+        </p>
+      </div>
+      <ol class="proof-timeline">
+        {proofDemoSummary.map((item) => <li>{item}</li>)}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section proof-comparison-section">
+    <div class="container">
+      <div class="section-heading">
+        <p class="eyebrow">Comparison</p>
+        <h2>No context / Raw notes / Contextarr export.</h2>
+        <p>
+          Contextarr fits between a blank chat box and a pile of unreviewed notes: it makes the useful context portable
+          while keeping review, source maps, and boundaries visible.
+        </p>
+      </div>
+      <div class="fit-table" role="table" aria-label="Where Contextarr fits">
+        <div class="fit-row fit-row-head" role="row">
+          <span role="columnheader">Approach</span>
+          <span role="columnheader">Fit</span>
+          <span role="columnheader">Likely result</span>
+        </div>
+        {contextFitRows.map((row) => (
+          <div class="fit-row" role="row">
+            <span role="cell">{row.option}</span>
+            <span role="cell">{row.fit}</span>
+            <span role="cell">{row.outcome}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-tight">
+    <div class="container">
+      <div class="section-heading">
+        <p class="eyebrow">Demo evals</p>
+        <h2>15 public-safe questions with proof expectations.</h2>
+        <p>
+          Each card names the cold-AI question, the best export profile, and the proof eval a reviewer should expect.
+        </p>
+      </div>
+      <div class="demo-pack-grid proof-eval-grid">
+        {demoPackCards.map((pack) => (
+          <article class="demo-pack-card proof-eval-card" id={pack.slug}>
+            <p class="demo-pack-category">{pack.category}</p>
+            <h2>{pack.name}</h2>
+            <dl class="proof-eval-meta">
+              <div>
+                <dt>Demo question</dt>
+                <dd>{pack.demoQuestion}</dd>
+              </div>
+              <div>
+                <dt>Best export</dt>
+                <dd>{pack.bestExport}</dd>
+              </div>
+              <div>
+                <dt>Proof eval</dt>
+                <dd>{pack.proofEval}</dd>
+              </div>
+            </dl>
+            <div class="demo-pack-links">
+              <a class="text-link" href={`/demo-packs#${pack.slug}`}>Open demo pack card</a>
+              <a class="text-link" href={`${links.demoPacks}/${pack.slug}`}>Open pack receipt</a>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section route-band">
+    <div class="container proof-split">
+      <div>
+        <p class="eyebrow">Trust receipts</p>
+        <h2>What the launch proof can honestly claim.</h2>
+      </div>
+      <ul class="receipt-list">
+        {launchProofReceipts.map((receipt) => <li>{receipt}</li>)}
+      </ul>
+    </div>
+  </section>
+</BaseLayout>

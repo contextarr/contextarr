@@ -1,0 +1,5 @@
+﻿pack_id: fake-product-line-pack
+blocked_categories:
+  - "Do not include real customer names, sales figures, contracts, or endorsements."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

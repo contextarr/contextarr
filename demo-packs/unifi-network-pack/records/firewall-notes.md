@@ -28,6 +28,10 @@ Firewall notes record intent, review ownership, and risk category without rule e
 - Lab-to-core exceptions expire at the end of a test window.
 - Media discovery exceptions are narrow and documented by purpose.
 - Firewall changes require a plain-English reason and rollback expectation.
+- Allowed paths are described by traffic class, not by numeric ports or copied rule syntax.
+- Remote-support traffic is marked review-only unless the maintainer has confirmed the support window is active.
+- Deny decisions should preserve the business reason, such as guest privacy, IoT containment, or management-plane protection.
+- Exceptions that support casting, printing, or controller reachability must identify the owning segment and expiry posture.
 
 ## Assistant Use
 

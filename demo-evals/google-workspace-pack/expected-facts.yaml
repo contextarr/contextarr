@@ -1,0 +1,11 @@
+﻿pack_id: google-workspace-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional workspace uses shared-drive categories for team, archive, and reports."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Calendar conventions distinguish focus blocks from external meetings."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

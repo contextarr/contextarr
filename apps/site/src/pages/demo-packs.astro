@@ -22,7 +22,7 @@ import { demoPackCards, links } from "../content/site";
   <section class="section section-tight">
     <div class="container demo-pack-grid">
       {demoPackCards.map((pack) => (
-        <article class="demo-pack-card">
+        <article class="demo-pack-card" id={pack.slug}>
           <div>
             <p class="demo-pack-category">{pack.category}</p>
             <h2>{pack.name}</h2>
@@ -42,7 +42,24 @@ import { demoPackCards, links } from "../content/site";
               <dd>{pack.trust}</dd>
             </div>
           </dl>
-          <a class="text-link" href={`${links.demoPacks}/${pack.slug}`}>View pack in repo</a>
+          <dl class="proof-eval-meta demo-pack-proof-meta">
+            <div>
+              <dt>Demo question</dt>
+              <dd>{pack.demoQuestion}</dd>
+            </div>
+            <div>
+              <dt>Best export</dt>
+              <dd>{pack.bestExport}</dd>
+            </div>
+            <div>
+              <dt>Proof eval</dt>
+              <dd>{pack.proofEval}</dd>
+            </div>
+          </dl>
+          <div class="demo-pack-links">
+            <a class="text-link" href={`/proof#${pack.slug}`}>Open proof eval</a>
+            <a class="text-link" href={`${links.demoPacks}/${pack.slug}`}>View pack in repo</a>
+          </div>
         </article>
       ))}
     </div>

@@ -192,6 +192,37 @@ pnpm compatibility:verify
 pnpm security:verify
 ```
 
+### Stage 2.5: Launch-Proof Layer
+
+Status: immediate bounded track.
+
+Goal:
+
+- Make the first public proof undeniable without widening runtime scope.
+- Show the cold-AI-fails / Contextarr-succeeds demo with local receipts.
+- Keep launch proof separate from future hosted, marketplace, registry, or agent-runtime work.
+
+Build:
+
+- Add `/proof` with a 5-minute proof summary, 15 demo eval cards, a No context / Raw notes / Contextarr export comparison, trust receipts, and a link to `docs/launch-proof.md`.
+- Add a small homepage "See the proof" CTA and compact "Where Contextarr fits" comparison.
+- Add the dominant "Try Contextarr in 7 minutes" route on `/run-locally`.
+- Document Context Pack anatomy, launch proof receipts, demo script, and local video-production boundaries.
+- Update the public-surface contract so proof language is verified.
+
+Gate:
+
+- No runtime, API, CLI, MCP, deployment, provider, or public-launch mutation.
+- Proof copy stays local-first, public-safe, and honest about current limitations.
+- `pnpm public-surface:verify` and `pnpm site:verify` pass.
+
+Primary verification:
+
+```bash
+pnpm public-surface:verify
+pnpm site:verify
+```
+
 ### Stage 3: Context Readiness and Local Observability
 
 Status: runtime foundation started. Current scope is a per-pack read-only readiness report plus bounded metadata-only Local Observability reads.

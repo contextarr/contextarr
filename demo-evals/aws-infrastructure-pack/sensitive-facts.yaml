@@ -1,0 +1,5 @@
+﻿pack_id: aws-infrastructure-pack
+blocked_categories:
+  - "Do not include account numbers, access keys, resource ARNs, or real region usage."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

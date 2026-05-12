@@ -18,6 +18,8 @@ export const links = {
   mcp: "https://github.com/contextarr/contextarr/blob/main/docs/mcp.md",
   cli: "https://github.com/contextarr/contextarr/blob/main/docs/cli-agent-mode.md",
   api: "https://github.com/contextarr/contextarr/blob/main/docs/api.md",
+  launchProof: "https://github.com/contextarr/contextarr/blob/main/docs/launch-proof.md",
+  contextPackAnatomy: "https://github.com/contextarr/contextarr/blob/main/docs/context-pack-anatomy.md",
   packAuthoring: "https://github.com/contextarr/contextarr/blob/main/docs/pack-authoring.md",
   exportProfiles: "https://github.com/contextarr/contextarr/blob/main/docs/export-profiles.md",
   contributing: "https://github.com/contextarr/contextarr/blob/main/CONTRIBUTING.md",
@@ -72,6 +74,44 @@ export const installCommands = [
   "git clone https://github.com/contextarr/contextarr",
   "cd contextarr",
   "docker compose up"
+];
+
+export const sevenMinuteSteps = [
+  {
+    title: "Clone",
+    text: "Get the public checkout on your machine.",
+    command: "git clone https://github.com/contextarr/contextarr"
+  },
+  {
+    title: "Enter",
+    text: "Work from the repo root so demo packs and scripts resolve.",
+    command: "cd contextarr"
+  },
+  {
+    title: "Install",
+    text: "Install the local workspace packages with the pinned package manager.",
+    command: "pnpm install"
+  },
+  {
+    title: "Verify",
+    text: "Run the public-surface and demo-pack checks before trusting the demo.",
+    command: "pnpm public-surface:verify && pnpm demo:validate"
+  },
+  {
+    title: "Start",
+    text: "Launch the local Docker preview against public-safe packs.",
+    command: "docker compose up"
+  },
+  {
+    title: "Inspect",
+    text: "Open the dashboard, then visit Demo Packs and Proof.",
+    command: "http://127.0.0.1:3210"
+  },
+  {
+    title: "Export",
+    text: "Generate a Contextarr export or human-readable HTML from a demo pack.",
+    command: "pnpm --filter @contextarr/cli contextarr export demo-packs/ai-workstation-pack --profile codex"
+  }
 ];
 
 export const proofComparisonRows = [
@@ -146,6 +186,40 @@ export const runLocallySteps = [
   }
 ];
 
+export const launchProofReceipts = [
+  "15 demo packs with 120 reviewed records and 8 export profiles per pack.",
+  "Contextarr export formats include ChatGPT, Claude, Codex, Markdown, JSON records, AGENTS.md, CLAUDE.md, and llms.txt.",
+  "human-readable HTML rendering works from local files.",
+  "read-only MCP exposes approved context without shell, network, mutation, or agent runtime behavior.",
+  "Validation, scanner, screenshots, Docker, site, and release gates exist as repo-local commands."
+];
+
+export const contextFitRows = [
+  {
+    option: "No context",
+    fit: "Fast but unreliable",
+    outcome: "The AI guesses from the prompt and misses source boundaries."
+  },
+  {
+    option: "Raw notes",
+    fit: "Useful but messy",
+    outcome: "The AI sees details, but stale notes, drafts, and private material can mix together."
+  },
+  {
+    option: "Contextarr export",
+    fit: "Reviewed and portable",
+    outcome: "Approved records, source mapping, redaction rules, and the target profile travel together."
+  }
+];
+
+export const proofDemoSummary = [
+  "Start with one question a cold AI cannot answer safely.",
+  "Show the raw notes are useful but unstructured.",
+  "Run the validated Contextarr export for the matching demo pack.",
+  "Compare the answer against source-backed records and trust receipts.",
+  "Close on local-only boundaries: no public deploy, no external AI API, no agent execution."
+];
+
 export const demoPackCards = [
   {
     name: "AI Workstation Pack",
@@ -154,7 +228,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Local AI workstation context, tools, models, and operating notes."
+    text: "Local AI workstation context, tools, models, and operating notes.",
+    demoQuestion: "Which local AI service should I inspect first if inference feels slow?",
+    bestExport: "Codex or Claude for troubleshooting briefs; Markdown for human review.",
+    proofEval: "Answer should route through stack, capacity, safety, and workflow records before naming a first inspection point."
   },
   {
     name: "Claude Code Project Pack",
@@ -163,7 +240,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Project handoff context for coding agents and implementation briefs."
+    text: "Project handoff context for coding agents and implementation briefs.",
+    demoQuestion: "Write a Codex implementation brief for a scoped UI fix.",
+    bestExport: "Claude or Codex for implementation briefs; AGENTS.md for persistent project guidance.",
+    proofEval: "Answer should include scope, files, constraints, verification, and no unrelated runtime changes."
   },
   {
     name: "Docker Containers Pack",
@@ -172,7 +252,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Container inventory, stack notes, service boundaries, and troubleshooting context."
+    text: "Container inventory, stack notes, service boundaries, and troubleshooting context.",
+    demoQuestion: "Why can one app reach the proxy but not the database?",
+    bestExport: "Codex or Claude for troubleshooting; Markdown for operator review.",
+    proofEval: "Answer should distinguish proxy, network, environment, secret, and volume boundaries."
   },
   {
     name: "Internal Support KB Pack",
@@ -181,7 +264,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Support knowledge base structure, SOPs, review state, and safe handoff context."
+    text: "Support knowledge base structure, SOPs, review state, and safe handoff context.",
+    demoQuestion: "How should a tier-two escalation be routed?",
+    bestExport: "Codex or Markdown for support drafting; JSON records for metadata validation.",
+    proofEval: "Answer should separate safe response wording from escalation policy and review ownership."
   },
   {
     name: "Obsidian Vault Pack",
@@ -190,7 +276,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Markdown vault context for source-backed notes and export-ready records."
+    text: "Markdown vault context for source-backed notes and export-ready records.",
+    demoQuestion: "Which notes should be excluded before export?",
+    bestExport: "Markdown for human-readable AI briefs; JSON records for metadata-aware review.",
+    proofEval: "Answer should cite frontmatter, export rules, source state, and safer reviewed-record alternatives."
   },
   {
     name: "Jellyfin Media Server Pack",
@@ -199,7 +288,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Community",
-    text: "Media server setup, library notes, maintenance context, and support-ready exports."
+    text: "Media server setup, library notes, maintenance context, and support-ready exports.",
+    demoQuestion: "What should be checked before changing transcoding settings?",
+    bestExport: "Markdown or Codex for operational review; JSON records for boundary validation.",
+    proofEval: "Answer should cover hardware capability, client behavior, storage, and rollback notes."
   },
   {
     name: "UniFi Network Pack",
@@ -208,7 +300,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Network topology, devices, constraints, and troubleshooting context."
+    text: "Network topology, devices, constraints, and troubleshooting context.",
+    demoQuestion: "Does the VLAN intent allow this traffic class?",
+    bestExport: "Codex or Markdown for policy review; JSON records for local validation.",
+    proofEval: "Answer should compare VLAN intent, firewall notes, SSID policy, and maintenance cadence."
   },
   {
     name: "GitHub Workflow Pack",
@@ -217,7 +312,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Repository workflow, PR habits, release gates, and automation notes."
+    text: "Repository workflow, PR habits, release gates, and automation notes.",
+    demoQuestion: "Is this PR ready to release, or only ready to review?",
+    bestExport: "Codex for coding-agent workflow; Markdown for maintainer release review.",
+    proofEval: "Answer should separate review readiness from release readiness and list missing receipts."
   },
   {
     name: "AWS Infrastructure Pack",
@@ -226,7 +324,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Cloud architecture, account boundaries, operational notes, and AI handoff context."
+    text: "Cloud architecture, account boundaries, operational notes, and AI handoff context.",
+    demoQuestion: "What is the safe review path before changing backup or cost policy?",
+    bestExport: "Codex or Claude for infrastructure review; Markdown for public-safe summary.",
+    proofEval: "Answer should start with backup, cost, IAM, and environment policy before any change path."
   },
   {
     name: "Home Assistant Pack",
@@ -235,7 +336,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Community",
-    text: "Smart home systems, automations, device context, and support notes."
+    text: "Smart home systems, automations, device context, and support notes.",
+    demoQuestion: "Which automation class needs human review before changing?",
+    bestExport: "ChatGPT or Markdown for automation review; JSON records for validation.",
+    proofEval: "Answer should classify automations by risk, device group, schedule, and manual approval need."
   },
   {
     name: "Google Workspace Pack",
@@ -244,7 +348,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Workspace administration context, collaboration patterns, and operating notes."
+    text: "Workspace administration context, collaboration patterns, and operating notes.",
+    demoQuestion: "What can be shared with an external collaborator safely?",
+    bestExport: "llms.txt or Markdown for sharing guidance; JSON records for source mapping.",
+    proofEval: "Answer should use access rules, shared-drive policy, retention notes, and review state."
   },
   {
     name: "Tailscale VPN Pack",
@@ -253,7 +360,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Verified",
-    text: "Tailnet context, remote access notes, policy boundaries, and support exports."
+    text: "Tailnet context, remote access notes, policy boundaries, and support exports.",
+    demoQuestion: "Which stale-device or subnet-route fact needs review?",
+    bestExport: "Claude or Codex for policy review; Markdown for public-safe route summary.",
+    proofEval: "Answer should flag stale devices, subnet route intent, sharing rules, and review cadence."
   },
   {
     name: "VS Code Setup Pack",
@@ -262,7 +372,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Editor setup, extensions, local workflow, and coding-agent context."
+    text: "Editor setup, extensions, local workflow, and coding-agent context.",
+    demoQuestion: "Which extension/debug setup is relevant for a coding-agent task?",
+    bestExport: "Codex or AGENTS.md for coding-agent setup; Markdown for human overview.",
+    proofEval: "Answer should map task type to extensions, debug habits, workspace rules, and avoided assumptions."
   },
   {
     name: "OpenAI Prompt Engineering Pack",
@@ -271,7 +384,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Prompting practices, reusable patterns, constraints, and target-specific exports."
+    text: "Prompting practices, reusable patterns, constraints, and target-specific exports.",
+    demoQuestion: "How should a prompt template be reviewed before reuse?",
+    bestExport: "ChatGPT or Codex for prompt-review briefs; Markdown for lifecycle summaries.",
+    proofEval: "Answer should cover purpose, data boundary, rubric fit, model policy, and retirement notes."
   },
   {
     name: "Product Line Pack",
@@ -280,7 +396,10 @@ export const demoPackCards = [
     records: 8,
     profiles: 8,
     trust: "Curated",
-    text: "Public-safe fictional product context for testing KB, support, and handoff workflows."
+    text: "Public-safe fictional product context for testing KB, support, and handoff workflows.",
+    demoQuestion: "Which fictional buyer segment fits the product best and what should support avoid promising?",
+    bestExport: "ChatGPT or Claude for buyer-fit demos; JSON records for product-boundary checks.",
+    proofEval: "Answer should cite buyer guide, model comparison, compatibility, FAQ, and support matrix boundaries."
   }
 ];
 

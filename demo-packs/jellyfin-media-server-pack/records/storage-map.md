@@ -28,6 +28,10 @@ Storage is documented by role and recoverability without host paths.
 - `transcode-cache` is disposable and should not be backed up.
 - `incoming-review` holds newly added media until naming and metadata are checked.
 - `offline-copy` represents a disconnected backup target verified during maintenance.
+- `library-archive` represents read-mostly media that should not be modified by assistant suggestions.
+- `metadata-state` has a higher recovery priority than cache because it preserves user-facing library organization.
+- Storage support boundaries are described by role, recoverability, and review owner instead of mount paths.
+- Any cleanup recommendation must distinguish cache, incoming review, metadata state, and primary media roles.
 
 ## Assistant Use
 

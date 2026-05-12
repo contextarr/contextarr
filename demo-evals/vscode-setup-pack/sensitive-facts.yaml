@@ -1,0 +1,5 @@
+﻿pack_id: vscode-setup-pack
+blocked_categories:
+  - "Do not include real usernames, workspace paths, license keys, or private extension settings."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

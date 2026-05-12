@@ -31,6 +31,19 @@ Evaluation Patterns describes a fictional prompt library for internal AI workflo
 | Review use | Scores are advisory and tied to a dated review. | Keeps the pack specific without exposing private operational data. |
 | AI value | Benchmarks are kept local and reproducible, not vendor claims. | Keeps the pack specific without exposing private operational data. |
 
+## Evaluation Matrix
+
+| Evaluation area | Synthetic evidence | Review question | Export boundary |
+| --- | --- | --- | --- |
+| Task fit | Three fake task classes mapped to prompt purpose. | Does the prompt solve the same kind of task? | No private user transcripts. |
+| Data boundary | Allowed, restricted, and prohibited input classes. | Does the template require data it should not see? | No sensitive examples or datasets. |
+| Output quality | Rubric labels for accuracy, tone, structure, and refusal clarity. | Does the output meet the expected format? | No vendor ranking claims. |
+| Failure mode | Known ambiguity, overreach, and missing-context risks. | What should require reviewer attention? | No private control-prompt excerpts. |
+
+## Review Use
+
+Evaluation notes are a gate before reuse, not proof that a prompt is universally safe. A safe answer should cite the rubric area, note the data boundary, and identify whether a fresh review is required for the target task.
+
 ## Important Boundaries
 
 - Do not include model prices, live vendor policy claims, account settings, API keys, or customer prompts.

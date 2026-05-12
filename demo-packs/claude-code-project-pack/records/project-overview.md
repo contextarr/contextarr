@@ -21,7 +21,7 @@ review_status: approved
 
 ## Summary
 
-Project Overview describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
+Project Overview describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs. The demo repository is a note-review product with a dashboard, pack preview, and export review surface.
 
 ## Key Facts
 
@@ -30,6 +30,18 @@ Project Overview describes a fictional TypeScript repository named Meridian Note
 | Scope | Product area: Markdown note capture, Context Pack generation, local preview dashboard. | Keeps the pack specific without exposing private operational data. |
 | Review use | Current milestone: stabilize pack validation, export previews, and read-only agent handoffs. | Keeps the pack specific without exposing private operational data. |
 | AI value | Primary risk: agents changing public surfaces before pack content is reviewed. | Keeps the pack specific without exposing private operational data. |
+
+## Synthetic Product Texture
+
+- `Review Inbox` groups imported notes by freshness, source status, and public-safety readiness.
+- `Pack Preview` shows approved records and target-shaped export summaries before an operator shares them.
+- `Brief Builder` turns reviewed records into a scoped implementation brief for a single UI fix.
+- `Health Panel` shows validation status, stale source warnings, and records that need human review.
+- The current fictional milestone is to make export preview wording match approved record boundaries without changing activation or publishing behavior.
+
+## Safe UI Fix Framing
+
+A scoped UI fix should name the affected surface, the user-visible problem, the files or components to inspect if known from reviewed context, and the validation expectation. It should also state what is out of scope, especially publishing, deployment, credential handling, and broad redesign.
 
 ## Important Boundaries
 

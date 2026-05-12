@@ -7,4 +7,13 @@ Synthetic public-safe raw note for source support-escalation-note.
 - Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
 - Scope: illustrative source material for Contextarr demo pack validation only.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+## Synthetic Escalation Texture
+
+| Example signal | Fictional routing bucket | Review note |
+| --- | --- | --- |
+| Repeated symptom | Product Support Review | Pattern should be described without other-customer references. |
+| Missing article coverage | Knowledge Review | Create a review item in the demo narrative only. |
+| Unclear configuration boundary | Technical Triage | Ask for non-sensitive reproduction details. |
+| Policy exception | Operations Review | Do not promise approval or timeline. |
+
+This source note supports tier-two routing language without naming real queues, teams, staff, customers, ticket IDs, or systems.

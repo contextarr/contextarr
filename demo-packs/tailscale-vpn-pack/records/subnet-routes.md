@@ -28,6 +28,10 @@ Subnet route notes are high-level because route advertisements can expose privat
 - Management route category is discouraged and requires explicit maintainer review.
 - Route approval notes include purpose, expiry, and observed impact.
 - Numeric routes, gateways, and interface names are omitted.
+- Route ownership uses fictional roles such as "home-lab steward", "media steward", and "temporary project owner".
+- A stale route fact is any route category whose owner, purpose, or review window is missing.
+- Broad route categories are marked review-first when a narrower service share would answer the same support need.
+- Assistants may identify route documentation gaps but must not infer or invent address ranges.
 
 ## Assistant Use
 

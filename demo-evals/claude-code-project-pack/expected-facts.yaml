@@ -1,0 +1,11 @@
+﻿pack_id: claude-code-project-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional repo uses small scoped tasks with explicit final reports."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Forbidden actions are documented separately from coding conventions."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

@@ -31,6 +31,17 @@ The demo policy escalates issues when customer impact, repeated failures, or mis
 | Missing article | Create review item |
 | Safety concern | Pause and request review |
 
+## Tier-Two Routing
+
+| Signal | Tier-two route | Customer-safe posture |
+|---|---|---|
+| Same symptom reported three or more times in a fictional release window | Product Support Review | Acknowledge the pattern without naming other customers. |
+| Agent cannot map the issue to an approved article | Knowledge Review | Say the team is checking the documented guidance. |
+| Configuration boundary is unclear | Technical Triage | Ask for non-sensitive reproduction details only. |
+| Policy, billing concept, or account exception is involved | Operations Review | Avoid promises about credits, approvals, or timelines. |
+
+The assistant can recommend a route and the reason for escalation, but it should not invent queue names, assign people, expose internal notes, or present a routing suggestion as a completed action.
+
 ## Notes
 
 The policy is generic and does not include real team names or customer records.

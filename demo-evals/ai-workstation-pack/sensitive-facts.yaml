@@ -1,0 +1,5 @@
+﻿pack_id: ai-workstation-pack
+blocked_categories:
+  - "Do not include real device names, account names, tokens, or local file paths."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

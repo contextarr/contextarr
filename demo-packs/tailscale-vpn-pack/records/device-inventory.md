@@ -28,6 +28,10 @@ Device inventory uses role categories and trust posture.
 - Lab server class can expose selected internal services after review.
 - Media server class is reachable by approved clients but cannot administer the tailnet.
 - Temporary collaborator class expires after the project window closes.
+- Stale personal-device entries are flagged when the owner class is unknown, the role is unclear, or the device no longer maps to an active support need.
+- Route-capable devices must name a fictional route owner such as "lab steward" or "media steward" before review can pass.
+- Shared-device classes are described by purpose only and avoid real person names, machine names, and operating-system fingerprints.
+- Break-glass maintainer access is documented as a review category, not as a standing credential or bypass path.
 
 ## Assistant Use
 

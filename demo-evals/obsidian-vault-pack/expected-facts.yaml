@@ -1,0 +1,11 @@
+﻿pack_id: obsidian-vault-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional vault separates daily notes, reference notes, and export rules."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Frontmatter rules require concise status fields and source notes."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

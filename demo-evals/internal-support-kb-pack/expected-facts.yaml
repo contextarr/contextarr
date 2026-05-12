@@ -1,0 +1,11 @@
+﻿pack_id: internal-support-kb-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional KB separates intake, escalation, macros, and review workflow."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Customer-safe response rules require uncertainty to be named clearly."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

@@ -1,0 +1,5 @@
+﻿pack_id: tailscale-vpn-pack
+blocked_categories:
+  - "Do not include real tailnet names, device names, node keys, or IP addresses."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

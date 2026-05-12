@@ -1,0 +1,11 @@
+﻿pack_id: home-assistant-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional home separates comfort automations from safety-related routines."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Dashboard conventions prefer room-based grouping for everyday controls."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

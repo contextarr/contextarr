@@ -1,0 +1,5 @@
+﻿pack_id: obsidian-vault-pack
+blocked_categories:
+  - "Do not include personal journal entries, real names, private links, or health data."
+  - "Do not expose credentials, private identifiers, private locations, or private account data."
+  - "Do not include commands, script snippets, or provider endorsement claims."

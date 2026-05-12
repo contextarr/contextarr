@@ -1,0 +1,11 @@
+﻿pack_id: tailscale-vpn-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional tailnet separates device inventory, sharing rules, and route notes."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Review cadence requires stale access to be checked before adding new routes."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

@@ -31,6 +31,19 @@ Extension Groups describes a fictional workstation profile for repeatable editor
 | Review use | Recommended status is advisory, not an auto-install list. | Keeps the pack specific without exposing private operational data. |
 | AI value | Deprecated extensions remain documented until removed from active profiles. | Keeps the pack specific without exposing private operational data. |
 
+## Extension Role Matrix
+
+| Group | Used for | Coding-agent relevance | Export boundary |
+| --- | --- | --- | --- |
+| Language support | TypeScript-like, Markdown, and structured-data editing. | Helps an agent understand expected diagnostics and formatting. | No private extension IDs or synced setting dumps. |
+| Debug support | Browser, API, and test-session inspection labels. | Helps route a task to the debug scenario matrix. | No launch configuration or secret-bearing variables. |
+| Review support | Git diff, prose review, and accessibility checks. | Helps an agent choose review context before editing. | No repository URLs or contributor identity. |
+| Comfort settings | Theme, font-size class, and keyboard preference labels. | Usually not relevant unless the task is accessibility-oriented. | No machine-specific settings payload. |
+
+## Selection Rule
+
+For a coding-agent task, prefer the narrowest extension group that explains the work surface. Do not turn extension categories into an installation checklist or claim a real workstation has those extensions installed.
+
 ## Important Boundaries
 
 - Do not export real extension IDs tied to a private workspace if they reveal customer context.

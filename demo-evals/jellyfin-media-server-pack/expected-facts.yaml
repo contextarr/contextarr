@@ -1,0 +1,11 @@
+﻿pack_id: jellyfin-media-server-pack
+facts:
+  - id: scoped_fact_1
+    text: "The fictional server documents library, storage, backup, and client categories."
+    source: records/overview.md
+  - id: scoped_fact_2
+    text: "Transcoding policy favors direct play unless a documented exception applies."
+    source: records/operating-rules.md
+  - id: source_awareness
+    text: "Grounded answers should cite record labels and state missing details instead of inventing them."
+    source: fixture-rubric

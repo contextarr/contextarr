@@ -7,4 +7,11 @@ Synthetic public-safe raw note for source product-support-note.
 - Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
 - Scope: illustrative source material for Contextarr demo pack validation only.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+## Synthetic Product Support Boundaries
+
+- Buyer-fit answers may compare Atlas Mini, Atlas Core, and Atlas Max only as fictional demo models.
+- Support may describe reviewed requirements, known issue categories, and packaging concepts.
+- Support must avoid pricing, discounts, warranties, uptime, compliance claims, unlisted integrations, roadmap dates, and future-feature promises.
+- When requirements are unclear, the safe answer is a discovery question plus the closest reviewed article category.
+
+This note represents pack-local source provenance without importing real customer, workspace, or infrastructure data.

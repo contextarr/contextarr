@@ -7,4 +7,13 @@ Synthetic public-safe raw note for source google-workspace-pack-shared-drive-pol
 - Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
 - Scope: illustrative source material for Contextarr demo pack validation only.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+## Synthetic Shared Drive Texture
+
+| Fictional area | Review posture | Export boundary |
+| --- | --- | --- |
+| Team Operating Notes | Cross-team reviewed | Export purpose summary only |
+| Partner Packet Drafts | Human-approved excerpts | Export excerpt, not drafts |
+| Metrics Workbook Summaries | Aggregated and invented | Export narrative rules only |
+| Archive Holding Area | Stale until reviewed | Do not export until refreshed |
+
+The policy note is about safe summarization and does not describe real folders, tenants, domains, or permissions.

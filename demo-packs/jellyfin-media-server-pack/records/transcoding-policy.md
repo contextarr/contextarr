@@ -28,6 +28,10 @@ Transcoding decisions balance user experience, resource limits, and fallbacks.
 - The transcode cache is disposable and monitored for runaway growth.
 - Quality complaints are documented by client class, media class, and observed symptom.
 - The record excludes codec commands, device mappings, and driver setup steps.
+- Before changing transcoding posture, review client class, network condition category, media class, cache capacity, and fallback plan.
+- Remote-stream issues are triaged separately from local-playback issues so assistants do not overgeneralize.
+- Hardware support is described as capability class only and never as a real device ID, driver path, or vendor-specific setup.
+- Storage pressure takes priority over convenience changes when cache growth could affect metadata or backup health.
 
 ## Assistant Use
 

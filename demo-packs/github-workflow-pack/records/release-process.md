@@ -31,6 +31,19 @@ Release Process describes a fictional open-source repository called Northstar Do
 | Review use | No tag or public release occurs without explicit release approval. | Keeps the pack specific without exposing private operational data. |
 | AI value | Rollback notes explain how to return to the previous local build state. | Keeps the pack specific without exposing private operational data. |
 
+## Release Gate Matrix
+
+| Gate | Ready to review | Ready to release |
+| --- | --- | --- |
+| PR evidence | Summary, changed surfaces, and verification notes are present. | Evidence packet has been refreshed for the release candidate. |
+| Review state | Requested reviewers can evaluate scope and risk. | Required reviewers have approved and unresolved concerns are documented. |
+| Public claims | New claims are marked for copy review. | Changelog, screenshots, and limitations match the approved release note. |
+| Rollback | A rollback intent is described. | Rollback owner role and previous stable reference are confirmed. |
+
+## Readiness Rule
+
+A PR can be ready to review while still not ready to release. Release readiness requires a separate approval signal, a current evidence packet, and a public-facing notes check. Assistants should classify readiness and list missing gates instead of implying permission to publish.
+
 ## Important Boundaries
 
 - Do not treat this pack as a GitHub connector or automation token.

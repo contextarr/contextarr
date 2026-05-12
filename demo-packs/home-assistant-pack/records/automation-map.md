@@ -28,6 +28,10 @@ Automation records describe intent, guardrails, and review status without execut
 - Energy automations reduce nonessential load during synthetic peak windows.
 - Notification automations avoid sensitive occupancy details in message text.
 - Safety-impacting automations require manual review and are not executable examples.
+- Access-related automations, including locks, doors, and alarm-adjacent states, are review-only and excluded from demo changes.
+- Comfort automations may be adjusted at the policy-description level when they do not imply occupancy, security, or health decisions.
+- Water, heat, and power-protection automations are treated as safety-impacting because false actions can cause damage.
+- Every automation class lists an owner role, allowed assistant action, and human-review trigger.
 
 ## Assistant Use
 

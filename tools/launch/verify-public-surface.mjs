@@ -55,6 +55,28 @@ function countRecordFiles(packDirName) {
   return fs.readdirSync(recordsDir).filter((file) => file.endsWith(".md")).length;
 }
 
+function countExportProfiles(packDirName) {
+  const exportsDir = path.join(repoRoot, "demo-packs", packDirName, "exports");
+  if (!fs.existsSync(exportsDir)) {
+    return 0;
+  }
+  return fs.readdirSync(exportsDir).filter((file) => file.endsWith(".yaml") || file.endsWith(".yml")).length;
+}
+
+function demoPackSiteObject(siteContent, slug) {
+  const marker = `slug: "${slug}"`;
+  const markerIndex = siteContent.indexOf(marker);
+  if (markerIndex < 0) {
+    return "";
+  }
+  const objectStart = siteContent.lastIndexOf("\n  {", markerIndex);
+  const objectEnd = siteContent.indexOf("\n  }", markerIndex);
+  if (objectStart < 0 || objectEnd < 0) {
+    return "";
+  }
+  return siteContent.slice(objectStart, objectEnd + 5);
+}
+
 function routeToFile(route) {
   if (route === "/") {
     return "apps/site/src/pages/index.astro";
@@ -81,6 +103,9 @@ if (!failed) {
     return pack.starterPack === true;
   }).length;
   const recordCount = demoPackDirs.reduce((total, dir) => total + countRecordFiles(dir), 0);
+  const siteContent = read("apps/site/src/content/site.ts");
+  const demoPacksPage = read("apps/site/src/pages/demo-packs.astro");
+  const proofPage = read("apps/site/src/pages/proof.astro");
 
   const inventoryChecks = [
     ["demo pack", demoPackDirs.length, contract.inventory.demoPacks],
@@ -101,6 +126,54 @@ if (!failed) {
     }
     if (manifest.inventory?.[key] !== expected) {
       fail(`Screenshot manifest inventory.${key} must be ${expected}; got ${manifest.inventory?.[key]}.`);
+    }
+  }
+
+  const manifestNames = demoPackDirs
+    .map((dir) => readJson(path.join(repoRoot, "demo-packs", dir, "contextarr-pack.json")).name)
+    .sort();
+  const contractNames = [...(contract.inventory.demoPackNames ?? [])].sort();
+  if (JSON.stringify(manifestNames) !== JSON.stringify(contractNames)) {
+    fail(
+      `Public surface demo pack names drifted from manifests. Expected ${contractNames.join(", ")}; got ${manifestNames.join(", ")}.`
+    );
+  }
+
+  if (!demoPacksPage.includes("/proof#${pack.slug}")) {
+    fail("Demo pack page must link each card to its proof eval.");
+  }
+  if (!proofPage.includes("id={pack.slug}")) {
+    fail("Proof page must expose per-pack anchors.");
+  }
+
+  for (const dir of demoPackDirs) {
+    const packManifest = readJson(path.join(repoRoot, "demo-packs", dir, "contextarr-pack.json"));
+    const recordFiles = countRecordFiles(dir);
+    const exportProfiles = countExportProfiles(dir);
+    const evalReport = path.join(repoRoot, "demo-evals", dir, "report.md");
+    const card = demoPackSiteObject(siteContent, dir);
+
+    if (!card) {
+      fail(`Site demo-pack metadata is missing card for ${dir}.`);
+      continue;
+    }
+    if (!card.includes(`name: "${packManifest.name}"`)) {
+      fail(`Site demo-pack metadata for ${dir} must use manifest name ${packManifest.name}.`);
+    }
+    if (!card.includes(`records: ${recordFiles}`)) {
+      fail(`Site demo-pack metadata for ${dir} must show ${recordFiles} records.`);
+    }
+    if (!card.includes(`profiles: ${exportProfiles}`)) {
+      fail(`Site demo-pack metadata for ${dir} must show ${exportProfiles} export profiles.`);
+    }
+    for (const field of ["demoQuestion", "bestExport", "proofEval"]) {
+      const fieldPattern = new RegExp(`${field}:\\s*"[^"]{12,}"`, "s");
+      if (!fieldPattern.test(card)) {
+        fail(`Site demo-pack metadata for ${dir} is missing non-empty ${field}.`);
+      }
+    }
+    if (!fs.existsSync(evalReport)) {
+      fail(`Proof eval report is missing for ${dir}.`);
     }
   }
 

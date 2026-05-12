@@ -115,6 +115,30 @@ Open the Docker preview at `http://127.0.0.1:3210`.
 
 See [docs/quickstart.md](docs/quickstart.md), [docs/install.md](docs/install.md), and [docs/docker.md](docs/docker.md).
 
+## Launch Proof and 7-Minute Trial
+
+Launch proof lives in [docs/launch-proof.md](docs/launch-proof.md) and on the public site `/proof` route. It shows the 5-minute demo path, all 15 demo evals, the No context / Raw notes / Contextarr export comparison, trust receipts, and the local-only boundaries.
+
+Try Contextarr in 7 minutes:
+
+```bash
+git clone https://github.com/contextarr/contextarr
+cd contextarr
+pnpm install
+pnpm public-surface:verify
+pnpm demo:validate
+docker compose up
+```
+
+Open `http://127.0.0.1:3210`, inspect a demo pack, then generate a Contextarr export or human-readable HTML:
+
+```bash
+pnpm --filter @contextarr/cli contextarr export demo-packs/ai-workstation-pack --profile codex
+pnpm --filter @contextarr/cli contextarr render demo-packs/ai-workstation-pack --out rendered/launch-proof-ai-workstation
+```
+
+This path performs no deployment, no public publish, no external AI API call, and no agent execution.
+
 ## Verification
 
 Recommended contributor checks:

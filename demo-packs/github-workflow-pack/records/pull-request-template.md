@@ -31,6 +31,19 @@ Pull Request Template describes a fictional open-source repository called Norths
 | Review use | Reviewers expect risk callouts for exports, security, and public copy. | Keeps the pack specific without exposing private operational data. |
 | AI value | Draft PRs can be used for agent work but do not imply approval. | Keeps the pack specific without exposing private operational data. |
 
+## PR Evidence Matrix
+
+| Template area | Review-ready signal | Release-ready signal |
+| --- | --- | --- |
+| Intent | Problem and scoped fix are clear. | Intent is reflected in release notes without overclaiming. |
+| Verification | Checks are named at the evidence level. | Release evidence is current and linked to the candidate state by description. |
+| Risk | Security, export, and public-copy risks are called out. | High-risk changes have owner approval and mitigation notes. |
+| Non-actions | Out-of-scope work is explicit. | Deferred work is represented as a known limitation when relevant. |
+
+## Agent Review Cue
+
+For coding-agent tasks, this template lets an assistant decide whether a PR has enough information for review. It does not let the assistant approve a release, create a tag, publish artifacts, or infer private reviewer identity.
+
 ## Important Boundaries
 
 - Do not treat this pack as a GitHub connector or automation token.

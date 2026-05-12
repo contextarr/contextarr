@@ -31,6 +31,17 @@ Shared Drive Policy describes a fictional team workspace with local notes about 
 | Review use | External sharing requires human approval and redaction review. | Keeps the pack specific without exposing private operational data. |
 | AI value | Exports must not include live Drive URLs or permission details. | Keeps the pack specific without exposing private operational data. |
 
+## Fictional Drive Taxonomy
+
+| Folder class | Example content | Export rule |
+| --- | --- | --- |
+| Team Operating Notes | Reviewed naming conventions and meeting summaries. | Export summary only after redaction review. |
+| Partner Packet Drafts | Sanitized excerpts prepared for outside collaborators. | Export only the approved excerpt, not source drafts. |
+| Metrics Workbook Summaries | Aggregated, invented reporting patterns. | Export narrative rules, not raw sheet cells. |
+| Archive Holding Area | Superseded policies and stale templates. | Block until freshness is reviewed. |
+
+The fictional policy treats sharing as a documentation decision, not an account action. A safe export can explain why a public-safe excerpt is appropriate, but it cannot grant access, name a real collaborator, or reproduce file paths.
+
 ## Important Boundaries
 
 - This pack is not a Google connector and cannot read Drive, Gmail, Calendar, or Apps Script.
@@ -55,6 +66,7 @@ Shared Drive Policy describes a fictional team workspace with local notes about 
 - Replace environment-specific identifiers with role labels before export.
 - Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
 - Prefer source summaries and reviewed boundaries over raw operational dumps.
+- Keep source-drive labels generic and avoid any real organization, tenant, or domain naming.
 
 ## Source Notes
 
