@@ -21,22 +21,6 @@ describe("@contextarr/review-candidates", () => {
     const root = tempRoot();
     const candidateDir = path.join(root, "drafts", "valid-draft");
     fs.cpSync(validPackFixture, candidateDir, { recursive: true });
-    const absoluteSourcePath = path.join(root, "private-sources", "manual-note.md").replace(/\\/g, "/");
-    fs.writeFileSync(
-      path.join(candidateDir, "sources", "sources.yaml"),
-      [
-        "sources:",
-        "  - id: manual-source",
-        "    type: markdown",
-        "    title: Manual Source",
-        `    path: '${absoluteSourcePath.replace(/'/g, "''")}'`,
-        "    retrieved_at: 2026-05-07T00:00:00Z",
-        "    license: MIT",
-        "    trust: local",
-        "    status: current",
-        ""
-      ].join("\n")
-    );
 
     const result = listReviewCandidates({
       roots: [{ rootPath: path.join(root, "drafts"), sourceKind: "draft_pack" }],
@@ -70,7 +54,7 @@ describe("@contextarr/review-candidates", () => {
     expect(detail?.sources).toEqual([
       expect.objectContaining({
         id: "manual-source",
-        path: "private-sources/manual-note.md"
+        path: "raw/manual-note.md"
       })
     ]);
     expect(JSON.stringify(detail)).not.toContain("This is a valid minimal context pack");
@@ -96,13 +80,15 @@ describe("@contextarr/review-candidates", () => {
     });
     expect(plan?.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "validation", status: "warning" }),
+        expect.objectContaining({ id: "validation", status: "pass" }),
         expect.objectContaining({ id: "candidate-contents", status: "pass" }),
         expect.objectContaining({ id: "active-conflict", status: "pass" }),
         expect.objectContaining({ id: "write-boundary", status: "pass" })
       ])
     );
-    expect(plan?.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "candidate.validation_warnings" })]));
+    expect(plan?.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "candidate.security_review_recommended" })])
+    );
     expect(plan?.boundaries.join(" ")).toContain("No record bodies");
     expect(JSON.stringify(plan)).not.toContain(root);
 

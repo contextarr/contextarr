@@ -560,15 +560,13 @@ function validateSourceMetadata(
   if (source.path && isAbsoluteSourcePath(source.path)) {
     addIssue(
       issues,
-      "warning",
-      "source.absolute_path",
-      `Source "${source.id}" should not expose absolute local paths.`,
+      "error",
+      "source.path_absolute",
+      `Source "${source.id}" path must be a relative pack-local file path. Use source.url for remote references.`,
       sourceFile,
       `sources.${source.id}.path`
     );
-  }
-
-  if (source.path && !isAbsoluteSourcePath(source.path)) {
+  } else if (source.path) {
     const resolvedSourcePath = path.resolve(packPath, source.path);
     if (!isInsidePath(packPath, resolvedSourcePath)) {
       addIssue(

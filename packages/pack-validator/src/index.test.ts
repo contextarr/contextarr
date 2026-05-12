@@ -104,6 +104,33 @@ describe("validatePack", () => {
     });
   });
 
+  it.each([
+    ["POSIX absolute path", "/etc/passwd"],
+    ["Windows drive path", "C:\\Users\\Rob\\secret.md"],
+    ["Windows UNC path", "\\\\server\\share\\secret.md"]
+  ])("reports %s source paths as blocking errors", (_label, sourcePath) => {
+    withTempValidPack("contextarr-source-path-absolute-", (packPath) => {
+      const sourcesPath = path.join(packPath, "sources", "sources.yaml");
+      fs.writeFileSync(
+        sourcesPath,
+        fs.readFileSync(sourcesPath, "utf8").replace("path: raw/manual-note.md", `path: ${JSON.stringify(sourcePath)}`),
+        "utf8"
+      );
+
+      const result = validatePack(packPath);
+
+      expect(result.valid).toBe(false);
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          severity: "error",
+          code: "source.path_absolute",
+          file: "sources/sources.yaml",
+          path: "sources.manual-source.path"
+        })
+      );
+    });
+  });
+
   it("reports source paths that stay inside the pack but do not exist", () => {
     withTempValidPack("contextarr-source-path-missing-", (packPath) => {
       const sourcesPath = path.join(packPath, "sources", "sources.yaml");
