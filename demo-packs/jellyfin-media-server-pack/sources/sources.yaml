@@ -2,7 +2,7 @@ sources:
   - id: jellyfin-media-server-pack-server-overview-source
     type: manual_demo_note
     title: Jellyfin Media Server Pack Server Overview Synthetic Source
-    path: ../raw/server-overview.md
+    path: raw/server-overview.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -12,7 +12,7 @@ sources:
   - id: jellyfin-media-server-pack-hardware-and-os-source
     type: local_markdown
     title: Jellyfin Media Server Pack Hardware And OS Synthetic Source
-    path: ../raw/hardware-and-os.md
+    path: raw/hardware-and-os.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -22,7 +22,7 @@ sources:
   - id: jellyfin-media-server-pack-library-structure-source
     type: official_docs_reference
     title: Jellyfin Media Server Pack Library Structure Synthetic Source
-    path: ../raw/library-structure.md
+    path: raw/library-structure.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -32,7 +32,7 @@ sources:
   - id: jellyfin-media-server-pack-storage-map-source
     type: synthetic_example
     title: Jellyfin Media Server Pack Storage Map Synthetic Source
-    path: ../raw/storage-map.md
+    path: raw/storage-map.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -42,7 +42,7 @@ sources:
   - id: jellyfin-media-server-pack-clients-and-users-source
     type: configuration_summary
     title: Jellyfin Media Server Pack Clients And Users Synthetic Source
-    path: ../raw/clients-and-users.md
+    path: raw/clients-and-users.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -52,7 +52,7 @@ sources:
   - id: jellyfin-media-server-pack-transcoding-policy-source
     type: operator_note
     title: Jellyfin Media Server Pack Transcoding Policy Synthetic Source
-    path: ../raw/transcoding-policy.md
+    path: raw/transcoding-policy.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -62,7 +62,7 @@ sources:
   - id: jellyfin-media-server-pack-network-access-source
     type: review_checklist
     title: Jellyfin Media Server Pack Network Access Synthetic Source
-    path: ../raw/network-access.md
+    path: raw/network-access.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -72,7 +72,7 @@ sources:
   - id: jellyfin-media-server-pack-backup-policy-source
     type: export_summary
     title: Jellyfin Media Server Pack Backup Policy Synthetic Source
-    path: ../raw/backup-policy.md
+    path: raw/backup-policy.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive

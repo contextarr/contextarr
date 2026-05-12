@@ -32,8 +32,8 @@ describe("SQLite indexer", () => {
       expect(result).toMatchObject({
         packsIndexed: 15,
         packsSkipped: 0,
-        recordsIndexed: 111,
-        sourcesIndexed: 111,
+        recordsIndexed: 120,
+        sourcesIndexed: 120,
         exportProfilesIndexed: 120,
         skillsIndexed: 8,
         skillsSkipped: 0,
@@ -49,8 +49,8 @@ describe("SQLite indexer", () => {
       });
       expect(stats).toMatchObject({
         packs: 15,
-        records: 111,
-        sources: 111,
+        records: 120,
+        sources: 120,
         exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
@@ -78,8 +78,8 @@ describe("SQLite indexer", () => {
 
       expect(getIndexStats(db)).toMatchObject({
         packs: 15,
-        records: 111,
-        sources: 111,
+        records: 120,
+        sources: 120,
         exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,

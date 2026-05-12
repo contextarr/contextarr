@@ -1,3 +1,34 @@
-Internal Support KB
+# Internal Support KB Pack llms.txt Sample
 
-Fake public-safe llms.txt style sample. Use the pack summary, approved records, and source titles only. Do not include private data or executable instructions.
+pack_id: internal-support-kb-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe demo context for a fictional internal support knowledge base.
+
+records:
+internal-support.article-taxonomy: Article Taxonomy
+internal-support.customer-safe-response-rules: Customer-Safe Response Rules
+internal-support.escalation-policy: Escalation Policy
+internal-support.known-issues: Known Issues
+internal-support.macro-library: Macro Library
+internal-support.quality-review-rubric: Quality Review Rubric
+internal-support.review-workflow: Review Workflow
+internal-support.ticket-intake: Ticket Intake
+
+sources:
+support-intake-note: Fictional Support Intake Note
+support-escalation-note: Fictional Escalation Note
+support-response-note: Fictional Response Safety Note
+support-known-issues-note: Fictional Known Issues Note
+support-review-note: Fictional Review Workflow Note
+support-taxonomy-note: Fictional Article Taxonomy Note
+support-macro-note: Fictional Macro Library Note
+support-quality-note: Fictional Quality Review Note
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

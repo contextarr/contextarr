@@ -19,12 +19,16 @@ review_status: approved
 
 # IAM Boundaries
 
-Documents role-review principles and excludes policies, access keys, and permission snippets.
+IAM is described by job function, short review loops, and least-privilege maintenance access.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for AWS Infrastructure Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `viewer` can inspect health, inventory, and logs without changing infrastructure.
+- `deployer` can promote reviewed application artifacts but cannot create IAM roles.
+- `platform-maintainer` can update shared networking, backups, and monitoring after review.
+- `break-glass` is a sealed emergency path with post-incident review.
+- The record omits real policies, ARNs, usernames, access keys, and permission snippets.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this cloud infrastructure context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

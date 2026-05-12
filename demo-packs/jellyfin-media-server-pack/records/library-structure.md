@@ -19,12 +19,16 @@ review_status: approved
 
 # Library Structure
 
-Maps public-safe library categories, naming practices, and metadata-review expectations.
+Libraries are organized around browsing needs rather than real titles or personal viewing patterns.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Movies, series, music, home videos, and learning media are separate library classes.
+- Home videos are private and excluded from public examples.
+- Metadata corrections are recorded as category-level decisions, not title logs.
+- Experimental libraries must not change stable naming rules.
+- Library scans are scheduled to avoid active viewing windows.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Environment Variables
 
-Explains safe variable documentation and excludes values, tokens, and secrets.
+Environment variable documentation is limited to purpose, sensitivity, and owner role.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Public configuration covers feature flags, log-level categories, and non-secret display settings.
+- Sensitive configuration covers credentials, tokens, connection strings, and signing material.
+- Service-to-service addresses are described by role rather than literal hostnames.
+- Variables with unclear purpose are marked for retirement review.
+- Example values are avoided because fake secrets are often mistaken for templates.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

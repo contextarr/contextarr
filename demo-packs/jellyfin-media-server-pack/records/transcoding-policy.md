@@ -19,12 +19,16 @@ review_status: approved
 
 # Transcoding Policy
 
-Summarizes expected transcoding decisions, quality notes, and review-safe troubleshooting context.
+Transcoding decisions balance user experience, resource limits, and fallbacks.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Direct play is preferred for local clients whenever format and bandwidth allow.
+- Hardware transcoding is reserved for remote clients, older devices, and constrained sessions.
+- The transcode cache is disposable and monitored for runaway growth.
+- Quality complaints are documented by client class, media class, and observed symptom.
+- The record excludes codec commands, device mappings, and driver setup steps.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Secrets Policy
 
-Defines secret-handling rules and review expectations for imported configuration summaries.
+Secrets are discussed only as handling rules.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- The pack contains no keys, tokens, passwords, recovery phrases, or usable secret names.
+- Secrets live outside compose documentation and are referenced only by sensitivity class.
+- Rotation is required after maintainer changes, suspected exposure, or major service migration.
+- Backup copies of secret stores require a separate review note.
+- Screenshots and logs must be checked for token fragments before inclusion.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

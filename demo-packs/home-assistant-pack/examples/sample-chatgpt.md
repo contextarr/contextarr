@@ -1,21 +1,37 @@
-# Home Assistant Pack - ChatGPT Sample
+# Home Assistant Pack - ChatGPT Sample Brief
 
-Validated public-safe starter context for local assistant workflows.
+Sample preview for target: ChatGPT.
+Pack ID: `home-assistant-pack`.
 
-## Included Records
+## Context
 
-- home-assistant-pack.home-overview
-- home-assistant-pack.device-groups
-- home-assistant-pack.automation-map
-- home-assistant-pack.dashboard-conventions
-- home-assistant-pack.backup-plan
-- home-assistant-pack.network-boundaries
-- home-assistant-pack.privacy-rules
-- home-assistant-pack.maintenance-routine
+Public-safe starter context for a fictional Home Assistant installation. Use this as a concise assistant brief when the user wants help reasoning about the fictional, public-safe context in this pack.
 
-## Constraints
+## Records Included
 
-- No private data.
-- No credentials.
-- No executable commands.
-- Third-party names and marks identify domains only and do not imply endorsement.
+- `home-assistant-pack.automation-map` - Automation Map
+- `home-assistant-pack.backup-plan` - Backup Plan
+- `home-assistant-pack.dashboard-conventions` - Dashboard Conventions
+- `home-assistant-pack.device-groups` - Device Groups
+- `home-assistant-pack.home-overview` - Home Overview
+- `home-assistant-pack.maintenance-routine` - Maintenance Routine
+- `home-assistant-pack.network-boundaries` - Network Boundaries
+- `home-assistant-pack.privacy-rules` - Privacy Rules
+
+## Constraints And Boundaries
+
+- Treat every detail as synthetic demo context, not live operational truth.
+- Do not invent credentials, hostnames, account identifiers, customer names, private URLs, or device secrets.
+- Do not provide execution steps, connector setup, shell commands, or live-service instructions.
+- Keep answers grounded in approved records and source summaries.
+
+## Useful Questions
+
+- What should an assistant know before helping with Home Assistant Pack?
+- Which records are safe to use in an owner-facing answer?
+- What boundaries should be repeated before proposing changes?
+- Which source notes should be checked before trusting a stale detail?
+
+## Source Handling
+
+Prefer source-backed statements. If a detail is missing from these records, say what source note would need review instead of filling the gap.

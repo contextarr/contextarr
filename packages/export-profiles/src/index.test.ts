@@ -122,9 +122,12 @@ describe("export profile engine", () => {
         "ai-workstation.local-ai-stack",
         "ai-workstation.storage-layout",
         "ai-workstation.networking-notes",
-        "ai-workstation.troubleshooting-workflow"
+        "ai-workstation.troubleshooting-workflow",
+        "ai-workstation.capacity-planning",
+        "ai-workstation.maintenance-cadence",
+        "ai-workstation.safety-boundaries"
       ]);
-      expect(artifact.sources).toHaveLength(5);
+      expect(artifact.sources).toHaveLength(8);
       expect(artifact.filename).toMatch(/\.(md|txt)$/);
     }
 
@@ -136,8 +139,8 @@ describe("export profile engine", () => {
     const parsed = JSON.parse(jsonArtifact.content);
 
     expect(jsonArtifact.mimeType).toBe("application/json");
-    expect(parsed.records).toHaveLength(5);
-    expect(parsed.sources).toHaveLength(5);
+    expect(parsed.records).toHaveLength(8);
+    expect(parsed.sources).toHaveLength(8);
   });
 
   it("lists all Phase 18 profile targets for a demo Skill", () => {
@@ -361,17 +364,22 @@ describe("export profile engine", () => {
       "utf8"
     );
     fs.writeFileSync(
-      path.join(packsDir, "internal-support-kb-pack", "sources", "sources.yaml"),
+    path.join(packsDir, "internal-support-kb-pack", "sources", "sources.yaml"),
       `${fs.readFileSync(path.join(packsDir, "internal-support-kb-pack", "sources", "sources.yaml"), "utf8").trimEnd()}
   - id: agent-kit-sensitive-source
     type: markdown
     title: Agent Kit Sensitive Source
-    path: ../raw/agent-kit-sensitive.md
+    path: raw/agent-kit-sensitive.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
     status: current
 `,
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packsDir, "internal-support-kb-pack", "raw", "agent-kit-sensitive.md"),
+      "# Agent Kit Sensitive Source\n\nSynthetic source note for excluded Agent Kit export metadata.\n",
       "utf8"
     );
 
@@ -789,12 +797,17 @@ describe("export profile engine", () => {
   - id: pack-sensitive-source
     type: markdown
     title: Pack Sensitive Source
-    path: ../raw/pack-sensitive.md
+    path: raw/pack-sensitive.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: local
     status: current
 `,
+      "utf8"
+    );
+    fs.writeFileSync(
+      path.join(packPath, "raw", "pack-sensitive.md"),
+      "# Pack Sensitive Source\n\nSynthetic source note for excluded pack export metadata.\n",
       "utf8"
     );
     fs.writeFileSync(
@@ -865,7 +878,7 @@ describe("export profile engine", () => {
       },
       {
         packPath: demoPack("claude-code-project-pack"),
-        recordIds: ["claude-code-project.agent-instructions"]
+        recordIds: ["claude-code-project-pack.implementation-rules"]
       }
     ];
 
@@ -881,7 +894,7 @@ describe("export profile engine", () => {
     expect(markdown.includedRecords.map((record) => record.id)).toEqual([
       "ai-workstation.local-ai-stack",
       "ai-workstation.networking-notes",
-      "claude-code-project.agent-instructions"
+      "claude-code-project-pack.implementation-rules"
     ]);
     expect(markdown.content.indexOf("Local AI Stack")).toBeLessThan(markdown.content.indexOf("Networking Notes"));
 

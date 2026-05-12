@@ -19,12 +19,16 @@ review_status: approved
 
 # Backup Policy
 
-States what configuration and library metadata should be backed up in the fictional setup.
+Backup policy focuses on recoverable configuration and metadata.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Configuration and metadata state are backed up before server updates.
+- Large media libraries are protected by separate offline-copy practices outside this pack.
+- Restore drills verify that a clean server recognizes synthetic libraries.
+- Backup health is reviewed after storage changes and before plugin upgrades.
+- Failed backup checks are documented as evidence gaps, not command transcripts.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Maintenance Routine
 
-Documents update windows, post-change checks, and evidence capture expectations.
+Maintenance keeps the fictional smart-home setup predictable and safe to change.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Monthly review checks backups, integration health, stale automations, and low-battery categories.
+- Quarterly review checks dashboard visibility, privacy exclusions, and network boundary notes.
+- Updates are batched into quiet windows with comfort-impact expectations.
+- Post-change evidence covers dashboard load, representative automation behavior, and notification noise.
+- Emergency changes require a follow-up note before new automations are added.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

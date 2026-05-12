@@ -2,7 +2,7 @@ sources:
   - id: product-overview-note
     type: markdown
     title: Fictional Product Overview Note
-    path: ../raw/overview-note.md
+    path: raw/overview-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: N/A
     license_status: not_applicable
@@ -12,7 +12,7 @@ sources:
   - id: product-comparison-note
     type: markdown
     title: Fictional Product Comparison Note
-    path: ../raw/comparison-note.md
+    path: raw/comparison-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -20,7 +20,7 @@ sources:
   - id: product-support-note
     type: markdown
     title: Fictional Support Matrix Note
-    path: ../raw/support-note.md
+    path: raw/support-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -28,7 +28,7 @@ sources:
   - id: product-release-note
     type: markdown
     title: Fictional Release Notes Source
-    path: ../raw/release-note.md
+    path: raw/release-note.md
     retrieved_at: 2026-05-07T00:00:00Z
     license: MIT
     trust: official
@@ -36,8 +36,32 @@ sources:
   - id: product-faq-note
     type: markdown
     title: Fictional FAQ Source
-    path: ../raw/faq-note.md
+    path: raw/faq-note.md
     retrieved_at: 2026-05-07T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-buyer-guide-note
+    type: markdown
+    title: Fictional Buyer Guide Source
+    path: raw/buyer-guide-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-compatibility-note
+    type: markdown
+    title: Fictional Compatibility Requirements Source
+    path: raw/compatibility-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
+    license: MIT
+    trust: official
+    status: current
+  - id: product-packaging-note
+    type: markdown
+    title: Fictional Packaging Tiers Source
+    path: raw/packaging-note.md
+    retrieved_at: 2026-05-12T00:00:00Z
     license: MIT
     trust: official
     status: current

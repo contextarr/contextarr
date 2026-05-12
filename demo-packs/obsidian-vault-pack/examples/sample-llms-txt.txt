@@ -1,16 +1,34 @@
-Obsidian Vault Pack
+# Obsidian Vault Pack llms.txt Sample
 
-Public-safe starter context for a fictional local Markdown knowledge vault.
+pack_id: obsidian-vault-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for a fictional local Markdown knowledge vault.
 
-Records:
-- obsidian-vault-pack.vault-overview
-- obsidian-vault-pack.folder-map
-- obsidian-vault-pack.note-conventions
-- obsidian-vault-pack.frontmatter-rules
-- obsidian-vault-pack.linking-patterns
-- obsidian-vault-pack.daily-notes
-- obsidian-vault-pack.import-boundaries
-- obsidian-vault-pack.export-rules
+records:
+obsidian-vault-pack.daily-notes: Daily Notes
+obsidian-vault-pack.export-rules: Export Rules
+obsidian-vault-pack.folder-map: Folder Map
+obsidian-vault-pack.frontmatter-rules: Frontmatter Rules
+obsidian-vault-pack.import-boundaries: Import Boundaries
+obsidian-vault-pack.linking-patterns: Linking Patterns
+obsidian-vault-pack.note-conventions: Note Conventions
+obsidian-vault-pack.vault-overview: Vault Overview
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+obsidian-vault-pack-vault-overview-source: Obsidian Vault Pack Vault Overview Synthetic Source
+obsidian-vault-pack-folder-map-source: Obsidian Vault Pack Folder Map Synthetic Source
+obsidian-vault-pack-note-conventions-source: Obsidian Vault Pack Note Conventions Synthetic Source
+obsidian-vault-pack-frontmatter-rules-source: Obsidian Vault Pack Frontmatter Rules Synthetic Source
+obsidian-vault-pack-linking-patterns-source: Obsidian Vault Pack Linking Patterns Synthetic Source
+obsidian-vault-pack-daily-notes-source: Obsidian Vault Pack Daily Notes Synthetic Source
+obsidian-vault-pack-import-boundaries-source: Obsidian Vault Pack Import Boundaries Synthetic Source
+obsidian-vault-pack-export-rules-source: Obsidian Vault Pack Export Rules Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

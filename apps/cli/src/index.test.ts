@@ -26,7 +26,7 @@ const scannerFixturesDir = path.join(repoRoot, "packages/security-scanner/test/f
 const tempDirs: string[] = [];
 const expectedDemoCounts = {
   packs: 15,
-  records: 111,
+  records: 120,
   skills: 8,
   agentKits: 8
 };
@@ -217,9 +217,9 @@ describe("contextarr CLI", () => {
         exposureReadiness: {
           packId: "ai-workstation-pack",
           summary: {
-            recordCount: 5,
-            exportEligibleRecords: 5,
-            mcpEligibleRecords: 5
+            recordCount: 8,
+            exportEligibleRecords: 8,
+            mcpEligibleRecords: 8
           }
         }
       });
@@ -1250,7 +1250,7 @@ describe("contextarr CLI", () => {
     const code = await runCli(["render", path.join(demoPacksDir, "ai-workstation-pack"), "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Rendered 1 pack(s), 5 record(s)");
+    expect(output.stdout).toContain("Rendered 1 pack(s), 8 record(s)");
     expectNoAbsolutePaths(output.stdout);
     expect(fs.readFileSync(path.join(outDir, "index.html"), "utf8")).toContain("AI Workstation Pack");
     expect(fs.existsSync(path.join(outDir, "records", "ai-workstation.local-ai-stack.html"))).toBe(true);
@@ -1262,7 +1262,7 @@ describe("contextarr CLI", () => {
     const code = await runCli(["render", demoPacksDir, "--out", outDir], output.io);
 
     expect(code).toBe(0);
-    expect(output.stdout).toContain("Rendered 15 pack(s), 111 record(s)");
+    expect(output.stdout).toContain("Rendered 15 pack(s), 120 record(s)");
     expectNoAbsolutePaths(output.stdout);
     expect(fs.existsSync(path.join(outDir, "packs", "ai-workstation-pack", "index.html"))).toBe(true);
   });

@@ -19,12 +19,16 @@ review_status: approved
 
 # SSID Policy
 
-Captures wireless network categories, guest boundaries, and review cadence.
+Wireless networks are named by audience and risk level in documentation.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Primary SSID category is for trusted household devices.
+- Guest SSID category is time-bounded and isolated from local services.
+- IoT SSID category is limited to onboarding and approved service discovery.
+- Lab SSID category is disabled unless a test window is documented.
+- Passwords, QR codes, and real SSID names are never included.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -2,7 +2,7 @@ sources:
   - id: unifi-network-pack-topology-overview-source
     type: manual_demo_note
     title: UniFi Network Pack Topology Overview Synthetic Source
-    path: ../raw/topology-overview.md
+    path: raw/topology-overview.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -12,7 +12,7 @@ sources:
   - id: unifi-network-pack-wan-and-gateway-source
     type: local_markdown
     title: UniFi Network Pack WAN And Gateway Synthetic Source
-    path: ../raw/wan-and-gateway.md
+    path: raw/wan-and-gateway.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -22,7 +22,7 @@ sources:
   - id: unifi-network-pack-vlans-and-subnets-source
     type: official_docs_reference
     title: UniFi Network Pack VLANs And Subnets Synthetic Source
-    path: ../raw/vlans-and-subnets.md
+    path: raw/vlans-and-subnets.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -32,7 +32,7 @@ sources:
   - id: unifi-network-pack-ssid-policy-source
     type: synthetic_example
     title: UniFi Network Pack SSID Policy Synthetic Source
-    path: ../raw/ssid-policy.md
+    path: raw/ssid-policy.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -42,7 +42,7 @@ sources:
   - id: unifi-network-pack-device-inventory-source
     type: configuration_summary
     title: UniFi Network Pack Device Inventory Synthetic Source
-    path: ../raw/device-inventory.md
+    path: raw/device-inventory.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -52,7 +52,7 @@ sources:
   - id: unifi-network-pack-firewall-notes-source
     type: operator_note
     title: UniFi Network Pack Firewall Notes Synthetic Source
-    path: ../raw/firewall-notes.md
+    path: raw/firewall-notes.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -62,7 +62,7 @@ sources:
   - id: unifi-network-pack-wifi-troubleshooting-source
     type: review_checklist
     title: UniFi Network Pack WiFi Troubleshooting Synthetic Source
-    path: ../raw/wifi-troubleshooting.md
+    path: raw/wifi-troubleshooting.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -72,7 +72,7 @@ sources:
   - id: unifi-network-pack-maintenance-routine-source
     type: export_summary
     title: UniFi Network Pack Maintenance Routine Synthetic Source
-    path: ../raw/maintenance-routine.md
+    path: raw/maintenance-routine.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive

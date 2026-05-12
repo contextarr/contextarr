@@ -19,12 +19,45 @@ review_status: approved
 
 # Accessibility Settings
 
-Documents font, contrast, and keyboard navigation preferences as public-safe examples.
+## Summary
 
-## Starter Context
+Accessibility Settings describes a fictional workstation profile for repeatable editor setup across TypeScript, Markdown, and local API projects. It gives developers who want AI help with editor context without pasting private settings files a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
 
-This is original synthetic demo context for VS Code Setup Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+## Key Facts
 
-## Agent Boundary
+| Area | Demo detail | Why it matters |
+| --- | --- | --- |
+| Scope | High-contrast review and keyboard-only navigation are first-class setup notes. | Keeps the pack specific without exposing private operational data. |
+| Review use | Font, zoom, and contrast preferences are described as categories. | Keeps the pack specific without exposing private operational data. |
+| AI value | Personal accessibility preferences are private unless deliberately exported. | Keeps the pack specific without exposing private operational data. |
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+## Important Boundaries
+
+- Do not export real extension IDs tied to a private workspace if they reveal customer context.
+- Do not include absolute machine paths, tokens, SSH hosts, or copied settings dumps.
+- Do not tell an agent to install extensions or change the editor automatically.
+- This record is synthetic demo content and is not a live connector, credential source, or automation runbook.
+
+## Do Not Assume
+
+- Do not assume omitted private files, identities, metrics, or service names exist.
+- Do not treat this record as permission to mutate repositories, cloud resources, accounts, documents, or local machines.
+- Do not expand the scenario beyond the reviewed source notes listed in the pack.
+
+## Useful AI Questions
+
+- What does this record let an assistant safely understand about VS Code Setup Pack?
+- Which assumptions should be checked before using this context in an export?
+- What should stay out of a public-safe brief for this pack?
+
+## Redaction Notes
+
+- Replace environment-specific identifiers with role labels before export.
+- Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
+- Prefer source summaries and reviewed boundaries over raw operational dumps.
+
+## Source Notes
+
+- Record ID: `vscode-setup-pack.accessibility-settings`
+- Source material is a synthetic local note in this pack's `raw/` folder.
+- Review status is approved for public-safe demos, but the context remains non-executable.

@@ -2,7 +2,7 @@ sources:
   - id: tailscale-vpn-pack-tailnet-overview-source
     type: manual_demo_note
     title: Tailscale VPN Pack Tailnet Overview Synthetic Source
-    path: ../raw/tailnet-overview.md
+    path: raw/tailnet-overview.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -12,7 +12,7 @@ sources:
   - id: tailscale-vpn-pack-device-inventory-source
     type: local_markdown
     title: Tailscale VPN Pack Device Inventory Synthetic Source
-    path: ../raw/device-inventory.md
+    path: raw/device-inventory.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -22,7 +22,7 @@ sources:
   - id: tailscale-vpn-pack-access-controls-source
     type: official_docs_reference
     title: Tailscale VPN Pack Access Controls Synthetic Source
-    path: ../raw/access-controls.md
+    path: raw/access-controls.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -32,7 +32,7 @@ sources:
   - id: tailscale-vpn-pack-subnet-routes-source
     type: synthetic_example
     title: Tailscale VPN Pack Subnet Routes Synthetic Source
-    path: ../raw/subnet-routes.md
+    path: raw/subnet-routes.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -42,7 +42,7 @@ sources:
   - id: tailscale-vpn-pack-exit-node-policy-source
     type: configuration_summary
     title: Tailscale VPN Pack Exit Node Policy Synthetic Source
-    path: ../raw/exit-node-policy.md
+    path: raw/exit-node-policy.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -52,7 +52,7 @@ sources:
   - id: tailscale-vpn-pack-sharing-rules-source
     type: operator_note
     title: Tailscale VPN Pack Sharing Rules Synthetic Source
-    path: ../raw/sharing-rules.md
+    path: raw/sharing-rules.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -62,7 +62,7 @@ sources:
   - id: tailscale-vpn-pack-troubleshooting-source
     type: review_checklist
     title: Tailscale VPN Pack Troubleshooting Synthetic Source
-    path: ../raw/troubleshooting.md
+    path: raw/troubleshooting.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -72,7 +72,7 @@ sources:
   - id: tailscale-vpn-pack-review-cadence-source
     type: export_summary
     title: Tailscale VPN Pack Review Cadence Synthetic Source
-    path: ../raw/review-cadence.md
+    path: raw/review-cadence.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive

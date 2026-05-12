@@ -19,12 +19,16 @@ review_status: approved
 
 # Automation Map
 
-Describes automation categories and review status without YAML, triggers, or executable actions.
+Automation records describe intent, guardrails, and review status without executable YAML.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Comfort automations adjust lights and climate based on broad mode categories.
+- Utility automations send maintenance reminders for filters, batteries, and backup checks.
+- Energy automations reduce nonessential load during synthetic peak windows.
+- Notification automations avoid sensitive occupancy details in message text.
+- Safety-impacting automations require manual review and are not executable examples.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Server Overview
 
-Summarizes a fictional household media server and the kinds of context an assistant may need.
+Cedar Room Media is a synthetic household Jellyfin setup.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- The server supports a small household, a guest profile class, and a maintenance-only admin role.
+- Primary goals are reliable local playback, predictable library scans, and recoverable configuration.
+- Remote access is optional and reviewed separately from local streaming.
+- Metadata quality is prioritized over aggressive automation.
+- The pack avoids real usernames, domains, device IDs, library contents, and watch history.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -2,7 +2,7 @@ sources:
   - id: google-workspace-pack-workspace-overview-source
     type: manual_demo_note
     title: Google Workspace Pack Workspace Overview Synthetic Source
-    path: ../raw/workspace-overview.md
+    path: raw/workspace-overview.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -12,7 +12,7 @@ sources:
   - id: google-workspace-pack-drive-folder-map-source
     type: local_markdown
     title: Google Workspace Pack Drive Folder Map Synthetic Source
-    path: ../raw/drive-folder-map.md
+    path: raw/drive-folder-map.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -22,7 +22,7 @@ sources:
   - id: google-workspace-pack-shared-drive-policy-source
     type: official_docs_reference
     title: Google Workspace Pack Shared Drive Policy Synthetic Source
-    path: ../raw/shared-drive-policy.md
+    path: raw/shared-drive-policy.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -32,7 +32,7 @@ sources:
   - id: google-workspace-pack-docs-style-guide-source
     type: synthetic_example
     title: Google Workspace Pack Docs Style Guide Synthetic Source
-    path: ../raw/docs-style-guide.md
+    path: raw/docs-style-guide.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -42,7 +42,7 @@ sources:
   - id: google-workspace-pack-sheets-and-reporting-source
     type: configuration_summary
     title: Google Workspace Pack Sheets And Reporting Synthetic Source
-    path: ../raw/sheets-and-reporting.md
+    path: raw/sheets-and-reporting.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -52,7 +52,7 @@ sources:
   - id: google-workspace-pack-apps-script-projects-source
     type: operator_note
     title: Google Workspace Pack Apps Script Projects Synthetic Source
-    path: ../raw/apps-script-projects.md
+    path: raw/apps-script-projects.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -62,7 +62,7 @@ sources:
   - id: google-workspace-pack-calendar-and-meet-conventions-source
     type: review_checklist
     title: Google Workspace Pack Calendar And Meet Conventions Synthetic Source
-    path: ../raw/calendar-and-meet-conventions.md
+    path: raw/calendar-and-meet-conventions.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive
@@ -72,7 +72,7 @@ sources:
   - id: google-workspace-pack-access-and-sharing-rules-source
     type: export_summary
     title: Google Workspace Pack Access And Sharing Rules Synthetic Source
-    path: ../raw/access-and-sharing-rules.md
+    path: raw/access-and-sharing-rules.md
     retrieved_at: 2026-05-09T00:00:00Z
     license: MIT
     license_status: known_permissive

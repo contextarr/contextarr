@@ -19,12 +19,16 @@ review_status: approved
 
 # Backup Plan
 
-Captures configuration backup cadence and restore-readiness notes.
+Backup planning focuses on recoverable configuration and privacy-safe evidence.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Configuration snapshots are reviewed before core updates and integration changes.
+- Backup copies are stored in a protected location category, not named paths.
+- Restore drills validate dashboards, integrations, and representative automations with synthetic devices.
+- Sensitive history databases are not exported into public demo context.
+- Failed backup checks are documented as status and next review date only.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

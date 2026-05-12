@@ -19,12 +19,16 @@ review_status: approved
 
 # Home Overview
 
-Summarizes synthetic rooms, device groups, and assistant-safe automation context.
+Willow Loft is a synthetic smart-home installation for safe Home Assistant context.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Room groups are living area, kitchen area, work area, utility area, and exterior-adjacent area.
+- Device groups include lighting, climate, presence-safe sensors, media controls, and energy monitors.
+- Automations are documented by purpose and review status, not YAML or exact triggers.
+- Privacy-sensitive devices are summarized only as excluded categories.
+- The pack avoids addresses, occupant routines, exact sensor locations, camera details, recordings, and tokens.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

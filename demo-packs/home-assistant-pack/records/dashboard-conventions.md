@@ -19,12 +19,16 @@ review_status: approved
 
 # Dashboard Conventions
 
-Documents layout, naming, and visibility expectations for fictional dashboards.
+Dashboards are organized for quick status review while keeping sensitive household context out of exports.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Main dashboard shows room comfort, lighting state, and high-level maintenance alerts.
+- Energy dashboard shows trends and device classes, not account or billing details.
+- Maintenance dashboard tracks batteries, integrations, backups, and stale automations.
+- Guest dashboard exposes only non-sensitive comfort controls.
+- Restricted dashboard categories are never included in public sample exports.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

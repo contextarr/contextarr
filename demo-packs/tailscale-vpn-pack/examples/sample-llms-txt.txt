@@ -1,16 +1,34 @@
-Tailscale VPN Pack
+# Tailscale VPN Pack llms.txt Sample
 
-Public-safe starter context for a fictional Tailscale tailnet.
+pack_id: tailscale-vpn-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for a fictional Tailscale tailnet.
 
-Records:
-- tailscale-vpn-pack.tailnet-overview
-- tailscale-vpn-pack.device-inventory
-- tailscale-vpn-pack.access-controls
-- tailscale-vpn-pack.subnet-routes
-- tailscale-vpn-pack.exit-node-policy
-- tailscale-vpn-pack.sharing-rules
-- tailscale-vpn-pack.troubleshooting
-- tailscale-vpn-pack.review-cadence
+records:
+tailscale-vpn-pack.access-controls: Access Controls
+tailscale-vpn-pack.device-inventory: Device Inventory
+tailscale-vpn-pack.exit-node-policy: Exit Node Policy
+tailscale-vpn-pack.review-cadence: Review Cadence
+tailscale-vpn-pack.sharing-rules: Sharing Rules
+tailscale-vpn-pack.subnet-routes: Subnet Routes
+tailscale-vpn-pack.tailnet-overview: Tailnet Overview
+tailscale-vpn-pack.troubleshooting: Troubleshooting
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+tailscale-vpn-pack-tailnet-overview-source: Tailscale VPN Pack Tailnet Overview Synthetic Source
+tailscale-vpn-pack-device-inventory-source: Tailscale VPN Pack Device Inventory Synthetic Source
+tailscale-vpn-pack-access-controls-source: Tailscale VPN Pack Access Controls Synthetic Source
+tailscale-vpn-pack-subnet-routes-source: Tailscale VPN Pack Subnet Routes Synthetic Source
+tailscale-vpn-pack-exit-node-policy-source: Tailscale VPN Pack Exit Node Policy Synthetic Source
+tailscale-vpn-pack-sharing-rules-source: Tailscale VPN Pack Sharing Rules Synthetic Source
+tailscale-vpn-pack-troubleshooting-source: Tailscale VPN Pack Troubleshooting Synthetic Source
+tailscale-vpn-pack-review-cadence-source: Tailscale VPN Pack Review Cadence Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

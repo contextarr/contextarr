@@ -19,12 +19,16 @@ review_status: approved
 
 # Network Boundaries
 
-Summarizes safe local network assumptions without hostnames, routes, or credentials.
+Network notes describe isolation intent without hostnames, IP addresses, routes, or credentials.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Home Assistant host class lives on a trusted automation segment.
+- IoT device class has limited access to the automation host and required discovery paths.
+- Guest devices cannot administer automations or view private dashboards.
+- Cloud-dependent integrations are reviewed for necessity and privacy impact.
+- Network changes are documented with observed behavior and rollback expectations.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

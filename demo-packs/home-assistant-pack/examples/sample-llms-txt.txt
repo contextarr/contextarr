@@ -1,16 +1,34 @@
-Home Assistant Pack
+# Home Assistant Pack llms.txt Sample
 
-Public-safe starter context for a fictional Home Assistant installation.
+pack_id: home-assistant-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe starter context for a fictional Home Assistant installation.
 
-Records:
-- home-assistant-pack.home-overview
-- home-assistant-pack.device-groups
-- home-assistant-pack.automation-map
-- home-assistant-pack.dashboard-conventions
-- home-assistant-pack.backup-plan
-- home-assistant-pack.network-boundaries
-- home-assistant-pack.privacy-rules
-- home-assistant-pack.maintenance-routine
+records:
+home-assistant-pack.automation-map: Automation Map
+home-assistant-pack.backup-plan: Backup Plan
+home-assistant-pack.dashboard-conventions: Dashboard Conventions
+home-assistant-pack.device-groups: Device Groups
+home-assistant-pack.home-overview: Home Overview
+home-assistant-pack.maintenance-routine: Maintenance Routine
+home-assistant-pack.network-boundaries: Network Boundaries
+home-assistant-pack.privacy-rules: Privacy Rules
 
-Use: validated local context for AI assistants.
-Do not use: live connector behavior, remote registry installation, telemetry, or agent execution.
+sources:
+home-assistant-pack-home-overview-source: Home Assistant Pack Home Overview Synthetic Source
+home-assistant-pack-device-groups-source: Home Assistant Pack Device Groups Synthetic Source
+home-assistant-pack-automation-map-source: Home Assistant Pack Automation Map Synthetic Source
+home-assistant-pack-dashboard-conventions-source: Home Assistant Pack Dashboard Conventions Synthetic Source
+home-assistant-pack-backup-plan-source: Home Assistant Pack Backup Plan Synthetic Source
+home-assistant-pack-network-boundaries-source: Home Assistant Pack Network Boundaries Synthetic Source
+home-assistant-pack-privacy-rules-source: Home Assistant Pack Privacy Rules Synthetic Source
+home-assistant-pack-maintenance-routine-source: Home Assistant Pack Maintenance Routine Synthetic Source
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

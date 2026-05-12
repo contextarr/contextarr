@@ -19,12 +19,16 @@ review_status: approved
 
 # Topology Overview
 
-Summarizes fictional gateway, switch, access-point, and client zones.
+Harbor House is a synthetic UniFi-style home network for public-safe network context demos.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Gateway zone handles internet handoff, routing policy, and availability status.
+- Core switch zone separates wired infrastructure from end-user devices.
+- Access point zone covers shared living spaces, office coverage, and outdoor fringe coverage.
+- Client zones are trusted, guest, IoT, media, and lab.
+- Diagrams show relationships and risk boundaries, not addresses, serials, or controller URLs.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

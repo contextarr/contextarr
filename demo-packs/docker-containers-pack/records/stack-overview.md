@@ -19,12 +19,16 @@ review_status: approved
 
 # Stack Overview
 
-Summarizes a fictional set of self-hosted stacks and their ownership boundaries.
+Maple Dock is a synthetic self-hosted stack for a small household lab.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Core services include a reverse proxy, dashboard, media indexer, document vault, metrics collector, and backup helper.
+- Experimental services live in a separate stack and cannot share persistent volumes with core services.
+- Containers are grouped by ingress, applications, data stores, observability, and maintenance.
+- Service ownership is documented by role rather than personal name.
+- The pack documents relationships and risk, not executable compose syntax.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

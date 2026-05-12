@@ -10,9 +10,13 @@ include:
     - fake-product-line.support-matrix
     - fake-product-line.release-notes
     - fake-product-line.sales-support-faq
+    - fake-product-line.buyer-guide
+    - fake-product-line.compatibility-requirements
+    - fake-product-line.packaging-tiers
 exclude_tags:
   - secret
   - never_export
+  - imported_draft
 token_budget: 12000
 sections:
   - summary

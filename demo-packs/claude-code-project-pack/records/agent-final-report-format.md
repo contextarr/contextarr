@@ -19,12 +19,45 @@ review_status: approved
 
 # Agent Final Report Format
 
-Defines a concise implementation report with files, commands, checks, blockers, and security notes.
+## Summary
 
-## Starter Context
+Agent Final Report Format describes a fictional TypeScript repository named Meridian Notes that uses AI coding agents for scoped implementation work. It gives maintainers preparing Claude Code, Codex, and local coding-agent handoffs a reviewed, local, public-safe context record that can be rendered for humans and reused in target-specific AI briefs.
 
-This is original synthetic demo context for Claude Code Project Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+## Key Facts
 
-## Agent Boundary
+| Area | Demo detail | Why it matters |
+| --- | --- | --- |
+| Scope | Report order: summary, changed files, verification, blockers, residual risk. | Keeps the pack specific without exposing private operational data. |
+| Review use | Mention commands by gate name where useful; avoid turning demo content into runbooks. | Keeps the pack specific without exposing private operational data. |
+| AI value | When blocked, include the exact failing area and next repair path. | Keeps the pack specific without exposing private operational data. |
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+## Important Boundaries
+
+- Do not push, publish, deploy, tag releases, or change package distribution settings.
+- Do not invent missing requirements; flag unknowns in the final report.
+- Do not expose private repository paths, credentials, live issue links, or user names.
+- This record is synthetic demo content and is not a live connector, credential source, or automation runbook.
+
+## Do Not Assume
+
+- Do not assume omitted private files, identities, metrics, or service names exist.
+- Do not treat this record as permission to mutate repositories, cloud resources, accounts, documents, or local machines.
+- Do not expand the scenario beyond the reviewed source notes listed in the pack.
+
+## Useful AI Questions
+
+- What does this record let an assistant safely understand about Claude Code Project Pack?
+- Which assumptions should be checked before using this context in an export?
+- What should stay out of a public-safe brief for this pack?
+
+## Redaction Notes
+
+- Replace environment-specific identifiers with role labels before export.
+- Keep private paths, tokens, emails, customer names, and live links out of generated briefs.
+- Prefer source summaries and reviewed boundaries over raw operational dumps.
+
+## Source Notes
+
+- Record ID: `claude-code-project-pack.agent-final-report-format`
+- Source material is a synthetic local note in this pack's `raw/` folder.
+- Review status is approved for public-safe demos, but the context remains non-executable.

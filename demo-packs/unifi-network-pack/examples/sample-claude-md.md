@@ -1,21 +1,36 @@
-# UniFi Network Pack - CLAUDE.md Sample
+# CLAUDE.md Sample For UniFi Network Pack
 
-Validated public-safe starter context for local assistant workflows.
+Pack ID: `unifi-network-pack`.
+This is a Claude-oriented project/context note generated as an illustrative preview from approved demo-pack records.
 
-## Included Records
+## Working Context
 
-- unifi-network-pack.topology-overview
-- unifi-network-pack.wan-and-gateway
-- unifi-network-pack.vlans-and-subnets
-- unifi-network-pack.ssid-policy
-- unifi-network-pack.device-inventory
-- unifi-network-pack.firewall-notes
-- unifi-network-pack.wifi-troubleshooting
-- unifi-network-pack.maintenance-routine
+Public-safe starter context for a fictional UniFi network.
 
-## Constraints
+## Source Grounding
 
-- No private data.
-- No credentials.
-- No executable commands.
-- Third-party names and marks identify domains only and do not imply endorsement.
+- `unifi-network-pack-topology-overview-source` - UniFi Network Pack Topology Overview Synthetic Source (verified)
+- `unifi-network-pack-wan-and-gateway-source` - UniFi Network Pack WAN And Gateway Synthetic Source (verified)
+- `unifi-network-pack-vlans-and-subnets-source` - UniFi Network Pack VLANs And Subnets Synthetic Source (verified)
+- `unifi-network-pack-ssid-policy-source` - UniFi Network Pack SSID Policy Synthetic Source (verified)
+- `unifi-network-pack-device-inventory-source` - UniFi Network Pack Device Inventory Synthetic Source (verified)
+- `unifi-network-pack-firewall-notes-source` - UniFi Network Pack Firewall Notes Synthetic Source (verified)
+- `unifi-network-pack-wifi-troubleshooting-source` - UniFi Network Pack WiFi Troubleshooting Synthetic Source (verified)
+- `unifi-network-pack-maintenance-routine-source` - UniFi Network Pack Maintenance Routine Synthetic Source (verified)
+
+## Useful Records
+
+- `unifi-network-pack.device-inventory` - Device Inventory
+- `unifi-network-pack.firewall-notes` - Firewall Notes
+- `unifi-network-pack.maintenance-routine` - Maintenance Routine
+- `unifi-network-pack.ssid-policy` - SSID Policy
+- `unifi-network-pack.topology-overview` - Topology Overview
+- `unifi-network-pack.vlans-and-subnets` - VLANs And Subnets
+- `unifi-network-pack.wan-and-gateway` - WAN And Gateway
+- `unifi-network-pack.wifi-troubleshooting` - WiFi Troubleshooting
+
+## Do Not Assume
+
+- No live accounts, private projects, real customers, real hostnames, real files, or credentials are represented.
+- Contextarr prepares and routes context. It does not run agents or mutate external systems.
+- If a needed fact is missing, request a reviewed source update instead of inventing one.

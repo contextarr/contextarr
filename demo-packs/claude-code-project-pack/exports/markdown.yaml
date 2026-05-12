@@ -1,4 +1,4 @@
-﻿id: claude-code-project-markdown
+id: claude-code-project-markdown
 name: Claude Code Project Pack Generic Markdown Export
 target: generic_markdown
 format: markdown
@@ -8,7 +8,7 @@ include:
     - claude-code-project-pack.project-overview
     - claude-code-project-pack.repo-structure
     - claude-code-project-pack.current-phase
-    - claude-code-project.agent-instructions
+    - claude-code-project-pack.implementation-rules
     - claude-code-project-pack.coding-conventions
     - claude-code-project-pack.testing-and-validation
     - claude-code-project-pack.forbidden-actions

@@ -19,12 +19,16 @@ review_status: approved
 
 # Volumes And Storage
 
-Maps synthetic volume categories, persistence needs, and backup notes.
+Storage is documented by data class so backup priority is clear without host paths.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Docker Containers Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `config-state` holds service settings and is backed up before updates.
+- `media-cache` can be rebuilt and has lower backup priority.
+- `user-content-demo` is durable and reviewed before migration.
+- `metrics-retention` is pruned on a fixed schedule to avoid unbounded growth.
+- Bind mounts, device paths, and disk serials are intentionally omitted.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this container operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

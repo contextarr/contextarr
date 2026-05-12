@@ -1,3 +1,34 @@
-AI Workstation
+# AI Workstation Pack llms.txt Sample
 
-Fake public-safe llms.txt style sample. Use the pack summary, approved records, and source titles only. Do not include private data or executable instructions.
+pack_id: ai-workstation-pack
+target: llms_txt
+status: illustrative_sample
+summary: Public-safe demo context for a fictional local AI developer workstation.
+
+records:
+ai-workstation.capacity-planning: Capacity Planning
+ai-workstation.hardware-overview: Hardware Overview
+ai-workstation.local-ai-stack: Local AI Stack
+ai-workstation.maintenance-cadence: Maintenance Cadence
+ai-workstation.networking-notes: Networking Notes
+ai-workstation.safety-boundaries: Safety Boundaries
+ai-workstation.storage-layout: Storage Layout
+ai-workstation.troubleshooting-workflow: Troubleshooting Workflow
+
+sources:
+ai-workstation-operator-note: Fictional Workstation Operator Note
+ai-workstation-stack-note: Fictional Local AI Stack Note
+ai-workstation-storage-note: Fictional Storage Planning Note
+ai-workstation-network-note: Fictional Network Planning Note
+ai-workstation-workflow-note: Fictional Troubleshooting Workflow Note
+ai-workstation-capacity-note: Fictional Capacity Planning Note
+ai-workstation-maintenance-note: Fictional Maintenance Cadence Note
+ai-workstation-safety-note: Fictional Safety Boundaries Note
+
+boundaries:
+- synthetic public-safe context only
+- local files are the source of truth
+- SQLite is rebuildable derived state
+- human-readable HTML and exports are generated artifacts
+- MCP is read-only
+- Contextarr prepares context and does not run agents

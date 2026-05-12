@@ -19,12 +19,16 @@ review_status: approved
 
 # Privacy Rules
 
-Defines what household details must be omitted from exports and demos.
+Privacy rules define what must stay out of context packs and public demos.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Home Assistant Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Exclude occupant names, routines, arrivals, departures, and room-level presence history.
+- Exclude camera images, door histories, alarm states, and lock controls.
+- Exclude exact geolocation, address clues, WiFi names, tokens, and webhook paths.
+- Summarize logs as categories and symptoms, not raw event streams.
+- Public examples use fictional room groups and generic device classes only.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this home automation operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

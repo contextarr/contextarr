@@ -19,12 +19,16 @@ review_status: approved
 
 # Device Inventory
 
-Lists sample infrastructure device classes and metadata fields for local indexing.
+Inventory uses broad device classes and location labels.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for UniFi Network Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Gateway appliance is the primary routing device with config-backup ownership.
+- Core switch feeds office, media, and access-point uplinks.
+- Access points use coverage roles: main floor, work area, and fringe area.
+- Infrastructure clients include controller host, monitoring node, and backup target categories.
+- Device records include lifecycle status and owner role, never serials or MACs.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

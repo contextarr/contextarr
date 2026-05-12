@@ -19,12 +19,16 @@ review_status: approved
 
 # Sharing Rules
 
-Defines public-safe notes for external sharing and temporary access reviews.
+Sharing is treated as a temporary exception, not a default collaboration pattern.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- Shared access is tied to a project category and expiration date.
+- Guest access cannot include management surfaces, backup targets, or private household services.
+- External collaborators receive the narrowest service category that satisfies the task.
+- Review notes capture why sharing was needed and when removal is due.
+- Public examples never include emails, invite URLs, or shared-node names.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

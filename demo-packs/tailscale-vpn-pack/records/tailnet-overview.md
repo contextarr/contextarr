@@ -19,12 +19,16 @@ review_status: approved
 
 # Tailnet Overview
 
-Summarizes a fictional tailnet purpose, device categories, and review ownership.
+Northstar Tailnet is a synthetic private connectivity model for a homelab and small project workspace.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Tailscale VPN Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- The tailnet connects maintainer laptops, one lab server class, one media server class, and selected mobile clients.
+- Access is grouped by maintainer, observer, service, and temporary collaborator roles.
+- The default posture is private access to specific services, not broad flat-network reachability.
+- Public examples use generic node labels only.
+- The pack avoids real tailnet names, emails, device keys, domains, and node identifiers.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this private network operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

@@ -19,12 +19,16 @@ review_status: approved
 
 # Storage Map
 
-Captures fictional storage tiers, backup labels, and capacity-review notes.
+Storage is documented by role and recoverability without host paths.
 
-## Starter Context
+## Synthetic Operating Context
 
-This is original synthetic demo context for Jellyfin Media Server Pack. It is written to be useful for local Contextarr validation and export tests without copying third-party documentation or exposing private operational data.
+- `media-primary` represents large read-heavy media storage.
+- `metadata-state` represents configuration, posters, indexes, and plugin state.
+- `transcode-cache` is disposable and should not be backed up.
+- `incoming-review` holds newly added media until naming and metadata are checked.
+- `offline-copy` represents a disconnected backup target verified during maintenance.
 
-## Agent Boundary
+## Assistant Use
 
-Assistants may summarize, compare, validate, and export this record as reviewed context. Assistants must not treat this record as a live connector, install guide, credential source, or executable runbook.
+Assistants may summarize this media server operations context, compare boundaries, and identify documentation gaps. They must not provide commands, scripts, secrets, credentials, live URLs, private identifiers, provider-console steps, or claims about real systems.

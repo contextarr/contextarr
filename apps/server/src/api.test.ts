@@ -210,8 +210,8 @@ describe("Contextarr API", () => {
       authRequired: false,
       counts: {
         packs: 15,
-        records: 111,
-        sources: 111,
+        records: 120,
+        sources: 120,
         exportProfiles: 120,
         skills: 8,
         skillInstructions: 24,
@@ -627,12 +627,12 @@ describe("Contextarr API", () => {
         blocked: false
       },
       summary: {
-        recordCount: 5,
-        exportEligibleRecords: 5,
-        mcpEligibleRecords: 5,
+        recordCount: 8,
+        exportEligibleRecords: 8,
+        mcpEligibleRecords: 8,
         exportProfileCount: 8,
         exportEligibleProfiles: 8,
-        sourceBackedRecords: 5,
+        sourceBackedRecords: 8,
         recordsMissingSourceCoverage: 0
       },
       policies: {
@@ -765,8 +765,8 @@ describe("Contextarr API", () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: "ai-workstation-pack",
-          recordCount: 5,
-          sourceCount: 5,
+          recordCount: 8,
+          sourceCount: 8,
           exportProfileCount: 8,
           healthStatus: "healthy",
           coverImage: null,
@@ -2106,8 +2106,8 @@ describe("Contextarr API", () => {
       coverImage: null,
       reviewQueueCount: 0,
       counts: {
-        records: 5,
-        sources: 5,
+        records: 8,
+        sources: 8,
         exportProfiles: 8
       }
     });
@@ -2153,12 +2153,14 @@ describe("Contextarr API", () => {
     });
     expect(String(detail.json().packPath ?? "")).not.toContain(":\\");
     expect(detail.json().sources[0]).toMatchObject({
+      path: "raw/manual-note.md",
       licenseStatus: "known_permissive",
       contentHashAlgorithm: "sha256",
       contentHash: "0".repeat(64),
       staleAfterDays: 30
     });
-    expect(detail.json().sources[0]).not.toHaveProperty("path");
+    expect(String(detail.json().sources[0].path)).not.toContain("..");
+    expect(String(detail.json().sources[0].path)).not.toContain(":\\");
     expect(detail.json().exportReadiness.profiles[0]).toMatchObject({
       id: "stale-source-pack-codex",
       status: "ready_with_warnings",
@@ -2167,9 +2169,12 @@ describe("Contextarr API", () => {
     expect(record.json()).toMatchObject({
       id: "stale-source-pack.overview",
       staleSourceCount: 1,
-      resolvedSources: [expect.objectContaining({ licenseStatus: "known_permissive", contentHash: "0".repeat(64) })]
+      resolvedSources: [
+        expect.objectContaining({ path: "raw/manual-note.md", licenseStatus: "known_permissive", contentHash: "0".repeat(64) })
+      ]
     });
-    expect(record.json().resolvedSources[0]).not.toHaveProperty("path");
+    expect(String(record.json().resolvedSources[0].path)).not.toContain("..");
+    expect(String(record.json().resolvedSources[0].path)).not.toContain(":\\");
     expect(health.json().checks).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "freshness", status: "warning" })])
     );
@@ -2196,7 +2201,7 @@ describe("Contextarr API", () => {
       filename: "ai-workstation-codex.md"
     });
     expect(response.json().content).toContain("Codex Context Export");
-    expect(response.json().includedRecords).toHaveLength(5);
+    expect(response.json().includedRecords).toHaveLength(8);
     await app.close();
     db.close();
   });
@@ -2498,7 +2503,10 @@ describe("Contextarr API", () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.json().includedRecords.map((record: { id: string }) => record.id)).toEqual([
-        "ai-workstation.local-ai-stack"
+        "ai-workstation.local-ai-stack",
+        "ai-workstation.capacity-planning",
+        "ai-workstation.maintenance-cadence",
+        "ai-workstation.safety-boundaries"
       ]);
       expect(body).not.toContain("private-api-export-token");
       expect(body).not.toContain("draft-api-export-token");
@@ -3221,7 +3229,7 @@ describe("Contextarr API", () => {
         format: "markdown",
         selections: [
           { packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] },
-          { packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }
+          { packId: "claude-code-project-pack", recordIds: ["claude-code-project-pack.implementation-rules"] }
         ]
       }
     });
@@ -3236,7 +3244,7 @@ describe("Contextarr API", () => {
     });
     expect(response.json().includedRecords.map((record: { id: string }) => record.id)).toEqual([
       "ai-workstation.local-ai-stack",
-      "claude-code-project.agent-instructions"
+      "claude-code-project-pack.implementation-rules"
     ]);
     expect(response.json().content).toContain("Phase 10 Handoff");
     await app.close();
@@ -3296,7 +3304,7 @@ describe("Contextarr API", () => {
         privacyMode: "redacted",
         selections: [
           { packId: "ai-workstation-pack", recordIds: ["ai-workstation.local-ai-stack"] },
-          { packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }
+          { packId: "claude-code-project-pack", recordIds: ["claude-code-project-pack.implementation-rules"] }
         ]
       }
     });
@@ -3403,7 +3411,7 @@ describe("Contextarr API", () => {
         ...payload,
         packId: "phase5-composed-excluded-tag",
         excludeTags: ["instructions"],
-        selections: [{ packId: "claude-code-project-pack", recordIds: ["claude-code-project.agent-instructions"] }]
+        selections: [{ packId: "claude-code-project-pack", recordIds: ["claude-code-project-pack.implementation-rules"] }]
       }
     });
 
@@ -3680,7 +3688,7 @@ describe("Contextarr API", () => {
     expect(response.json()).toMatchObject({
       ok: true,
       packsIndexed: 15,
-      recordsIndexed: 111,
+      recordsIndexed: 120,
       skillsIndexed: 8,
       skillInstructionsIndexed: 24,
       agentKitsIndexed: 8,
