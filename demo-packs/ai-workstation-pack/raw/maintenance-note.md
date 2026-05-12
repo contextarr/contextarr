@@ -1,10 +1,14 @@
-# Fictional Maintenance Note
+# Maintenance Note Source Material
 
-Synthetic public-safe raw note for AI Workstation.
+Maintenance note for a fictional AI workstation.
 
-- Scenario: fictional local AI workstation operations, model storage, capacity, maintenance, and safety boundaries.
-- Purpose: back the matching reviewed record with local source provenance.
-- Safety: no secrets, live domains, private identifiers, executable instructions, or copied vendor documentation.
-- Review posture: illustrative Contextarr demo source material only.
+The operator tracks local service health, model storage hygiene, backup freshness, and whether demo surfaces still load. Maintenance notes are summarized for AI help, but direct machine actions remain human-controlled.
 
-This note is intentionally concise. It proves the pack can keep readable local source notes alongside records, rules, exports, and rendered outputs.
+| Check area | Why it matters |
+| --- | --- |
+| service health | avoids stale troubleshooting assumptions |
+| model storage | prevents confusing duplicate artifacts |
+| demo data | keeps public examples accurate |
+| backup marker | supports recovery planning |
+
+The note describes review topics and intentionally avoids runnable maintenance steps.

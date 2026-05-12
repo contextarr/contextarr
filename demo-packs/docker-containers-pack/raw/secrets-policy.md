@@ -1,10 +1,14 @@
-# Docker Containers Pack Secrets Policy Synthetic Source
+# Sensitive Values Policy Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-secrets-policy-source.
+Boundary note for a fictional Docker operations pack.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: review_checklist.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The pack may describe where sensitive material is expected to live, but it never stores the values. Exports should say that restore steps require local operator access rather than pretending the AI has everything needed.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Material class | Pack behavior |
+| --- | --- |
+| access values | omitted |
+| local certificate notes | summarize renewal owner only |
+| sample placeholders | allowed only when clearly fake |
+| rotation history | describe cadence, not values |
+
+This source is a policy reminder, not a secure-value store.

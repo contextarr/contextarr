@@ -1,10 +1,13 @@
-# Claude Code Project Pack Project Overview Synthetic Source
+# Project Overview Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-project-overview-source.
+Maintainer orientation note for a fictional Context Pack tooling repo.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: manual_demo_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The repository demonstrates a local-first context workflow: pack files are canonical, SQLite is derived state, and exports are generated artifacts. The public site should make the core loop obvious before introducing advanced preview objects.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Surface | Role in the project |
+| --- | --- |
+| CLI | Validates packs and produces agent-readable output. |
+| Dashboard | Lets humans inspect packs, records, health, and exports. |
+| MCP | Serves approved context read-only. |
+
+The overview is synthetic and contains no private repo names, customer names, or live service endpoints.

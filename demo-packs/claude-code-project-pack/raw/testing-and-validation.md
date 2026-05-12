@@ -1,10 +1,13 @@
-# Claude Code Project Pack Testing And Validation Synthetic Source
+# Testing And Validation Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-testing-and-validation-source.
+Quality note from a fictional release checklist.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: operator_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+A change is considered reviewable when the narrow test for the touched surface passes and the wider release gate has a plausible path to green. For demo-pack edits, validation should confirm records, source IDs, export profiles, raw source paths, and public-safe boundaries.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Change type | Evidence expected |
+| --- | --- |
+| Demo pack content | Pack validation and public surface count check. |
+| Validator rule | Unit fixture covering the failure mode. |
+| Site wording | Site verifier and public-surface verifier. |
+
+The checklist records expected proof, not instructions to execute untrusted pack content.

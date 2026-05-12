@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Release Process Synthetic Source
+# Release Process Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-release-process-source.
+Release-readiness note for a fictional repository.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: operator_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+A green PR is not the same as a public release. The release process requires review completion, release-note confirmation, evidence refresh, and explicit approval for any public action.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Stage | Required signal |
+| --- | --- |
+| PR review | comments resolved and CI green |
+| release candidate | evidence packet refreshed |
+| public release | separate approval from maintainers |
+
+The note is designed to stop accidental publication from routine branch work.

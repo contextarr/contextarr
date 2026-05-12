@@ -1,10 +1,14 @@
-# Docker Containers Pack Volumes And Storage Synthetic Source
+# Volumes And Storage Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-volumes-and-storage-source.
+Storage note for a fictional Docker host.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: configuration_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The operator describes volume classes instead of exposing private mount paths. The useful context is which services hold durable data, which volumes can be recreated, and which areas should never be sent to a general AI chat.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Storage class | Examples | Export posture |
+| --- | --- | --- |
+| durable-app-data | app databases and indexes | summarize only |
+| cache | rebuildable caches | safe to describe |
+| media-library | user-owned media paths | redacted |
+| config | local service settings | summarize categories |
+
+No private filesystem paths or media titles are included.

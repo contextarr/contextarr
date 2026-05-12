@@ -1,10 +1,13 @@
-# Obsidian Vault Pack Note Conventions Synthetic Source
+# Note Conventions Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-note-conventions-source.
+Writing convention note for fictional Markdown records.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: official_docs_reference.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Durable notes should explain context, source, and decision state. Capture notes can be messy, but exported records should be concise, sourced, and clear about what an AI should not assume.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Note type | Expected shape |
+| --- | --- |
+| decision | context, choice, reason, review date |
+| system note | owner, boundaries, current state |
+| project note | goal, scope, blockers, next review |
+
+The convention makes records reviewable without requiring a hosted memory service.

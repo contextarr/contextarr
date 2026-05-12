@@ -1,10 +1,14 @@
-# Obsidian Vault Pack Import Boundaries Synthetic Source
+# Import Boundaries Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-import-boundaries-source.
+Import boundary note for fictional vault-to-pack work.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: review_checklist.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The importer should preserve source context but avoid treating every note as trusted. Attachments, private folders, daily notes, and unresolved inbox items remain review candidates until a human promotes them.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Source area | Import posture |
+| --- | --- |
+| reviewed project notes | candidate record |
+| inbox | draft candidate |
+| attachments | metadata only unless reviewed |
+| private folders | excluded |
+
+This source models a safe import policy without using real private files.

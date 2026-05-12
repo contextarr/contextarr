@@ -1,10 +1,14 @@
-# Obsidian Vault Pack Folder Map Synthetic Source
+# Folder Map Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-folder-map-source.
+Vault map note for a fictional Obsidian workspace.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: local_markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The vault uses broad folders to separate durable knowledge from capture areas. Contextarr records the folder intent so imported notes can be classified without sending the whole vault to an AI assistant.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Folder class | Purpose | Default treatment |
+| --- | --- | --- |
+| projects | active work context | review and summarize |
+| systems | reusable operating notes | eligible after freshness check |
+| inbox | unprocessed capture | draft-only |
+| private | personal material | exclude |
+
+Folder names are illustrative and do not reveal a real vault structure.

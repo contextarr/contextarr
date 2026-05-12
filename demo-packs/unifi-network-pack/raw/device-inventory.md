@@ -1,10 +1,14 @@
-# UniFi Network Pack Device Inventory Synthetic Source
+# Device Inventory Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-device-inventory-source.
+Network inventory note for a fictional UniFi-style site.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: configuration_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Devices are tracked by role class rather than serial number. The pack needs enough context for troubleshooting advice while avoiding private identifiers, addresses, and live controller details.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Role class | Examples | Review concern |
+| --- | --- | --- |
+| gateway | routing and WAN boundary | exposure and failover |
+| switching | wired distribution | port role intent |
+| access point | wireless coverage | client experience |
+| client class | trusted, guest, IoT | segmentation |
+
+No MAC addresses, serial numbers, controller URLs, or real site names are recorded.

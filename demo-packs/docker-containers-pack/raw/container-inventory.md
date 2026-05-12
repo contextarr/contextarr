@@ -1,10 +1,14 @@
-# Docker Containers Pack Container Inventory Synthetic Source
+# Container Inventory Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-container-inventory-source.
+Inventory note from a fictional self-hosted Docker environment.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: official_docs_reference.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The operator tracks containers by purpose, dependency class, and recovery importance. Container names are generalized so the pack can be shared without revealing private host naming conventions.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Class | Typical examples | Recovery priority |
+| --- | --- | --- |
+| edge | proxy and access boundary services | high |
+| data | databases and stateful stores | high |
+| app | user-facing self-hosted apps | medium |
+| utility | maintenance and report helpers | low |
+
+The inventory intentionally omits image digests, private registry names, and environment values.

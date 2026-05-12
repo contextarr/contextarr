@@ -1,10 +1,14 @@
-# UniFi Network Pack SSID Policy Synthetic Source
+# SSID Policy Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-ssid-policy-source.
+Wireless policy note for a fictional site.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: synthetic_example.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+SSID names are generalized into categories. The pack records which client classes belong on each wireless segment and what should be redacted before sharing context with an AI assistant.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| SSID class | Intended clients | Export treatment |
+| --- | --- | --- |
+| trusted | owner devices | summarize only |
+| guest | temporary visitors | safe to describe |
+| IoT | appliances and sensors | no device identifiers |
+| lab | temporary testing | review before export |
+
+Passphrases, QR codes, and real SSID names are intentionally omitted.

@@ -1,10 +1,15 @@
-# Fictional Local AI Stack Note
+# Stack Note Source Material
 
-Synthetic public-safe raw note for source ai-workstation-stack-note.
+Stack overview note for a fictional AI workstation.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The local stack includes a dashboard surface, CLI validation, export preview, static rendering, and read-only context serving. The source owner wants AI help to understand which surface is relevant before suggesting a fix.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Stack layer | Role |
+| --- | --- |
+| local files | canonical pack source |
+| SQLite index | rebuildable app state |
+| dashboard | human inspection |
+| exports | target-shaped artifacts |
+| read-only MCP | approved context access |
+
+The note avoids package versions and live service endpoints.

@@ -1,10 +1,13 @@
-# Claude Code Project Pack Forbidden Actions Synthetic Source
+# Forbidden Actions Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-forbidden-actions-source.
+Safety note for fictional coding-agent work.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: review_checklist.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The project does not want agents to infer permission for public actions. Merge, release, deploy, registry, marketplace, package publication, and telemetry changes require separate explicit approval. When a task is about content or validation, the implementation should stay inside that lane.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Boundary | Reason |
+| --- | --- |
+| No public launch action | Keeps review separate from publication. |
+| No executable pack behavior | Context packs remain data, not automation. |
+| No silent remote behavior | Local-first claims must remain inspectable. |
+
+This source note intentionally avoids runnable examples or command snippets.

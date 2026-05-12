@@ -1,10 +1,13 @@
-# Fictional Troubleshooting Workflow Note
+# Workflow Note Source Material
 
-Synthetic public-safe raw note for source ai-workstation-workflow-note.
+Workflow note for a fictional AI operator.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The preferred loop is assemble, review, route: collect local source material, validate and render it for human review, then create the right brief for the target tool. The same pack may support a dashboard view, a Markdown brief, or read-only MCP access.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Step | Owner question |
+| --- | --- |
+| assemble | What local source backs this record? |
+| review | Is it current, public-safe, and approved? |
+| route | Which output shape fits the AI tool? |
+
+The workflow note is descriptive and contains no task runner instructions.

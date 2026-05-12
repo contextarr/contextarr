@@ -1,10 +1,14 @@
-# UniFi Network Pack Firewall Notes Synthetic Source
+# Firewall Notes Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-firewall-notes-source.
+Firewall intent note for a fictional network.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: operator_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Rules are described in plain-language intent, not copied as firewall exports. The important context is which zones should talk, which zones should never initiate access, and which exceptions require human review.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Zone relation | Intent |
+| --- | --- |
+| trusted to services | allowed for normal administration |
+| guest to internal | blocked except captive resources |
+| IoT to trusted | blocked by default |
+| operations to network gear | allowed only for maintainers |
+
+The source avoids rule dumps, addresses, and live device names.

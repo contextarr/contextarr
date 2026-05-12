@@ -1,10 +1,14 @@
-# Fictional Storage Planning Note
+# Storage Note Source Material
 
-Synthetic public-safe raw note for source ai-workstation-storage-note.
+Storage policy note for a fictional local AI setup.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The operator separates canonical source files from generated outputs. Pack folders are readable and versionable; indexes, screenshots, and generated briefs can be rebuilt or refreshed as needed.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Storage class | Source of truth? | Notes |
+| --- | --- | --- |
+| pack files | yes | records, sources, rules, profiles |
+| SQLite | no | derived local index |
+| export briefs | no | generated artifacts |
+| screenshots | no | reviewed launch evidence |
+
+No local drive names or private directory paths are included.

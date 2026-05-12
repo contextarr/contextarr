@@ -1,10 +1,14 @@
-# UniFi Network Pack WiFi Troubleshooting Synthetic Source
+# Wi-Fi Troubleshooting Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-wifi-troubleshooting-source.
+Incident note from a fictional wireless troubleshooting log.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: review_checklist.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Recent issues were grouped by symptom rather than by client identity. The notes emphasize channel congestion, roaming behavior, weak coverage areas, and whether wired services were healthy during the incident.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Symptom group | Likely context to check |
+| --- | --- |
+| slow clients | AP load and channel overlap |
+| roaming drop | AP placement and client class |
+| IoT disconnect | segment policy and signal quality |
+| guest complaint | captive access and WAN health |
+
+No client names, MAC addresses, or exact room labels are included.

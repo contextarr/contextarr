@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Security Alerts Synthetic Source
+# Security Alerts Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-security-alerts-source.
+Security handling note for a fictional project.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: export_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Alerts are triaged by exposure risk and whether the affected surface can leak context or imply execution. Dependency alerts are recorded separately from product-boundary issues such as unsafe paths or accidental private data in examples.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Alert class | Expected response |
+| --- | --- |
+| dependency advisory | patch or document risk |
+| source-path escape | block before release |
+| public copy overclaim | patch wording before launch |
+
+No real advisory IDs or private disclosure details are included.

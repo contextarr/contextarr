@@ -1,10 +1,13 @@
-# Docker Containers Pack Update Policy Synthetic Source
+# Update Policy Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-update-policy-source.
+Maintenance note for fictional self-hosted services.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: export_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Updates are grouped by blast radius. Low-risk dashboard-only services can move during routine maintenance. Stateful services require a recent backup marker and a rollback note. Edge services require a second look because mistakes can change exposure.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Update class | Review needed |
+| --- | --- |
+| dashboard-only | basic smoke check |
+| stateful app | backup marker and rollback owner |
+| edge boundary | exposure review |
+
+The policy records decision criteria and intentionally excludes commands.

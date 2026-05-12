@@ -1,10 +1,14 @@
-# Obsidian Vault Pack Vault Overview Synthetic Source
+# Vault Overview Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-vault-overview-source.
+Overview note for a fictional local Markdown vault.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: manual_demo_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The vault is treated as source material, not as a direct AI memory feed. Contextarr extracts reviewed records and preserves source links so the user can inspect what is being exported.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Vault area | Contextarr role |
+| --- | --- |
+| durable notes | source-backed records |
+| capture notes | draft intake |
+| templates | authoring guidance |
+| private material | excluded by default |
+
+The source is fictional and does not include personal notes.

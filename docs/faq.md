@@ -62,7 +62,9 @@ Yes. Export previews, redaction rules, source summaries, review state, and human
 
 ### What AI tools can Contextarr target?
 
-Targets include ChatGPT, Codex, Claude, Claude Code, Gemini, Antigravity, Hermes, OpenClaw, local agents, generic Markdown, JSON records, AGENTS.md, CLAUDE.md, llms.txt, and read-only MCP clients.
+Current export profiles include ChatGPT, Claude, Codex, generic Markdown, JSON records, AGENTS.md, CLAUDE.md, and llms.txt.
+
+Generated Markdown briefs can also be used with other AI tools that accept pasted or file-based context.
 
 ### Why have different export formats?
 

@@ -1,10 +1,14 @@
-# Docker Containers Pack Environment Variables Synthetic Source
+# Environment Variables Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-environment-variables-source.
+Configuration policy note for a fictional Docker stack.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: operator_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Environment values are documented by category, not copied into the pack. The useful context is whether a setting is public-safe, operationally sensitive, or required during restore planning.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Category | Pack treatment |
+| --- | --- |
+| display labels | safe to summarize |
+| feature toggles | summarize intent only |
+| sensitive values | omit and mark as external secure material |
+| host paths | describe storage class, not private filesystem paths |
+
+This note helps exports explain boundaries without leaking actual runtime configuration.

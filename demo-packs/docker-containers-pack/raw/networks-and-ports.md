@@ -1,10 +1,14 @@
-# Docker Containers Pack Networks And Ports Synthetic Source
+# Networks And Ports Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-networks-and-ports-source.
+Operator note from a fictional homelab container review.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: synthetic_example.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Network boundaries are tracked by intent because generated compose summaries miss firewall context. Edge services may attach to a shared entry network, while databases and cache services stay on internal bridges. Host port exposure is reviewed manually before an export is shared.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Network intent | Allowed service class | Notes |
+| --- | --- | --- |
+| edge | reverse proxy and public-safe status page | review before sharing |
+| app-internal | app to app traffic | no direct host exposure |
+| data-internal | stateful stores | restricted to dependent apps |
+| ops-internal | monitoring and maintenance views | operator-only |
+
+No real host ports, hostnames, or firewall rules are included.

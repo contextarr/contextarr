@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Branch Policy Synthetic Source
+# Branch Policy Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-branch-policy-source.
+Repository operations note for a fictional project.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: local_markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Work branches are named by purpose and kept reviewable. Draft PRs are used for external review before merge readiness. Public launch actions are intentionally separate from PR creation.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Branch state | Meaning |
+| --- | --- |
+| draft PR | ready for review, not merge-ready |
+| ready PR | CI green and review issues handled |
+| release branch | only after explicit release approval |
+
+The policy helps an AI assistant avoid treating a pushed branch as permission to publish.

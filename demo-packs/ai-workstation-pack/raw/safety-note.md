@@ -1,10 +1,14 @@
-# Fictional Safety Note
+# Safety Note Source Material
 
-Synthetic public-safe raw note for AI Workstation.
+Safety boundary note for a fictional AI workstation.
 
-- Scenario: fictional local AI workstation operations, model storage, capacity, maintenance, and safety boundaries.
-- Purpose: back the matching reviewed record with local source provenance.
-- Safety: no secrets, live domains, private identifiers, executable instructions, or copied vendor documentation.
-- Review posture: illustrative Contextarr demo source material only.
+The workstation can prepare context for many tools, but Contextarr itself should not become an executor. The pack records boundaries so exported briefs stay clear about what the downstream AI may know versus what it may do.
 
-This note is intentionally concise. It proves the pack can keep readable local source notes alongside records, rules, exports, and rendered outputs.
+| Boundary | Pack-safe statement |
+| --- | --- |
+| actions | Contextarr prepares context only |
+| private data | classify and redact before export |
+| remote services | no hidden calls in pack handling |
+| source files | user-owned and inspectable |
+
+This is guidance for context preparation, not an automation policy engine.

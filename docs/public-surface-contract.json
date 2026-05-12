@@ -83,8 +83,6 @@
       "SQLite is rebuildable",
       "Imported external Skills may be preserved"
     ],
-    "forbiddenPhrases": [
-      "self-hosted context automation"
-    ]
+    "forbiddenPhrases": []
   }
 }

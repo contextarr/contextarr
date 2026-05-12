@@ -1,10 +1,13 @@
-# Docker Containers Pack Compose Files Synthetic Source
+# Compose Files Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-compose-files-source.
+Operator note for a fictional Docker host inventory.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: local_markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Compose projects are grouped by service family rather than copied into the pack. The source owner keeps the actual compose files outside the demo pack and records only reviewable summaries: service class, exposure tier, storage tier, and maintenance owner.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Project class | Example role | Exposure tier |
+| --- | --- | --- |
+| media | catalog and streaming services | internal dashboard |
+| automation | scheduled local helpers | local-only |
+| observability | logs and health summaries | operator-only |
+
+No runnable compose snippets are included in this synthetic source.

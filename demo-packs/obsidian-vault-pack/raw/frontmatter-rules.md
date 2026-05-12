@@ -1,10 +1,14 @@
-# Obsidian Vault Pack Frontmatter Rules Synthetic Source
+# Frontmatter Rules Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-frontmatter-rules-source.
+Metadata convention note for fictional Markdown records.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: synthetic_example.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Frontmatter is used to separate source state from export state. Notes can be useful without being approved for AI output, so review status and privacy class are tracked separately.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Field | Purpose |
+| --- | --- |
+| status | draft, reviewed, or stale |
+| privacy | public-safe, private, or sensitive |
+| source_ids | links the summary to source notes |
+| freshness | indicates when context should be rechecked |
+
+The convention is synthetic and does not copy a real vault schema.

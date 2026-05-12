@@ -1,10 +1,13 @@
-# Obsidian Vault Pack Linking Patterns Synthetic Source
+# Linking Patterns Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-linking-patterns-source.
+Linking convention note for a fictional knowledge vault.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: configuration_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Backlinks and wiki links are useful signals, but they are not proof that a note is current or approved. Contextarr can summarize link neighborhoods while still requiring source review.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Link pattern | Meaning | Caution |
+| --- | --- | --- |
+| project to decision | useful context chain | verify latest decision |
+| daily to project | temporary signal | do not export directly |
+| topic to source | provenance clue | check source status |
+
+No real note titles or personal references are included.

@@ -1,10 +1,14 @@
-# UniFi Network Pack Maintenance Routine Synthetic Source
+# Maintenance Routine Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-maintenance-routine-source.
+Routine maintenance note for a fictional network site.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: export_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The operator reviews firmware posture, stale client groups, backup freshness, and Wi-Fi incident notes on a recurring cadence. Changes that affect segmentation or gateway behavior require a short rollback note.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Check | Why it matters |
+| --- | --- |
+| backup freshness | supports recovery after controller issues |
+| stale clients | reduces confusing device history |
+| AP health | catches coverage drift |
+| rule changes | prevents accidental zone exposure |
+
+No maintenance commands or controller exports are included.

@@ -1,10 +1,14 @@
-# GitHub Workflow Pack Actions Workflows Synthetic Source
+# Actions Workflows Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-actions-workflows-source.
+CI policy note for a fictional GitHub repository.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: configuration_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The repository uses workflow gates as release confidence, not as a substitute for review. The pack tracks what each gate proves so an AI assistant can suggest the right verification without guessing.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Gate family | What it proves |
+| --- | --- |
+| lint and typecheck | source consistency |
+| unit tests | expected behavior of core modules |
+| content verifier | launch-facing copy and inventory claims |
+| smoke gate | local preview still starts |
+
+The note does not include workflow secure values, runner labels, or copied workflow YAML.

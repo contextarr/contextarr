@@ -1,10 +1,13 @@
-# Claude Code Project Pack Agent Instructions Synthetic Source
+# Agent Instructions Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-agent-instructions-source.
+Project maintainer note for fictional coding-agent contributors.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: synthetic_example.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The agent is expected to inspect the current branch before editing, preserve user-authored changes, and keep fixes scoped to the requested behavior. If a task touches validation or export behavior, the matching tests and public contract notes should be checked in the same pass.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Situation | Preferred handling |
+| --- | --- |
+| Unknown file ownership | Read surrounding context before editing. |
+| Public copy change | Check implementation-status and known-limitations wording. |
+| Pack-format change | Update fixtures and validator coverage together. |
+
+The note is intentionally procedural but non-executable. It does not ask the agent to run shell content from a pack.

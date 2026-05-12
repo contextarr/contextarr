@@ -1,10 +1,14 @@
-# UniFi Network Pack VLANs And Subnets Synthetic Source
+# VLANs And Subnets Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-vlans-and-subnets-source.
+Segmentation note for a fictional UniFi-style network.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: official_docs_reference.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Segments are documented by purpose, not by address. This gives an AI enough context to reason about troubleshooting without exposing private addressing or controller exports.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Segment class | Purpose | Default posture |
+| --- | --- | --- |
+| trusted | normal personal devices | access to shared services |
+| services | local apps and infrastructure | limited inbound paths |
+| guest | visitor access | internet-only |
+| IoT | untrusted appliances | isolated from trusted devices |
+
+No private subnets or static mappings are included.

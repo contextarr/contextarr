@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Repository Overview Synthetic Source
+# Repository Overview Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-repository-overview-source.
+Maintainer orientation for a fictional open-source repository.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: manual_demo_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The repository contains app surfaces, validation packages, demo packs, docs, and launch-site content. Demo data is part of the product proof path, so it is reviewed with the same care as source code.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Area | Launch relevance |
+| --- | --- |
+| demo packs | shows the Context Pack concept concretely |
+| public site | explains current scope and boundaries |
+| validator | protects source-backed and non-execution claims |
+
+This source avoids real repository URLs and contributor identities.

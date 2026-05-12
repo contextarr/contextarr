@@ -1,10 +1,13 @@
-# UniFi Network Pack WAN And Gateway Synthetic Source
+# WAN And Gateway Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-wan-and-gateway-source.
+Gateway operations note for a fictional network.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: local_markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The operator tracks WAN health, gateway role, and support boundaries at a high level. The pack can say that a gateway sits at the edge without including provider account details or line identifiers.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Topic | Pack-safe summary |
+| --- | --- |
+| WAN state | describe health trend, not provider account data |
+| gateway role | edge router and policy enforcement point |
+| failover | note whether a plan exists, not private details |
+
+This source avoids modem identifiers, billing data, and live diagnostic links.

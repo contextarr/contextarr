@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Code Review Rules Synthetic Source
+# Code Review Rules Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-code-review-rules-source.
+Review checklist note for a fictional open-source repository.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: review_checklist.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Reviewers lead with correctness, security, public-claim accuracy, and missing tests. Style comments are secondary unless the style problem makes the product harder to understand.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Review area | Example question |
+| --- | --- |
+| behavior | Does this change match the documented contract? |
+| safety | Could this expose private data or imply execution? |
+| evidence | Did the author run the relevant verifier? |
+
+This note is meant to shape review comments, not to authorize automated changes.

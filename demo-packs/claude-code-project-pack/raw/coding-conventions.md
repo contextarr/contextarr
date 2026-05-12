@@ -1,10 +1,13 @@
-# Claude Code Project Pack Coding Conventions Synthetic Source
+# Coding Conventions Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-coding-conventions-source.
+Local style note for a fictional TypeScript monorepo.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: configuration_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The project favors small modules, deterministic validation reports, and typed JSON response shapes. Public-facing wording should use current-status language instead of future promises. Tests should use stable fixture timestamps when a report contains generated dates.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Area | Convention |
+| --- | --- |
+| API responses | Include schemaVersion when the object is durable or agent-facing. |
+| Validators | Prefer explicit issue codes over prose-only failures. |
+| Site copy | Keep launch claims tied to current routes and verified counts. |
+
+Do not introduce a broad abstraction just to deduplicate a one-off launch page.

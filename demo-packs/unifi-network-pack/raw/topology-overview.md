@@ -1,10 +1,14 @@
-# UniFi Network Pack Topology Overview Synthetic Source
+# Topology Overview Source Note
 
-Synthetic public-safe raw note for source unifi-network-pack-topology-overview-source.
+Topology note for a fictional home-office network.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: manual_demo_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The site uses a simple hierarchy: gateway, core switch, access layer, and wireless access points. The pack keeps a conceptual map so support conversations can avoid repeated setup questions without revealing private diagrams.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Layer | Role | Notes |
+| --- | --- | --- |
+| gateway | routing and WAN edge | one active unit in the example |
+| core switch | wired aggregation | carries tagged segments |
+| access layer | room and device drops | mixed wired clients |
+| wireless | AP coverage | coverage notes are synthetic |
+
+The note contains no floor plan, GPS information, or real host labels.

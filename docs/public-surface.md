@@ -22,7 +22,7 @@ Website hero copy should keep the first read focused on the working loop:
 
 It may also include a compact target line:
 
-> Targets include ChatGPT, Codex, Claude, Claude Code, Gemini, Antigravity, Hermes, OpenClaw, and other AI agents & tools.
+> Current export profiles include ChatGPT, Claude, Codex, generic Markdown, JSON, AGENTS.md, CLAUDE.md, and llms.txt. Generated Markdown briefs can also be used with other AI tools that accept pasted or file-based context.
 
 Website loop section should use:
 

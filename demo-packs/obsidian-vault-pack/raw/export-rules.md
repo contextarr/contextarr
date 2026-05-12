@@ -1,10 +1,14 @@
-# Obsidian Vault Pack Export Rules Synthetic Source
+# Export Rules Source Note
 
-Synthetic public-safe raw note for source obsidian-vault-pack-export-rules-source.
+Export policy note for a fictional Markdown vault.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: export_summary.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Exports use reviewed records, not raw vault folders. Notes tagged as private, draft, personal, or source-only require review before they can appear in an AI brief.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Tag class | Export behavior |
+| --- | --- |
+| project | eligible after source review |
+| evergreen | eligible after freshness check |
+| daily | excluded by default |
+| private | excluded unless explicitly approved |
+
+The note is about process and contains no private note text.

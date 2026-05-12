@@ -1,10 +1,13 @@
-# Claude Code Project Pack Repo Structure Synthetic Source
+# Repository Structure Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-repo-structure-source.
+Architecture note for a fictional monorepo layout.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: local_markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The app is organized around separate packages for validation and export behavior, with apps for CLI, server, web dashboard, MCP, and public site. Demo packs and fixtures are treated as product proof, not throwaway samples.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Area | Expected ownership |
+| --- | --- |
+| apps/site | Public launch pages and contract checks. |
+| packages/pack-validator | Schema and source-path validation. |
+| demo-packs | Public-safe examples used by dashboard and docs. |
+
+When file moves are needed, public-surface verifiers should be updated in the same change.

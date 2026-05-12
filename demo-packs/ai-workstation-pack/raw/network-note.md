@@ -1,10 +1,14 @@
-# Fictional Network Planning Note
+# Network Note Source Material
 
-Synthetic public-safe raw note for source ai-workstation-network-note.
+Local network note for a fictional workstation setup.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The workstation is described as a local development and AI context machine. Services are assumed to bind locally unless the operator explicitly documents otherwise. Exports should avoid implying that remote access is configured.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Surface | Default posture |
+| --- | --- |
+| dashboard | local preview |
+| API | local development use |
+| model tools | operator-controlled |
+| public site | static launch surface only |
+
+No private hostnames, IP addresses, or tunnel names are included.

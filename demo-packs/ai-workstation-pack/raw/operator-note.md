@@ -1,10 +1,14 @@
-# Fictional Workstation Operator Note
+# Operator Note Source Material
 
-Synthetic public-safe raw note for source ai-workstation-operator-note.
+Owner-maintained note for a fictional local AI workstation.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: markdown.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The workstation is used to prepare source-backed context, inspect local dashboards, test exports, and compare AI-tool handoffs. The important operating preference is review before routing: context should be readable by the owner before it reaches an assistant.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Activity | Desired context behavior |
+| --- | --- |
+| pack authoring | keep records local and source-linked |
+| export preview | show redaction and target shape |
+| AI handoff | send only approved context |
+| troubleshooting | preserve evidence and exact checks |
+
+The note is synthetic and avoids real user history.

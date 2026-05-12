@@ -1,10 +1,14 @@
-# Fictional Capacity Note
+# Capacity Note Source Material
 
-Synthetic public-safe raw note for AI Workstation.
+Operator note for a fictional local AI workstation.
 
-- Scenario: fictional local AI workstation operations, model storage, capacity, maintenance, and safety boundaries.
-- Purpose: back the matching reviewed record with local source provenance.
-- Safety: no secrets, live domains, private identifiers, executable instructions, or copied vendor documentation.
-- Review posture: illustrative Contextarr demo source material only.
+Capacity is tracked by workload class rather than exact hardware telemetry. The pack needs enough context for planning model use, dashboard checks, and export guidance without exposing machine-specific identifiers.
 
-This note is intentionally concise. It proves the pack can keep readable local source notes alongside records, rules, exports, and rendered outputs.
+| Workload class | Expected constraint | Review cue |
+| --- | --- | --- |
+| chat inference | memory headroom | check concurrent services |
+| indexing | disk and CPU burst | schedule away from demos |
+| web dashboard | low resource use | keep available during review |
+| batch export | short CPU spike | safe for normal use |
+
+No serial numbers, private paths, or live metrics are included.

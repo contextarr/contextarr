@@ -1,10 +1,13 @@
-# Claude Code Project Pack Current Phase Synthetic Source
+# Current Phase Source Note
 
-Synthetic public-safe raw note for source claude-code-project-pack-current-phase-source.
+Planning note for a fictional pre-release project branch.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: official_docs_reference.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The active milestone is public-preview readiness. The maintainers are prioritizing source-backed demo packs, clear site positioning, validation reliability, and read-only context surfaces. Registry, marketplace, hosted vault, and agent execution ideas are intentionally out of scope for this phase.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Workstream | Current focus |
+| --- | --- |
+| Packs | Make examples specific, synthetic, and source-backed. |
+| Site | Explain the product without overselling future integrations. |
+| Validator | Catch unsafe local paths and stale fixture assumptions. |
+
+This note is used to help an AI assistant understand priority order, not to authorize release actions.

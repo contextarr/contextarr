@@ -1,10 +1,13 @@
-# GitHub Workflow Pack Pull Request Template Synthetic Source
+# Pull Request Template Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-pull-request-template-source.
+PR template summary for a fictional project.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: official_docs_reference.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Pull requests should state the problem, the scoped fix, tests run, and any explicit non-actions. For launch-facing work, the template asks authors to call out whether they changed public claims, screenshots, or demo-pack inventory.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Template section | Purpose |
+| --- | --- |
+| Summary | Keeps reviewers oriented. |
+| Verification | Separates proof from intent. |
+| Boundaries | Records what was deliberately not done. |
+
+The real template is not copied here; this pack records the intent behind it.

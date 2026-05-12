@@ -1,10 +1,13 @@
-# Docker Containers Pack Stack Overview Synthetic Source
+# Stack Overview Source Note
 
-Synthetic public-safe raw note for source docker-containers-pack-stack-overview-source.
+Operator overview for a fictional local Docker host.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: manual_demo_note.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+The stack is organized around a small number of service families so an AI assistant can reason about impact without seeing private configuration. State lives in named storage classes, and dashboards are treated as local review surfaces rather than public services.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Service family | Statefulness | Review concern |
+| --- | --- | --- |
+| media apps | mixed | storage and transcoding impact |
+| knowledge apps | stateful | backup cadence |
+| network helpers | light state | exposure boundaries |
+
+The note is synthetic and avoids runnable deployment instructions.

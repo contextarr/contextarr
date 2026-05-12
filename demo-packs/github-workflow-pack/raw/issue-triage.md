@@ -1,10 +1,14 @@
-# GitHub Workflow Pack Issue Triage Synthetic Source
+# Issue Triage Source Note
 
-Synthetic public-safe raw note for source github-workflow-pack-issue-triage-source.
+Maintainer note for fictional issue intake.
 
-- Purpose: support the matching demo record with fictional, non-sensitive context.
-- Source type: synthetic_example.
-- Safety: no secrets, no live domains, no private identifiers, and no executable instructions.
-- Scope: illustrative source material for Contextarr demo pack validation only.
+Issues are sorted by user impact and release risk. Reports about broken validation, misleading public copy, or unsafe export behavior receive higher priority than broad feature requests.
 
-This note is intentionally small. It represents pack-local source provenance without importing real customer, workspace, or infrastructure data.
+| Label class | Triage meaning |
+| --- | --- |
+| launch-blocker | prevents public preview confidence |
+| safety | touches privacy, execution, or export boundaries |
+| content-quality | demo pack or docs clarity issue |
+| future-scope | valid idea, not current phase |
+
+No real issue titles or user handles are included in this synthetic note.
